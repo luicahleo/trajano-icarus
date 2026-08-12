@@ -1,6 +1,6 @@
 # Andamiaje de instrucciones para agentes — Plan de implementación
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Levantar en Trajano-Icarus la capa de instrucciones para agentes —`AGENTS.md` como única fuente, con adaptadores generados— y una puerta de calidad mínima de cuatro gates que se valida a sí misma, sin escribir una línea de código de aplicación.
 
@@ -33,7 +33,7 @@
 **Interfaces:**
 - Produces: clasificación texto/binario que el gate de mojibake usa a través de `git grep -I` (Tarea 3), y exclusión del ruido que el gate de enlaces recorrería (Tarea 4).
 
-- [ ] **Step 1: Crear `.gitignore`**
+- [x] **Step 1: Crear `.gitignore`**
 
 `.gitignore`:
 ```gitignore
@@ -72,7 +72,7 @@ docs/ai/HANDOFF.md
 Thumbs.db
 ```
 
-- [ ] **Step 2: Crear `.gitattributes`**
+- [x] **Step 2: Crear `.gitattributes`**
 
 `.gitattributes`:
 ```gitattributes
@@ -99,7 +99,7 @@ Thumbs.db
 *.zip binary
 ```
 
-- [ ] **Step 3: Verificar la clasificación y las exclusiones**
+- [x] **Step 3: Verificar la clasificación y las exclusiones**
 
 Run:
 ```powershell
@@ -109,7 +109,7 @@ git check-ignore -v .claude/settings.local.json
 ```
 Expected: la primera línea informa `text: auto`; las dos siguientes informan la línea de `.gitignore` que produce la exclusión. Si `git check-ignore` no imprime nada, la regla no está tomando efecto y hay que revisar el patrón.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add .gitignore .gitattributes
@@ -132,7 +132,7 @@ git commit -m "chore: cimientos del repositorio (gitignore y gitattributes)"
   - `ejecutar(comando: string, args: string[], opciones?: { cwd?: string, silencioso?: boolean, sinShell?: boolean }): { codigo: number, salida: string, duracionMs: number }` en `quality/lib/ejecutar.mjs`. Nunca lanza: el llamador decide qué hacer con un código distinto de cero.
 - Las Tareas 3, 4, 6, 7 y 9 consumen ambos módulos con esas firmas exactas.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 `quality/__tests__/salida.test.mjs`:
 ```javascript
@@ -208,7 +208,7 @@ test('combina stdout y stderr en una sola cadena', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar los tests para ver que fallan**
+- [x] **Step 2: Ejecutar los tests para ver que fallan**
 
 Run:
 ```powershell
@@ -216,7 +216,7 @@ node --test quality/__tests__
 ```
 Expected: FAIL. Los dos archivos de test abortan porque no se pueden resolver los módulos `../lib/salida.mjs` y `../lib/ejecutar.mjs` (`ERR_MODULE_NOT_FOUND`).
 
-- [ ] **Step 3: Implementar `quality/lib/salida.mjs`**
+- [x] **Step 3: Implementar `quality/lib/salida.mjs`**
 
 `quality/lib/salida.mjs`:
 ```javascript
@@ -247,7 +247,7 @@ export function aviso(texto) {
 }
 ```
 
-- [ ] **Step 4: Implementar `quality/lib/ejecutar.mjs`**
+- [x] **Step 4: Implementar `quality/lib/ejecutar.mjs`**
 
 `quality/lib/ejecutar.mjs`:
 ```javascript
@@ -281,7 +281,7 @@ export function ejecutar(comando, args, opciones = {}) {
 }
 ```
 
-- [ ] **Step 5: Ejecutar los tests para ver que pasan**
+- [x] **Step 5: Ejecutar los tests para ver que pasan**
 
 Run:
 ```powershell
@@ -289,7 +289,7 @@ node --test quality/__tests__
 ```
 Expected: PASS. La línea de resumen informa `fail 0` y nueve tests superados.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add quality/lib quality/__tests__
@@ -321,7 +321,7 @@ git commit -m "feat: librería común de salida y ejecución para la puerta de c
 4. `git grep -I` salta los archivos que git clasifica como binarios y solo recorre archivos versionados, que es exactamente el alcance que pide el diseño.
 5. La autoexcepción: en archivos `.md`, se descarta lo que esté entre acentos graves antes de decidir. Un mojibake accidental nunca está entre acentos graves; una cita deliberada del patrón sí. En archivos que no son `.md` no hay excepción alguna.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `quality/__tests__/check-mojibake.test.mjs`:
 ```javascript
@@ -401,7 +401,7 @@ test('analizar ignora una salida vacía', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar el test para ver que falla**
+- [x] **Step 2: Ejecutar el test para ver que falla**
 
 Run:
 ```powershell
@@ -409,7 +409,7 @@ node --test quality/__tests__/check-mojibake.test.mjs
 ```
 Expected: FAIL con `ERR_MODULE_NOT_FOUND`: no se puede resolver `../check-mojibake.mjs`.
 
-- [ ] **Step 3: Implementar el gate**
+- [x] **Step 3: Implementar el gate**
 
 `quality/check-mojibake.mjs`:
 ```javascript
@@ -499,7 +499,7 @@ if (process.argv[1] && process.argv[1].endsWith('check-mojibake.mjs')) {
 }
 ```
 
-- [ ] **Step 4: Ejecutar el test para ver que pasa**
+- [x] **Step 4: Ejecutar el test para ver que pasa**
 
 Run:
 ```powershell
@@ -507,7 +507,7 @@ node --test quality/__tests__/check-mojibake.test.mjs
 ```
 Expected: PASS, `fail 0`.
 
-- [ ] **Step 5: Ejecutar el gate contra el repositorio real**
+- [x] **Step 5: Ejecutar el gate contra el repositorio real**
 
 Run:
 ```powershell
@@ -516,7 +516,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: `[OK] Gate de mojibake: sin hallazgos.` y `codigo=0`. El spec de diseño cita los patrones entre acentos graves, así que queda exento.
 
-- [ ] **Step 6: Comprobar que el gate detecta un mojibake real**
+- [x] **Step 6: Comprobar que el gate detecta un mojibake real**
 
 Run:
 ```powershell
@@ -537,7 +537,7 @@ Expected: vuelve a `[OK]` y `codigo=0`.
 
 Nota: `Out-File -Encoding utf8` en PowerShell 5.1 escribe BOM. El BOM no afecta a este gate, y el archivo se borra en el mismo paso; para archivos que se conservan, usar el editor o `[System.IO.File]::WriteAllText` con `UTF8Encoding($false)`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add quality/check-mojibake.mjs quality/__tests__/check-mojibake.test.mjs
@@ -561,7 +561,7 @@ git commit -m "feat: gate de mojibake con autoexcepción por spans de código"
   - `archivosMarkdown(): { ok: boolean, archivos?: string[], motivo?: string }`
 - Ejecutado como CLI: sale con 0 si todo enlace relativo apunta a algo existente, 1 si no.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `quality/__tests__/check-enlaces.test.mjs`:
 ```javascript
@@ -620,7 +620,7 @@ test('rutaDelDestino decodifica los espacios escapados', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar el test para ver que falla**
+- [x] **Step 2: Ejecutar el test para ver que falla**
 
 Run:
 ```powershell
@@ -628,7 +628,7 @@ node --test quality/__tests__/check-enlaces.test.mjs
 ```
 Expected: FAIL con `ERR_MODULE_NOT_FOUND`: no se puede resolver `../check-enlaces.mjs`.
 
-- [ ] **Step 3: Implementar el gate**
+- [x] **Step 3: Implementar el gate**
 
 `quality/check-enlaces.mjs`:
 ```javascript
@@ -728,7 +728,7 @@ if (process.argv[1] && process.argv[1].endsWith('check-enlaces.mjs')) {
 }
 ```
 
-- [ ] **Step 4: Ejecutar el test para ver que pasa**
+- [x] **Step 4: Ejecutar el test para ver que pasa**
 
 Run:
 ```powershell
@@ -736,7 +736,7 @@ node --test quality/__tests__/check-enlaces.test.mjs
 ```
 Expected: PASS, `fail 0`.
 
-- [ ] **Step 5: Ejecutar el gate contra el repositorio real**
+- [x] **Step 5: Ejecutar el gate contra el repositorio real**
 
 Run:
 ```powershell
@@ -745,7 +745,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: `[OK] Gate de enlaces: ... sin enlaces rotos.` y `codigo=0`.
 
-- [ ] **Step 6: Comprobar que el gate detecta un enlace roto**
+- [x] **Step 6: Comprobar que el gate detecta un enlace roto**
 
 Run:
 ```powershell
@@ -764,7 +764,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: vuelve a `[OK]` y `codigo=0`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add quality/check-enlaces.mjs quality/__tests__/check-enlaces.test.mjs
@@ -788,7 +788,7 @@ git commit -m "feat: gate de enlaces relativos en Markdown versionado"
   - `ejecutarGates(gates, ejecutor): { ok: boolean, ejecutados: Array<{ nombre: string, codigo: number }> }` — `ejecutor` es una función `(gate) => { codigo: number }`, inyectable para poder testear el corte al primer fallo sin lanzar procesos.
 - `verify.ps1` y `verify.sh` propagan el código de salida de `node quality/verify.mjs`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `quality/__tests__/verify.test.mjs`:
 ```javascript
@@ -838,7 +838,7 @@ test('informa el código del gate que falló', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar el test para ver que falla**
+- [x] **Step 2: Ejecutar el test para ver que falla**
 
 Run:
 ```powershell
@@ -846,7 +846,7 @@ node --test quality/__tests__/verify.test.mjs
 ```
 Expected: FAIL con `ERR_MODULE_NOT_FOUND`: no se puede resolver `../verify.mjs`.
 
-- [ ] **Step 3: Implementar el orquestador**
+- [x] **Step 3: Implementar el orquestador**
 
 `quality/verify.mjs`:
 ```javascript
@@ -900,7 +900,7 @@ if (process.argv[1] && process.argv[1].endsWith('verify.mjs')) {
 }
 ```
 
-- [ ] **Step 4: Crear los puntos de entrada**
+- [x] **Step 4: Crear los puntos de entrada**
 
 `verify.ps1`:
 ```powershell
@@ -918,7 +918,7 @@ exit $LASTEXITCODE
 node quality/verify.mjs "$@"
 ```
 
-- [ ] **Step 5: Ejecutar el test para ver que pasa**
+- [x] **Step 5: Ejecutar el test para ver que pasa**
 
 Run:
 ```powershell
@@ -926,7 +926,7 @@ node --test quality/__tests__/verify.test.mjs
 ```
 Expected: PASS, `fail 0`.
 
-- [ ] **Step 6: Ejecutar la puerta completa por sus dos puntos de entrada**
+- [x] **Step 6: Ejecutar la puerta completa por sus dos puntos de entrada**
 
 Run:
 ```powershell
@@ -942,7 +942,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: la misma salida y `codigo=0`. Si `bash` no está disponible, anotarlo: el CI de la Tarea 12 no usa `verify.sh`, así que no bloquea.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add quality/verify.mjs quality/__tests__/verify.test.mjs verify.ps1 verify.sh
@@ -968,7 +968,7 @@ git commit -m "feat: orquestador de la puerta de calidad y puntos de entrada"
 
 **Nota:** `PUERTA_CALIDAD.md` describe los tres gates vigentes hoy. La Tarea 9 le agrega el de adaptadores cuando ese gate exista. Ningún documento nombra cantidades de tests ni de proyectos: esas cifras caducan en cada commit.
 
-- [ ] **Step 1: Crear `docs/ai/README.md`**
+- [x] **Step 1: Crear `docs/ai/README.md`**
 
 `docs/ai/README.md`:
 ```markdown
@@ -1029,7 +1029,7 @@ comandos— son optimizaciones opcionales. Nunca deben ser necesarias para
 entender ni ejecutar el proceso del proyecto.
 ```
 
-- [ ] **Step 2: Crear `docs/ai/WORKFLOW.md`**
+- [x] **Step 2: Crear `docs/ai/WORKFLOW.md`**
 
 `docs/ai/WORKFLOW.md`:
 ```markdown
@@ -1078,7 +1078,7 @@ bounded context nuevo no se improvisa.
   anota y se sigue.
 ```
 
-- [ ] **Step 3: Crear `docs/ai/PUERTA_CALIDAD.md`**
+- [x] **Step 3: Crear `docs/ai/PUERTA_CALIDAD.md`**
 
 `docs/ai/PUERTA_CALIDAD.md`:
 ```markdown
@@ -1145,7 +1145,7 @@ Este documento describe los gates, no cuenta tests ni proyectos: esas cifras
 caducan en cada commit.
 ```
 
-- [ ] **Step 4: Crear `docs/ai/FLUJO_GIT.md`**
+- [x] **Step 4: Crear `docs/ai/FLUJO_GIT.md`**
 
 `docs/ai/FLUJO_GIT.md`:
 ```markdown
@@ -1194,7 +1194,7 @@ pull requests.
 - Nunca reescribir historia ya publicada.
 ```
 
-- [ ] **Step 5: Crear `docs/ai/ECONOMIA_TOKENS.md`**
+- [x] **Step 5: Crear `docs/ai/ECONOMIA_TOKENS.md`**
 
 `docs/ai/ECONOMIA_TOKENS.md`:
 ```markdown
@@ -1238,7 +1238,7 @@ sola: solo hay que preguntarse qué modelo ocupa hoy cada casilla.
 Ver también [CONTEXT-EFFICIENCY.md](CONTEXT-EFFICIENCY.md).
 ```
 
-- [ ] **Step 6: Crear `docs/ai/CONTEXT-EFFICIENCY.md`**
+- [x] **Step 6: Crear `docs/ai/CONTEXT-EFFICIENCY.md`**
 
 `docs/ai/CONTEXT-EFFICIENCY.md`:
 ```markdown
@@ -1273,7 +1273,7 @@ reglas son las mismas que resume `AGENTS.md`; acá está el detalle.
 - Se cargó un documento de proceso para una tarea trivial.
 ```
 
-- [ ] **Step 7: Crear `docs/ai/HANDOFF.template.md`**
+- [x] **Step 7: Crear `docs/ai/HANDOFF.template.md`**
 
 `docs/ai/HANDOFF.template.md`:
 ```markdown
@@ -1321,7 +1321,7 @@ funcionan en este entorno.
 > archivos actuales antes de confiar en ella.
 ```
 
-- [ ] **Step 8: Ejecutar la puerta para validar los documentos recién creados**
+- [x] **Step 8: Ejecutar la puerta para validar los documentos recién creados**
 
 Run:
 ```powershell
@@ -1333,7 +1333,7 @@ Expected: `[OK] Puerta de calidad: verde.` y `codigo=0`. El gate de enlaces ahor
 
 El `git add` va antes de `verify` a propósito: ambos gates solo ven archivos versionados.
 
-- [ ] **Step 9: Comprobar que el gate de enlaces protege el mapa**
+- [x] **Step 9: Comprobar que el gate de enlaces protege el mapa**
 
 Run:
 ```powershell
@@ -1353,7 +1353,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: vuelve a `[OK]` y `codigo=0`. `git checkout --` restaura desde el índice, que tiene el contenido agregado en el Step 8.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```powershell
 git add docs/ai
@@ -1373,7 +1373,7 @@ git commit -m "docs: documentos de proceso para agentes en docs/ai"
 
 **Nota de forma:** las referencias a documentos van entre acentos graves, no como enlaces Markdown. Son rutas que el agente debe abrir con su propia herramienta, no navegación entre documentos, y así el gate de enlaces no las trata como enlaces.
 
-- [ ] **Step 1: Crear `AGENTS.md`**
+- [x] **Step 1: Crear `AGENTS.md`**
 
 `AGENTS.md`:
 ```markdown
@@ -1478,7 +1478,7 @@ no contexto obligatorio. No cargarlos en bloque.
 Mapa completo de documentación: `docs/ai/README.md`.
 ```
 
-- [ ] **Step 2: Verificar con la puerta**
+- [x] **Step 2: Verificar con la puerta**
 
 Run:
 ```powershell
@@ -1488,7 +1488,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: `[OK] Puerta de calidad: verde.` y `codigo=0`.
 
-- [ ] **Step 3: Verificar que no hay BOM**
+- [x] **Step 3: Verificar que no hay BOM**
 
 Run:
 ```powershell
@@ -1501,7 +1501,7 @@ $texto = [System.IO.File]::ReadAllText('AGENTS.md')
 [System.IO.File]::WriteAllText((Resolve-Path 'AGENTS.md'), $texto, (New-Object System.Text.UTF8Encoding($false)))
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add AGENTS.md
@@ -1537,7 +1537,7 @@ git commit -m "docs: AGENTS.md como única fuente de instrucciones para agentes"
 | Copilot | `.github/copilot-instructions.md` | puntero textual; no soporta imports |
 | DeepSeek | — | es un modelo, no un harness |
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `quality/__tests__/manifiesto.test.mjs`:
 ```javascript
@@ -1613,7 +1613,7 @@ test('los ignorados cubren los secretos y el ruido de build', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar el test para ver que falla**
+- [x] **Step 2: Ejecutar el test para ver que falla**
 
 Run:
 ```powershell
@@ -1621,7 +1621,7 @@ node --test quality/__tests__/manifiesto.test.mjs
 ```
 Expected: FAIL con `ERR_MODULE_NOT_FOUND`: no se puede resolver `../adaptadores/manifiesto.mjs`.
 
-- [ ] **Step 3: Implementar el manifiesto**
+- [x] **Step 3: Implementar el manifiesto**
 
 `quality/adaptadores/manifiesto.mjs`:
 ```javascript
@@ -1697,7 +1697,7 @@ reglas propias, que divergirían del núcleo.
 ];
 ```
 
-- [ ] **Step 4: Implementar el generador**
+- [x] **Step 4: Implementar el generador**
 
 `quality/generar-adaptadores.mjs`:
 ```javascript
@@ -1745,7 +1745,7 @@ if (process.argv[1] && process.argv[1].endsWith('generar-adaptadores.mjs')) {
 }
 ```
 
-- [ ] **Step 5: Ejecutar el test para ver que pasa**
+- [x] **Step 5: Ejecutar el test para ver que pasa**
 
 Run:
 ```powershell
@@ -1753,7 +1753,7 @@ node --test quality/__tests__/manifiesto.test.mjs
 ```
 Expected: PASS, `fail 0`.
 
-- [ ] **Step 6: Generar los adaptadores y comprobar la idempotencia**
+- [x] **Step 6: Generar los adaptadores y comprobar la idempotencia**
 
 Run:
 ```powershell
@@ -1768,7 +1768,7 @@ git status --short
 ```
 Expected: `[OK] Adaptadores generados: 0 escrito(s), 6 sin cambios.` y `git status --short` muestra los seis archivos como no versionados (`??`), sin ninguna modificación adicional: el generador es idempotente.
 
-- [ ] **Step 7: Verificar con la puerta**
+- [x] **Step 7: Verificar con la puerta**
 
 Run:
 ```powershell
@@ -1778,7 +1778,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: `[OK] Puerta de calidad: verde.` y `codigo=0`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add quality/adaptadores quality/generar-adaptadores.mjs quality/__tests__/manifiesto.test.mjs CLAUDE.md GEMINI.md .github/copilot-instructions.md .clineignore .cursorignore .geminiignore
@@ -1800,7 +1800,7 @@ git commit -m "feat: manifiesto y generador de adaptadores por harness"
 - Consumes: `ADAPTADORES` (Tarea 8), `exito`/`fallo` (Tarea 2).
 - Produces: `verificarAdaptadores(adaptadores, leer): Array<{ ruta: string, motivo: 'falta' | 'difiere' }>`, donde `leer` es `(ruta: string) => string | null` y devuelve `null` si el archivo no existe.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `quality/__tests__/check-adaptadores.test.mjs`:
 ```javascript
@@ -1851,7 +1851,7 @@ test('el gate de adaptadores está en la lista y corre antes que mojibake', () =
 });
 ```
 
-- [ ] **Step 2: Ejecutar los tests para verlos fallar**
+- [x] **Step 2: Ejecutar los tests para verlos fallar**
 
 Run:
 ```powershell
@@ -1859,7 +1859,7 @@ node --test quality/__tests__/check-adaptadores.test.mjs quality/__tests__/verif
 ```
 Expected: FAIL doble. El primer archivo aborta con `ERR_MODULE_NOT_FOUND` por `../check-adaptadores.mjs`; el segundo falla en el test nuevo porque `GATES` todavía no incluye `'Adaptadores'`.
 
-- [ ] **Step 3: Implementar el gate**
+- [x] **Step 3: Implementar el gate**
 
 `quality/check-adaptadores.mjs`:
 ```javascript
@@ -1907,7 +1907,7 @@ if (process.argv[1] && process.argv[1].endsWith('check-adaptadores.mjs')) {
 }
 ```
 
-- [ ] **Step 4: Registrar el gate en el orquestador**
+- [x] **Step 4: Registrar el gate en el orquestador**
 
 En `quality/verify.mjs`, dentro de `GATES`, insertar la entrada nueva **entre** `'Tests de la puerta'` y `'Mojibake'`, de modo que la lista quede así:
 ```javascript
@@ -1921,7 +1921,7 @@ export const GATES = [
 ];
 ```
 
-- [ ] **Step 5: Ejecutar los tests para verlos pasar**
+- [x] **Step 5: Ejecutar los tests para verlos pasar**
 
 Run:
 ```powershell
@@ -1929,7 +1929,7 @@ node --test quality/__tests__/check-adaptadores.test.mjs quality/__tests__/verif
 ```
 Expected: PASS, `fail 0`.
 
-- [ ] **Step 6: Comprobar que el gate detecta una edición manual**
+- [x] **Step 6: Comprobar que el gate detecta una edición manual**
 
 Run:
 ```powershell
@@ -1947,7 +1947,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: el generador informa `1 escrito(s)`, el gate vuelve a `[OK]` y `codigo=0`.
 
-- [ ] **Step 7: Documentar el gate**
+- [x] **Step 7: Documentar el gate**
 
 En `docs/ai/PUERTA_CALIDAD.md`, en la tabla «Gates vigentes», insertar esta fila justo después de la de «Tests de la puerta»:
 
@@ -1955,7 +1955,7 @@ En `docs/ai/PUERTA_CALIDAD.md`, en la tabla «Gates vigentes», insertar esta fi
 | Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore`) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 ```
 
-- [ ] **Step 8: Ejecutar la puerta completa**
+- [x] **Step 8: Ejecutar la puerta completa**
 
 Run:
 ```powershell
@@ -1965,7 +1965,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: los **cuatro** títulos de gate, cuatro líneas `[OK]`, `[OK] Puerta de calidad: verde.` y `codigo=0`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```powershell
 git add quality/check-adaptadores.mjs quality/__tests__/check-adaptadores.test.mjs quality/verify.mjs quality/__tests__/verify.test.mjs docs/ai/PUERTA_CALIDAD.md
@@ -1985,7 +1985,7 @@ git commit -m "feat: gate de adaptadores contra el manifiesto"
 
 **Origen:** son las reglas rescatadas de `.github/copilot-instructions.md` de ICARUS antes de descartarlo. Se rescata el conocimiento del negocio; las convenciones de estilo de aquel archivo se descartan porque son incompatibles con esta puerta —notablemente la prohibición de compilar y el logging obligatorio de valores de variables, que choca con el anti-PII en un dominio con datos biométricos.
 
-- [ ] **Step 1: Crear el glosario**
+- [x] **Step 1: Crear el glosario**
 
 `docs/dominio/glosario-avicola.md`:
 ```markdown
@@ -2040,7 +2040,7 @@ cada bounded context, en los subproyectos 5 y siguientes. Este documento se
 amplía ahí; no se anticipa acá.
 ```
 
-- [ ] **Step 2: Verificar con la puerta**
+- [x] **Step 2: Verificar con la puerta**
 
 Run:
 ```powershell
@@ -2050,7 +2050,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: `[OK] Puerta de calidad: verde.` y `codigo=0`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add docs/dominio
@@ -2071,7 +2071,7 @@ git commit -m "docs: glosario del dominio avícola rescatado de ICARUS"
 
 **Nota:** el comando usa `$CLAUDE_PROJECT_DIR`, nunca una ruta absoluta de usuario. Ese es uno de los defectos de Caserito que este diseño corrige.
 
-- [ ] **Step 1: Crear el script del hook**
+- [x] **Step 1: Crear el script del hook**
 
 `.claude/hooks/regenerar-adaptadores.mjs`:
 ```javascript
@@ -2109,7 +2109,7 @@ spawnSync(process.execPath, [join(raiz, 'quality', 'generar-adaptadores.mjs')], 
 process.exit(0);
 ```
 
-- [ ] **Step 2: Crear `.claude/settings.json`**
+- [x] **Step 2: Crear `.claude/settings.json`**
 
 Si el archivo ya existe, fusionar la clave `hooks` sin borrar el resto.
 
@@ -2132,7 +2132,7 @@ Si el archivo ya existe, fusionar la clave `hooks` sin borrar el resto.
 }
 ```
 
-- [ ] **Step 3: Verificar que el JSON es válido**
+- [x] **Step 3: Verificar que el JSON es válido**
 
 Run:
 ```powershell
@@ -2140,7 +2140,7 @@ node -e "JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'));
 ```
 Expected: `json-ok`.
 
-- [ ] **Step 4: Verificar el hook alimentándolo con un evento simulado**
+- [x] **Step 4: Verificar el hook alimentándolo con un evento simulado**
 
 Primero, un evento que **no** debe disparar nada:
 ```powershell
@@ -2161,7 +2161,7 @@ Expected: el hook regenera `GEMINI.md`, el gate informa `[OK] Gate de adaptadore
 
 Si el hook no restauró el archivo, comprobar que `CLAUDE_PROJECT_DIR` está definido; fuera de una sesión de Claude Code el script cae en `process.cwd()`, así que el comando debe ejecutarse desde la raíz del repositorio.
 
-- [ ] **Step 5: Ejecutar la puerta completa**
+- [x] **Step 5: Ejecutar la puerta completa**
 
 Run:
 ```powershell
@@ -2171,7 +2171,7 @@ Write-Output "codigo=$LASTEXITCODE"
 ```
 Expected: `[OK] Puerta de calidad: verde.` y `codigo=0`. Nótese que `.claude/settings.local.json` está en `.gitignore`: solo se versiona `settings.json`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add .claude/settings.json .claude/hooks/regenerar-adaptadores.mjs
@@ -2194,7 +2194,7 @@ git commit -m "chore: hook de Claude Code que regenera los adaptadores al editar
 - `fetch-depth: 0`: los gates futuros necesitan historial para calcular diffs.
 - Las actions se pinnean **por SHA, no por tag**: un tag es mutable, un SHA no.
 
-- [ ] **Step 1: Crear el workflow**
+- [x] **Step 1: Crear el workflow**
 
 `.github/workflows/ci.yml`:
 ```yaml
@@ -2221,7 +2221,7 @@ jobs:
         run: node quality/verify.mjs
 ```
 
-- [ ] **Step 2: Verificar que el YAML es válido y que los mismos comandos pasan en local**
+- [x] **Step 2: Verificar que el YAML es válido y que los mismos comandos pasan en local**
 
 Run:
 ```powershell
@@ -2237,14 +2237,14 @@ node -e "const t=require('fs').readFileSync('.github/workflows/ci.yml','utf8'); 
 ```
 Expected: `yaml-ok`. Un tabulador en YAML es un error de sintaxis; esta comprobación lo descarta.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add .github/workflows/ci.yml
 git commit -m "ci: workflow de GitHub Actions con el job de calidad"
 ```
 
-- [ ] **Step 4: Push y confirmación del CI en verde**
+- [x] **Step 4: Push y confirmación del CI en verde**
 
 Run:
 ```powershell
@@ -2332,6 +2332,32 @@ Limpieza:
 cd C:\Users\lrcahuana\source\repos\Trajano-Icarus
 Remove-Item -Recurse -Force C:\Users\LRCAHU~1\AppData\Local\Temp\trajano-verificacion
 ```
+
+## Desviaciones detectadas al ejecutar (2026-08-12)
+
+### 1. Patrón PCRE del gate de mojibake (Tarea 3, Step 3)
+
+- **Qué decía el plan:** pasar el patrón `\xC3\x83` a `git grep -P`, tratándolo como una secuencia de bytes.
+- **Por qué falló:** el PCRE2 de este Git trabaja en modo UTF-8. Por eso, `\xC3` denota U+00C3 (bytes `c3 83`) y `\x83` denota U+0083 (bytes `c2 83`); el patrón resultante buscaba `c3 83 c2 83` y no coincidía con el mojibake real. El gate podía dar verde aunque el índice contuviera texto corrupto.
+- **Qué se implementó:** la constante `PATRON_PCRE` de `quality/check-mojibake.mjs` usa `\x{FFFD}|\x{00C3}|\x{00C2}`. En modo UTF identifica los caracteres inequívocos que delatan mojibake sin marcar las vocales acentuadas correctas del español.
+
+### 2. Descubrimiento de tests en Node 24 (Tareas 2 y 5)
+
+- **Qué decía el plan:** ejecutar `node --test quality/__tests__`.
+- **Por qué falló:** en Node 24 los argumentos posicionales de `--test` son patrones glob; el directorio se intentaba cargar como módulo y el proceso abortaba con `MODULE_NOT_FOUND`.
+- **Qué se implementó:** la constante `PATRON_TESTS` de `quality/verify.mjs` contiene el glob `quality/__tests__/*.test.mjs`, verificado en Windows con shell y en el CI Linux sin shell.
+
+### 3. Lectura del stdin en el hook de Claude (Tarea 11, Step 1)
+
+- **Qué decía el plan:** aplicar `JSON.parse` directamente al texto recibido por stdin.
+- **Por qué falló:** PowerShell 5.1 antepone un BOM al stdin de una tubería; `JSON.parse` lanzaba una excepción y el `catch` terminaba silenciosamente con código 0, sin regenerar nada.
+- **Qué se implementó:** `.claude/hooks/regenerar-adaptadores.mjs` aplica `.trim()` antes de `JSON.parse`, eliminando el BOM y el espacio periférico antes de interpretar el JSON.
+
+### 4. Inyección de mojibake en la verificación end-to-end (punto 3)
+
+- **Qué decía el plan:** usar `Add-Content` con caracteres no ASCII para agregar el caso corrupto a `AGENTS.md`.
+- **Por qué falló:** en PowerShell 5.1, `Add-Content` escribe en ANSI y depositaría un byte `0xC3` aislado, no la secuencia UTF-8 de un mojibake real; por tanto, la prueba no reproducía el defecto que debía detectar.
+- **Qué se implementó:** la prueba debe agregar el texto con `[System.IO.File]::AppendAllText`, pasando `(New-Object System.Text.UTF8Encoding($false))`, para escribir UTF-8 sin BOM y reproducir la secuencia real.
 
 ## Lo que este plan deja fuera a propósito
 
