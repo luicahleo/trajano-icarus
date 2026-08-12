@@ -1,0 +1,23 @@
+# Archivo generado por quality/generar-adaptadores.mjs. No editar a mano: editar AGENTS.md.
+# Rutas que ningún agente necesita leer: ruido de build, dependencias y
+# secretos. Mantener el contenido idéntico en los tres archivos es justamente
+# lo que este generador garantiza.
+
+.git/
+node_modules/
+bin/
+obj/
+artifacts/
+dist/
+coverage/
+
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+
+.vs/
+.idea/
+graphify-out/
+.superpowers/
