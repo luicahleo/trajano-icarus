@@ -30,6 +30,19 @@ public class ReglasDeCapasTests
     }
 
     [Fact]
+    public void InfraestructuraNoDependeDelHost()
+    {
+        var resultado = Types
+            .InAssembly(typeof(Identity.Infrastructure.Persistencia.IdentityDbContext).Assembly)
+            .ShouldNot()
+            .HaveDependencyOn("Icarus.Host")
+            .GetResult();
+
+        Assert.True(resultado.IsSuccessful,
+            string.Join(", ", resultado.FailingTypeNames ?? []));
+    }
+
+    [Fact]
     public void AplicacionNoDependeDeInfraestructura()
     {
         var resultado = Types

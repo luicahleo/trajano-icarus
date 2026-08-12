@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\Host\Icarus.Host\Icarus.Host.csproj" />
     <ProjectReference Include="..\..\src\Identity\Icarus.Identity.Application\Icarus.Identity.Application.csproj" />
     <ProjectReference Include="..\..\src\Identity\Icarus.Identity.Domain\Icarus.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Identity\Icarus.Identity.Infrastructure\Icarus.Identity.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

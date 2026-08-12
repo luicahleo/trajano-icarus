@@ -12,7 +12,12 @@ public class ReglasDeModulosTests
             .InAssembly(typeof(Clientes.Domain.Marcador).Assembly)
             .ShouldNot().HaveDependencyOn("Icarus.Identity").GetResult();
         var identityHaciaClientes = Types
-            .InAssembly(typeof(Identity.Domain.Rol).Assembly)
+            .InAssemblies(new[]
+            {
+                typeof(Identity.Domain.Rol).Assembly,
+                typeof(Identity.Application.Sesiones.IniciarSesionCommand).Assembly,
+                typeof(Identity.Infrastructure.Persistencia.IdentityDbContext).Assembly,
+            })
             .ShouldNot().HaveDependencyOn("Icarus.Clientes").GetResult();
 
         Assert.True(clientesHaciaIdentity.IsSuccessful,
