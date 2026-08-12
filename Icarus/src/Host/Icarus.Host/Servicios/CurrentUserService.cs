@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Icarus.BuildingBlocks.Application;
+using Icarus.Identity.Domain;
 
 namespace Icarus.Host.Servicios;
 
@@ -14,10 +15,10 @@ public sealed class CurrentUserService : ICurrentUser
     public bool EstaAutenticado => Usuario?.Identity?.IsAuthenticated == true && UsuarioId is not null;
 
     public Guid? UsuarioId =>
-        Guid.TryParse(Usuario?.FindFirstValue("sub"), out var id) ? id : null;
+        Guid.TryParse(Usuario?.FindFirstValue(ClaimsIdentidad.Subject), out var id) ? id : null;
 
-    public string? Rol => Usuario?.FindFirstValue("rol");
+    public string? Rol => Usuario?.FindFirstValue(ClaimsIdentidad.Rol);
 
     public Guid? ClienteId =>
-        Guid.TryParse(Usuario?.FindFirstValue("clienteId"), out var id) ? id : null;
+        Guid.TryParse(Usuario?.FindFirstValue(ClaimsIdentidad.ClienteId), out var id) ? id : null;
 }
