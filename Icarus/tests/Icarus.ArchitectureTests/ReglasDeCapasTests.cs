@@ -12,7 +12,7 @@ public class ReglasDeCapasTests
             .InAssemblies(new[]
             {
                 typeof(BuildingBlocks.Domain.Entity).Assembly,
-                typeof(Identity.Domain.Marcador).Assembly,
+                typeof(Identity.Domain.Rol).Assembly,
                 typeof(Clientes.Domain.Marcador).Assembly,
             })
             .ShouldNot()
