@@ -1,0 +1,99 @@
+# Trajano-Icarus — instrucciones para agentes
+
+Fuente única para Codex, Kimi CLI, Claude, Gemini, Copilot y cualquier agente
+futuro. Mantener este archivo **corto**: solo reglas que aplican a casi cualquier
+tarea. Lo específico vive en `docs/ai/`.
+
+Los archivos `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` y los
+`.*ignore` por proveedor están **generados** desde este archivo. No editarlos a
+mano: editar este, y correr `node quality/generar-adaptadores.mjs`.
+
+## Prioridades
+
+- Seguir el pedido explícito del usuario y no ampliar el alcance sin
+  autorización.
+- Documentos, textos e identificadores de dominio en español correcto, con
+  acentos y en UTF-8 sin BOM. Nunca mojibake.
+- Anti-PII no negociable: nunca registrar datos biométricos, documentos de
+  identidad, credenciales, tokens ni registros nominales de acceso de
+  trabajadores. Usar mensajes de error genéricos.
+- Preservar los cambios ajenos y evitar operaciones destructivas.
+- Nunca afirmar que algo está verde sin haber ejecutado el comando y visto la
+  salida.
+
+## Ramas
+
+- `develop` es la rama por defecto y de trabajo: commit y push directos tras
+  verificar. No hay pull requests.
+- `master` es producción: recibe `develop` por merge fast-forward, **solo a
+  pedido explícito del usuario**.
+- No crear ramas de trabajo salvo pedido explícito.
+- Detalle en `docs/ai/FLUJO_GIT.md`.
+
+## Descubrimiento eficiente
+
+1. Empezar solo con `git status --short --branch` y `git log -5 --oneline`.
+2. No ejecutar listados recursivos ni volcados de todos los archivos al iniciar.
+3. Buscar por término, símbolo o ruta probable; limitar el resultado primero y
+   refinar antes de ampliar.
+4. Leer fragmentos antes que archivos completos. Abrir solo el spec, el plan, el
+   código y los tests vinculados con la tarea actual.
+5. Revisar primero `git diff --stat` y después solo los diffs relevantes.
+6. Resumir logs y errores por causa, archivo y línea; no pegar salidas extensas.
+
+`docs/superpowers/specs/` y `docs/superpowers/plans/` son memoria consultable,
+no contexto obligatorio. No cargarlos en bloque.
+
+## Selección de proceso
+
+- Pregunta, explicación o diagnóstico: investigar y responder; no modificar.
+- Cambio pequeño y claro: implementar, probar en proporción y resumir.
+- Feature, bloque o cambio arquitectónico: seguir `docs/ai/WORKFLOW.md` desde
+  brainstorming hasta cierre.
+- Continuación de otra sesión: leer primero `docs/ai/HANDOFF.md` si existe, y
+  verificar cada afirmación importante contra git y los archivos actuales.
+
+## Proyecto
+
+- Trajano-Icarus es la refactorización de ICARUS: control de acceso de
+  trabajadores (zonas, biométricos) y gestión avícola (granjas, galpones,
+  producción de huevos, mortalidad, vacunación, alimentación, despachos,
+  precios).
+- El vocabulario y las reglas del negocio están en
+  `docs/dominio/glosario-avicola.md`. Consultarlo antes de nombrar una entidad o
+  inventar una regla.
+- Backend .NET bajo `Icarus/` y frontend React bajo `web/`: **todavía no
+  existen**. Llegan en los subproyectos 2 y 3. No crearlos por iniciativa propia.
+- Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
+  trabajar en esos árboles.
+
+## Verificación
+
+- Durante TDD, ejecutar el test dirigido; la suite completa al integrar o cerrar.
+- Un test que nunca se vio en rojo no prueba nada.
+- Informar las pruebas no ejecutadas y el motivo.
+
+## Puerta de calidad
+
+- Ejecutar `./verify.ps1` (o `./verify.sh`) antes de cada commit y push. Es
+  obligatorio y sustituye a la revisión humana del código.
+- Prohibido `--no-verify` en commit o push.
+- Prohibido relajar una baseline, un umbral o una exclusión para que pase el
+  gate. Si el gate falla, se arregla el contenido, no el gate.
+- Las baselines de `quality/` solo se actualizan hacia mejor, en commit propio
+  que explique la mejora.
+- Detalle de cada gate: `docs/ai/PUERTA_CALIDAD.md`.
+
+## Economía de contexto
+
+- Una feature o bloque por sesión.
+- Preferir sesiones nuevas con handoff breve frente a historiales largos.
+- Usar el nivel de modelo más económico que mantenga la calidad; elevarlo ante
+  decisiones de criterio. No bajarlo en cambios de configuración de build o de
+  verificación, aunque parezcan mecánicos.
+- No usar subagentes salvo trabajo verdaderamente independiente que compense su
+  coste.
+- Guardar las decisiones duraderas en specs; el chat no es documentación.
+- Detalle en `docs/ai/ECONOMIA_TOKENS.md` y `docs/ai/CONTEXT-EFFICIENCY.md`.
+
+Mapa completo de documentación: `docs/ai/README.md`.
