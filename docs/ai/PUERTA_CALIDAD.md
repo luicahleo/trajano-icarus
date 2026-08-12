@@ -13,7 +13,8 @@ En POSIX, `./verify.sh`. Ambos son envoltorios de `node quality/verify.mjs`, que
 ejecuta los gates en orden y **se detiene en el primero que falla** para dar
 retroalimentación rápida.
 
-Ningún gate necesita Docker ni el SDK de .NET: la puerta corre en segundos.
+Los gates de backend necesitan el SDK de .NET 10; los tests de integración con
+Testcontainers (planes 2-3) necesitarán Docker. El resto corre en segundos.
 
 ## Gates vigentes
 
@@ -23,6 +24,8 @@ Ningún gate necesita Docker ni el SDK de .NET: la puerta corre en segundos.
 | Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore`) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 | Mojibake | Ausencia del carácter de reemplazo y de las secuencias que delatan UTF-8 leído como Latin-1, en todo archivo versionado que git clasifique como texto | Escribir el carácter correcto en UTF-8 |
 | Enlaces | Que todo enlace relativo de los `.md` versionados apunte a un archivo existente | Corregir el enlace o crear el destino |
+| Backend build | Que `Icarus/Icarus.sln` compile sin errores ni warnings (los warnings son errores); el compilador y los analizadores son la verificación mecánica de las reglas de estilo y diseño | Según el error del compilador o del analizador |
+| Backend tests | Que los tests unitarios, de arquitectura y de integración de la solución estén verdes; son la verificación mecánica de las reglas de arquitectura y del dominio | Según el test que falla |
 
 Los enlaces absolutos `http` y `https` no se comprueban: verificar la red haría
 el gate lento y no determinista.

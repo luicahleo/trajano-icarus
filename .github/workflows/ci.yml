@@ -19,3 +19,16 @@ jobs:
 
       - name: Puerta de calidad
         run: node quality/verify.mjs
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: Icarus/global.json
+      - name: Build
+        run: dotnet build Icarus/Icarus.sln --nologo
+      - name: Tests
+        run: dotnet test Icarus/Icarus.sln --nologo --no-build

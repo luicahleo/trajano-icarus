@@ -2,7 +2,8 @@
 // Puerta de calidad de Trajano-Icarus.
 //   node quality/verify.mjs
 // Ejecuta los gates en orden y se detiene en el primero que falla, para dar
-// retroalimentación rápida. Ningún gate necesita Docker ni el SDK de .NET.
+// retroalimentación rápida. Los gates de backend necesitan el SDK de .NET 10;
+// los tests de integración con Testcontainers (planes 2-3) necesitan Docker.
 
 import { fileURLToPath } from 'node:url';
 import { ejecutar } from './lib/ejecutar.mjs';
@@ -22,6 +23,8 @@ export const GATES = [
   { nombre: 'Adaptadores', comando: 'node', args: ['quality/check-adaptadores.mjs'] },
   { nombre: 'Mojibake', comando: 'node', args: ['quality/check-mojibake.mjs'] },
   { nombre: 'Enlaces', comando: 'node', args: ['quality/check-enlaces.mjs'] },
+  { nombre: 'Backend build', comando: 'dotnet', args: ['build', 'Icarus/Icarus.sln', '--nologo'] },
+  { nombre: 'Backend tests', comando: 'dotnet', args: ['test', 'Icarus/Icarus.sln', '--nologo', '--no-build'] },
 ];
 
 export function ejecutarGates(gates, ejecutor) {
