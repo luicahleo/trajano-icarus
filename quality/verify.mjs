@@ -37,7 +37,7 @@ export function ejecutarGates(gates, ejecutor) {
 if (process.argv[1] && process.argv[1].endsWith('verify.mjs')) {
   const resultado = ejecutarGates(GATES, (gate) => {
     console.log(titulo(gate.nombre));
-    const { codigo, duracionMs } = ejecutar(gate.comando, gate.args, { cwd: raiz });
+    const { codigo, duracionMs } = ejecutar(gate.comando, gate.args, { cwd: raiz, sinShell: true });
     if (codigo === 0) console.log(exito(`${gate.nombre} (${duracionMs} ms)`));
     return { codigo };
   });
