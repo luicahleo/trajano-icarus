@@ -1,0 +1,33 @@
+# Node
+node_modules/
+
+# .NET (subproyecto 2)
+bin/
+obj/
+artifacts/
+*.user
+
+# Herramientas de agentes
+.superpowers/
+graphify-out/
+.kombai/
+
+# Handoff efímero: es estado de sesión, no memoria del proyecto.
+# La plantilla versionada es docs/ai/HANDOFF.template.md.
+docs/ai/HANDOFF.md
+
+# Secretos y entorno
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+
+# Ajustes locales de Claude Code (no compartibles)
+.claude/settings.local.json
+
+# Editores y sistema operativo
+.vs/
+.idea/
+.DS_Store
+Thumbs.db

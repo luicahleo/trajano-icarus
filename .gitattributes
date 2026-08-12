@@ -1,0 +1,21 @@
+# Normalización de fin de línea. `text=auto` deja que git clasifique cada
+# archivo como texto o binario; el gate de mojibake se apoya en esa
+# clasificación a través de `git grep -I`.
+* text=auto eol=lf
+
+# Scripts que Windows debe recibir con CRLF
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Scripts POSIX siempre con LF
+*.sh text eol=lf
+
+# Binarios explícitos
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
