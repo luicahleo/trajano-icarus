@@ -33,7 +33,7 @@
 - Consumes: nada.
 - Produces: estructura de proyectos con referencias correctas; `dotnet build Icarus/Icarus.sln` en verde. Los tasks siguientes asumen estos nombres de proyecto exactos.
 
-- [ ] **Step 1: Crear `Icarus/global.json`**
+- [x] **Step 1: Crear `Icarus/global.json`**
 
 ```json
 {
@@ -44,7 +44,7 @@
 }
 ```
 
-- [ ] **Step 2: Crear `Icarus/Directory.Build.props`**
+- [x] **Step 2: Crear `Icarus/Directory.Build.props`**
 
 ```xml
 <Project>
@@ -59,7 +59,7 @@
 </Project>
 ```
 
-- [ ] **Step 3: Crear `Icarus/Directory.Packages.props`**
+- [x] **Step 3: Crear `Icarus/Directory.Packages.props`**
 
 Versiones verificadas el 2026-08-12: las de MediatR, FluentValidation, Serilog,
 test y analizadores contra `repos/dev_Caserito/CaseritoApp/Directory.Packages.props`;
@@ -98,7 +98,7 @@ contra la API de NuGet (Caserito no las pinea).
 </Project>
 ```
 
-- [ ] **Step 4: Crear la solución y los proyectos**
+- [x] **Step 4: Crear la solución y los proyectos**
 
 ```bash
 cd Icarus
@@ -119,13 +119,13 @@ dotnet new xunit   -n Icarus.ArchitectureTests               -o tests/Icarus.Arc
 dotnet sln add src/BuildingBlocks/Icarus.BuildingBlocks.Domain src/BuildingBlocks/Icarus.BuildingBlocks.Application src/BuildingBlocks/Icarus.BuildingBlocks.Observability src/Identity/Icarus.Identity.Domain src/Identity/Icarus.Identity.Application src/Identity/Icarus.Identity.Infrastructure src/Clientes/Icarus.Clientes.Domain src/Clientes/Icarus.Clientes.Application src/Clientes/Icarus.Clientes.Infrastructure src/Host/Icarus.Host tests/Icarus.UnitTests tests/Icarus.IntegrationTests tests/Icarus.ArchitectureTests
 ```
 
-- [ ] **Step 5: Eliminar los archivos generados de ejemplo**
+- [x] **Step 5: Eliminar los archivos generados de ejemplo**
 
 ```bash
 cd Icarus && find src tests -name 'Class1.cs' -delete -o -name 'UnitTest1.cs' -delete
 ```
 
-- [ ] **Step 6: Cablear las referencias según las reglas del spec**
+- [x] **Step 6: Cablear las referencias según las reglas del spec**
 
 ```bash
 cd Icarus
@@ -143,7 +143,7 @@ dotnet add tests/Icarus.IntegrationTests reference src/Host/Icarus.Host
 dotnet add tests/Icarus.ArchitectureTests reference src/BuildingBlocks/Icarus.BuildingBlocks.Domain src/BuildingBlocks/Icarus.BuildingBlocks.Application src/Identity/Icarus.Identity.Domain src/Identity/Icarus.Identity.Application src/Clientes/Icarus.Clientes.Domain src/Clientes/Icarus.Clientes.Application
 ```
 
-- [ ] **Step 7: FrameworkReference y paquetes donde corresponde**
+- [x] **Step 7: FrameworkReference y paquetes donde corresponde**
 
 `Icarus.BuildingBlocks.Observability` necesita ASP.NET Core (middlewares).
 Agregar a `src/BuildingBlocks/Icarus.BuildingBlocks.Observability/Icarus.BuildingBlocks.Observability.csproj`:
@@ -169,12 +169,12 @@ dotnet add tests/Icarus.IntegrationTests package Microsoft.AspNetCore.Mvc.Testin
 CPM toma las versiones de `Directory.Packages.props`. Si el CLI escribió
 `Version=` en algún `.csproj`, borrarlo a mano (regla global).
 
-- [ ] **Step 8: Verificar build**
+- [x] **Step 8: Verificar build**
 
 Run: `dotnet build Icarus/Icarus.sln --nologo`
 Expected: `Build succeeded`, 0 warnings (los warnings son errores).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Icarus
@@ -222,7 +222,7 @@ public sealed class NotFoundException : DomainException { public NotFoundExcepti
 public sealed class ConflictException : DomainException { public ConflictException(string mensaje); }
 ```
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `EntityTests.cs`:
 
@@ -305,12 +305,12 @@ public class AggregateRootTests
 }
 ```
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (`Entity` y `AggregateRoot` no existen).
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `Entity.cs`:
 
@@ -391,12 +391,12 @@ public sealed class ConflictException : DomainException
 }
 ```
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/BuildingBlocks/Icarus.BuildingBlocks.Domain Icarus/tests/Icarus.UnitTests
@@ -441,7 +441,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     where TRequest : notnull;
 ```
 
-- [ ] **Step 1: Escribir el test en rojo**
+- [x] **Step 1: Escribir el test en rojo**
 
 `ValidationBehaviorTests.cs`:
 
@@ -497,12 +497,12 @@ public class ValidationBehaviorTests
 }
 ```
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (`ValidationBehavior` no existe).
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 `ICurrentUser.cs`:
 
@@ -565,12 +565,12 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
 }
 ```
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: PASS (8 tests acumulados).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/BuildingBlocks/Icarus.BuildingBlocks.Application Icarus/tests/Icarus.UnitTests
@@ -594,7 +594,7 @@ git commit -m "feat: ICurrentUser, IUnitOfWork y ValidationBehavior"
   `ModulosNoSeReferencianEntreSi`. Los planes 2 y 3 extienden estas reglas a
   los proyectos `Infrastructure` cuando tengan tipos.
 
-- [ ] **Step 1: Crear los marcadores de assembly**
+- [x] **Step 1: Crear los marcadores de assembly**
 
 Los proyectos de módulo están vacíos; estos archivos anclan los tests de
 arquitectura y se borran en los planes 2 y 3 cuando existan tipos reales:
@@ -608,7 +608,7 @@ arquitectura y se borran en los planes 2 y 3 cuando existan tipos reales:
 - `Icarus/src/Clientes/Icarus.Clientes.Application/Marcador.cs`:
   `namespace Icarus.Clientes.Application; public static class Marcador { }`
 
-- [ ] **Step 2: Escribir los tests**
+- [x] **Step 2: Escribir los tests**
 
 `ReglasDeCapasTests.cs`:
 
@@ -692,13 +692,13 @@ public class ReglasDeModulosTests
 }
 ```
 
-- [ ] **Step 3: Correr y verificar verde (riesgo de test vacuo)**
+- [x] **Step 3: Correr y verificar verde (riesgo de test vacuo)**
 
 Run: `dotnet test Icarus/tests/Icarus.ArchitectureTests --nologo`
 Expected: PASS. Como las reglas sobre proyectos casi vacíos podrían pasar sin
 probar nada, el paso siguiente verifica que el arnés detecta violaciones.
 
-- [ ] **Step 4: Prueba de fuego (ver la regla en rojo)**
+- [x] **Step 4: Prueba de fuego (ver la regla en rojo)**
 
 1. Agregar temporalmente `<PackageReference Include="MediatR" />` al `.csproj`
    de `Icarus.Clientes.Domain` y un archivo `Temp.cs` con
@@ -707,7 +707,7 @@ probar nada, el paso siguiente verifica que el arnés detecta violaciones.
    Expected: `DominioNoDependeDeLibrerias` FALLA y nombra a `Temp`.
 3. Revertir: borrar `Temp.cs` y el `PackageReference`. Correr de nuevo: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/tests/Icarus.ArchitectureTests Icarus/src/Identity Icarus/src/Clientes
@@ -752,7 +752,7 @@ public sealed class ExceptionHandlingMiddleware
 }
 ```
 
-- [ ] **Step 1: Tests en rojo — CorrelationIdMiddleware**
+- [x] **Step 1: Tests en rojo — CorrelationIdMiddleware**
 
 ```csharp
 using Icarus.BuildingBlocks.Observability;
@@ -802,7 +802,7 @@ public class CorrelationIdMiddlewareTests
 }
 ```
 
-- [ ] **Step 2: Tests en rojo — ExceptionHandlingMiddleware**
+- [x] **Step 2: Tests en rojo — ExceptionHandlingMiddleware**
 
 ```csharp
 using System.Text.Json;
@@ -873,12 +873,12 @@ public class ExceptionHandlingMiddlewareTests
 }
 ```
 
-- [ ] **Step 3: Correr y verificar rojo**
+- [x] **Step 3: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (los middlewares no existen).
 
-- [ ] **Step 4: Implementación**
+- [x] **Step 4: Implementación**
 
 `CorrelationIdMiddleware.cs`:
 
@@ -1016,12 +1016,12 @@ public static class ObservabilityExtensions
 }
 ```
 
-- [ ] **Step 5: Correr y verificar verde**
+- [x] **Step 5: Correr y verificar verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: PASS (16 tests acumulados).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Icarus/src/BuildingBlocks/Icarus.BuildingBlocks.Observability Icarus/tests/Icarus.UnitTests
@@ -1047,7 +1047,7 @@ git commit -m "feat: observabilidad transversal (Serilog, correlation ID, except
   `X-Correlation-ID`; `CurrentUserService` (implementación de `ICurrentUser`)
   registrada como scoped. Los planes 2 y 3 agregan endpoints al Host.
 
-- [ ] **Step 1: Test unitario en rojo — CurrentUserService**
+- [x] **Step 1: Test unitario en rojo — CurrentUserService**
 
 ```csharp
 using System.Security.Claims;
@@ -1096,7 +1096,7 @@ public class CurrentUserServiceTests
 }
 ```
 
-- [ ] **Step 2: Tests de integración en rojo — health y correlation ID**
+- [x] **Step 2: Tests de integración en rojo — health y correlation ID**
 
 `HealthEndpointTests.cs`:
 
@@ -1157,13 +1157,13 @@ public class CorrelationIdIntegrationTests : IClassFixture<WebApplicationFactory
 }
 ```
 
-- [ ] **Step 3: Correr y verificar rojo**
+- [x] **Step 3: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.IntegrationTests --nologo`
 Expected: FALLA de compilación (`CurrentUserService` no existe y `Program` no
 es accesible para `WebApplicationFactory<Program>`).
 
-- [ ] **Step 4: Implementación**
+- [x] **Step 4: Implementación**
 
 `Servicios/CurrentUserService.cs`:
 
@@ -1219,12 +1219,12 @@ app.Run();
 public partial class Program { }
 ```
 
-- [ ] **Step 5: Correr y verificar verde**
+- [x] **Step 5: Correr y verificar verde**
 
 Run: `dotnet test Icarus/Icarus.sln --nologo`
 Expected: PASS toda la solución.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Icarus/src/Host Icarus/tests
@@ -1247,7 +1247,7 @@ git commit -m "feat: Host con health check, correlation ID y CurrentUserService"
 - Produces: `./verify.sh` ejecuta también `dotnet build` y `dotnet test`; CI con
   job `backend`. Los planes siguientes asumen que el gate corre los tests .NET.
 
-- [ ] **Step 1: Extender los gates en `quality/verify.mjs`**
+- [x] **Step 1: Extender los gates en `quality/verify.mjs`**
 
 Agregar a `GATES`, después del gate de Enlaces:
 
@@ -1260,18 +1260,18 @@ Y actualizar el comentario de cabecera: la línea «Ningún gate necesita Docker
 ni el SDK de .NET» pasa a «Los gates de backend necesitan el SDK de .NET 10;
 los tests de integración con Testcontainers (planes 2-3) necesitan Docker».
 
-- [ ] **Step 2: Actualizar `docs/ai/PUERTA_CALIDAD.md`**
+- [x] **Step 2: Actualizar `docs/ai/PUERTA_CALIDAD.md`**
 
 Agregar los dos gates a la lista de vigentes, con su racional (el compilador y
 los tests son la verificación mecánica de las reglas de arquitectura y del
 dominio). Sin cifras que caduquen.
 
-- [ ] **Step 3: Correr la puerta completa**
+- [x] **Step 3: Correr la puerta completa**
 
 Run: `./verify.sh`
 Expected: verde, incluyendo `Backend build` y `Backend tests`.
 
-- [ ] **Step 4: Agregar el job backend a `.github/workflows/ci.yml`**
+- [x] **Step 4: Agregar el job backend a `.github/workflows/ci.yml`**
 
 ```yaml
   backend:
@@ -1292,7 +1292,7 @@ El SHA corresponde a la v5 vigente al 2026-08-12 (resuelto con
 `gh api repos/actions/setup-dotnet/git/refs/tags/v5 --jq .object.sha`); las
 actions se pinnean por SHA, no por tag.
 
-- [ ] **Step 5: Crear `docker-compose.dev.yml` (Seq opcional)**
+- [x] **Step 5: Crear `docker-compose.dev.yml` (Seq opcional)**
 
 ```yaml
 # Servicios opcionales de desarrollo. Uso: docker compose -f docker-compose.dev.yml up -d
@@ -1314,7 +1314,7 @@ volumes:
 La conexión de Serilog a Seq queda para el plan 2, cuando el Host tenga
 `appsettings.Development.json` con configuración real.
 
-- [ ] **Step 6: Commit, push y verificación del CI**
+- [x] **Step 6: Commit, push y verificación del CI**
 
 ```bash
 git add quality/verify.mjs docs/ai/PUERTA_CALIDAD.md .github/workflows/ci.yml docker-compose.dev.yml
@@ -1325,3 +1325,32 @@ gh run list --limit 2
 ```
 
 Expected: el run del push muestra los jobs `calidad` y `backend` en verde.
+
+---
+
+## Desviaciones registradas al ejecutar (2026-08-12)
+
+Todas verificadas en rojo/verde y detalladas en los mensajes de commit:
+
+1. **Serilog pineado en 4.3.0** (no 4.1.0): `Serilog.AspNetCore` 10.0.0 exige
+   Serilog >= 4.3.0; con CPM + transitive pinning el pin 4.1.0 da NU1109.
+   Aprobada por el usuario antes de aplicarla.
+2. **Solución en formato `.sln` clásico**: el SDK 10 genera `.slnx` por defecto;
+   se recreó con `dotnet new sln --format sln` para respetar las rutas del plan.
+3. **Constructores estándar de excepción** en `DomainException`,
+   `NotFoundException` y `ConflictException` (Roslynator RCS1194 con
+   `TreatWarningsAsErrors`).
+4. **Pragma S2094** en los `Marcador.cs` temporales (SonarAnalyzer no admite
+   clases vacías). Se borran con los marcadores en los planes 2 y 3.
+5. **FluentValidation agregado a `BuildingBlocks.Observability`**: el plan lo usa
+   en `ExceptionHandlingMiddleware` pero no lo listaba en el Task 1.
+6. **Program.cs**: `await app.RunAsync()` (S6966) y constructor `protected` en
+   la clase `Program` parcial (S1118).
+7. **`EstaAutenticado` exige identidad autenticada y claim `sub` válido**: el
+   test del plan crea la identidad con `authenticationType`, lo que da
+   `IsAuthenticated = true` aun sin claims.
+8. **Test de la puerta actualizado**: el invariante «todo gate corre con node»
+   pasó a admitir los gates `dotnet` de backend.
+
+Nota operativa: los templates xUnit del SDK escriben `Version=` en los
+`.csproj`; hay que quitarlos a mano por CPM (previsto en el Task 1, Step 7).
