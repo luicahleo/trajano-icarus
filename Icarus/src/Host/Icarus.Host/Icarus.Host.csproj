@@ -3,6 +3,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingBlocks\Icarus.BuildingBlocks.Application\Icarus.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Icarus.BuildingBlocks.Observability\Icarus.BuildingBlocks.Observability.csproj" />
+    <ProjectReference Include="..\..\Identity\Icarus.Identity.Infrastructure\Icarus.Identity.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
   </ItemGroup>
 
   <PropertyGroup>
