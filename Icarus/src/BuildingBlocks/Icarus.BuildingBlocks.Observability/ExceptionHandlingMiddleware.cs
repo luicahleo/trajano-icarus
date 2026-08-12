@@ -37,6 +37,7 @@ public sealed class ExceptionHandlingMiddleware
             ConflictException => (StatusCodes.Status409Conflict, "Conflicto con el estado actual"),
             ValidationException => (StatusCodes.Status400BadRequest, "Solicitud inválida"),
             DomainException => (StatusCodes.Status400BadRequest, "Error de negocio"),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "No autorizado"),
             _ => (StatusCodes.Status500InternalServerError, "Error interno"),
         };
 

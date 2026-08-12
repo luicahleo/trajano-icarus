@@ -50,6 +50,14 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
+    public async Task UnauthorizedAccessExceptionDevuelve401SinDetalle()
+    {
+        var (status, cuerpo) = await Ejecutar(new UnauthorizedAccessException("detalle interno sensible"));
+        Assert.Equal(StatusCodes.Status401Unauthorized, status);
+        Assert.DoesNotContain("detalle interno sensible", cuerpo.ToString());
+    }
+
+    [Fact]
     public async Task ExcepcionNoControladaDevuelve500GenericoSinDetalleTecnico()
     {
         var (status, cuerpo) = await Ejecutar(new InvalidOperationException("detalle interno sensible"));

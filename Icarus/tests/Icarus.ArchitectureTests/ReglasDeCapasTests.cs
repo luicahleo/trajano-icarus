@@ -36,7 +36,7 @@ public class ReglasDeCapasTests
             .InAssemblies(new[]
             {
                 typeof(BuildingBlocks.Application.ICurrentUser).Assembly,
-                typeof(Identity.Application.Marcador).Assembly,
+                typeof(Identity.Application.Sesiones.IniciarSesionCommand).Assembly,
                 typeof(Clientes.Application.Marcador).Assembly,
             })
             .ShouldNot()
