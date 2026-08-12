@@ -19,6 +19,7 @@ export const GATES = [
   // Va primero: si la propia puerta está rota, el resto de los veredictos no
   // vale nada.
   { nombre: 'Tests de la puerta', comando: 'node', args: ['--test', PATRON_TESTS] },
+  { nombre: 'Adaptadores', comando: 'node', args: ['quality/check-adaptadores.mjs'] },
   { nombre: 'Mojibake', comando: 'node', args: ['quality/check-mojibake.mjs'] },
   { nombre: 'Enlaces', comando: 'node', args: ['quality/check-enlaces.mjs'] },
 ];

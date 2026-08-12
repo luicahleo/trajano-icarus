@@ -42,3 +42,9 @@ test('informa el código del gate que falló', () => {
   const resultado = ejecutarGates([{ nombre: 'A' }], () => ({ codigo: 7 }));
   assert.equal(resultado.ejecutados[0].codigo, 7);
 });
+
+test('el gate de adaptadores está en la lista y corre antes que mojibake', () => {
+  const nombres = GATES.map((g) => g.nombre);
+  assert.ok(nombres.includes('Adaptadores'));
+  assert.ok(nombres.indexOf('Adaptadores') < nombres.indexOf('Mojibake'));
+});

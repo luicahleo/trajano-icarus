@@ -20,6 +20,7 @@ Ningún gate necesita Docker ni el SDK de .NET: la puerta corre en segundos.
 | Gate | Qué comprueba | Cómo se arregla un fallo |
 |---|---|---|
 | Tests de la puerta | Que los propios scripts de `quality/` estén verdes | Según el mensaje del test |
+| Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore`) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 | Mojibake | Ausencia del carácter de reemplazo y de las secuencias que delatan UTF-8 leído como Latin-1, en todo archivo versionado que git clasifique como texto | Escribir el carácter correcto en UTF-8 |
 | Enlaces | Que todo enlace relativo de los `.md` versionados apunte a un archivo existente | Corregir el enlace o crear el destino |
 
