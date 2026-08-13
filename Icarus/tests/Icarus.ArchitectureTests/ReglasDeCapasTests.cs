@@ -33,7 +33,11 @@ public class ReglasDeCapasTests
     public void InfraestructuraNoDependeDelHost()
     {
         var resultado = Types
-            .InAssembly(typeof(Identity.Infrastructure.Persistencia.IdentityDbContext).Assembly)
+            .InAssemblies(new[]
+            {
+                typeof(Identity.Infrastructure.Persistencia.IdentityDbContext).Assembly,
+                typeof(Clientes.Infrastructure.Persistencia.ClientesDbContext).Assembly,
+            })
             .ShouldNot()
             .HaveDependencyOn("Icarus.Host")
             .GetResult();

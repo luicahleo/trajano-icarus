@@ -32,7 +32,6 @@ public static class DependencyInjection
         servicios.AddScoped<IConsultaUsuarios, ConsultaUsuarios>();
         servicios.AddScoped<IEmisorAccessTokens, EmisorAccessTokens>();
         servicios.AddScoped<IServicioRefreshTokens, ServicioRefreshTokens>();
-        servicios.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IdentityDbContext>());
 
         var jwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>() ?? new OpcionesJwt();
         if (string.IsNullOrEmpty(jwt.Clave))
@@ -59,7 +58,10 @@ public static class DependencyInjection
 
         servicios.AddAuthorizationBuilder()
             .AddPolicy(PoliticasAutorizacion.SoloAdministrador,
-                politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Administrador)));
+                politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Administrador)))
+            .AddPolicy(PoliticasAutorizacion.GestionTrabajadores,
+                politica => politica.RequireClaim(
+                    ClaimsIdentidad.Rol, nameof(Rol.Administrador), nameof(Rol.Cliente)));
 
         return servicios;
     }
