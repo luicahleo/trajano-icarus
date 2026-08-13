@@ -2,6 +2,9 @@ using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Behaviors;
 using Icarus.BuildingBlocks.Observability;
+using Icarus.Clientes.Application.Clientes;
+using Icarus.Clientes.Infrastructure;
+using Icarus.Clientes.Infrastructure.Persistencia;
 using Icarus.Host.Endpoints;
 using Icarus.Host.Servicios;
 using Icarus.Identity.Application.Sesiones;
@@ -16,11 +19,14 @@ builder.AddObservabilidad();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(IniciarSesionCommand).Assembly));
-builder.Services.AddValidatorsFromAssembly(typeof(IniciarSesionCommand).Assembly);
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
+    typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly));
+builder.Services.AddValidatorsFromAssemblies([
+    typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly]);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);
+builder.Services.AddClientesInfraestructura(builder.Configuration);
 
 var app = builder.Build();
 
@@ -32,17 +38,30 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 app.MapIdentidad();
+app.MapClientes();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
-    // Migra y siembra las cuentas de prueba por rol (dev y tests de integración).
-    // En Testing la factory inyecta la cadena de conexión y las claves fijas.
+    // Sondeo de entitlement (spec: el mecanismo se construye y se prueba en
+    // este incremento aunque aún no haya endpoints de módulos de negocio).
+    app.MapSondeoEntitlement();
+
+    // Migra ambos schemas y siembra las cuentas y los datos de prueba por rol
+    // (dev y tests de integración). En Testing la factory inyecta la cadena
+    // de conexión y las claves fijas.
     using var alcance = app.Services.CreateScope();
     var db = alcance.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await db.Database.MigrateAsync();
     await SemillaIdentidad.SembrarAsync(
         alcance.ServiceProvider,
         app.Configuration["Semilla:ContrasenaPrueba"] ?? "Solo-Desarrollo-123");
+
+    var clientesDb = alcance.ServiceProvider.GetRequiredService<ClientesDbContext>();
+    await clientesDb.Database.MigrateAsync();
+    // Los ids fijos vienen de SemillaIdentidad: el claim clienteId de las
+    // cuentas semilla debe coincidir con el cliente sembrado.
+    await SemillaClientes.SembrarAsync(
+        alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId);
 }
 
 await app.RunAsync();
