@@ -62,8 +62,10 @@ no contexto obligatorio. No cargarlos en bloque.
 - El vocabulario y las reglas del negocio están en
   `docs/dominio/glosario-avicola.md`. Consultarlo antes de nombrar una entidad o
   inventar una regla.
-- Backend .NET bajo `Icarus/` y frontend React bajo `web/`: **todavía no
-  existen**. Llegan en los subproyectos 2 y 3. No crearlos por iniciativa propia.
+- Backend .NET bajo `Icarus/`: solución con building blocks (Domain, Application,
+  Observability), módulo Identity completo (JWT, usuarios, roles) y puerta de
+  calidad con gates de backend. El módulo Clientes (plan 3) y el frontend React
+  bajo `web/` (plan 4) todavía no existen. No crearlos por iniciativa propia.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
 
@@ -72,6 +74,8 @@ no contexto obligatorio. No cargarlos en bloque.
 - Durante TDD, ejecutar el test dirigido; la suite completa al integrar o cerrar.
 - Un test que nunca se vio en rojo no prueba nada.
 - Informar las pruebas no ejecutadas y el motivo.
+- Desde el plan 2 la puerta exige Docker corriendo: los tests de integración
+  usan Testcontainers.MsSql.
 
 ## Puerta de calidad
 

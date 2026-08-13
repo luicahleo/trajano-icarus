@@ -13,8 +13,9 @@ En POSIX, `./verify.sh`. Ambos son envoltorios de `node quality/verify.mjs`, que
 ejecuta los gates en orden y **se detiene en el primero que falla** para dar
 retroalimentación rápida.
 
-Los gates de backend necesitan el SDK de .NET 10; los tests de integración con
-Testcontainers (planes 2-3) necesitarán Docker. El resto corre en segundos.
+Los gates de backend necesitan el SDK de .NET 10 y Docker corriendo: `Backend
+tests` incluye tests de integración con Testcontainers.MsSql desde el plan 2.
+El resto corre en segundos.
 
 ## Gates vigentes
 
