@@ -50,7 +50,7 @@ public class ReglasDeCapasTests
             {
                 typeof(BuildingBlocks.Application.ICurrentUser).Assembly,
                 typeof(Identity.Application.Sesiones.IniciarSesionCommand).Assembly,
-                typeof(Clientes.Application.Marcador).Assembly,
+                typeof(Clientes.Application.Clientes.CrearClienteCommand).Assembly,
             })
             .ShouldNot()
             .HaveDependencyOnAny("Icarus.Identity.Infrastructure", "Icarus.Clientes.Infrastructure")
