@@ -98,6 +98,12 @@ no contexto obligatorio. No cargarlos en bloque.
 - No usar subagentes salvo trabajo verdaderamente independiente que compense su
   coste.
 - Guardar las decisiones duraderas en specs; el chat no es documentación.
+- Ahorro de tokens (regla decidida para este proyecto): el prompt caching es
+  automático del proveedor, sin configuración ni acción; la palanca real es la
+  sesión nueva por feature con handoff en `docs/ai/HANDOFF.md`. Usar `/compact`
+  solo como red de seguridad cerca del límite de contexto, siempre con pista
+  explícita de qué preservar. No usar mem0 en este proyecto: es redundante con
+  los handoffs escritos y suma tokens en cada turno.
 - Detalle en `docs/ai/ECONOMIA_TOKENS.md` y `docs/ai/CONTEXT-EFFICIENCY.md`.
 
 Mapa completo de documentación: `docs/ai/README.md`.
