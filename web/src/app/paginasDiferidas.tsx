@@ -1,0 +1,26 @@
+import { lazy } from 'react';
+
+export const LoginPage = lazy(() =>
+  import('../features/auth/LoginPage').then((modulo) => ({ default: modulo.LoginPage })),
+);
+export const InicioPage = lazy(() =>
+  import('./InicioPage').then((modulo) => ({ default: modulo.InicioPage })),
+);
+export const NotFoundPage = lazy(() =>
+  import('./NotFoundPage').then((modulo) => ({ default: modulo.NotFoundPage })),
+);
+export const ClientesListaPage = lazy(() =>
+  import('../features/admin/clientes/ClientesListaPage').then((modulo) => ({ default: modulo.ClientesListaPage })),
+);
+export const ClienteNuevoPage = lazy(() =>
+  import('../features/admin/clientes/ClienteNuevoPage').then((modulo) => ({ default: modulo.ClienteNuevoPage })),
+);
+export const ClienteDetallePage = lazy(() =>
+  import('../features/admin/clientes/ClienteDetallePage').then((modulo) => ({ default: modulo.ClienteDetallePage })),
+);
+export const UsuarioNuevoPage = lazy(() =>
+  import('../features/admin/usuarios/UsuarioNuevoPage').then((modulo) => ({ default: modulo.UsuarioNuevoPage })),
+);
+export const TrabajadoresPage = lazy(() =>
+  import('../features/trabajadores/TrabajadoresPage').then((modulo) => ({ default: modulo.TrabajadoresPage })),
+);
