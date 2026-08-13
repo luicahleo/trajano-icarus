@@ -1,11 +1,86 @@
-import { Box, Typography } from '@mui/material';
-import { Proximamente } from '../../app/Proximamente';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Alert, Box, Button, Card, TextField, Typography } from '@mui/material';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
+import { inicioSegunRol } from '../../app/inicioSegunRol';
+import { ApiError } from '../../lib/http';
+import { obtenerMe } from './api';
+import { useAuth } from './AuthContext';
+
+const esquema = z.object({
+  email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
+  contrasena: z.string().min(1, 'La contraseña es obligatoria.'),
+});
+
+type Esquema = z.infer<typeof esquema>;
 
 export function LoginPage() {
+  const { iniciarSesion } = useAuth();
+  const navigate = useNavigate();
+  const [errorApi, setErrorApi] = useState<{ code: string; correlationId?: string } | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<Esquema>({ resolver: zodResolver(esquema) });
+
+  const onEnviar = handleSubmit(async (valores) => {
+    setEnviando(true);
+    setErrorApi(null);
+    try {
+      await iniciarSesion(valores);
+      const me = await obtenerMe();
+      navigate(inicioSegunRol(me.rol));
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorApi({ code: error.code ?? `Error de servidor (${error.status})`, correlationId: error.correlationId });
+      } else {
+        setErrorApi({ code: 'No se pudo iniciar sesión. Inténtalo de nuevo.' });
+      }
+    } finally {
+      setEnviando(false);
+    }
+  });
+
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4">Iniciar sesión</Typography>
-      <Proximamente />
+    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: 'background.default', p: 2 }}>
+      <Card sx={{ width: '100%', maxWidth: 420, p: 4 }}>
+        <Typography variant="h4" sx={{ mb: 3 }}>
+          Iniciar sesión
+        </Typography>
+        <Box component="form" onSubmit={onEnviar} noValidate sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            label="Correo electrónico"
+            type="email"
+            autoComplete="email"
+            fullWidth
+            {...register('email')}
+            error={Boolean(errors.email)}
+            helperText={errors.email?.message}
+          />
+          <TextField
+            label="Contraseña"
+            type="password"
+            autoComplete="current-password"
+            fullWidth
+            {...register('contrasena')}
+            error={Boolean(errors.contrasena)}
+            helperText={errors.contrasena?.message}
+          />
+          {errorApi && (
+            <Alert severity="error">
+              {errorApi.code}
+              {errorApi.correlationId ? ` (ID: ${errorApi.correlationId})` : ''}
+            </Alert>
+          )}
+          <Button type="submit" variant="contained" size="large" disabled={enviando}>
+            Iniciar sesión
+          </Button>
+        </Box>
+      </Card>
     </Box>
   );
 }
