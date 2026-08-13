@@ -9,7 +9,7 @@ public class ReglasDeModulosTests
     public void ModulosNoSeReferencianEntreSi()
     {
         var clientesHaciaIdentity = Types
-            .InAssembly(typeof(Clientes.Domain.Marcador).Assembly)
+            .InAssembly(typeof(Clientes.Domain.Cliente).Assembly)
             .ShouldNot().HaveDependencyOn("Icarus.Identity").GetResult();
         var identityHaciaClientes = Types
             .InAssemblies(new[]

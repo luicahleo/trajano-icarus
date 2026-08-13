@@ -13,7 +13,7 @@ public class ReglasDeCapasTests
             {
                 typeof(BuildingBlocks.Domain.Entity).Assembly,
                 typeof(Identity.Domain.Rol).Assembly,
-                typeof(Clientes.Domain.Marcador).Assembly,
+                typeof(Clientes.Domain.Cliente).Assembly,
             })
             .ShouldNot()
             .HaveDependencyOnAny(
