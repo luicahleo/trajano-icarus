@@ -27,6 +27,9 @@
     <ProjectReference Include="..\..\src\Identity\Icarus.Identity.Application\Icarus.Identity.Application.csproj" />
     <ProjectReference Include="..\..\src\Identity\Icarus.Identity.Domain\Icarus.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\src\Identity\Icarus.Identity.Infrastructure\Icarus.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Clientes\Icarus.Clientes.Domain\Icarus.Clientes.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Clientes\Icarus.Clientes.Application\Icarus.Clientes.Application.csproj" />
+    <ProjectReference Include="..\..\src\Clientes\Icarus.Clientes.Infrastructure\Icarus.Clientes.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
