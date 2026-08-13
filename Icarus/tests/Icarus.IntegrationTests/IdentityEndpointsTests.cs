@@ -186,6 +186,36 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
     }
 
     [Fact]
+    public async Task RenovacionesConcurrentesConElMismoRefreshSoloUnaRota()
+    {
+        var cliente = _factory.CreateClient();
+        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+            new { email = SemillaIdentidad.EmailSoporte, contrasena = ContrasenaSemilla });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var cookie = login.Headers.GetValues("Set-Cookie")
+            .Single(h => h.StartsWith(IdentidadEndpoints.CookieRefresh + "=", StringComparison.Ordinal))
+            .Split(';')[0];
+
+        // Dos renovaciones en vuelo a la vez con la misma cookie (p. ej. dos
+        // pestañas o StrictMode de React): solo una puede rotar el refresh.
+        HttpRequestMessage PedidoRenovacion()
+        {
+            var pedido = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+            pedido.Headers.Add("Cookie", cookie);
+            return pedido;
+        }
+
+        var respuestas = await Task.WhenAll(
+            cliente.SendAsync(PedidoRenovacion()),
+            cliente.SendAsync(PedidoRenovacion()));
+
+        var codigos = respuestas.Select(r => r.StatusCode).Order().ToArray();
+        Assert.Equal(
+            new[] { HttpStatusCode.OK, HttpStatusCode.Unauthorized },
+            codigos);
+    }
+
+    [Fact]
     public async Task RenovarSinCookieDevuelve401()
     {
         var cliente = _factory.CreateClient();

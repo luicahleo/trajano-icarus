@@ -35,14 +35,23 @@ public sealed class ServicioRefreshTokens : IServicioRefreshTokens
     public async Task<Guid?> RotarAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
         var hash = Hashear(refreshToken);
-        var existente = await _db.RefreshTokens
-            .SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
-        if (existente is null || existente.RevocadoEnUtc is not null || existente.ExpiraEnUtc <= DateTime.UtcNow)
+        var ahora = DateTime.UtcNow;
+
+        // Revocación atómica: un solo UPDATE condicional evita la carrera entre
+        // renovaciones concurrentes que presentan el mismo refresh token
+        // (dos pestañas, StrictMode de React). Si no afecta filas, el token es
+        // desconocido, ya está revocado o expiró: mismo resultado genérico.
+        var revocados = await _db.RefreshTokens
+            .Where(t => t.TokenHash == hash && t.RevocadoEnUtc == null && t.ExpiraEnUtc > ahora)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevocadoEnUtc, ahora), cancellationToken);
+        if (revocados == 0)
             return null;
 
-        existente.RevocadoEnUtc = DateTime.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
-        return existente.UsuarioId;
+        // Esta llamada dejó la fila revocada: su UsuarioId es seguro de leer.
+        return await _db.RefreshTokens
+            .Where(t => t.TokenHash == hash)
+            .Select(t => (Guid?)t.UsuarioId)
+            .SingleAsync(cancellationToken);
     }
 
     private static string Hashear(string token) =>
