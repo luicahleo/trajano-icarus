@@ -66,6 +66,14 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
+    public async Task ReglaNegocioExceptionDevuelve400()
+    {
+        var (status, cuerpo) = await Ejecutar(new ReglaNegocioException("regla violada"));
+        Assert.Equal(StatusCodes.Status400BadRequest, status);
+        Assert.DoesNotContain("regla violada", cuerpo.ToString());
+    }
+
+    [Fact]
     public async Task TodaRespuestaIncluyeCorrelationId()
     {
         var (_, cuerpo) = await Ejecutar(new ConflictException("conflicto"));
