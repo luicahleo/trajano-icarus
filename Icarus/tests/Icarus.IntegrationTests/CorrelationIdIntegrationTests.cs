@@ -1,13 +1,12 @@
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-public class CorrelationIdIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class CorrelationIdIntegrationTests : IClassFixture<IdentityFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly IdentityFactory _factory;
 
-    public CorrelationIdIntegrationTests(WebApplicationFactory<Program> factory) => _factory = factory;
+    public CorrelationIdIntegrationTests(IdentityFactory factory) => _factory = factory;
 
     [Fact]
     public async Task TodaRespuestaLlevaCorrelationId()

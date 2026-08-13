@@ -1,13 +1,12 @@
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests : IClassFixture<IdentityFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly IdentityFactory _factory;
 
-    public HealthEndpointTests(WebApplicationFactory<Program> factory) => _factory = factory;
+    public HealthEndpointTests(IdentityFactory factory) => _factory = factory;
 
     [Fact]
     public async Task HealthResponde200()
