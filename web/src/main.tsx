@@ -7,7 +7,10 @@ import '@fontsource/open-sans/latin-700.css';
 import '@fontsource/prompt/latin-600.css';
 import '@fontsource/prompt/latin-700.css';
 import { theme } from './app/theme';
+import { instalarServiceWorker } from './pwa/registro';
 import App from './App';
+
+instalarServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
