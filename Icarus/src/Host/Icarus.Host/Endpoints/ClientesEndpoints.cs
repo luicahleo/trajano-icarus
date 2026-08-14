@@ -1,5 +1,6 @@
 using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Application.Trabajadores;
+using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using MediatR;
@@ -78,10 +79,10 @@ public static class ClientesEndpoints
     {
         var grupo = app.MapGroup("/clientes/sondeo");
 
-        grupo.MapGet("/gestion-avicola", () => Results.Ok(new { estado = "ok" }))
-            .RequireAuthorization(PoliticasClientes.RequiereGestionAvicola);
-        grupo.MapGet("/control-acceso", () => Results.Ok(new { estado = "ok" }))
-            .RequireAuthorization(PoliticasClientes.RequiereControlAcceso);
+        grupo.MapGet("/funcionalidad/granjas", () => Results.Ok(new { estado = "ok" }))
+            .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.Granjas));
+        grupo.MapGet("/funcionalidad/vacunacion", () => Results.Ok(new { estado = "ok" }))
+            .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.Vacunacion));
 
         return app;
     }

@@ -24,19 +24,22 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioClientes, RepositorioClientes>();
         servicios.AddScoped<IRepositorioTrabajadores, RepositorioTrabajadores>();
         servicios.AddScoped<IVerificadorEntitlement, VerificadorEntitlement>();
-        servicios.AddScoped<IAuthorizationHandler, ManejadorModuloHabilitado>();
+        servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadHabilitada>();
 
         // IUnitOfWork resuelve al contexto de Clientes. Identity no lo consume
         // (nada lo inyecta; su registro se quitó en este plan).
         servicios.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ClientesDbContext>());
 
-        servicios.AddAuthorizationBuilder()
-            .AddPolicy(PoliticasClientes.RequiereGestionAvicola, politica => politica
+        var politicas = servicios.AddAuthorizationBuilder();
+        foreach (var funcionalidad in Enum.GetValues<Funcionalidades>())
+        {
+            if (funcionalidad == Funcionalidades.Ninguno)
+                continue;
+            var politica = PoliticasClientes.Para(funcionalidad);
+            politicas.AddPolicy(politica, politicaBuilder => politicaBuilder
                 .RequireAuthenticatedUser()
-                .AddRequirements(new RequisitoModuloHabilitado(Modulos.GestionAvicola)))
-            .AddPolicy(PoliticasClientes.RequiereControlAcceso, politica => politica
-                .RequireAuthenticatedUser()
-                .AddRequirements(new RequisitoModuloHabilitado(Modulos.ControlAcceso)));
+                .AddRequirements(new RequisitoFuncionalidadHabilitada(funcionalidad)));
+        }
 
         return servicios;
     }

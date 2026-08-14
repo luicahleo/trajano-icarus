@@ -76,25 +76,84 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
     [Fact]
     public async Task ClienteConModuloHabilitadoRecibe200()
     {
-        // El cliente semilla tiene GestionAvicola habilitado.
+        // El rol Cliente tiene todas las funcionalidades de sus módulos: el
+        // cliente semilla tiene GestionAvicola.
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
         var cliente = _factory.CreateClient();
 
+        var granjas = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
+        var vacunacion = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/vacunacion", token));
+
+        Assert.Equal(HttpStatusCode.OK, granjas.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, vacunacion.StatusCode);
+    }
+
+    [Fact]
+    public async Task TrabajadorConFuncionalidadAsignadaRecibe200()
+    {
+        // El trabajador semilla tiene Granjas asignado (sembrado en este plan).
+        var token = await LoginComo(SemillaIdentidad.EmailTrabajador);
+        var cliente = _factory.CreateClient();
+
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/gestion-avicola", token));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
 
     [Fact]
-    public async Task ModuloNoHabilitadoDevuelve403()
+    public async Task TrabajadorSinFuncionalidadAsignadaDevuelve403()
     {
-        // El cliente semilla no tiene ControlAcceso.
-        var token = await LoginComo(SemillaIdentidad.EmailCliente);
+        // El trabajador semilla no tiene Vacunacion.
+        var token = await LoginComo(SemillaIdentidad.EmailTrabajador);
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/control-acceso", token));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/vacunacion", token));
+
+        Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task TrabajadorNuevoSinFuncionalidadesDevuelve403()
+    {
+        var (clienteId, _) = await CrearClienteConCuenta(["GestionAvicola"]);
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var clienteHttp = _factory.CreateClient();
+
+        var altaTrabajador = PedidoAutenticado(
+            HttpMethod.Post, $"/clientes/{clienteId}/trabajadores", admin);
+        altaTrabajador.Content = JsonContent.Create(new
+        {
+            nombre = "Nombre Ficticio",
+            documentoIdentidad = $"8{Random.Shared.Next(10000000, 99999999)}",
+            cargo = "Operario",
+            fechaIngreso = "2026-01-15",
+            email = $"trabajador-{Guid.NewGuid():N}@icarus.test",
+            contrasena = IdentityFactory.ContrasenaDePrueba,
+        });
+        var respuestaAlta = await clienteHttp.SendAsync(altaTrabajador);
+        Assert.Equal(HttpStatusCode.Created, respuestaAlta.StatusCode);
+        var trabajadorId = (await respuestaAlta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+
+        var email = $"trabajador-{Guid.NewGuid():N}@icarus.test";
+        var altaUsuario = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", admin);
+        altaUsuario.Content = JsonContent.Create(new
+        {
+            email,
+            contrasena = IdentityFactory.ContrasenaDePrueba,
+            rol = "Trabajador",
+            clienteId,
+            trabajadorId,
+        });
+        Assert.Equal(HttpStatusCode.Created, (await clienteHttp.SendAsync(altaUsuario)).StatusCode);
+
+        var tokenTrabajador = await LoginComo(email);
+        var respuesta = await clienteHttp.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", tokenTrabajador));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -106,7 +165,7 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/gestion-avicola", token));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -125,7 +184,7 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         Assert.Equal(HttpStatusCode.NoContent, suspender.StatusCode);
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/gestion-avicola", token));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -138,7 +197,7 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/gestion-avicola", token));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -148,7 +207,7 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
     {
         var cliente = _factory.CreateClient();
 
-        var respuesta = await cliente.GetAsync("/clientes/sondeo/gestion-avicola");
+        var respuesta = await cliente.GetAsync("/clientes/sondeo/funcionalidad/granjas");
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }

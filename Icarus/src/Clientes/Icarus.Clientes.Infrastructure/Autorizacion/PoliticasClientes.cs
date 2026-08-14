@@ -1,9 +1,13 @@
+using Icarus.Clientes.Domain;
+
 namespace Icarus.Clientes.Infrastructure.Autorizacion;
 
-// Políticas de entitlement por módulo (spec). Los endpoints de negocio las
-// referencian por nombre; el sondeo del Host las prueba mientras no existan.
+// Políticas de entitlement por funcionalidad (spec). Los endpoints de negocio
+// las referencian por nombre; el sondeo del Host las prueba mientras no
+// existan.
 public static class PoliticasClientes
 {
-    public const string RequiereGestionAvicola = "Modulo:GestionAvicola";
-    public const string RequiereControlAcceso = "Modulo:ControlAcceso";
+    public const string Prefijo = "Funcionalidad:";
+
+    public static string Para(Funcionalidades funcionalidad) => Prefijo + funcionalidad.ToString();
 }
