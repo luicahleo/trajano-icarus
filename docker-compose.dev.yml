@@ -1,8 +1,8 @@
 # Orquestación de desarrollo local: SQL Server + API (.NET) + Web (Vite/React) + Seq.
-# Uso: docker compose -f docker-compose.dev.yml up -d
+# Uso: cp .env.example .env  (ajusta SA_PASSWORD)  ->  docker compose -f docker-compose.dev.yml up -d
 # La API queda en http://localhost:8080, la web en http://localhost:5173
 # (proxya /api hacia la API), Seq en http://localhost:5341 y SQL Server en
-# localhost,1433 (sa / Icarus-Dev-1234, credencial solo de desarrollo, coincide
+# localhost,1433 (sa / ${SA_PASSWORD}, credencial solo de desarrollo, coincide
 # con appsettings.Development.json para correr sin Docker).
 services:
   seq:
@@ -21,7 +21,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Icarus-Dev-1234"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD}"
       MSSQL_PID: Developer
     ports:
       - "1433:1433"
@@ -42,7 +42,9 @@ services:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_HTTP_PORTS: "8080"
       # Cadena de conexión apuntando al servicio sqlserver dentro de la red de compose.
-      ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=Icarus-Dev-1234;TrustServerCertificate=True"
+      ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
+      # Contraseña de las cuentas semilla (paridad con Caserito, SeedUsuariosDesarrollo).
+      Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Semilla-Dev-1234}"
       # Dentro del contenedor localhost no es el host: Seq se alcanza por la red de compose.
       Serilog__WriteTo__0__Args__serverUrl: "http://seq:80"
     ports:

@@ -16,9 +16,10 @@ graphify-out/
 # La plantilla versionada es docs/ai/HANDOFF.template.md.
 docs/ai/HANDOFF.md
 
-# Secretos y entorno
+# Secretos y entorno (el ejemplo es plantilla versionada, no un secreto)
 .env
 .env.*
+!.env.example
 *.pfx
 *.p12
 *.key
