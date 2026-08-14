@@ -39,7 +39,7 @@
 - Consumes: nada.
 - Produces: el proyecto base compilable con MUI y Vitest; lo usan todos los tasks siguientes. `app/providers.tsx` hoy solo envuelve en `QueryClientProvider` (el `AuthProvider` llega en el Task 3).
 
-- [ ] **Step 1: Scaffold del template oficial**
+- [x] **Step 1: Scaffold del template oficial**
 
 Run (directorio raíz del repo, `web/` no debe existir):
 
@@ -49,7 +49,7 @@ npm create vite@latest web -- --template react-ts
 
 Expected: estructura base react-ts de Vite 8 (tsconfig de proyecto/referencias, `eslint.config.js`, `.gitignore` propio con `dist`/`node_modules`). No debe instalar dependencias. Si el template cambió y omite `eslint.config.js`, crearlo según el de Caserito (`web/eslint.config.js` de `repos/dev_Caserito/web`).
 
-- [ ] **Step 2: package.json con versiones pineadas (paridad Caserito)**
+- [x] **Step 2: package.json con versiones pineadas (paridad Caserito)**
 
 Reemplazo completo de `web/package.json`:
 
@@ -122,7 +122,7 @@ Reemplazo completo de `web/package.json`:
 }
 ```
 
-- [ ] **Step 3: vite.config.ts, index.html y tree base**
+- [x] **Step 3: vite.config.ts, index.html y tree base**
 
 `web/vite.config.ts`:
 
@@ -316,7 +316,7 @@ test('la app monta sin romper', () => {
 });
 ```
 
-- [ ] **Step 4: Instalación real y verificación**
+- [x] **Step 4: Instalación real y verificación**
 
 Run:
 
@@ -329,7 +329,7 @@ npm run test
 
 Expected: `npm install` sin ERESOLVE; `lint` sin errores; `build` (`tsc -b && vite build`) sin errores de tipos; `test` con el smoke en verde. Si el template trae un `eslint.config.js` cuya config rompe algo, ajustar solo el mínimo para que pase.
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -446,7 +446,7 @@ export async function peticion<T>(o: { ruta: string; metodo?: 'GET' | 'POST' | '
 
 `features/trabajadores/api.ts`: `listarTrabajadores(clienteId)`, `crearTrabajador(clienteId, { nombre, documentoIdentidad, cargo, fechaIngreso })` → `{ id }`, `cesarTrabajador(id, fechaCese)` → `POST /clientes/trabajadores/{id}/cese` con `{ fechaCese }`, `desactivarTrabajador(id)` → `DELETE /clientes/trabajadores/{id}`.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `web/src/lib/correlation.test.ts`:
 
@@ -544,14 +544,14 @@ describe('peticion', () => {
 
 Nota: la renovación single-flight en estos tests ocurre a través del `fetch` simulado; el 401 del original dispara `renovarSesionInterna` que usa el mismo `fetch`.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA de compilación (`http.ts`, `correlation.ts`, `tipos.ts` no existen) o aserciones en rojo si faltan.
 
-- [ ] **Step 3: Implementar** los cinco módulos de `lib/` y los tres `api.ts` según las Interfaces.
+- [x] **Step 3: Implementar** los cinco módulos de `lib/` y los tres `api.ts` según las Interfaces.
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -561,7 +561,7 @@ npm run build
 
 Expected: PASS (correlation + http), lint y build sin errores.
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -608,7 +608,7 @@ Al montar: si `renovarSesion()` da true, `obtenerMe()` y guarda el usuario; `car
 
 `RequiereRol`: `{ roles, children }`; si `!tieneRol(...roles)` → `Navigate to="/" replace` (la raíz redirige según rol); si no → `children`.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `AuthContext.test.tsx` (mock de fetch): restauración con renovar 200 + me 200 → `estaAutenticado` true y `rol` correcto; renovar 401 → anónimo; `cargando` pasa de true a false en ambos casos. `ProtectedRoute.test.tsx`: sin sesión → `Navigate` a `/login`; con sesión → muestra el hijo; mientras carga → `CircularProgress` y no redirige. `RequiereRol.test.tsx`: rol permitido → hijo; rol ajeno → `Navigate` a `/`.
 
@@ -624,14 +624,14 @@ const estado = {
 
 Nota: para testear el contexto sin red, los tests envuelven el componente bajo un `AuthProvider` real con `fetch` simulado (reusar el patrón de `http.test.ts`), o inyectan un `AuthContext` de prueba vía un wrapper. Preferir el `AuthProvider` real con fetch simulado: cubre el ciclo completo de restauración.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA de compilación o aserción (AuthContext no existe).
 
-- [ ] **Step 3: Implementar** AuthContext, guardas y `providers.tsx` con `AuthProvider`.
+- [x] **Step 3: Implementar** AuthContext, guardas y `providers.tsx` con `AuthProvider`.
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -639,7 +639,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -699,20 +699,20 @@ export function inicioSegunRol(rol: Rol): string {
 
 `AppLayout`: `AppBar` con título «Icarus», menú según rol (Administrador: Clientes, Usuarios, Trabajadores; Cliente: Trabajadores; SoporteTecnico/Trabajador: sin enlaces), botón de cerrar sesión y `Outlet`. Carga diferida vía `paginasDiferidas.tsx` (patrón Caserito).
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `inicioSegunRol.test.ts`: administrador→`/admin/clientes`; cliente→`/trabajadores`; soporte→`/inicio`; trabajador→`/inicio`.
 
 `AppLayout.test.tsx` (con `AuthProvider` real + fetch simulado para rol): Administrador ve «Clientes», «Usuarios» y «Trabajadores»; Cliente solo «Trabajadores»; el botón de cierre llama `cerrarSesion` (verifica que navega a `/login` y deja anónimo).
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA de compilación (los módulos no existen).
 
-- [ ] **Step 3: Implementar** tema ya presente (Task 1), `inicioSegunRol`, router con placeholders, `AppLayout`, `InicioPage`, `NotFoundPage`, `paginasDiferidas` y `App.tsx` con `RouterProvider`.
+- [x] **Step 3: Implementar** tema ya presente (Task 1), `inicioSegunRol`, router con placeholders, `AppLayout`, `InicioPage`, `NotFoundPage`, `paginasDiferidas` y `App.tsx` con `RouterProvider`.
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -722,7 +722,7 @@ npm run build
 
 Expected: router y layout verdes; `build` con las páginas diferidas lazy ok.
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -751,7 +751,7 @@ const esquema = z.object({
 });
 ```
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `LoginPage.test.tsx` (con `AuthProvider` real + fetch simulado):
 1. Render: título y los dos campos, botón «Iniciar sesión».
@@ -759,14 +759,14 @@ const esquema = z.object({
 3. Envío vacío: muestra «El correo es obligatorio.» y «La contraseña es obligatoria.» sin llamar a la API.
 4. `ApiError` 401 con `title` «No autorizado»: muestra el mensaje genérico y el correlation ID del header (no credenciales).
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA (LoginPage placeholder no tiene el formulario).
 
-- [ ] **Step 3: Implementar** `LoginPage.tsx` con MUI (`TextField`, `Alert`, `Button`), `useForm` + `zodResolver`, manejo de `ApiError` con `snackbar`/`Alert` y `navigate(inicioSegunRol(usuario.rol))`.
+- [x] **Step 3: Implementar** `LoginPage.tsx` con MUI (`TextField`, `Alert`, `Button`), `useForm` + `zodResolver`, manejo de `ApiError` con `snackbar`/`Alert` y `navigate(inicioSegunRol(usuario.rol))`.
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -774,7 +774,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -800,20 +800,20 @@ git commit -m "feat(web): pantalla de inicio de sesión con validación y errore
   - `ClienteNuevoPage` (`/admin/clientes/nuevo`): formulario `razonSocial` (obligatorio, máx 200) e `identificadorFiscal` (obligatorio, máx 32); éxito → navega a la lista; 409 → muestra el `title` genérico.
   - `ClienteDetallePage` (`/admin/clientes/:id`): datos, estado, `Checkbox` por módulo (`GestionAvicola`, `ControlAcceso`) que guardan con `definirModulos` al cambiar, y botones suspender/reactivar.
 
-- [ ] **Step 1: Escribir los tests en rojo** (fetch simulado por endpoint; los contratos de `api.ts` ya existen)
+- [x] **Step 1: Escribir los tests en rojo** (fetch simulado por endpoint; los contratos de `api.ts` ya existen)
 
 1. Lista: `GET /clientes` con dos clientes → renderiza ambas filas con su estado y módulos; el botón suspender llama `POST /clientes/{id}/suspender` y refresca la lista; «Nuevo cliente» navega.
 2. Nuevo: campos vacíos → errores «La razón social es obligatoria.» / «El identificador fiscal es obligatorio.» sin llamar a la API; envío válido → `POST /clientes` con `{ razonSocial, identificadorFiscal }` y navega a la lista; `ApiError` 409 → muestra el `title`.
 3. Detalle: `GET /clientes` (para encontrar el registro por `:id`) muestra los datos; alternar un módulo llama `PUT /clientes/{id}/modulos` con la lista completa nueva; suspender/reactivar llaman a su endpoint.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA (páginas no existen o placeholder).
 
-- [ ] **Step 3: Implementar** las tres páginas con MUI (`Table`, `Chip`, `Dialog` de confirmación, `Checkbox`, `TextField`) y react-query (`queryKey` por lista, invalidación tras mutación).
+- [x] **Step 3: Implementar** las tres páginas con MUI (`Table`, `Chip`, `Dialog` de confirmación, `Checkbox`, `TextField`) y react-query (`queryKey` por lista, invalidación tras mutación).
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -821,7 +821,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -843,7 +843,7 @@ git commit -m "feat(web): gestión de clientes para administradores"
 - Consumes: `features/admin/clientes/api.ts` (`listarClientes`) y `features/trabajadores/api.ts` (`listarTrabajadores`) para los selectores dependientes.
 - Formulario: `email` (formato correo), `contrasena` (mínimo 12, la exige el backend), `rol` (uno de los cuatro). Si rol ∈ `Cliente|Trabajador` → selector de cliente (`listarClientes`). Si rol `Trabajador` → selector de trabajador del cliente elegido (`listarTrabajadores`). Éxito → mensaje de éxito y reset; `ApiError` 409 → `title` genérico. Nunca se muestran ni loguean credenciales.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `UsuarioNuevoPage.test.tsx` (fetch simulado):
 1. Validación: sin rol/email/contrasena corta → errores en español sin llamar a la API.
@@ -853,14 +853,14 @@ git commit -m "feat(web): gestión de clientes para administradores"
 5. Envío válido → `POST /identidad/usuarios` con `{ email, contrasena, rol, clienteId, trabajadorId }` (nulls según rol) y muestra éxito.
 6. `ApiError` 409 → muestra el `title` genérico.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA (página no existe).
 
-- [ ] **Step 3: Implementar** `UsuarioNuevoPage.tsx` y `api.ts` con react-hook-form + zod (esquema condicional por rol), MUI (`Select`, `MenuItem`, `TextField`), react-query para los selectores.
+- [x] **Step 3: Implementar** `UsuarioNuevoPage.tsx` y `api.ts` con react-hook-form + zod (esquema condicional por rol), MUI (`Select`, `MenuItem`, `TextField`), react-query para los selectores.
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -868,7 +868,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -892,7 +892,7 @@ git commit -m "feat(web): alta de cuentas de usuario para administradores"
   - Rol `Administrador`: selector de cliente (`GET /clientes`) y luego su lista.
   - Tabla: nombre, documento de identidad, cargo, fecha de ingreso, fecha de cese (si hay) y acciones: cesar (dialogo con `fechaCese`, validación no futura), desactivar (confirmación; soft delete). Alta con formulario (dialogo o página) `{ nombre, documentoIdentidad, cargo, fechaIngreso }`.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `TrabajadoresPage.test.tsx` (fetch simulado):
 1. Rol `Cliente` con `clienteId` propio: `GET /clientes/{id}/trabajadores` y renderiza filas.
@@ -902,14 +902,14 @@ git commit -m "feat(web): alta de cuentas de usuario para administradores"
 5. Desactivar: confirmación → `DELETE /clientes/trabajadores/{id}`.
 6. `ApiError` 409 (documento duplicado) → muestra el `title` genérico sin revelar el documento.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `npm run test`
 Expected: FALLA (página no existe o placeholder).
 
-- [ ] **Step 3: Implementar** `TrabajadoresPage.tsx` con MUI y react-query; validación de `fechaCese` no futura en el cliente (el dominio también la valida).
+- [x] **Step 3: Implementar** `TrabajadoresPage.tsx` con MUI y react-query; validación de `fechaCese` no futura en el cliente (el dominio también la valida).
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 ```bash
 npm run test
@@ -917,7 +917,7 @@ npm run lint
 npm run build
 ```
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -943,7 +943,7 @@ git commit -m "feat(web): gestión de trabajadores para administradores y client
 - Consumes: nada nuevo del backend.
 - Produces: PWA instalable (`generateSW`, `registerType: 'autoUpdate'`, manifest español «Icarus», iconos placeholder), y la documentación local de `web/`.
 
-- [ ] **Step 1: Generar los iconos placeholder (Node puro)**
+- [x] **Step 1: Generar los iconos placeholder (Node puro)**
 
 `web/scripts/generar-iconos.mjs`: escribe PNG válidos (firma + IHDR + IDAT con zlib + IEND, CRC-32 implementado a mano) de un cuadrado sólido del color primario (`#1B5E20`) en 192 y 512, más sus variantes `maskable` (el mismo cuadrado a sangre completa). No usa dependencias. Run:
 
@@ -953,7 +953,7 @@ node scripts/generar-iconos.mjs
 
 Expected: cuatro PNG en `web/public/pwa/` (verificables con `file public/pwa/pwa-192x192.png`).
 
-- [ ] **Step 2: Configurar VitePWA y el registro**
+- [x] **Step 2: Configurar VitePWA y el registro**
 
 En `vite.config.ts`, agregar el plugin:
 
@@ -995,7 +995,7 @@ export function instalarServiceWorker(): void {
 
 `web/src/vite-env.d.ts`: agregar `/// <reference types="vite-plugin-pwa/client" />`. `main.tsx`: `instalarServiceWorker()`.
 
-- [ ] **Step 3: Verificar el build PWA**
+- [x] **Step 3: Verificar el build PWA**
 
 ```bash
 npm run build
@@ -1003,13 +1003,13 @@ npm run build
 
 Expected: en `web/dist/` aparecen `manifest.webmanifest` y `sw.js` (y `registerSW` compilado). Ejecutar además `npm run lint` y `npm run test`.
 
-- [ ] **Step 4: README y AGENTS.md de `web/`**
+- [x] **Step 4: README y AGENTS.md de `web/`**
 
 `web/README.md`: cómo levantar el entorno (API: `docker compose -f docker-compose.dev.yml up -d` o `dotnet run` desde `Icarus/`), `npm install`, `npm run dev` (proxy `/api` → `http://localhost:8080`), cuentas semilla dev/test (admin/soporte/cliente/trabajador@icarus.test; contraseña según cómo se levante la API: `Semilla-Dev-1234` por `dotnet run` con `appsettings.Development.json`, `Solo-Desarrollo-123` por compose) y los comandos de la puerta.
 
 `web/AGENTS.md`: convenciones del árbol (alias `@/`, MUI + Emotion, react-query, react-hook-form + zod, `lib/` sin dependencias de `features/`/`app/`, anti-PII: token solo en memoria y errores sin datos personales, comandos `npm run lint/test/build`, puerta `./verify.sh`).
 
-- [ ] **Step 5: Verificar la puerta y commit**
+- [x] **Step 5: Verificar la puerta y commit**
 
 ```bash
 ./verify.sh
@@ -1032,7 +1032,7 @@ git commit -m "feat(web): PWA con manifest, service worker e iconos"
 - Consumes: `web/` completo (node_modules presente desde el Task 1).
 - Produces: la puerta verifica el frontend (lint, build, tests) igual que el backend; CI los corre en `calidad` (vía verify) y en un job `frontend` propio.
 
-- [ ] **Step 1: Agregar los gates en rojo**
+- [x] **Step 1: Agregar los gates en rojo**
 
 En `quality/verify.mjs`, la lista `GATES` pasa a incluir (tras «Enlaces», antes de «Backend build»):
 
@@ -1063,7 +1063,7 @@ const { codigo, duracionMs } = ejecutar(gate.comando, gate.args, { cwd, sinShell
 Run: `node --test quality/__tests__/verify.test.mjs`
 Expected: el test «cada gate se invoca con el comando que le corresponde» FALLA (espera `node` para los nuevos gates `npm`). Es la prueba roja por el motivo correcto.
 
-- [ ] **Step 2: Actualizar el test de la puerta**
+- [x] **Step 2: Actualizar el test de la puerta**
 
 En `quality/__tests__/verify.test.mjs`, el test del comando pasa a:
 
@@ -1084,7 +1084,7 @@ test('cada gate se invoca con el comando que le corresponde', () => {
 Run: `node --test quality/__tests__/verify.test.mjs`
 Expected: PASS.
 
-- [ ] **Step 3: Verificar la puerta completa**
+- [x] **Step 3: Verificar la puerta completa**
 
 ```bash
 ./verify.sh
@@ -1092,7 +1092,7 @@ Expected: PASS.
 
 Expected: los tres gates de frontend en verde (lint/build/tests desde `web/`) y el resto sin cambios. Docker corriendo para los tests de integración.
 
-- [ ] **Step 4: Documentar la puerta y el CI**
+- [x] **Step 4: Documentar la puerta y el CI**
 
 `docs/ai/PUERTA_CALIDAD.md`: agregar a la tabla las filas `Frontend lint` (`eslint . && prettier --check .`), `Frontend build` (`tsc -b && vite build`) y `Frontend tests` (`vitest run`), y a la sección de ejecución la nota de que los gates de frontend necesitan `npm install` previo en `web/` (Node 22).
 
@@ -1130,7 +1130,7 @@ Expected: los tres gates de frontend en verde (lint/build/tests desde `web/`) y 
         working-directory: web
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.sh
@@ -1142,7 +1142,17 @@ git commit -m "build(quality): gates de frontend en la puerta y en CI"
 
 ## Registro de ejecución
 
-- [ ] Todos los tests vistos en rojo por el motivo correcto antes de su verde (Tasks 2-8, 10-Step 1).
-- [ ] `./verify.sh` verde antes de cada commit (Docker corriendo).
-- [ ] Versiones del `package.json` resueltas por el `npm install` real del Task 1 (sin ERESOLVE); si hubo ajustes, anotarlos aquí:
-- [ ] Desviaciones detectadas al ejecutar respecto de este plan (actualizar este documento, nunca maquillar el resultado):
+- [x] Todos los tests vistos en rojo por el motivo correcto antes de su verde (Tasks 2-8, 10-Step 1).
+- [x] `./verify.sh` verde antes de cada commit (Docker corriendo).
+- [x] Versiones del `package.json` resueltas por el `npm install` real del Task 1 (sin ERESOLVE); si hubo ajustes, anotarlos aquí:
+  - `npm install` del Task 1 sin ERESOLVE y sin vulnerabilidades; paridad Caserito cumplida sin ajustes.
+- [x] Desviaciones detectadas al ejecutar respecto de este plan (actualizar este documento, nunca maquillar el resultado):
+  - **Sin alias `@/`.** El código usa imports relativos (paridad real de Caserito, que tampoco configura el alias). `web/AGENTS.md` documenta «imports relativos» en lugar de «alias `@/`».
+  - **`Router` con Suspense para `/login`.** El router envolvió `LoginPage` (lazy) en un `Suspense` propio porque esa ruta queda fuera del layout.
+  - **`useWatch` en vez de `watch`.** El React Compiler (regla `react-hooks/incompatible-library`) avisaba con `watch` de react-hook-form; `useWatch` es un hook real y deja el lint limpio.
+  - **Esquema de `UsuarioNuevoPage`.** El `Resolver` de react-hook-form exige que el tipo de salida del esquema coincida con `Formulario`, así que el enum de rol incluye `''` en el tipo y la validación la rechaza con `superRefine`.
+  - **Smoke test del Task 1.** Al montar el `AuthProvider` (Task 3) la app hace red al arrancar: el smoke test simula `fetch` anónimo y, desde el Task 4 (router), asevera el heading «Iniciar sesión» en lugar de «Icarus».
+  - **Menú «Trabajadores» del administrador.** Sin página «todos los trabajadores» (la API no la expone), el enlace del menú apunta a `/admin/clientes`; la navegación no depende de un `clienteId` (spec). Los trabajadores se alcanzan desde la ficha de un cliente (`/clientes/:clienteId/trabajadores`).
+  - **Mock `fetchSimulado` con `init`.** Las llamadas tipo `fetch(url, { method: 'POST', ... })` (renovar sesión) pasan url + init; el mock debe leer el método del `init` o ve un GET y devuelve 404.
+  - **Gate «Frontend lint».** Ejecuta `npm run lint` (= `eslint .`); `format:check` queda disponible aparte. La tabla de `docs/ai/PUERTA_CALIDAD.md` documenta los comandos reales (no `eslint . && prettier --check .`), y el test de la puerta distingue `npm.cmd` en Windows.
+  - **MUI 9.** `InputLabelProps` no existe en MUI 9: se usa `slotProps={{ inputLabel: { shrink: true } }}`. `Grid` no se usó.
