@@ -2,6 +2,8 @@ using MediatR;
 
 namespace Icarus.Clientes.Application.Clientes;
 
-// Sistema cerrado (spec): crear clientes es exclusivo del Administrador
-// (endpoint con política en el Host).
-public sealed record CrearClienteCommand(string RazonSocial, string IdentificadorFiscal) : IRequest<Guid>;
+// Alta embebida (spec): el Host recibe email y contrasena y crea la cuenta de
+// acceso, mientras este handler solo crea el cliente. Email y contrasena no
+// van a logs ni a mensajes de error (anti-PII).
+public sealed record CrearClienteCommand(
+    string RazonSocial, string IdentificadorFiscal, string Email, string Contrasena) : IRequest<Guid>;

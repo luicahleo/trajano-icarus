@@ -19,7 +19,8 @@ public class CrearTrabajadorHandlerTests
         _handler = new CrearTrabajadorHandler(_clientes, _trabajadores, _unitOfWork);
 
     private static CrearTrabajadorCommand ComandoValido(Guid clienteId) =>
-        new(clienteId, "Nombre Ficticio", "00000000", "Operario", new DateOnly(2026, 1, 15));
+        new(clienteId, "Nombre Ficticio", "00000000", "Operario", new DateOnly(2026, 1, 15),
+            "trabajador@icarus.test", "Contrasena-Prueba-1");
 
     [Fact]
     public async Task TrabajadorValidoSeCreaYGuarda()

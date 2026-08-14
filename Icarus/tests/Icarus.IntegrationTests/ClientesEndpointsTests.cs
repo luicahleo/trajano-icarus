@@ -35,7 +35,13 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
         pedido.Content = JsonContent.Create(
-            new { razonSocial = "Granja de Prueba S.A.C.", identificadorFiscal });
+            new
+            {
+                razonSocial = "Granja de Prueba S.A.C.",
+                identificadorFiscal,
+                email = $"cliente-{Guid.NewGuid():N}@icarus.test",
+                contrasena = IdentityFactory.ContrasenaDePrueba,
+            });
 
         var respuesta = await cliente.SendAsync(pedido);
 
@@ -58,7 +64,13 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.PostAsJsonAsync("/clientes",
-            new { razonSocial = "Granja", identificadorFiscal = "20999999999" });
+            new
+            {
+                razonSocial = "Granja",
+                identificadorFiscal = "20999999999",
+                email = "nuevo@icarus.test",
+                contrasena = IdentityFactory.ContrasenaDePrueba,
+            });
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -69,7 +81,13 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
-        pedido.Content = JsonContent.Create(new { razonSocial = "Granja", identificadorFiscal = "20999999998" });
+        pedido.Content = JsonContent.Create(new
+        {
+            razonSocial = "Granja",
+            identificadorFiscal = "20999999998",
+            email = "nuevo@icarus.test",
+            contrasena = IdentityFactory.ContrasenaDePrueba,
+        });
 
         var respuesta = await cliente.SendAsync(pedido);
 
@@ -87,6 +105,8 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         {
             razonSocial = "Granja Repetida S.A.C.",
             identificadorFiscal = Icarus.Clientes.Infrastructure.SemillaClientes.IdentificadorFiscalDemo,
+            email = $"nuevo-{Guid.NewGuid():N}@icarus.test",
+            contrasena = IdentityFactory.ContrasenaDePrueba,
         });
 
         var respuesta = await cliente.SendAsync(pedido);

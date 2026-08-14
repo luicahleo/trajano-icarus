@@ -11,5 +11,7 @@ public sealed class CrearTrabajadorValidator : AbstractValidator<CrearTrabajador
         RuleFor(c => c.DocumentoIdentidad).NotEmpty().MaximumLength(32);
         RuleFor(c => c.Cargo).NotEmpty().MaximumLength(100);
         RuleFor(c => c.FechaIngreso).NotEmpty();
+        RuleFor(c => c.Email).NotEmpty().EmailAddress();
+        RuleFor(c => c.Contrasena).NotEmpty().MinimumLength(12);
     }
 }

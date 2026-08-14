@@ -38,6 +38,8 @@ public class TrabajadoresEndpointsTests : IClassFixture<IdentityFactory>
         {
             razonSocial = "Granja de Prueba S.A.C.",
             identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}",
+            email = $"cliente-{Guid.NewGuid():N}@icarus.test",
+            contrasena = IdentityFactory.ContrasenaDePrueba,
         });
         var respuesta = await cliente.SendAsync(pedido);
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -51,6 +53,8 @@ public class TrabajadoresEndpointsTests : IClassFixture<IdentityFactory>
         documentoIdentidad = documento,
         cargo = "Operario",
         fechaIngreso = "2026-01-15",
+        email = $"trabajador-{Guid.NewGuid():N}@icarus.test",
+        contrasena = IdentityFactory.ContrasenaDePrueba,
     };
 
     [Fact]

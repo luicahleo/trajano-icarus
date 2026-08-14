@@ -47,7 +47,8 @@ public static class ClientesEndpoints
             async (Guid clienteId, CrearTrabajadorRequest cuerpo, ISender mediator) =>
             {
                 var id = await mediator.Send(new CrearTrabajadorCommand(
-                    clienteId, cuerpo.Nombre, cuerpo.DocumentoIdentidad, cuerpo.Cargo, cuerpo.FechaIngreso));
+                    clienteId, cuerpo.Nombre, cuerpo.DocumentoIdentidad, cuerpo.Cargo,
+                    cuerpo.FechaIngreso, cuerpo.Email, cuerpo.Contrasena));
                 return Results.Created($"/clientes/{clienteId}/trabajadores/{id}", new { id });
             }).RequireAuthorization(PoliticasAutorizacion.GestionTrabajadores);
 
@@ -88,7 +89,8 @@ public static class ClientesEndpoints
     private sealed record DefinirModulosRequest(IReadOnlyList<string> Modulos);
 
     private sealed record CrearTrabajadorRequest(
-        string Nombre, string DocumentoIdentidad, string Cargo, DateOnly FechaIngreso);
+        string Nombre, string DocumentoIdentidad, string Cargo, DateOnly FechaIngreso,
+        string Email, string Contrasena);
 
     private sealed record CeseTrabajadorRequest(DateOnly FechaCese);
 }

@@ -44,6 +44,8 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         {
             razonSocial = "Granja de Prueba S.A.C.",
             identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}",
+            email = $"cuenta-{Guid.NewGuid():N}@icarus.test",
+            contrasena = IdentityFactory.ContrasenaDePrueba,
         });
         var respuestaCliente = await clienteHttp.SendAsync(altaCliente);
         Assert.Equal(HttpStatusCode.Created, respuestaCliente.StatusCode);

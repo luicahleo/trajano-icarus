@@ -21,7 +21,9 @@ public class CrearClienteHandlerTests
         _clientes.ExisteIdentificadorFiscalAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(false);
 
-        var id = await _handler.Handle(new CrearClienteCommand("Granja", "20100000001"), CancellationToken.None);
+        var id = await _handler.Handle(
+            new CrearClienteCommand("Granja", "20100000001", "granja@icarus.test", "Contrasena-Prueba-1"),
+            CancellationToken.None);
 
         Assert.NotEqual(Guid.Empty, id);
         _clientes.Received(1).Agregar(Arg.Any<Cliente>());
@@ -35,7 +37,9 @@ public class CrearClienteHandlerTests
             .Returns(true);
 
         var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(new CrearClienteCommand("Granja", "20100000001"), CancellationToken.None));
+            _handler.Handle(
+                new CrearClienteCommand("Granja", "20100000001", "granja@icarus.test", "Contrasena-Prueba-1"),
+                CancellationToken.None));
 
         Assert.Equal("No se pudo registrar el cliente.", ex.Message);
         _clientes.DidNotReceive().Agregar(Arg.Any<Cliente>());

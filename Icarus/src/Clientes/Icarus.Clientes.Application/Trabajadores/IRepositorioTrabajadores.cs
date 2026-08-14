@@ -20,4 +20,4 @@ public interface IRepositorioTrabajadores
 
 public sealed record TrabajadorResumen(
     Guid Id, string Nombre, string DocumentoIdentidad, string Cargo,
-    DateOnly FechaIngreso, DateOnly? FechaCese);
+    DateOnly FechaIngreso, DateOnly? FechaCese, IReadOnlyList<string> Funcionalidades);
