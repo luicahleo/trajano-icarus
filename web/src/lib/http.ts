@@ -20,7 +20,11 @@ export class ApiError extends Error {
 }
 
 function urlCompleta(ruta: string): string {
-  return new URL(ruta, window.location.origin).toString();
+  // El backend sirve sin prefijo y el proxy de Vite / gateway lo enrutan bajo
+  // /api (spec): toda llamada a la API lleva la base, aunque la ruta se escriba
+  // sin ella.
+  const conBase = ruta.startsWith('/api') ? ruta : `/api${ruta}`;
+  return new URL(conBase, window.location.origin).toString();
 }
 
 function esRutaDeSesion(ruta: string): boolean {

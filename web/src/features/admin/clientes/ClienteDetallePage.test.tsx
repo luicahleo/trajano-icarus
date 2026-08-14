@@ -47,7 +47,7 @@ describe('ClienteDetallePage', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   test('muestra los datos del cliente encontrado por :id', async () => {
-    fetchSimulado({ 'GET /clientes': respuesta(200, [clienteConGA]) });
+    fetchSimulado({ 'GET /api/clientes': respuesta(200, [clienteConGA]) });
     renderDetalle();
 
     expect(await screen.findByText('Granja Uno S.A.C.')).toBeInTheDocument();
@@ -60,8 +60,8 @@ describe('ClienteDetallePage', () => {
   test('alternar un módulo guarda la lista completa nueva', async () => {
     const usuario = userEvent.setup();
     const fetchMock = fetchSimulado({
-      'GET /clientes': respuesta(200, [clienteConGA]),
-      'PUT /clientes/c1/modulos': respuesta(204),
+      'GET /api/clientes': respuesta(200, [clienteConGA]),
+      'PUT /api/clientes/c1/modulos': respuesta(204),
     });
     renderDetalle();
 
@@ -79,8 +79,8 @@ describe('ClienteDetallePage', () => {
   test('suspender pide confirmación y llama a su endpoint', async () => {
     const usuario = userEvent.setup();
     const fetchMock = fetchSimulado({
-      'GET /clientes': respuesta(200, [clienteConGA]),
-      'POST /clientes/c1/suspender': respuesta(204),
+      'GET /api/clientes': respuesta(200, [clienteConGA]),
+      'POST /api/clientes/c1/suspender': respuesta(204),
     });
     renderDetalle();
 

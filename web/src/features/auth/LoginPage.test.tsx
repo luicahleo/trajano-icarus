@@ -60,7 +60,7 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('clientes de administrador')).toBeInTheDocument();
 
-    const llamada = fetchMock.mock.calls.find(([arg]) => esLlamadaA('/identidad/sesion')(arg));
+    const llamada = fetchMock.mock.calls.find(([arg]) => esLlamadaA('/api/identidad/sesion')(arg));
     expect(llamada).toBeDefined();
     const cuerpo = JSON.parse(await (llamada![0] as Request).clone().text());
     expect(cuerpo).toEqual({ email: 'admin@icarus.test', contrasena: 'Secreto-123' });
@@ -76,7 +76,7 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('El correo es obligatorio.')).toBeInTheDocument();
     expect(screen.getByText('La contraseña es obligatoria.')).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([arg]) => esLlamadaA('/identidad/sesion')(arg))).toBe(false);
+    expect(fetchMock.mock.calls.some(([arg]) => esLlamadaA('/api/identidad/sesion')(arg))).toBe(false);
   });
 
   test('ApiError 401 muestra el title genérico y el correlation ID sin credenciales', async () => {

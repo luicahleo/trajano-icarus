@@ -26,8 +26,8 @@ function fetchSimulado(reglas: Record<string, Response>) {
 
 function baseFetch(rol: Rol, clienteId: string | null, reglas: Record<string, Response>) {
   return fetchSimulado({
-    'POST /identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
-    'GET /identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId }),
+    'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
+    'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId }),
     ...reglas,
   });
 }
@@ -91,7 +91,7 @@ describe('TrabajadoresPage', () => {
 
   test('un cliente ve los trabajadores de su propia empresa', async () => {
     const fetchMock = baseFetch('Cliente', 'cli1', {
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador, trabajador2]),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador, trabajador2]),
     });
     renderPagina('/trabajadores');
 
@@ -104,9 +104,9 @@ describe('TrabajadoresPage', () => {
   test('el administrador elige un cliente y se carga su lista', async () => {
     const usuario = userEvent.setup();
     baseFetch('Administrador', null, {
-      'GET /clientes': respuesta(200, [clienteA, clienteB]),
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'GET /clientes/cli2/trabajadores': respuesta(200, [trabajador2]),
+      'GET /api/clientes': respuesta(200, [clienteA, clienteB]),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'GET /api/clientes/cli2/trabajadores': respuesta(200, [trabajador2]),
     });
     renderPagina('/clientes/cli1/trabajadores');
 
@@ -121,8 +121,8 @@ describe('TrabajadoresPage', () => {
   test('el alta crea un trabajador y refresca la lista', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetch('Cliente', 'cli1', {
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'POST /clientes/cli1/trabajadores': respuesta(201, { id: 't9' }),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'POST /api/clientes/cli1/trabajadores': respuesta(201, { id: 't9' }),
     });
     renderPagina('/trabajadores');
 
@@ -151,8 +151,8 @@ describe('TrabajadoresPage', () => {
   test('cesar rechaza una fecha futura y llama al endpoint con una válida', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetch('Cliente', 'cli1', {
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'POST /clientes/trabajadores/t1/cese': respuesta(204),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'POST /api/clientes/trabajadores/t1/cese': respuesta(204),
     });
     renderPagina('/trabajadores');
 
@@ -179,8 +179,8 @@ describe('TrabajadoresPage', () => {
   test('desactivar pide confirmación y borra el trabajador', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetch('Cliente', 'cli1', {
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'DELETE /clientes/trabajadores/t1': respuesta(204),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'DELETE /api/clientes/trabajadores/t1': respuesta(204),
     });
     renderPagina('/trabajadores');
 
@@ -193,8 +193,8 @@ describe('TrabajadoresPage', () => {
   test('un 409 en el alta muestra el title sin revelar el documento', async () => {
     const usuario = userEvent.setup();
     baseFetch('Cliente', 'cli1', {
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'POST /clientes/cli1/trabajadores': respuesta(409, { title: 'El documento de identidad ya está registrado.' }),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'POST /api/clientes/cli1/trabajadores': respuesta(409, { title: 'El documento de identidad ya está registrado.' }),
     });
     renderPagina('/trabajadores');
 

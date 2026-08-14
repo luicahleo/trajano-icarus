@@ -53,7 +53,7 @@ describe('ClienteNuevoPage', () => {
 
   test('envío válido crea el cliente y navega a la lista', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = fetchSimulado({ 'POST /clientes': respuesta(201, { id: 'c1' }) });
+    const fetchMock = fetchSimulado({ 'POST /api/clientes': respuesta(201, { id: 'c1' }) });
     renderNuevo();
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');
@@ -73,7 +73,7 @@ describe('ClienteNuevoPage', () => {
 
   test('un 409 muestra el title del problema', async () => {
     const usuario = userEvent.setup();
-    fetchSimulado({ 'POST /clientes': respuesta(409, { title: 'Ya existe un cliente con ese identificador.' }) });
+    fetchSimulado({ 'POST /api/clientes': respuesta(409, { title: 'Ya existe un cliente con ese identificador.' }) });
     renderNuevo();
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');

@@ -55,7 +55,7 @@ describe('ClientesListaPage', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   test('lista los clientes con estado y módulos', async () => {
-    fetchSimulado({ 'GET /clientes': respuesta(200, [clienteActivo, clienteSuspendido]) });
+    fetchSimulado({ 'GET /api/clientes': respuesta(200, [clienteActivo, clienteSuspendido]) });
     renderPagina();
 
     expect(await screen.findByText('Granja Uno S.A.C.')).toBeInTheDocument();
@@ -70,8 +70,8 @@ describe('ClientesListaPage', () => {
   test('suspender pide confirmación y llama al endpoint', async () => {
     const usuario = userEvent.setup();
     const fetchMock = fetchSimulado({
-      'GET /clientes': respuesta(200, [clienteActivo, clienteSuspendido]),
-      'POST /clientes/c1/suspender': respuesta(204),
+      'GET /api/clientes': respuesta(200, [clienteActivo, clienteSuspendido]),
+      'POST /api/clientes/c1/suspender': respuesta(204),
     });
     renderPagina();
 
@@ -90,7 +90,7 @@ describe('ClientesListaPage', () => {
 
   test('el botón de nuevo cliente navega al alta', async () => {
     const usuario = userEvent.setup();
-    fetchSimulado({ 'GET /clientes': respuesta(200, [clienteActivo]) });
+    fetchSimulado({ 'GET /api/clientes': respuesta(200, [clienteActivo]) });
     renderPagina();
 
     await usuario.click(await screen.findByRole('button', { name: 'Nuevo cliente' }));

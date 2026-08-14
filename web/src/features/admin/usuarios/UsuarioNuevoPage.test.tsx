@@ -82,14 +82,14 @@ describe('UsuarioNuevoPage', () => {
 
     expect(screen.queryByRole('combobox', { name: 'Cliente' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Trabajador' })).not.toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([arg]) => new URL(String((arg as Request).url)).pathname === '/clientes')).toBe(
+    expect(fetchMock.mock.calls.some(([arg]) => new URL(String((arg as Request).url)).pathname === '/api/clientes')).toBe(
       false,
     );
   });
 
   test('el rol Cliente muestra el selector de cliente y no el de trabajador', async () => {
     const usuario = userEvent.setup();
-    fetchSimulado({ 'GET /clientes': respuesta(200, [cliente]) });
+    fetchSimulado({ 'GET /api/clientes': respuesta(200, [cliente]) });
     renderNuevo();
 
     await elegirOpcion(usuario, 'Rol', 'Cliente');
@@ -101,8 +101,8 @@ describe('UsuarioNuevoPage', () => {
   test('el rol Trabajador carga los trabajadores del cliente elegido', async () => {
     const usuario = userEvent.setup();
     fetchSimulado({
-      'GET /clientes': respuesta(200, [cliente]),
-      'GET /clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'GET /api/clientes': respuesta(200, [cliente]),
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
     });
     renderNuevo();
 
@@ -118,8 +118,8 @@ describe('UsuarioNuevoPage', () => {
   test('envío válido crea la cuenta y muestra el éxito', async () => {
     const usuario = userEvent.setup();
     const fetchMock = fetchSimulado({
-      'GET /clientes': respuesta(200, [cliente]),
-      'POST /identidad/usuarios': respuesta(201, { id: 'u1' }),
+      'GET /api/clientes': respuesta(200, [cliente]),
+      'POST /api/identidad/usuarios': respuesta(201, { id: 'u1' }),
     });
     renderNuevo();
 
@@ -149,8 +149,8 @@ describe('UsuarioNuevoPage', () => {
   test('un 409 muestra el title del problema', async () => {
     const usuario = userEvent.setup();
     fetchSimulado({
-      'GET /clientes': respuesta(200, [cliente]),
-      'POST /identidad/usuarios': respuesta(409, { title: 'Ya existe una cuenta con ese correo.' }),
+      'GET /api/clientes': respuesta(200, [cliente]),
+      'POST /api/identidad/usuarios': respuesta(409, { title: 'Ya existe una cuenta con ese correo.' }),
     });
     renderNuevo();
 
