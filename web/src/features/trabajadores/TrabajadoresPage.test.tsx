@@ -40,7 +40,6 @@ function renderPagina(rutaInicial: string) {
         <AuthProvider>
           <Routes>
             <Route path="/trabajadores" element={<TrabajadoresPage />} />
-            <Route path="/clientes/:clienteId/trabajadores" element={<TrabajadoresPage />} />
           </Routes>
         </AuthProvider>
       </MemoryRouter>
@@ -62,6 +61,7 @@ const trabajador = {
   cargo: 'Criadora',
   fechaIngreso: '2025-01-01',
   fechaCese: null,
+  funcionalidades: ['Granjas'],
 };
 const trabajador2 = {
   id: 't2',
@@ -70,20 +70,7 @@ const trabajador2 = {
   cargo: 'Veterinario',
   fechaIngreso: '2025-03-01',
   fechaCese: '2026-02-01',
-};
-const clienteA = {
-  id: 'cli1',
-  razonSocial: 'Granja Uno S.A.C.',
-  identificadorFiscal: '20100102030',
-  estaActivo: true,
-  modulos: ['GestionAvicola'],
-};
-const clienteB = {
-  id: 'cli2',
-  razonSocial: 'Avícola Dos S.R.L.',
-  identificadorFiscal: '20511223344',
-  estaActivo: true,
-  modulos: ['GestionAvicola'],
+  funcionalidades: [],
 };
 
 describe('TrabajadoresPage', () => {
@@ -101,23 +88,6 @@ describe('TrabajadoresPage', () => {
     expect(llamadaCon(fetchMock, 'GET', '/clientes/cli1/trabajadores')).toBe(true);
   });
 
-  test('el administrador elige un cliente y se carga su lista', async () => {
-    const usuario = userEvent.setup();
-    baseFetch('Administrador', null, {
-      'GET /api/clientes': respuesta(200, [clienteA, clienteB]),
-      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'GET /api/clientes/cli2/trabajadores': respuesta(200, [trabajador2]),
-    });
-    renderPagina('/clientes/cli1/trabajadores');
-
-    expect(await screen.findByText('Ana Quispe')).toBeInTheDocument();
-
-    await usuario.click(screen.getByRole('combobox', { name: 'Cliente' }));
-    await usuario.click(await screen.findByRole('option', { name: 'Avícola Dos S.R.L.' }));
-
-    expect(await screen.findByText('Roberto Mamani')).toBeInTheDocument();
-  });
-
   test('el alta crea un trabajador y refresca la lista', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetch('Cliente', 'cli1', {
@@ -132,6 +102,8 @@ describe('TrabajadoresPage', () => {
     await usuario.type(screen.getByLabelText('Documento de identidad'), 'DNI-00000099');
     await usuario.type(screen.getByLabelText('Cargo'), 'Supervisor');
     fireEvent.change(screen.getByLabelText('Fecha de ingreso'), { target: { value: '2026-01-01' } });
+    await usuario.type(screen.getByLabelText('Correo electrónico'), 'nuevo@icarus.test');
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(llamadaCon(fetchMock, 'POST', '/clientes/cli1/trabajadores')).toBe(true);
@@ -145,6 +117,8 @@ describe('TrabajadoresPage', () => {
       documentoIdentidad: 'DNI-00000099',
       cargo: 'Supervisor',
       fechaIngreso: '2026-01-01',
+      email: 'nuevo@icarus.test',
+      contrasena: 'Clave-Larga-123456',
     });
   });
 
@@ -203,6 +177,8 @@ describe('TrabajadoresPage', () => {
     await usuario.type(screen.getByLabelText('Documento de identidad'), 'DNI-00000099');
     await usuario.type(screen.getByLabelText('Cargo'), 'Supervisor');
     fireEvent.change(screen.getByLabelText('Fecha de ingreso'), { target: { value: '2026-01-01' } });
+    await usuario.type(screen.getByLabelText('Correo electrónico'), 'nuevo@icarus.test');
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText(/El documento de identidad ya está registrado/)).toBeInTheDocument();

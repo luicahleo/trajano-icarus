@@ -48,6 +48,8 @@ describe('ClienteNuevoPage', () => {
 
     expect(await screen.findByText('La razón social es obligatoria.')).toBeInTheDocument();
     expect(screen.getByText('El identificador fiscal es obligatorio.')).toBeInTheDocument();
+    expect(screen.getByText('El correo es obligatorio.')).toBeInTheDocument();
+    expect(screen.getByText('La contraseña debe tener al menos 12 caracteres.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([arg]) => (arg as Request).method === 'POST')).toBe(false);
   });
 
@@ -58,6 +60,8 @@ describe('ClienteNuevoPage', () => {
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');
     await usuario.type(screen.getByLabelText('Identificador fiscal'), '20123456789');
+    await usuario.type(screen.getByLabelText('Correo electrónico'), 'cliente@icarus.test');
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Crear cliente' }));
 
     expect(await screen.findByText('lista de clientes')).toBeInTheDocument();
@@ -68,7 +72,12 @@ describe('ClienteNuevoPage', () => {
     });
     expect(llamada).toBeDefined();
     const cuerpo = JSON.parse(await (llamada![0] as Request).clone().text());
-    expect(cuerpo).toEqual({ razonSocial: 'Granja Demo S.A.C.', identificadorFiscal: '20123456789' });
+    expect(cuerpo).toEqual({
+      razonSocial: 'Granja Demo S.A.C.',
+      identificadorFiscal: '20123456789',
+      email: 'cliente@icarus.test',
+      contrasena: 'Clave-Larga-123456',
+    });
   });
 
   test('un 409 muestra el title del problema', async () => {
@@ -78,6 +87,8 @@ describe('ClienteNuevoPage', () => {
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');
     await usuario.type(screen.getByLabelText('Identificador fiscal'), '20123456789');
+    await usuario.type(screen.getByLabelText('Correo electrónico'), 'cliente@icarus.test');
+    await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Crear cliente' }));
 
     expect(await screen.findByText(/Ya existe un cliente con ese identificador/)).toBeInTheDocument();

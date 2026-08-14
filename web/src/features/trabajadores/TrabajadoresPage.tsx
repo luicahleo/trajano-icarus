@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  MenuItem,
   Paper,
   Stack,
   Table,
@@ -23,12 +22,10 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { ApiError } from '../../lib/http';
 import type { TrabajadorResumen } from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
-import { listarClientes } from '../admin/clientes/api';
 import { cesarTrabajador, crearTrabajador, desactivarTrabajador, listarTrabajadores } from './api';
 
 const esquemaAlta = z.object({
@@ -36,6 +33,8 @@ const esquemaAlta = z.object({
   documentoIdentidad: z.string().min(1, 'El documento de identidad es obligatorio.'),
   cargo: z.string().min(1, 'El cargo es obligatorio.'),
   fechaIngreso: z.string().min(1, 'La fecha de ingreso es obligatoria.'),
+  email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
+  contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.'),
 });
 
 type DatosAlta = z.infer<typeof esquemaAlta>;
@@ -48,12 +47,8 @@ function fechaDeHoy(): string {
 }
 
 export function TrabajadoresPage() {
-  const { rol, clienteId: miClienteId } = useAuth();
-  const { clienteId: clienteIdRuta } = useParams<{ clienteId: string }>();
-  const navigate = useNavigate();
+  const { clienteId } = useAuth();
   const queryClient = useQueryClient();
-  const esAdministrador = rol === 'Administrador';
-  const [clienteElegido, setClienteElegido] = useState<string>(clienteIdRuta ?? '');
   const [abiertaAlta, setAbiertaAlta] = useState(false);
   const [cesando, setCesando] = useState<TrabajadorResumen | null>(null);
   const [fechaCese, setFechaCese] = useState('');
@@ -61,14 +56,7 @@ export function TrabajadoresPage() {
   const [desactivando, setDesactivando] = useState<TrabajadorResumen | null>(null);
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
 
-  const clienteId = esAdministrador ? clienteElegido : miClienteId;
   const claveTrabajadores = ['trabajadores', clienteId] as const;
-
-  const { data: clientes } = useQuery({
-    queryKey: ['clientes'],
-    queryFn: listarClientes,
-    enabled: esAdministrador,
-  });
 
   const { data: trabajadores, isLoading, isError } = useQuery({
     queryKey: claveTrabajadores,
@@ -138,28 +126,6 @@ export function TrabajadoresPage() {
           </Button>
         )}
       </Stack>
-
-      {esAdministrador && (
-        <TextField
-          select
-          label="Cliente"
-          value={clienteElegido}
-          onChange={(e) => {
-            setClienteElegido(e.target.value);
-            navigate(`/clientes/${e.target.value}/trabajadores`);
-          }}
-          sx={{ mb: 3, minWidth: 320 }}
-        >
-          <MenuItem value="" disabled>
-            Selecciona un cliente
-          </MenuItem>
-          {(clientes ?? []).map((c) => (
-            <MenuItem key={c.id} value={c.id}>
-              {c.razonSocial}
-            </MenuItem>
-          ))}
-        </TextField>
-      )}
 
       {isError && <Alert severity="error">No se pudo cargar la lista de trabajadores.</Alert>}
       {isLoading && <CircularProgress />}
@@ -243,6 +209,24 @@ export function TrabajadoresPage() {
               {...register('fechaIngreso')}
               error={Boolean(errors.fechaIngreso)}
               helperText={errors.fechaIngreso?.message}
+            />
+            <TextField
+              label="Correo electrónico"
+              type="email"
+              autoComplete="off"
+              fullWidth
+              {...register('email')}
+              error={Boolean(errors.email)}
+              helperText={errors.email?.message}
+            />
+            <TextField
+              label="Contraseña"
+              type="password"
+              autoComplete="new-password"
+              fullWidth
+              {...register('contrasena')}
+              error={Boolean(errors.contrasena)}
+              helperText={errors.contrasena?.message}
             />
             {errorAlta && <Alert severity="error">{errorAlta}</Alert>}
           </Box>

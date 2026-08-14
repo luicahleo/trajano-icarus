@@ -19,6 +19,8 @@ const esquema = z.object({
     .string()
     .min(1, 'El identificador fiscal es obligatorio.')
     .max(32, 'El identificador fiscal no puede superar los 32 caracteres.'),
+  email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
+  contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.'),
 });
 
 type Esquema = z.infer<typeof esquema>;
@@ -70,6 +72,24 @@ export function ClienteNuevoPage() {
             {...register('identificadorFiscal')}
             error={Boolean(errors.identificadorFiscal)}
             helperText={errors.identificadorFiscal?.message}
+          />
+          <TextField
+            label="Correo electrónico"
+            type="email"
+            autoComplete="off"
+            fullWidth
+            {...register('email')}
+            error={Boolean(errors.email)}
+            helperText={errors.email?.message}
+          />
+          <TextField
+            label="Contraseña"
+            type="password"
+            autoComplete="new-password"
+            fullWidth
+            {...register('contrasena')}
+            error={Boolean(errors.contrasena)}
+            helperText={errors.contrasena?.message}
           />
           {errorApi && <Alert severity="error">{errorApi}</Alert>}
           <Button type="submit" variant="contained" size="large" disabled={crear.isPending}>

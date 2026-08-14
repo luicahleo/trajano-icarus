@@ -7,7 +7,7 @@ export async function listarTrabajadores(clienteId: string): Promise<TrabajadorR
 
 export async function crearTrabajador(
   clienteId: string,
-  datos: { nombre: string; documentoIdentidad: string; cargo: string; fechaIngreso: string },
+  datos: { nombre: string; documentoIdentidad: string; cargo: string; fechaIngreso: string; email: string; contrasena: string },
 ): Promise<{ id: string }> {
   return peticion<{ id: string }>({ ruta: `/clientes/${clienteId}/trabajadores`, metodo: 'POST', cuerpo: datos });
 }

@@ -5,7 +5,12 @@ export async function listarClientes(): Promise<ClienteResumen[]> {
   return peticion<ClienteResumen[]>({ ruta: '/clientes' });
 }
 
-export async function crearCliente(datos: { razonSocial: string; identificadorFiscal: string }): Promise<{ id: string }> {
+export async function crearCliente(datos: {
+  razonSocial: string;
+  identificadorFiscal: string;
+  email: string;
+  contrasena: string;
+}): Promise<{ id: string }> {
   return peticion<{ id: string }>({ ruta: '/clientes', metodo: 'POST', cuerpo: datos });
 }
 
