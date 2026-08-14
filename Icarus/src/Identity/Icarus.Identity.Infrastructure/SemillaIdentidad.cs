@@ -14,7 +14,6 @@ public static class SemillaIdentidad
     public static readonly Guid TrabajadorDemoId = new("22222222-2222-2222-2222-222222222222");
 
     public const string EmailAdmin = "admin@icarus.test";
-    public const string EmailSoporte = "soporte@icarus.test";
     public const string EmailCliente = "cliente@icarus.test";
     public const string EmailTrabajador = "trabajador@icarus.test";
 
@@ -22,7 +21,6 @@ public static class SemillaIdentidad
     {
         var usuarios = servicios.GetRequiredService<UserManager<Usuario>>();
         await CrearSiNoExiste(usuarios, EmailAdmin, Rol.Administrador, null, null, contrasenaPrueba);
-        await CrearSiNoExiste(usuarios, EmailSoporte, Rol.SoporteTecnico, null, null, contrasenaPrueba);
         await CrearSiNoExiste(usuarios, EmailCliente, Rol.Cliente, ClienteDemoId, null, contrasenaPrueba);
         await CrearSiNoExiste(usuarios, EmailTrabajador, Rol.Trabajador, ClienteDemoId, TrabajadorDemoId, contrasenaPrueba);
     }

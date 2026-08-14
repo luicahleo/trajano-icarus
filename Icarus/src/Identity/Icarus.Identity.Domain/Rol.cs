@@ -5,7 +5,6 @@ namespace Icarus.Identity.Domain;
 public enum Rol
 {
     Administrador = 0,
-    SoporteTecnico = 1,
-    Cliente = 2,
-    Trabajador = 3,
+    Cliente = 1,
+    Trabajador = 2,
 }

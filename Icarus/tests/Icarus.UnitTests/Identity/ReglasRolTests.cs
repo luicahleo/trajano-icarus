@@ -15,7 +15,6 @@ public class ReglasRolTests
 
     [Theory]
     [InlineData(Rol.Administrador)]
-    [InlineData(Rol.SoporteTecnico)]
     public void RolesDePlataformaNoRequierenCliente(Rol rol)
     {
         Assert.False(ReglasRol.RequiereCliente(rol));

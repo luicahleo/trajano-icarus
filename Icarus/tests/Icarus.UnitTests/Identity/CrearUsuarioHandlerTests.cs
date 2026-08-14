@@ -40,7 +40,7 @@ public class CrearUsuarioHandlerTests
             .Returns((Guid?)null);
 
         await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(
-            new CrearUsuarioCommand("nueva@icarus.test", "Contrasena-123", "SoporteTecnico", null, null),
+            new CrearUsuarioCommand("nueva@icarus.test", "Contrasena-123", "Trabajador", null, null),
             CancellationToken.None));
     }
 }

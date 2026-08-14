@@ -98,7 +98,7 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.PostAsJsonAsync("/identidad/usuarios",
-            new { email = "nuevo@icarus.test", contrasena = "Contrasena-Prueba-1", rol = "SoporteTecnico" });
+            new { email = "nuevo@icarus.test", contrasena = "Contrasena-Prueba-1", rol = "Trabajador" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -110,7 +110,7 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", token);
         pedido.Content = JsonContent.Create(
-            new { email = "nuevo@icarus.test", contrasena = "Contrasena-Prueba-1", rol = "SoporteTecnico" });
+            new { email = "nuevo@icarus.test", contrasena = "Contrasena-Prueba-1", rol = "Trabajador" });
 
         var respuesta = await cliente.SendAsync(pedido);
 
@@ -125,7 +125,7 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
         var email = $"creado-{Guid.NewGuid():N}@icarus.test";
         var pedido = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", token);
         pedido.Content = JsonContent.Create(
-            new { email, contrasena = "Contrasena-Prueba-1", rol = "SoporteTecnico" });
+            new { email, contrasena = "Contrasena-Prueba-1", rol = "Cliente", clienteId = SemillaIdentidad.ClienteDemoId });
 
         var respuesta = await cliente.SendAsync(pedido);
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -167,7 +167,7 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
     {
         var cliente = _factory.CreateClient();
         var login = await cliente.PostAsJsonAsync("/identidad/sesion",
-            new { email = SemillaIdentidad.EmailSoporte, contrasena = ContrasenaSemilla });
+            new { email = SemillaIdentidad.EmailAdmin, contrasena = ContrasenaSemilla });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var cookie = login.Headers.GetValues("Set-Cookie")
             .Single(h => h.StartsWith(IdentidadEndpoints.CookieRefresh + "=", StringComparison.Ordinal))
@@ -190,7 +190,7 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
     {
         var cliente = _factory.CreateClient();
         var login = await cliente.PostAsJsonAsync("/identidad/sesion",
-            new { email = SemillaIdentidad.EmailSoporte, contrasena = ContrasenaSemilla });
+            new { email = SemillaIdentidad.EmailAdmin, contrasena = ContrasenaSemilla });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var cookie = login.Headers.GetValues("Set-Cookie")
             .Single(h => h.StartsWith(IdentidadEndpoints.CookieRefresh + "=", StringComparison.Ordinal))

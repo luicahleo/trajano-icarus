@@ -6,8 +6,8 @@ namespace Icarus.Clientes.Infrastructure.Persistencia;
 
 // Filtros globales de EF Core (spec): soft delete (EstaActivo, regla
 // transversal del glosario) y tenant (ClienteId del claim, vía ICurrentUser).
-// Los roles de plataforma (Administrador, SoporteTecnico) llevan ClienteId
-// nulo y ven todos los tenants.
+// El rol de plataforma (Administrador) lleva ClienteId nulo y ve todos los
+// tenants.
 public sealed class ClientesDbContext : DbContext, IUnitOfWork
 {
     private readonly Guid? _clienteIdActual;
