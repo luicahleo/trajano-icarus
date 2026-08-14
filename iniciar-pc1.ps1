@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Ip,
     [switch]$Logs,
     [switch]$RecrearDatos,
@@ -7,6 +7,7 @@ param(
 
 $argumentos = @{
     Perfil = 'pc1'
+    SsidMobil = 'aseproda'
 }
 if ($Ip) { $argumentos.Ip = $Ip }
 if ($Logs) { $argumentos.Logs = $true }

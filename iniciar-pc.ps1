@@ -1,7 +1,8 @@
-param(
+﻿param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
     [string]$Ip,
+    [string]$SsidMobil,
     [switch]$Logs,
     [switch]$RecrearDatos,
     [switch]$ConfirmarBorradoDatos
@@ -15,6 +16,41 @@ if ($RecrearDatos -and -not $ConfirmarBorradoDatos) {
     throw 'La recreación elimina la base y volúmenes locales. Repite con -RecrearDatos -ConfirmarBorradoDatos.'
 }
 
+function Obtener-IpWifi([string]$Ssid) {
+    # netsh wlan reporta el SSID real de la conexión; Get-NetConnectionProfile
+    # puede devolver el nombre de red (p. ej. el dominio) en su lugar.
+    $salidaNetsh = $null
+    try {
+        $ErrorActionPreference = 'Continue'
+        $salidaNetsh = & netsh wlan show interfaces 2>$null
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+    $ssidConectado = $salidaNetsh | Where-Object { $_ -match '^\s*SSID\s*:\s*(.+)$' -and $Matches[1].Trim() -eq $Ssid }
+    if (-not $ssidConectado) { return $null }
+
+    $indicesWifi = @(Get-NetAdapter -ErrorAction SilentlyContinue |
+        Where-Object { $_.PhysicalMediaType -eq 'Native 802.11' } |
+        Select-Object -ExpandProperty InterfaceIndex)
+    foreach ($indice in $indicesWifi) {
+        $direccion = Get-NetIPAddress -InterfaceIndex $indice -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.IPAddress -notlike '169.254.*' } |
+            Select-Object -First 1
+        if ($direccion) { return $direccion.IPAddress }
+    }
+    $perfil = Get-NetConnectionProfile -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -eq $Ssid } |
+        Select-Object -First 1
+    if ($perfil) {
+        $direccion = Get-NetIPAddress -InterfaceIndex $perfil.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.IPAddress -notlike '169.254.*' } |
+            Select-Object -First 1
+        if ($direccion) { return $direccion.IPAddress }
+    }
+    throw "El WiFi '$Ssid' está conectado pero no tiene una IPv4 LAN asignada."
+}
+
 function Obtener-IpLan([string]$IpSolicitada) {
     if ($IpSolicitada) {
         $direccion = $null
@@ -24,6 +60,12 @@ function Obtener-IpLan([string]$IpSolicitada) {
             throw 'La IP indicada no es una IPv4 LAN válida.'
         }
         return $direccion.IPAddressToString
+    }
+
+    if ($SsidMobil) {
+        $ipWifi = Obtener-IpWifi $SsidMobil
+        if ($ipWifi) { return $ipWifi }
+        throw "No se encontró el WiFi '$SsidMobil' conectado. Conéctate a ese SSID para exponer el contenedor a los móviles."
     }
 
     $ruta = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction Stop |
