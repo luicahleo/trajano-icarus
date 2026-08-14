@@ -576,20 +576,20 @@ git commit -m "feat: alta embebida de cuentas y gestion de funcionalidades (solo
 - Consumes: el alta embebida del task 6 ya no usa `POST /identidad/usuarios`.
 - Produces: `IRegistradorUsuarios`/`RegistradorUsuarios` reubicados como servicio de registro de cuentas (no CRUD), consumidos únicamente por `AltaCuentasServicio` (Host). `ConsultaUsuarios`/`IConsultaUsuarios` (sesiones) NO se tocan: quedan en `Infrastructure/Usuarios/` porque son consulta de sesión, no CRUD de cuentas.
 
-- [ ] **Step 1: Quitar el endpoint y el paquete (rojo)**
+- [x] **Step 1: Quitar el endpoint y el paquete (rojo)**
 
 Eliminar los tres archivos de `Application/Usuarios` y mover la interfaz y su implementación a `RegistroCuentas/`. Quitar `POST /usuarios` de `IdentidadEndpoints.cs`. Borrar `CrearUsuarioHandlerTests.cs`.
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (`CrearUsuarioCommand`/`CrearUsuarioHandler` referenciados desde el endpoint y el DI; `IRegistradorUsuarios` en su namespace viejo).
 
-- [ ] **Step 2: Ajustar los consumidores (verde)**
+- [x] **Step 2: Ajustar los consumidores (verde)**
 
 - `Identity/DependencyInjection.cs`: actualizar el `using`/registro a `Icarus.Identity.Infrastructure.RegistroCuentas`.
 - `AltaCuentasServicio.cs`: `using Icarus.Identity.Application.RegistroCuentas;`.
 - `IdentityEndpointsTests.cs`: quitar `CrearUsuarioSinTokenDevuelve401`, `CrearUsuarioConRolClienteDevuelve403` y `CrearUsuarioComoAdminPermiteLoginDeLaNuevaCuenta` (el endpoint ya no existe).
 
-- [ ] **Step 3: Correr y verificar verde**
+- [x] **Step 3: Correr y verificar verde**
 
 Run:
 ```bash
@@ -599,7 +599,7 @@ dotnet test Icarus/tests/Icarus.IntegrationTests --nologo
 ```
 Expected: build con 0 warnings; suites en verde (ningún test usa ya `POST /identidad/usuarios`).
 
-- [ ] **Step 4: Puerta completa y commit**
+- [x] **Step 4: Puerta completa y commit**
 
 Run: `./verify.ps1` (todos los gates).
 Expected: verde. Si el gate de mojibake o enlaces falla, corregir el contenido, no el gate.
@@ -613,5 +613,7 @@ git commit -m "refactor(identity): elimina el CRUD de usuarios (la cuenta nace c
 
 ## Registro de cierre
 
-- **Sin implementar aún**: ninguna de las tareas de este plan (sesión de planificación). El spec (`docs/superpowers/specs/2026-08-14-entitlement-por-funcionalidad-design.md`) está aprobado y sin commitear junto con este plan; conviene commitearlos al arrancar la implementación.
-- **Verificación**: `./verify.ps1` al cierre de esta sesión (sin cambios de código) debe quedar verde.
+- **Estado**: plan completo. Las 7 tareas quedaron implementadas y commiteadas en `develop` (352841f, 1ca03ff, 144e878, 5e6afd1, ad87123, a98c42e, 2a40a0a). El spec se commitó al arrancar junto con el plan (08be897, sesión de planificación).
+- **Verificación**: `./verify.ps1` corrido antes de cada commit, siempre verde (80 unitarios, 4 de arquitectura, 40 de integración con Testcontainers, frontend completo).
+- **Notas de implementación**: `IEmisorAccessTokens` y `UsuarioActualDiseno` (DesignTime factory) se ajustaron en el task 4 como consumidores de la firma nueva; en el task 2 el valor por defecto de `Funcionalidades` se configuró con el enum (`HasDefaultValue(Funcionalidades.Ninguno)`), no con `0` entero. En el task 6, el test de asignación de funcionalidades exige que el cliente tenga `GestionAvicola` habilitado.
+- **Sin implementar (anotado, fuera del plan)**: módulos de negocio concretos de GestionAvicola (granjas, galpones, producción, etc.) y el módulo ControlAcceso (previsto, sin funcionalidades). El frontend React (plan 4) sigue sin existir.
