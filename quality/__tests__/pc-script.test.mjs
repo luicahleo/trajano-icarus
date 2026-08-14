@@ -20,6 +20,17 @@ test('las advertencias de docker info no detienen el inicio', () => {
   assert.match(core, /if \(\$codigoDocker -ne 0\)/);
 });
 
+test('el up y el down de compose toleran el stderr de docker', () => {
+  assert.match(
+    core,
+    /\$ErrorActionPreference = 'Continue'[\s\S]*docker compose @archivosCompose up -d --build[\s\S]*\$codigoUp = \$LASTEXITCODE[\s\S]*finally[\s\S]*\$ErrorActionPreference = \$preferenciaErrores/,
+  );
+  assert.match(
+    core,
+    /\$ErrorActionPreference = 'Continue'[\s\S]*docker compose @archivosCompose down --volumes[\s\S]*\$codigoDown = \$LASTEXITCODE[\s\S]*finally[\s\S]*\$ErrorActionPreference = \$preferenciaErrores/,
+  );
+});
+
 test('los fallos transitorios de curl reintentan el sondeo HTTPS', () => {
   assert.match(
     core,

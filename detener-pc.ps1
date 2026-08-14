@@ -18,8 +18,17 @@ if ($BorrarDatos -and -not $ConfirmarBorradoDatos) {
 
 $argumentos = @('down')
 if ($BorrarDatos) { $argumentos += '--volumes' }
-& docker compose @archivosCompose @argumentos
-if ($LASTEXITCODE -ne 0) { throw "No se pudo detener el entorno $Perfil." }
+
+$preferenciaErrores = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    & docker compose @archivosCompose @argumentos
+    $codigo = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $preferenciaErrores
+}
+if ($codigo -ne 0) { throw "No se pudo detener el entorno $Perfil." }
 
 if ($BorrarDatos) {
     Write-Host 'Se eliminaron los volúmenes Docker locales; no son recuperables desde este script.' -ForegroundColor Yellow

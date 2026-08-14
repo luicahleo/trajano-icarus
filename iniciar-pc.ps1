@@ -65,13 +65,27 @@ $archivosCompose = @(
 )
 
 if ($RecrearDatos) {
-    & docker compose @archivosCompose down --volumes
-    if ($LASTEXITCODE -ne 0) { throw "No se pudieron eliminar los datos locales de $nombreEquipo." }
+    try {
+        $ErrorActionPreference = 'Continue'
+        & docker compose @archivosCompose down --volumes
+        $codigoDown = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+    if ($codigoDown -ne 0) { throw "No se pudieron eliminar los datos locales de $nombreEquipo." }
     Write-Host 'Se eliminaron los volúmenes Docker locales; se recrearán al iniciar.' -ForegroundColor Yellow
 }
 
-& docker compose @archivosCompose up -d --build --renew-anon-volumes
-if ($LASTEXITCODE -ne 0) { throw "No se pudo levantar el entorno $nombreEquipo." }
+try {
+    $ErrorActionPreference = 'Continue'
+    & docker compose @archivosCompose up -d --build --renew-anon-volumes
+    $codigoUp = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $preferenciaErrores
+}
+if ($codigoUp -ne 0) { throw "No se pudo levantar el entorno $nombreEquipo." }
 
 $certificado = Join-Path $raiz ".local/$Perfil/caddy-data/caddy/pki/authorities/local/root.crt"
 for ($intento = 0; $intento -lt 30 -and -not (Test-Path $certificado); $intento++) {
@@ -95,12 +109,18 @@ for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
     if (-not $saludable) { Start-Sleep -Seconds 1 }
 }
 if (-not $saludable) {
-    & docker compose @archivosCompose logs --tail 50 gateway web api
+    try {
+        $ErrorActionPreference = 'Continue'
+        & docker compose @archivosCompose logs --tail 50 gateway web api
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
     throw 'El gateway HTTPS no alcanzó un estado saludable.'
 }
 
 Write-Host ''
-Write-Host "Icarus $nombreEquipo: https://$hostLan" -ForegroundColor Green
+Write-Host "Icarus ${nombreEquipo}: https://$hostLan" -ForegroundColor Green
 if (Test-Path $certificado) {
     Write-Host "CA pública para instalar en el móvil: $certificado" -ForegroundColor Yellow
 } else {
@@ -108,4 +128,12 @@ if (Test-Path $certificado) {
 }
 Write-Host 'Si el móvil no conecta, permite los puertos TCP 80 y 443 para redes privadas en Firewall de Windows.'
 
-if ($Logs) { & docker compose @archivosCompose logs -f }
+if ($Logs) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        & docker compose @archivosCompose logs -f
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+}

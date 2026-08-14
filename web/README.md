@@ -57,13 +57,10 @@ e `infra/pcX/Caddyfile`.
 ### Cuentas semilla dev/test
 
 Sistema cerrado (roles): `admin@icarus.test`, `soporte@icarus.test`,
-`cliente@icarus.test`, `trabajador@icarus.test`. La contraseña depende de cómo
-se levante la API:
-
-| Forma de levantar | Contraseña |
-|---|---|
-| `dotnet run` con `appsettings.Development.json` | `Semilla-Dev-1234` |
-| `docker compose -f docker-compose.dev.yml up -d` | `Solo-Desarrollo-123` |
+`cliente@icarus.test`, `trabajador@icarus.test`. La contraseña es
+`Semilla-Dev-1234` (configuración `Semilla:ContrasenaPrueba` de
+`appsettings.Development.json`, la misma que usa el compose con
+`ASPNETCORE_ENVIRONMENT=Development`).
 
 El cliente semilla «Granja Demo S.A.C.» tiene el módulo `GestionAvicola` y un
 trabajador demo (datos ficticios).
