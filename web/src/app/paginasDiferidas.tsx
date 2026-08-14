@@ -18,9 +18,6 @@ export const ClienteNuevoPage = lazy(() =>
 export const ClienteDetallePage = lazy(() =>
   import('../features/admin/clientes/ClienteDetallePage').then((modulo) => ({ default: modulo.ClienteDetallePage })),
 );
-export const UsuarioNuevoPage = lazy(() =>
-  import('../features/admin/usuarios/UsuarioNuevoPage').then((modulo) => ({ default: modulo.UsuarioNuevoPage })),
-);
 export const TrabajadoresPage = lazy(() =>
   import('../features/trabajadores/TrabajadoresPage').then((modulo) => ({ default: modulo.TrabajadoresPage })),
 );

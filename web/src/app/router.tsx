@@ -13,7 +13,6 @@ import {
   LoginPage,
   NotFoundPage,
   TrabajadoresPage,
-  UsuarioNuevoPage,
 } from './paginasDiferidas';
 import { RedirigirSegunRol } from './RedirigirSegunRol';
 
@@ -73,26 +72,6 @@ export const router = createBrowserRouter([
           <ProtectedRoute>
             <RequiereRol roles={admin}>
               <ClienteDetallePage />
-            </RequiereRol>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/admin/usuarios/nuevo',
-        element: (
-          <ProtectedRoute>
-            <RequiereRol roles={admin}>
-              <UsuarioNuevoPage />
-            </RequiereRol>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/clientes/:clienteId/trabajadores',
-        element: (
-          <ProtectedRoute>
-            <RequiereRol roles={admin}>
-              <TrabajadoresPage />
             </RequiereRol>
           </ProtectedRoute>
         ),

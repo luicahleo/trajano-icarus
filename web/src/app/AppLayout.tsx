@@ -12,13 +12,7 @@ interface EnlaceMenu {
 }
 
 const ENLACES_POR_ROL: Partial<Record<Rol, EnlaceMenu[]>> = {
-  Administrador: [
-    { etiqueta: 'Clientes', ruta: '/admin/clientes' },
-    { etiqueta: 'Usuarios', ruta: '/admin/usuarios/nuevo' },
-    // El administrador llega a los trabajadores desde la ficha de un cliente;
-    // el menú no depende de un clienteId (spec).
-    { etiqueta: 'Trabajadores', ruta: '/admin/clientes' },
-  ],
+  Administrador: [{ etiqueta: 'Clientes', ruta: '/admin/clientes' }],
   Cliente: [{ etiqueta: 'Trabajadores', ruta: '/trabajadores' }],
 };
 

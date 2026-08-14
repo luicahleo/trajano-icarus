@@ -37,11 +37,11 @@ function renderLayout(rol: Rol) {
 describe('AppLayout', () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  test('el administrador ve Clientes, Usuarios y Trabajadores', async () => {
+  test('el administrador solo ve Clientes', async () => {
     renderLayout('Administrador');
     expect(await screen.findByText('Clientes')).toBeInTheDocument();
-    expect(screen.getByText('Usuarios')).toBeInTheDocument();
-    expect(screen.getByText('Trabajadores')).toBeInTheDocument();
+    expect(screen.queryByText('Usuarios')).not.toBeInTheDocument();
+    expect(screen.queryByText('Trabajadores')).not.toBeInTheDocument();
   });
 
   test('el cliente solo ve Trabajadores', async () => {

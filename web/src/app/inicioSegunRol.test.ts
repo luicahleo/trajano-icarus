@@ -9,10 +9,6 @@ describe('inicioSegunRol', () => {
     expect(inicioSegunRol('Cliente')).toBe('/trabajadores');
   });
 
-  test('SoporteTecnico cae en el placeholder', () => {
-    expect(inicioSegunRol('SoporteTecnico')).toBe('/inicio');
-  });
-
   test('Trabajador cae en el placeholder', () => {
     expect(inicioSegunRol('Trabajador')).toBe('/inicio');
   });

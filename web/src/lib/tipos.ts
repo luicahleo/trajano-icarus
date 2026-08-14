@@ -1,4 +1,4 @@
-export type Rol = 'Administrador' | 'SoporteTecnico' | 'Cliente' | 'Trabajador';
+export type Rol = 'Administrador' | 'Cliente' | 'Trabajador';
 export type Modulo = 'GestionAvicola' | 'ControlAcceso';
 
 export interface SesionInfo {
@@ -10,6 +10,7 @@ export interface UsuarioActual {
   usuarioId: string;
   rol: Rol;
   clienteId: string | null;
+  trabajadorId: string | null;
 }
 
 export interface ClienteResumen {
@@ -27,4 +28,5 @@ export interface TrabajadorResumen {
   cargo: string;
   fechaIngreso: string;
   fechaCese: string | null;
+  funcionalidades: string[];
 }
