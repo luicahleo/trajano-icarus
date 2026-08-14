@@ -27,6 +27,7 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);
 builder.Services.AddClientesInfraestructura(builder.Configuration);
+builder.Services.AddScoped<AltaCuentasServicio>();
 
 var app = builder.Build();
 

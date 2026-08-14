@@ -29,19 +29,21 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },
         };
 
+    private static object CuerpoCliente(string identificadorFiscal, string email) => new
+    {
+        razonSocial = "Granja de Prueba S.A.C.",
+        identificadorFiscal,
+        email,
+        contrasena = IdentityFactory.ContrasenaDePrueba,
+    };
+
     private async Task<Guid> CrearClienteComoAdmin(string identificadorFiscal)
     {
         var token = await LoginComo(SemillaIdentidad.EmailAdmin);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
         pedido.Content = JsonContent.Create(
-            new
-            {
-                razonSocial = "Granja de Prueba S.A.C.",
-                identificadorFiscal,
-                email = $"cliente-{Guid.NewGuid():N}@icarus.test",
-                contrasena = IdentityFactory.ContrasenaDePrueba,
-            });
+            CuerpoCliente(identificadorFiscal, $"cliente-{Guid.NewGuid():N}@icarus.test"));
 
         var respuesta = await cliente.SendAsync(pedido);
 
@@ -51,11 +53,22 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
     }
 
     [Fact]
-    public async Task CrearClienteComoAdminDevuelve201()
+    public async Task CrearClienteComoAdminDevuelve201YLaCuentaEmbebidaPermiteLogin()
     {
-        var id = await CrearClienteComoAdmin($"2{Random.Shared.Next(100000000, 999999999)}");
+        var email = $"cliente-{Guid.NewGuid():N}@icarus.test";
+        var token = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var cliente = _factory.CreateClient();
+        var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
+        pedido.Content = JsonContent.Create(
+            CuerpoCliente($"2{Random.Shared.Next(100000000, 999999999)}", email));
 
-        Assert.NotEqual(Guid.Empty, id);
+        var respuesta = await cliente.SendAsync(pedido);
+
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+
+        // El alta embebida creó la cuenta rol Cliente: el login funciona.
+        var login = await LoginComo(email);
+        Assert.False(string.IsNullOrEmpty(login));
     }
 
     [Fact]
@@ -64,13 +77,7 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.PostAsJsonAsync("/clientes",
-            new
-            {
-                razonSocial = "Granja",
-                identificadorFiscal = "20999999999",
-                email = "nuevo@icarus.test",
-                contrasena = IdentityFactory.ContrasenaDePrueba,
-            });
+            CuerpoCliente("20999999999", "nuevo@icarus.test"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -81,13 +88,7 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
-        pedido.Content = JsonContent.Create(new
-        {
-            razonSocial = "Granja",
-            identificadorFiscal = "20999999998",
-            email = "nuevo@icarus.test",
-            contrasena = IdentityFactory.ContrasenaDePrueba,
-        });
+        pedido.Content = JsonContent.Create(CuerpoCliente("20999999998", "nuevo@icarus.test"));
 
         var respuesta = await cliente.SendAsync(pedido);
 
@@ -101,19 +102,41 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
         var token = await LoginComo(SemillaIdentidad.EmailAdmin);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
-        pedido.Content = JsonContent.Create(new
-        {
-            razonSocial = "Granja Repetida S.A.C.",
-            identificadorFiscal = Icarus.Clientes.Infrastructure.SemillaClientes.IdentificadorFiscalDemo,
-            email = $"nuevo-{Guid.NewGuid():N}@icarus.test",
-            contrasena = IdentityFactory.ContrasenaDePrueba,
-        });
+        pedido.Content = JsonContent.Create(
+            CuerpoCliente(Icarus.Clientes.Infrastructure.SemillaClientes.IdentificadorFiscalDemo,
+                $"nuevo-{Guid.NewGuid():N}@icarus.test"));
 
         var respuesta = await cliente.SendAsync(pedido);
 
         Assert.Equal(HttpStatusCode.Conflict, respuesta.StatusCode);
         var texto = await respuesta.Content.ReadAsStringAsync();
         Assert.DoesNotContain(Icarus.Clientes.Infrastructure.SemillaClientes.IdentificadorFiscalDemo, texto);
+    }
+
+    [Fact]
+    public async Task CrearClienteConEmailYaEnUsoDevuelve409SinClienteActivo()
+    {
+        // El email del cliente semilla ya tiene cuenta (anti-PII: 409 genérico).
+        var token = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var cliente = _factory.CreateClient();
+        var identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}";
+        var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
+        pedido.Content = JsonContent.Create(
+            CuerpoCliente(identificadorFiscal, SemillaIdentidad.EmailCliente));
+
+        var respuesta = await cliente.SendAsync(pedido);
+
+        Assert.Equal(HttpStatusCode.Conflict, respuesta.StatusCode);
+
+        // La compensación deja el cliente suspendido: el RIF intentado no
+        // aparece entre los clientes activos.
+        var lista = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/clientes", token));
+        var activos = (await lista.Content.ReadFromJsonAsync<JsonElement>())
+            .EnumerateArray()
+            .Where(c => c.GetProperty("estaActivo").GetBoolean())
+            .Select(c => c.GetProperty("identificadorFiscal").GetString())
+            .ToList();
+        Assert.DoesNotContain(identificadorFiscal, activos);
     }
 
     [Fact]

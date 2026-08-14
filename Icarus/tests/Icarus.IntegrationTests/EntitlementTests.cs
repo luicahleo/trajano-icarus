@@ -32,19 +32,20 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },
         };
 
-    // Crea un cliente y una cuenta rol Cliente vinculada; devuelve el id del
-    // cliente y el token de la cuenta nueva.
+    // Alta embebida de un cliente y su cuenta de acceso de rol Cliente, con
+    // asignación opcional de módulos. Devuelve el id y el token de la cuenta.
     private async Task<(Guid ClienteId, string Token)> CrearClienteConCuenta(string[]? modulos)
     {
         var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
         var clienteHttp = _factory.CreateClient();
 
+        var email = $"cuenta-{Guid.NewGuid():N}@icarus.test";
         var altaCliente = PedidoAutenticado(HttpMethod.Post, "/clientes", admin);
         altaCliente.Content = JsonContent.Create(new
         {
             razonSocial = "Granja de Prueba S.A.C.",
             identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}",
-            email = $"cuenta-{Guid.NewGuid():N}@icarus.test",
+            email,
             contrasena = IdentityFactory.ContrasenaDePrueba,
         });
         var respuestaCliente = await clienteHttp.SendAsync(altaCliente);
@@ -59,18 +60,42 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
             Assert.Equal(HttpStatusCode.NoContent, (await clienteHttp.SendAsync(asignar)).StatusCode);
         }
 
-        var email = $"cuenta-{Guid.NewGuid():N}@icarus.test";
-        var altaUsuario = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", admin);
-        altaUsuario.Content = JsonContent.Create(new
+        return (clienteId, await LoginComo(email));
+    }
+
+    // Alta embebida de un trabajador con asignación opcional de funcionalidades.
+    // Devuelve el token de su cuenta de rol Trabajador.
+    private async Task<string> CrearTrabajadorConCuenta(
+        Guid clienteId, string[]? funcionalidades, string tokenCliente)
+    {
+        var cliente = _factory.CreateClient();
+        var email = $"trabajador-{Guid.NewGuid():N}@icarus.test";
+        var altaTrabajador = PedidoAutenticado(
+            HttpMethod.Post, $"/clientes/{clienteId}/trabajadores", tokenCliente);
+        altaTrabajador.Content = JsonContent.Create(new
         {
+            nombre = "Nombre Ficticio",
+            documentoIdentidad = $"8{Random.Shared.Next(10000000, 99999999)}",
+            cargo = "Operario",
+            fechaIngreso = "2026-01-15",
             email,
             contrasena = IdentityFactory.ContrasenaDePrueba,
-            rol = "Cliente",
-            clienteId,
         });
-        Assert.Equal(HttpStatusCode.Created, (await clienteHttp.SendAsync(altaUsuario)).StatusCode);
+        var respuestaAlta = await cliente.SendAsync(altaTrabajador);
+        Assert.Equal(HttpStatusCode.Created, respuestaAlta.StatusCode);
+        var trabajadorId = (await respuestaAlta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
 
-        return (clienteId, await LoginComo(email));
+        if (funcionalidades is not null)
+        {
+            var asignar = PedidoAutenticado(
+                HttpMethod.Put, $"/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades",
+                tokenCliente);
+            asignar.Content = JsonContent.Create(new { funcionalidades });
+            Assert.Equal(HttpStatusCode.NoContent, (await cliente.SendAsync(asignar)).StatusCode);
+        }
+
+        return await LoginComo(email);
     }
 
     [Fact]
@@ -119,43 +144,27 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
     [Fact]
     public async Task TrabajadorNuevoSinFuncionalidadesDevuelve403()
     {
-        var (clienteId, _) = await CrearClienteConCuenta(["GestionAvicola"]);
-        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
-        var clienteHttp = _factory.CreateClient();
+        var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
+        var tokenTrabajador = await CrearTrabajadorConCuenta(clienteId, funcionalidades: null, tokenCliente);
+        var cliente = _factory.CreateClient();
 
-        var altaTrabajador = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{clienteId}/trabajadores", admin);
-        altaTrabajador.Content = JsonContent.Create(new
-        {
-            nombre = "Nombre Ficticio",
-            documentoIdentidad = $"8{Random.Shared.Next(10000000, 99999999)}",
-            cargo = "Operario",
-            fechaIngreso = "2026-01-15",
-            email = $"trabajador-{Guid.NewGuid():N}@icarus.test",
-            contrasena = IdentityFactory.ContrasenaDePrueba,
-        });
-        var respuestaAlta = await clienteHttp.SendAsync(altaTrabajador);
-        Assert.Equal(HttpStatusCode.Created, respuestaAlta.StatusCode);
-        var trabajadorId = (await respuestaAlta.Content.ReadFromJsonAsync<JsonElement>())
-            .GetProperty("id").GetGuid();
-
-        var email = $"trabajador-{Guid.NewGuid():N}@icarus.test";
-        var altaUsuario = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", admin);
-        altaUsuario.Content = JsonContent.Create(new
-        {
-            email,
-            contrasena = IdentityFactory.ContrasenaDePrueba,
-            rol = "Trabajador",
-            clienteId,
-            trabajadorId,
-        });
-        Assert.Equal(HttpStatusCode.Created, (await clienteHttp.SendAsync(altaUsuario)).StatusCode);
-
-        var tokenTrabajador = await LoginComo(email);
-        var respuesta = await clienteHttp.SendAsync(
+        var respuesta = await cliente.SendAsync(
             PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", tokenTrabajador));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task TrabajadorConFuncionalidadAsignadaViaEndpointRecibe200()
+    {
+        var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
+        var tokenTrabajador = await CrearTrabajadorConCuenta(clienteId, ["granjas"], tokenCliente);
+        var cliente = _factory.CreateClient();
+
+        var respuesta = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", tokenTrabajador));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
 
     [Fact]

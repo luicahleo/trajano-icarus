@@ -43,7 +43,7 @@ public static class IdentidadEndpoints
 
         // Sesión actual: el frontend la usa para las guardas y navegación por rol.
         grupo.MapGet("/me", (ICurrentUser actual) =>
-            Results.Ok(new { actual.UsuarioId, actual.Rol, actual.ClienteId }))
+            Results.Ok(new { actual.UsuarioId, actual.Rol, actual.ClienteId, actual.TrabajadorId }))
             .RequireAuthorization();
 
         return app;
