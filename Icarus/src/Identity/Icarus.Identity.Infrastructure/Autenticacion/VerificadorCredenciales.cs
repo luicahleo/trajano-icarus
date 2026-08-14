@@ -22,6 +22,6 @@ public sealed class VerificadorCredenciales : IVerificadorCredenciales
             return null;
         if (!await _usuarios.CheckPasswordAsync(usuario, contrasena))
             return null;
-        return new CredencialValida(usuario.Id, usuario.Rol, usuario.ClienteId);
+        return new CredencialValida(usuario.Id, usuario.Rol, usuario.ClienteId, usuario.TrabajadorId);
     }
 }

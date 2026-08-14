@@ -8,4 +8,4 @@ public interface IVerificadorCredenciales
         string email, string contrasena, CancellationToken cancellationToken = default);
 }
 
-public sealed record CredencialValida(Guid UsuarioId, string Rol, Guid? ClienteId);
+public sealed record CredencialValida(Guid UsuarioId, string Rol, Guid? ClienteId, Guid? TrabajadorId);

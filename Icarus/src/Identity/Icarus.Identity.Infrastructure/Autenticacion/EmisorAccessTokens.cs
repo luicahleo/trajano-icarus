@@ -14,7 +14,7 @@ public sealed class EmisorAccessTokens : IEmisorAccessTokens
 
     public EmisorAccessTokens(IOptions<OpcionesJwt> opciones) => _opciones = opciones.Value;
 
-    public string Emitir(Guid usuarioId, string rol, Guid? clienteId, out int expiraEnSegundos)
+    public string Emitir(Guid usuarioId, string rol, Guid? clienteId, Guid? trabajadorId, out int expiraEnSegundos)
     {
         var claims = new List<Claim>
         {
@@ -23,6 +23,8 @@ public sealed class EmisorAccessTokens : IEmisorAccessTokens
         };
         if (clienteId is not null)
             claims.Add(new Claim(ClaimsIdentidad.ClienteId, clienteId.Value.ToString()));
+        if (trabajadorId is not null)
+            claims.Add(new Claim(ClaimsIdentidad.TrabajadorId, trabajadorId.Value.ToString()));
 
         expiraEnSegundos = _opciones.MinutosAccessToken * 60;
         var clave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_opciones.Clave));

@@ -14,6 +14,7 @@ public sealed class ConsultaUsuarios : IConsultaUsuarios
         Guid usuarioId, CancellationToken cancellationToken = default) =>
         await _db.Users
             .Where(u => u.Id == usuarioId && u.Activo)
-            .Select(u => new UsuarioResumen(u.Id, u.Email ?? string.Empty, u.Rol, u.ClienteId))
+            .Select(u => new UsuarioResumen(
+                u.Id, u.Email ?? string.Empty, u.Rol, u.ClienteId, u.TrabajadorId))
             .SingleOrDefaultAsync(cancellationToken);
 }

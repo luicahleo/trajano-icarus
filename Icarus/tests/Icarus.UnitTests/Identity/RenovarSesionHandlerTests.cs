@@ -14,10 +14,11 @@ public class RenovarSesionHandlerTests
     public RenovarSesionHandlerTests()
     {
         _handler = new RenovarSesionHandler(_refresh, _consulta, _emisor);
-        _emisor.Emitir(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), out Arg.Any<int>())
+        _emisor.Emitir(
+                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>())
             .Returns(call =>
             {
-                call[3] = 900;
+                call[4] = 900;
                 return "access-token-nuevo";
             });
     }
@@ -28,7 +29,7 @@ public class RenovarSesionHandlerTests
         var usuarioId = Guid.NewGuid();
         _refresh.RotarAsync("refresh-viejo", Arg.Any<CancellationToken>()).Returns(usuarioId);
         _consulta.ObtenerPorIdAsync(usuarioId, Arg.Any<CancellationToken>())
-            .Returns(new UsuarioResumen(usuarioId, "cuenta@icarus.test", "Cliente", Guid.NewGuid()));
+            .Returns(new UsuarioResumen(usuarioId, "cuenta@icarus.test", "Cliente", Guid.NewGuid(), null));
         _refresh.EmitirAsync(usuarioId, Arg.Any<CancellationToken>()).Returns("refresh-nuevo");
 
         var sesion = await _handler.Handle(new RenovarSesionCommand("refresh-viejo"), CancellationToken.None);

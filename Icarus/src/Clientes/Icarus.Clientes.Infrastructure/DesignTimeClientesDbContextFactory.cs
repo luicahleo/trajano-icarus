@@ -28,5 +28,7 @@ public sealed class DesignTimeClientesDbContextFactory : IDesignTimeDbContextFac
         public string? Rol => null;
 
         public Guid? ClienteId => null;
+
+        public Guid? TrabajadorId => null;
     }
 }

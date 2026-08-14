@@ -7,4 +7,5 @@ public static class ClaimsIdentidad
     public const string Subject = "sub";
     public const string Rol = "rol";
     public const string ClienteId = "clienteId";
+    public const string TrabajadorId = "trabajadorId";
 }

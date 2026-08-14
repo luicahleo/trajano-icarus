@@ -25,7 +25,7 @@ public class EmisorAccessTokensTests
         var usuarioId = Guid.NewGuid();
         var clienteId = Guid.NewGuid();
 
-        var token = CrearEmisor().Emitir(usuarioId, "Cliente", clienteId, out var expiraEnSegundos);
+        var token = CrearEmisor().Emitir(usuarioId, "Cliente", clienteId, null, out var expiraEnSegundos);
         var leido = Leer(token);
 
         Assert.Equal(usuarioId.ToString(), leido.Claims.Single(c => c.Type == "sub").Value);
@@ -37,16 +37,37 @@ public class EmisorAccessTokensTests
     [Fact]
     public void TokenSinClienteOmiteElClaimClienteId()
     {
-        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Administrador", null, out _);
+        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Administrador", null, null, out _);
         var leido = Leer(token);
 
         Assert.DoesNotContain(leido.Claims, c => c.Type == "clienteId");
     }
 
     [Fact]
+    public void TokenConTrabajadorIncluyeElClaimTrabajadorId()
+    {
+        var trabajadorId = Guid.NewGuid();
+
+        var token = CrearEmisor().Emitir(
+            Guid.NewGuid(), "Trabajador", Guid.NewGuid(), trabajadorId, out _);
+        var leido = Leer(token);
+
+        Assert.Equal(trabajadorId.ToString(), leido.Claims.Single(c => c.Type == "trabajadorId").Value);
+    }
+
+    [Fact]
+    public void TokenSinTrabajadorOmiteElClaimTrabajadorId()
+    {
+        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Cliente", Guid.NewGuid(), null, out _);
+        var leido = Leer(token);
+
+        Assert.DoesNotContain(leido.Claims, c => c.Type == "trabajadorId");
+    }
+
+    [Fact]
     public void TokenLlevaEmisorYAudienciaConfigurados()
     {
-        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Administrador", null, out _);
+        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Administrador", null, null, out _);
         var leido = Leer(token);
 
         Assert.Equal("Icarus", leido.Issuer);

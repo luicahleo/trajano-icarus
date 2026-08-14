@@ -24,7 +24,8 @@ public sealed class RenovarSesionHandler : IRequestHandler<RenovarSesionCommand,
         var usuario = await _consulta.ObtenerPorIdAsync(usuarioId, cancellationToken)
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
 
-        var accessToken = _emisor.Emitir(usuario.Id, usuario.Rol, usuario.ClienteId, out var expiraEnSegundos);
+        var accessToken = _emisor.Emitir(
+            usuario.Id, usuario.Rol, usuario.ClienteId, usuario.TrabajadorId, out var expiraEnSegundos);
         var nuevoRefresh = await _refresh.EmitirAsync(usuario.Id, cancellationToken);
         return new ResultadoSesion(accessToken, nuevoRefresh, expiraEnSegundos);
     }

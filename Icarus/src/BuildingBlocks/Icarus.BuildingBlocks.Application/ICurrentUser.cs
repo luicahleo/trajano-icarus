@@ -6,4 +6,5 @@ public interface ICurrentUser
     Guid? UsuarioId { get; }
     string? Rol { get; }
     Guid? ClienteId { get; }
+    Guid? TrabajadorId { get; }
 }

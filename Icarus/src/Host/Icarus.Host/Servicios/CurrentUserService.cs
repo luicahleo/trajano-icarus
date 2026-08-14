@@ -21,4 +21,7 @@ public sealed class CurrentUserService : ICurrentUser
 
     public Guid? ClienteId =>
         Guid.TryParse(Usuario?.FindFirstValue(ClaimsIdentidad.ClienteId), out var id) ? id : null;
+
+    public Guid? TrabajadorId =>
+        Guid.TryParse(Usuario?.FindFirstValue(ClaimsIdentidad.TrabajadorId), out var id) ? id : null;
 }

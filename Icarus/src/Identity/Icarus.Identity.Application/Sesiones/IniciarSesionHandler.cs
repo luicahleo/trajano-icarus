@@ -25,7 +25,8 @@ public sealed class IniciarSesionHandler : IRequestHandler<IniciarSesionCommand,
             ?? throw new UnauthorizedAccessException("Credenciales inválidas.");
 
         var accessToken = _emisor.Emitir(
-            credencial.UsuarioId, credencial.Rol, credencial.ClienteId, out var expiraEnSegundos);
+            credencial.UsuarioId, credencial.Rol, credencial.ClienteId, credencial.TrabajadorId,
+            out var expiraEnSegundos);
         var refreshToken = await _refresh.EmitirAsync(credencial.UsuarioId, cancellationToken);
         return new ResultadoSesion(accessToken, refreshToken, expiraEnSegundos);
     }

@@ -14,10 +14,11 @@ public class IniciarSesionHandlerTests
     public IniciarSesionHandlerTests()
     {
         _handler = new IniciarSesionHandler(_verificador, _emisor, _refresh);
-        _emisor.Emitir(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), out Arg.Any<int>())
+        _emisor.Emitir(
+                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>())
             .Returns(call =>
             {
-                call[3] = 900;
+                call[4] = 900;
                 return "access-token";
             });
         _refresh.EmitirAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns("refresh-token");
@@ -28,7 +29,7 @@ public class IniciarSesionHandlerTests
     {
         var usuarioId = Guid.NewGuid();
         _verificador.VerificarAsync("cuenta@icarus.test", "x", Arg.Any<CancellationToken>())
-            .Returns(new CredencialValida(usuarioId, "Cliente", Guid.NewGuid()));
+            .Returns(new CredencialValida(usuarioId, "Cliente", Guid.NewGuid(), null));
 
         var sesion = await _handler.Handle(
             new IniciarSesionCommand("cuenta@icarus.test", "x"), CancellationToken.None);

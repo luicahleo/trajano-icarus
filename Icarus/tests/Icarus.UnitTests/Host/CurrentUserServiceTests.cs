@@ -34,11 +34,35 @@ public class CurrentUserServiceTests
     }
 
     [Fact]
+    public void UsuarioAutenticadoExponeTrabajadorId()
+    {
+        var trabajadorId = Guid.NewGuid();
+        var servicio = CrearServicio(
+            new Claim("sub", Guid.NewGuid().ToString()),
+            new Claim("rol", "Trabajador"),
+            new Claim("trabajadorId", trabajadorId.ToString()));
+
+        Assert.Equal(trabajadorId, servicio.TrabajadorId);
+    }
+
+    [Fact]
+    public void SinTrabajadorIdDevuelveNull()
+    {
+        var servicio = CrearServicio(
+            new Claim("sub", Guid.NewGuid().ToString()),
+            new Claim("rol", "Cliente"),
+            new Claim("clienteId", Guid.NewGuid().ToString()));
+
+        Assert.Null(servicio.TrabajadorId);
+    }
+
+    [Fact]
     public void SinClaimsDevuelveNulosYNoAutenticado()
     {
         var servicio = CrearServicio();
         Assert.False(servicio.EstaAutenticado);
         Assert.Null(servicio.UsuarioId);
         Assert.Null(servicio.ClienteId);
+        Assert.Null(servicio.TrabajadorId);
     }
 }
