@@ -67,4 +67,47 @@ public class TrabajadorTests
 
         Assert.False(trabajador.EstaActivo);
     }
+
+    [Fact]
+    public void TrabajadorNuevoEmpiezaSinFuncionalidades()
+    {
+        var trabajador = Crear();
+
+        Assert.Equal(Funcionalidades.Ninguno, trabajador.Funcionalidades);
+    }
+
+    [Fact]
+    public void DefinirFuncionalidadesReemplazaElConjunto()
+    {
+        var trabajador = Crear();
+
+        trabajador.DefinirFuncionalidades(Funcionalidades.Granjas);
+        trabajador.DefinirFuncionalidades(Funcionalidades.Granjas | Funcionalidades.Precios);
+
+        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Granjas));
+        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Precios));
+        Assert.False(trabajador.Funcionalidades.HasFlag(Funcionalidades.Vacunacion));
+    }
+
+    [Fact]
+    public void CeseNoLiberaLasFuncionalidades()
+    {
+        var trabajador = Crear();
+        trabajador.DefinirFuncionalidades(Funcionalidades.Granjas);
+
+        trabajador.Cesar(IngresoValido.AddDays(10));
+
+        Assert.Equal(Funcionalidades.Granjas, trabajador.Funcionalidades);
+    }
+
+    [Fact]
+    public void DesactivarNoLiberaLasFuncionalidades()
+    {
+        var trabajador = Crear();
+        trabajador.DefinirFuncionalidades(Funcionalidades.Vacunacion);
+
+        trabajador.Desactivar();
+
+        Assert.Equal(Funcionalidades.Vacunacion, trabajador.Funcionalidades);
+    }
 }

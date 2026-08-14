@@ -31,6 +31,7 @@ public sealed class Trabajador : AggregateRoot
         DocumentoIdentidad = documentoIdentidad.Trim();
         Cargo = cargo.Trim();
         FechaIngreso = fechaIngreso;
+        Funcionalidades = Funcionalidades.Ninguno;
         EstaActivo = true;
     }
 
@@ -51,7 +52,13 @@ public sealed class Trabajador : AggregateRoot
 
     public DateOnly? FechaCese { get; private set; }
 
+    public Funcionalidades Funcionalidades { get; private set; }
+
     public bool EstaActivo { get; private set; }
+
+    // Reemplaza el conjunto completo de funcionalidades del trabajador (spec).
+    // El cese o la desactivación no las liberan (trazabilidad).
+    public void DefinirFuncionalidades(Funcionalidades funcionalidades) => Funcionalidades = funcionalidades;
 
     public void Cesar(DateOnly fechaCese)
     {

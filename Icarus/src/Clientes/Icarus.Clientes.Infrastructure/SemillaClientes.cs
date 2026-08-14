@@ -28,9 +28,13 @@ public static class SemillaClientes
         cliente.DefinirModulos(Modulos.GestionAvicola);
         db.Clientes.Add(cliente);
 
-        db.Trabajadores.Add(new Trabajador(
+        // El trabajador demo tiene al menos una funcionalidad asignada para
+        // poder probar el entitlement por rol en dev y en los tests.
+        var trabajador = new Trabajador(
             trabajadorDemoId, clienteDemoId, "Trabajador Demo", DocumentoTrabajadorDemo,
-            "Operario", new DateOnly(2026, 1, 15)));
+            "Operario", new DateOnly(2026, 1, 15));
+        trabajador.DefinirFuncionalidades(Funcionalidades.Granjas);
+        db.Trabajadores.Add(trabajador);
 
         await db.SaveChangesAsync();
     }

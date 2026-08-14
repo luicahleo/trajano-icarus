@@ -12,6 +12,7 @@ public sealed class ConfiguracionTrabajador : IEntityTypeConfiguration<Trabajado
         builder.Property(t => t.Nombre).HasMaxLength(200).IsRequired();
         builder.Property(t => t.DocumentoIdentidad).HasMaxLength(32).IsRequired();
         builder.Property(t => t.Cargo).HasMaxLength(100).IsRequired();
+        builder.Property(t => t.Funcionalidades).HasConversion<int>().HasDefaultValue(Funcionalidades.Ninguno);
 
         // Documento único por cliente (spec), también contra trabajadores
         // desactivados: el soft delete no libera el documento (trazabilidad).
