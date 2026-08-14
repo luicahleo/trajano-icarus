@@ -15,7 +15,8 @@ retroalimentación rápida.
 
 Los gates de backend necesitan el SDK de .NET 10 y Docker corriendo: `Backend
 tests` incluye tests de integración con Testcontainers.MsSql desde el plan 2.
-El resto corre en segundos.
+Los gates de frontend necesitan Node 22 y `npm install` previo en `web/`. El
+resto corre en segundos.
 
 ## Gates vigentes
 
@@ -25,6 +26,9 @@ El resto corre en segundos.
 | Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore`) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 | Mojibake | Ausencia del carácter de reemplazo y de las secuencias que delatan UTF-8 leído como Latin-1, en todo archivo versionado que git clasifique como texto | Escribir el carácter correcto en UTF-8 |
 | Enlaces | Que todo enlace relativo de los `.md` versionados apunte a un archivo existente | Corregir el enlace o crear el destino |
+| Frontend lint | ESLint (flat config) sobre `web/` (`npm run lint`) | Según el error de ESLint |
+| Frontend build | `tsc -b && vite build` sobre `web/` (los errores de tipos son errores) | Según el error del compilador o del bundler |
+| Frontend tests | Vitest + Testing Library sobre `web/` (`npm run test`) | Según el test que falla |
 | Backend build | Que `Icarus/Icarus.sln` compile sin errores ni warnings (los warnings son errores); el compilador y los analizadores son la verificación mecánica de las reglas de estilo y diseño | Según el error del compilador o del analizador |
 | Backend tests | Que los tests unitarios, de arquitectura y de integración de la solución estén verdes; son la verificación mecánica de las reglas de arquitectura y del dominio | Según el test que falla |
 

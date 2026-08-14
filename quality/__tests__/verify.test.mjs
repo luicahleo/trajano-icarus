@@ -14,7 +14,13 @@ test('están declarados los gates de mojibake y de enlaces', () => {
 
 test('cada gate se invoca con el comando que le corresponde', () => {
   for (const gate of GATES) {
-    const esperado = gate.nombre.startsWith('Backend') ? 'dotnet' : 'node';
+    const esperado = gate.nombre.startsWith('Backend')
+      ? 'dotnet'
+      : gate.nombre.startsWith('Frontend')
+        ? process.platform === 'win32'
+          ? 'npm.cmd'
+          : 'npm'
+        : 'node';
     assert.equal(gate.comando, esperado);
     assert.ok(Array.isArray(gate.args) && gate.args.length > 0);
   }
