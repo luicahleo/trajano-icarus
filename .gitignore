@@ -23,6 +23,9 @@ docs/ai/HANDOFF.md
 *.p12
 *.key
 
+# Estado de runtime de los scripts de entorno PC (Caddy, IP detectada)
+.local/
+
 # Ajustes locales de Claude Code (no compartibles)
 .claude/settings.local.json
 
