@@ -1,0 +1,9 @@
+https://{$ICARUS_LAN_HOST} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy web:5173
+}
+
+http://{$ICARUS_LAN_HOST} {
+	redir https://{$ICARUS_LAN_HOST}{uri} permanent
+}

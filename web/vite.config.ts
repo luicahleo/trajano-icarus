@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080';
+const allowedHost = process.env.VITE_ALLOWED_HOST;
+
+export function crearHostsPermitidos(host: string | undefined): string[] {
+  return host ? [host] : [];
+}
 
 export default defineConfig({
   plugins: [
@@ -32,6 +37,7 @@ export default defineConfig({
   ],
   server: {
     host: true,
+    allowedHosts: crearHostsPermitidos(allowedHost),
     proxy: {
       // El backend sirve bajo la raíz sin prefijo (spec): el frontend usa la base
       // /api y el proxy reescribe a la API real (compose la publica en :8080).

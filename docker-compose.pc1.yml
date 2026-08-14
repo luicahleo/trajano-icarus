@@ -1,0 +1,25 @@
+# Extensión para probar Icarus desde un móvil en la red de PC1.
+# Usar mediante iniciar-pc1.ps1; ICARUS_LAN_IP e ICARUS_LAN_HOST son
+# obligatorias (las pone el script).
+services:
+  web:
+    environment:
+      # El host LAN (sslip.io) debe estar permitido por el dev server de Vite.
+      VITE_ALLOWED_HOST: "${ICARUS_LAN_HOST}"
+
+  gateway:
+    image: caddy:2.10.2-alpine
+    container_name: icarus-gateway
+    environment:
+      ICARUS_LAN_IP: "${ICARUS_LAN_IP}"
+      ICARUS_LAN_HOST: "${ICARUS_LAN_HOST}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/pc1/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./.local/pc1/caddy-data:/data
+      - ./.local/pc1/caddy-config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
