@@ -1,10 +1,11 @@
 using System.Text;
 using Icarus.BuildingBlocks.Application;
+using Icarus.Identity.Application.RegistroCuentas;
 using Icarus.Identity.Application.Sesiones;
-using Icarus.Identity.Application.Usuarios;
 using Icarus.Identity.Domain;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using Icarus.Identity.Infrastructure.Persistencia;
+using Icarus.Identity.Infrastructure.RegistroCuentas;
 using Icarus.Identity.Infrastructure.Usuarios;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

@@ -1,7 +1,7 @@
 using Icarus.BuildingBlocks.Domain;
 using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Application.Trabajadores;
-using Icarus.Identity.Application.Usuarios;
+using Icarus.Identity.Application.RegistroCuentas;
 using Icarus.Identity.Domain;
 using MediatR;
 

@@ -37,14 +37,14 @@
 - Consumes: nada.
 - Produces: `Rol` con 3 miembros; `ReglasRol.RequiereCliente` intacto (aplica a `Cliente` y `Trabajador`); semilla sin cuenta `SoporteTecnico`. Lo consumen todos los tasks siguientes.
 
-- [ ] **Step 1: Quitar `SoporteTecnico` del modelo y de la semilla (rojo)**
+- [x] **Step 1: Quitar `SoporteTecnico` del modelo y de la semilla (rojo)**
 
 En `Rol.cs` dejar `Administrador = 0`, `Cliente = 1`, `Trabajador = 2` (los valores no se persisten: el rol se guarda como texto). En `ReglasRol.cs` actualizar el comentario (solo `Cliente` y `Trabajador` son de empresa). En `SemillaIdentidad.cs` quitar la constante `EmailSoporte` y la línea `CrearSiNoExiste(usuarios, EmailSoporte, Rol.SoporteTecnico, …)`.
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación en `ReglasRolTests.cs:18` (`Rol.SoporteTecnico`) y `SemillaIdentidad.cs:25`.
 
-- [ ] **Step 2: Actualizar los tests (verde)**
+- [x] **Step 2: Actualizar los tests (verde)**
 
 - `ReglasRolTests.cs`: quitar `[InlineData(Rol.SoporteTecnico)]`.
 - `IdentityEndpointsTests.cs`:
@@ -61,7 +61,7 @@ dotnet test Icarus/tests/Icarus.IntegrationTests --nologo
 ```
 Expected: PASS (requiere Docker para los de integración).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Icarus/src/Identity Icarus/tests
@@ -120,7 +120,7 @@ public void DefinirFuncionalidades(Funcionalidades funcionalidades);  // reempla
 ```
 El cese o la desactivación NO tocan las funcionalidades (trazabilidad, spec). La regla «solo funcionalidades de módulos habilitados para el cliente» es transversal (necesita el cliente) y se valida en el handler (task 3), no en el agregado.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `FuncionalidadesTests.cs`:
 - `TodasLasFuncionalidadesPertenecenAGestionAvicola`: para cada miembro != `Ninguno`, `FuncionalidadesModulos.ModuloDe(f)` == `Modulos.GestionAvicola`.
@@ -134,16 +134,16 @@ El cese o la desactivación NO tocan las funcionalidades (trazabilidad, spec). L
 - `CeseNoLiberaLasFuncionalidades`: asignar `Granjas`, cesar, y verificar que `Funcionalidades` conserva `Granjas`.
 - `DesactivarNoLiberaLasFuncionalidades`: asignar `Vacunacion`, desactivar, y verificar que conserva `Vacunacion`.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (`Funcionalidades`/`FuncionalidadesModulos` no existen; `Trabajador.Funcionalidades` no existe).
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 `Funcionalidades.cs` con `#pragma warning disable S2346` (el miembro cero se nombra en español, mismo criterio que `Modulos`). `FuncionalidadesModulos.cs` con un `switch` que mapea las 8 a `Modulos.GestionAvicola` (`Ninguno` → `Modulos.Ninguno`) y el inverso por agrupación. `Trabajador.cs`: inicializar `Funcionalidades = Funcionalidades.Ninguno` en el ctor y agregar `DefinirFuncionalidades`.
 
-- [ ] **Step 4: Persistencia y migración**
+- [x] **Step 4: Persistencia y migración**
 
 `ConfiguracionTrabajador.cs`:
 ```csharp
@@ -160,7 +160,7 @@ dotnet build Icarus.sln --nologo
 ```
 Expected: migración que agrega la columna `Funcionalidades int NOT NULL DEFAULT 0` a `clientes.trabajadores`. Verificar leyendo la migración que solo agrega esa columna (el filtro global sigue sin ser parte del esquema).
 
-- [ ] **Step 5: Correr y verificar verde**
+- [x] **Step 5: Correr y verificar verde**
 
 Run:
 ```bash
@@ -169,7 +169,7 @@ dotnet test Icarus/tests/Icarus.IntegrationTests --nologo
 ```
 Expected: PASS (los de integración siguen verdes: la columna nueva no rompe nada y el trabajador demo queda sembrado con `Granjas`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Icarus/src/Clientes/Icarus.Clientes.Domain Icarus/src/Clientes/Icarus.Clientes.Infrastructure Icarus/tests
@@ -227,19 +227,19 @@ public sealed record TrabajadorResumen(
 
 Los handlers `CrearClienteHandler` y `CrearTrabajadorHandler` NO cambian su lógica (crean la entidad y guardan); solo compilan con los campos nuevos. La unicidad de email la resuelve Identity en la orquestación del Host (task 5), no el handler de Clientes.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `CrearClienteHandlerTests.cs` y `CrearTrabajadorHandlerTests.cs`: adaptar las llamadas a los comandos con `email` y `contrasena` ficticios. `DefinirFuncionalidadesTrabajadorHandlerTests.cs` (nuevo):
 - `FuncionalidadesDeModuloHabilitadoSeAsignan`: cliente con `Modulos.GestionAvicola`, trabajador válido; `["Granjas", "precios"]` → `trabajador.Funcionalidades.HasFlag(Granjas)` y `HasFlag(Precios)`; `SaveChanges` recibido.
 - `FuncionalidadDeModuloNoHabilitadoLanzaReglaDeNegocio`: cliente sin el módulo → `ReglaNegocioException`, sin `SaveChanges`.
 - `ClienteInexistenteLanzaNotFound` y `TrabajadorInexistenteLanzaNotFound`.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (comandos con campos nuevos; tipos nuevos no existen).
 
-- [ ] **Step 3: Implementación — comandos, validadores y handler de funcionalidades**
+- [x] **Step 3: Implementación — comandos, validadores y handler de funcionalidades**
 
 `CrearClienteValidator` y `CrearTrabajadorValidator`: agregar `Email` (`NotEmpty().EmailAddress()`) y `Contrasena` (`NotEmpty().MinimumLength(12)`), mismos criterios que el validador de usuarios que se elimina en el task 6.
 
@@ -249,14 +249,14 @@ Expected: FALLA de compilación (comandos con campos nuevos; tipos nuevos no exi
 
 `ClientesEndpoints.cs` (solo cableado, sin orquestación): `CrearTrabajadorRequest` gana `Email` y `Contrasena`, y la construcción del `CrearTrabajadorCommand` los pasa. `POST /clientes` enlaza `CrearClienteCommand` directo, así que el cuerpo ya admite los campos nuevos.
 
-- [ ] **Step 4: Actualizar los cuerpos de los tests de integración**
+- [x] **Step 4: Actualizar los cuerpos de los tests de integración**
 
 Hasta el task 5 el endpoint ignora `email`/`contrasena` (aún no hay orquestación), pero la validación los exige: hay que enviarlos para que el gate quede verde.
 - `ClientesEndpointsTests.CrearClienteComoAdmin` y `CrearClienteSinTokenDevuelve401`/`CrearClienteConRolClienteDevuelve403`: agregar `email` y `contrasena` ficticios al cuerpo.
 - `TrabajadoresEndpointsTests.CuerpoTrabajador`: agregar `email` y `contrasena` ficticios.
 - `EntitlementTests.CrearClienteConCuenta`: agregar `email` y `contrasena` al alta del cliente (el alta de la cuenta vía `POST /identidad/usuarios` sigue igual hasta el task 5).
 
-- [ ] **Step 5: Correr y verificar verde**
+- [x] **Step 5: Correr y verificar verde**
 
 Run:
 ```bash
@@ -265,7 +265,7 @@ dotnet test Icarus/tests/Icarus.IntegrationTests --nologo
 ```
 Expected: PASS (unitarios con los handlers nuevos; integración con los cuerpos actualizados).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Icarus/src/Clientes/Icarus.Clientes.Application Icarus/src/Clientes/Icarus.Clientes.Infrastructure Icarus/src/Host/Icarus.Host/Endpoints/ClientesEndpoints.cs Icarus/tests
@@ -324,7 +324,7 @@ public interface ICurrentUser
 
 `EmisorAccessTokens.Emitir(Guid usuarioId, string rol, Guid? clienteId, Guid? trabajadorId, out int expiraEnSegundos)` escribe el claim `trabajadorId` solo cuando no es nulo (mismo patrón que `clienteId`). `IniciarSesionHandler` y `RenovarSesionHandler` pasan `credencial.TrabajadorId` / `usuario.TrabajadorId`. `VerificadorCredenciales` y `ConsultaUsuarios` incluyen `TrabajadorId` en sus proyecciones. `CurrentUserService` lee `ClaimsIdentidad.TrabajadorId`.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `EmisorAccessTokensTests.cs`:
 - `TokenConTrabajadorIncluyeElClaimTrabajadorId`: `Emitir(usuarioId, "Trabajador", clienteId, trabajadorId, out _)` incluye `trabajadorId`.
@@ -336,21 +336,21 @@ public interface ICurrentUser
 
 `IniciarSesionHandlerTests` y `RenovarSesionHandlerTests`: adaptar las firmas (`CredencialValida`/`UsuarioResumen` con el parámetro nuevo y los `.Returns(...)` del emisor con el argumento nuevo).
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (firmas nuevas no existen aún).
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Aplicar los cambios de la sección **Interfaces** en los 10 archivos de producción. El claim viaja en el access token y en el `/me` se expone desde `ICurrentUser` (el endpoint `/me` se toca en el task 6).
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: PASS (los de integración no se tocan en este task: la emisión extra de un claim no rompe los endpoints existentes).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/Identity Icarus/src/BuildingBlocks Icarus/src/Host/Icarus.Host/Servicios/CurrentUserService.cs Icarus/tests
@@ -416,7 +416,7 @@ public static class PoliticasClientes
 - `GET /clientes/sondeo/funcionalidad/granjas` → `PoliticasClientes.Para(Funcionalidades.Granjas)`
 - `GET /clientes/sondeo/funcionalidad/vacunacion` → `PoliticasClientes.Para(Funcionalidades.Vacunacion)`
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 Reescribir `EntitlementTests.cs` contra las rutas y semántica nuevas:
 - `ClienteConModuloHabilitadoRecibe200`: `EmailCliente` (cliente demo con `GestionAvicola`) → `granjas` 200 y `vacunacion` 200 (el rol Cliente tiene todas las funcionalidades de sus módulos).
@@ -430,16 +430,16 @@ Reescribir `EntitlementTests.cs` contra las rutas y semántica nuevas:
 
 `CrearClienteConCuenta` mantiene su forma actual (alta de cliente con `email`/`contrasena` + asignación de módulos + alta de cuenta vía `POST /identidad/usuarios`); el task 6 la cambia al alta embebida.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.IntegrationTests --nologo`
 Expected: FALLA (las rutas `/clientes/sondeo/funcionalidad/*` no existen todavía → 404/403 distinto al esperado; el mecanismo por módulo ya no aplica).
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Aplicar los contratos de la sección **Interfaces**: nuevo verificador, requisito/manejador por funcionalidad (borrar `RequisitoModuloHabilitado.cs`), políticas por funcionalidad y su registro en DI, y el sondeo nuevo en `ClientesEndpoints.cs`.
 
-- [ ] **Step 4: Correr y verificar verde**
+- [x] **Step 4: Correr y verificar verde**
 
 Run:
 ```bash
@@ -448,7 +448,7 @@ dotnet test Icarus/tests/Icarus.IntegrationTests --nologo
 ```
 Expected: PASS (el entitlement por rol queda probado de punta a punta contra SQL Server).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/Clientes Icarus/src/Host/Icarus.Host/Endpoints/ClientesEndpoints.cs Icarus/tests/Icarus.IntegrationTests/EntitlementTests.cs
@@ -495,7 +495,7 @@ public sealed class AltaCuentasServicio
 
 Nota de diseño registrada: la atómica entre contextos no es transaccional a nivel BD (no hay MSDTC en contenedores). La orden sigue el spec («1. crear la entidad, 2. registrar la cuenta») y la compensación por soft delete deja la entidad no operativa (invisible para las consultas normales); el residual es un identificador (RIF/documento) reservado tras una cuenta fallida, aceptado para un sistema cerrado y documentado aquí.
 
-- [ ] **Step 1: Escribir los tests en rojo**
+- [x] **Step 1: Escribir los tests en rojo**
 
 `AltaCuentasServicioTests.cs` (NSubstitute sobre `ISender` y `IRegistradorUsuarios`):
 - `ClienteCreadoRegistraCuentaRolClienteYDevuelveId`: el mediador devuelve un `clienteId`; el registrador devuelve un `Guid`; verificar `RegistrarAsync(email, contrasena, "Cliente", clienteId, null, …)` y el id devuelto, sin compensación.
@@ -503,12 +503,12 @@ Nota de diseño registrada: la atómica entre contextos no es transaccional a ni
 - `TrabajadorCreadoRegistraCuentaRolTrabajadorYDevuelveId`: verificar `RegistrarAsync(…, "Trabajador", clienteId, trabajadorId, …)`.
 - `CuentaDeTrabajadorFallidaDesactivaElTrabajadorYDevuelveConflict`: verificar `DesactivarTrabajadorCommand(trabajadorId)` y `ConflictException`.
 
-- [ ] **Step 2: Correr y verificar rojo**
+- [x] **Step 2: Correr y verificar rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --nologo`
 Expected: FALLA de compilación (`AltaCuentasServicio` no existe).
 
-- [ ] **Step 3: Implementación — servicio, política y endpoints**
+- [x] **Step 3: Implementación — servicio, política y endpoints**
 
 - `AltaCuentasServicio.cs` según el contrato.
 - `Identity/DependencyInjection.cs`: `GestionTrabajadores` pasa a `RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Cliente))` (solo Cliente; el Administrador queda fuera de trabajadores, spec).
@@ -520,7 +520,7 @@ Expected: FALLA de compilación (`AltaCuentasServicio` no existe).
   - El resto de endpoints de trabajadores (`cese`, `DELETE`) queda con `GestionTrabajadores` (solo Cliente).
 - `IdentidadEndpoints.cs`: `/me` devuelve también `actual.TrabajadorId`.
 
-- [ ] **Step 4: Verificar build y unitarios**
+- [x] **Step 4: Verificar build y unitarios**
 
 Run:
 ```bash
@@ -529,7 +529,7 @@ dotnet test Icarus/tests/Icarus.UnitTests --nologo
 ```
 Expected: build con 0 warnings; unitarios en verde (incluidos los 4 de `AltaCuentasServicio`).
 
-- [ ] **Step 5: Actualizar los tests de integración al nuevo flujo**
+- [x] **Step 5: Actualizar los tests de integración al nuevo flujo**
 
 - `ClientesEndpointsTests`:
   - `CrearClienteComoAdmin` ahora crea también la cuenta rol `Cliente`: se puede verificar `POST /identidad/sesion` con el `email` del alta → 200.
@@ -543,12 +543,12 @@ Expected: build con 0 warnings; unitarios en verde (incluidos los 4 de `AltaCuen
 - `EntitlementTests`:
   - `CrearClienteConCuenta` deja de usar `POST /identidad/usuarios`: el alta de `POST /clientes` crea la cuenta. Los escenarios de trabajador nuevo usan el `POST /clientes/{clienteId}/trabajadores` embebido y `PUT .../funcionalidades` para asignar.
 
-- [ ] **Step 6: Correr la suite de integración y la puerta**
+- [x] **Step 6: Correr la suite de integración y la puerta**
 
 Run: `dotnet test Icarus/tests/Icarus.IntegrationTests --nologo` y luego `./verify.ps1`.
 Expected: PASS (todo el flujo de alta embebida, tenant y entitlement queda probado de punta a punta).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Icarus/src/Host Icarus/src/Identity/Icarus.Identity.Infrastructure/DependencyInjection.cs Icarus/tests

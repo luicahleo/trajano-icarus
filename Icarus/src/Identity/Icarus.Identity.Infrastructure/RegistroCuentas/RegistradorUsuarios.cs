@@ -1,8 +1,8 @@
-using Icarus.Identity.Application.Usuarios;
+using Icarus.Identity.Application.RegistroCuentas;
 using Icarus.Identity.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.Identity;
 
-namespace Icarus.Identity.Infrastructure.Usuarios;
+namespace Icarus.Identity.Infrastructure.RegistroCuentas;
 
 public sealed class RegistradorUsuarios : IRegistradorUsuarios
 {

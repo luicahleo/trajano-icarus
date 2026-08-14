@@ -1,6 +1,5 @@
 using Icarus.BuildingBlocks.Application;
 using Icarus.Identity.Application.Sesiones;
-using Icarus.Identity.Application.Usuarios;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using MediatR;
 using Microsoft.Extensions.Options;
@@ -34,12 +33,6 @@ public static class IdentidadEndpoints
             EstablecerCookieRefresh(http, sesion.RefreshToken, jwt.Value.DiasRefreshToken);
             return Results.Ok(new { sesion.AccessToken, sesion.ExpiraEnSegundos });
         });
-
-        grupo.MapPost("/usuarios", async (CrearUsuarioCommand command, ISender mediator) =>
-        {
-            var id = await mediator.Send(command);
-            return Results.Created($"/identidad/usuarios/{id}", new { id });
-        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
 
         // Sesión actual: el frontend la usa para las guardas y navegación por rol.
         grupo.MapGet("/me", (ICurrentUser actual) =>

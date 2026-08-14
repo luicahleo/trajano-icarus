@@ -93,49 +93,6 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
     }
 
     [Fact]
-    public async Task CrearUsuarioSinTokenDevuelve401()
-    {
-        var cliente = _factory.CreateClient();
-
-        var respuesta = await cliente.PostAsJsonAsync("/identidad/usuarios",
-            new { email = "nuevo@icarus.test", contrasena = "Contrasena-Prueba-1", rol = "Trabajador" });
-
-        Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
-    }
-
-    [Fact]
-    public async Task CrearUsuarioConRolClienteDevuelve403()
-    {
-        var token = await LoginComo(SemillaIdentidad.EmailCliente);
-        var cliente = _factory.CreateClient();
-        var pedido = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", token);
-        pedido.Content = JsonContent.Create(
-            new { email = "nuevo@icarus.test", contrasena = "Contrasena-Prueba-1", rol = "Trabajador" });
-
-        var respuesta = await cliente.SendAsync(pedido);
-
-        Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
-    }
-
-    [Fact]
-    public async Task CrearUsuarioComoAdminPermiteLoginDeLaNuevaCuenta()
-    {
-        var token = await LoginComo(SemillaIdentidad.EmailAdmin);
-        var cliente = _factory.CreateClient();
-        var email = $"creado-{Guid.NewGuid():N}@icarus.test";
-        var pedido = PedidoAutenticado(HttpMethod.Post, "/identidad/usuarios", token);
-        pedido.Content = JsonContent.Create(
-            new { email, contrasena = "Contrasena-Prueba-1", rol = "Cliente", clienteId = SemillaIdentidad.ClienteDemoId });
-
-        var respuesta = await cliente.SendAsync(pedido);
-        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
-
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
-            new { email, contrasena = "Contrasena-Prueba-1" });
-        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-    }
-
-    [Fact]
     public async Task MeDevuelveLosClaimsDelToken()
     {
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
