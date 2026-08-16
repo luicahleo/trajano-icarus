@@ -1,6 +1,7 @@
 import {
   crearErrorId,
   instalarCapturaGlobal,
+  limpiarDeduplicacionReportes,
   reportarDiagnostico,
   sanitizarAsset,
 } from './diagnosticos';
@@ -11,6 +12,7 @@ describe('diagnosticos', () => {
   beforeEach(() => {
     sessionStorage.clear();
     setAccessToken(null);
+    limpiarDeduplicacionReportes();
     vi.restoreAllMocks();
   });
 
@@ -52,6 +54,26 @@ describe('diagnosticos', () => {
       'index-Ab12.js',
     );
     expect(sanitizarAsset('https://externo.test/assets/index.js')).toBeUndefined();
+  });
+
+  test('deduplica el mismo evento durante la ventana y conserva errores distintos', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const base = {
+      eventName: 'window.unexpected' as const,
+      category: 'unexpected' as const,
+      source: 'window' as const,
+      asset: 'index-Ab12.js',
+      lineNumber: 12,
+      columnNumber: 4,
+    };
+
+    await reportarDiagnostico(base);
+    await reportarDiagnostico(base);
+    await reportarDiagnostico({ ...base, asset: 'index-Cd34.js' });
+
+    const reportes = fetchMock.mock.calls.filter(([ruta]) => ruta === '/api/diagnosticos/frontend');
+    expect(reportes).toHaveLength(2);
   });
 
   test('captura errores globales y promesas sin enviar su contenido', async () => {

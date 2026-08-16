@@ -42,6 +42,20 @@ function esRutaDeSesion(ruta: string): boolean {
   return ruta.startsWith('/identidad/sesion');
 }
 
+function esRutaDeDiagnostico(ruta: string): boolean {
+  return ruta.startsWith('/diagnosticos/frontend');
+}
+
+function reportarFalloDeRed(ruta: string): void {
+  if (esRutaDeDiagnostico(ruta)) return;
+  void reportarDiagnostico({
+    errorId: crearErrorId(),
+    eventName: 'http.network_failed',
+    category: 'network',
+    source: 'http',
+  });
+}
+
 function conHeaders(init: RequestInit, cuerpo?: unknown): RequestInit {
   const cabeceras = new Headers(init.headers);
   cabeceras.set('X-Correlation-ID', crearCorrelationId());
@@ -107,8 +121,7 @@ async function errorDesde(respuesta: Response): Promise<ApiError> {
   return new ApiError({
     status: respuesta.status,
     code,
-    correlationId:
-      respuesta.headers.get('X-Correlation-ID') ?? correlationId ?? undefined,
+    correlationId: respuesta.headers.get('X-Correlation-ID') ?? correlationId ?? undefined,
     traceId: respuesta.headers.get('X-Trace-Id') ?? traceId ?? undefined,
     errorId,
   });
@@ -132,10 +145,7 @@ export async function peticion<T>(o: {
 }): Promise<T> {
   const { ruta, metodo = 'GET', cuerpo } = o;
   const crearRequest = () =>
-    new Request(
-      urlCompleta(ruta),
-      conHeaders({ method: metodo, credentials: 'include' }, cuerpo),
-    );
+    new Request(urlCompleta(ruta), conHeaders({ method: metodo, credentials: 'include' }, cuerpo));
   const original = crearRequest();
   const reintentable = !esRutaDeSesion(ruta);
   const inicio = performance.now();
@@ -144,6 +154,7 @@ export async function peticion<T>(o: {
     respuesta = await fetch(original);
   } catch (error) {
     registrarLlamadaApi(original, inicio);
+    reportarFalloDeRed(ruta);
     throw error;
   }
   registrarLlamadaApi(original, inicio, respuesta);
@@ -155,6 +166,7 @@ export async function peticion<T>(o: {
       respuesta = await fetch(reintento);
     } catch (error) {
       registrarLlamadaApi(reintento, inicioReintento);
+      reportarFalloDeRed(ruta);
       throw error;
     }
     registrarLlamadaApi(reintento, inicioReintento, respuesta);

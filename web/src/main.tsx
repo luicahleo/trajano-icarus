@@ -9,6 +9,7 @@ import '@fontsource/prompt/latin-700.css';
 import { theme } from './app/theme';
 import { instalarServiceWorker } from './pwa/registro';
 import App from './App';
+import { CapturaErroresGlobales } from './app/CapturaErroresGlobales';
 
 instalarServiceWorker();
 
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <CapturaErroresGlobales />
       <App />
     </ThemeProvider>
   </StrictMode>,

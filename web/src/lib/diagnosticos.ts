@@ -28,6 +28,37 @@ export interface DiagnosticoFrontend {
 
 type ReporteroDiagnostico = (diagnostico: DiagnosticoFrontend) => Promise<void>;
 
+const VENTANA_DEDUPLICACION_MS = 60_000;
+const deduplicados = new Map<string, number>();
+
+function claveDeduplicacion(diagnostico: DiagnosticoFrontend): string {
+  return [
+    diagnostico.eventName,
+    diagnostico.source,
+    diagnostico.statusCode ?? '',
+    diagnostico.asset ?? '',
+    diagnostico.lineNumber ?? '',
+    diagnostico.columnNumber ?? '',
+  ].join('|');
+}
+
+function esDuplicado(diagnostico: DiagnosticoFrontend): boolean {
+  const clave = claveDeduplicacion(diagnostico);
+  const ahora = Date.now();
+  for (const [existente, caduca] of deduplicados) {
+    if (caduca < ahora) deduplicados.delete(existente);
+  }
+  if (deduplicados.has(clave)) return true;
+  deduplicados.set(clave, ahora + VENTANA_DEDUPLICACION_MS);
+  return false;
+}
+
+export function limpiarDeduplicacionReportes(): void {
+  deduplicados.clear();
+}
+
+export { type ReporteroDiagnostico };
+
 export function crearErrorId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(6));
   const hex = Array.from(bytes, (valor) => valor.toString(16).padStart(2, '0')).join('');
@@ -50,12 +81,14 @@ export function sanitizarAsset(valor?: string): string | undefined {
 }
 
 export async function reportarDiagnostico(diagnostico: DiagnosticoFrontend): Promise<void> {
+  if (esDuplicado(diagnostico)) return;
+
   const sessionId = obtenerSesionId();
   const cuerpo = {
     ...diagnostico,
     errorId: diagnostico.errorId ?? crearErrorId(),
     sessionId,
-    release: import.meta.env.VITE_RELEASE || undefined,
+    release: import.meta.env.VITE_RELEASE || 'development',
     asset: sanitizarAsset(diagnostico.asset),
     flowEvents: obtenerEventosRecientes(30),
   };

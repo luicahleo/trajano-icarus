@@ -16,7 +16,9 @@ describe('peticion', () => {
   });
 
   test('inyecta correlation ID y Bearer en todas las peticiones', async () => {
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(respuesta(200, { ok: true })));
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(respuesta(200, { ok: true })));
     setAccessToken('tok');
     vi.stubGlobal('fetch', fetchMock);
 
@@ -150,5 +152,44 @@ describe('peticion', () => {
       correlationId: '20cc2ea2-2f71-45bb-a667-25f1700431bb',
       traceId: '0123456789abcdef0123456789abcdef',
     });
+  });
+
+  test('el fallo de red se reporta como incidente técnico', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(peticion({ ruta: '/clientes' })).rejects.toThrow('Failed to fetch');
+
+    const reporte = fetchMock.mock.calls.filter(([ruta]) => ruta === '/api/diagnosticos/frontend');
+    expect(reporte).toHaveLength(1);
+    const cuerpo = JSON.parse(String(reporte[0][1].body)) as Record<string, unknown>;
+    expect(cuerpo).toMatchObject({
+      eventName: 'http.network_failed',
+      category: 'network',
+      source: 'http',
+    });
+    expect(cuerpo).not.toHaveProperty('message');
+    expect(cuerpo).not.toHaveProperty('stack');
+  });
+
+  test('los 4xx esperados no generan reporte técnico', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(respuesta(404, { title: 'No encontrado' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(peticion({ ruta: '/clientes/abc' })).rejects.toMatchObject({ status: 404 });
+
+    const reportes = fetchMock.mock.calls.filter(([ruta]) => ruta === '/api/diagnosticos/frontend');
+    expect(reportes).toHaveLength(0);
+  });
+
+  test('el endpoint de diagnóstico nunca se reporta a sí mismo', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      peticion({ ruta: '/diagnosticos/frontend', metodo: 'POST', cuerpo: {} }),
+    ).rejects.toThrow();
+
+    expect(fetchMock.mock.calls).toHaveLength(1);
   });
 });

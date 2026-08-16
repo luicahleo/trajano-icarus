@@ -5,6 +5,7 @@ import { RequiereRol } from '../features/auth/RequiereRol';
 import type { Rol } from '../lib/tipos';
 import { AppLayout } from './AppLayout';
 import { CargandoRuta } from './CargandoRuta';
+import { ErrorDiagnosticoPage } from './ErrorDiagnosticoPage';
 import {
   ClienteDetallePage,
   ClienteNuevoPage,
@@ -22,6 +23,7 @@ const admin: Rol[] = ['Administrador'];
 export const router = createBrowserRouter([
   {
     element: <RaizAplicacion />,
+    errorElement: <ErrorDiagnosticoPage />,
     children: [
       {
         path: '/login',
