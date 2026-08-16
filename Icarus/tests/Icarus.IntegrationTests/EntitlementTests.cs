@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Icarus.Host.Endpoints;
 using Icarus.Identity.Infrastructure;
 using Xunit;
 
@@ -61,6 +62,42 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         }
 
         return (clienteId, await LoginComo(email));
+    }
+
+    private async Task<(Guid ClienteId, string Email, string Token, string Cookie)> CrearClienteConSesion(
+        string[]? modulos)
+    {
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var clienteHttp = _factory.CreateClient();
+        var email = $"cuenta-{Guid.NewGuid():N}@icarus.test";
+        var altaCliente = PedidoAutenticado(HttpMethod.Post, "/clientes", admin);
+        altaCliente.Content = JsonContent.Create(new
+        {
+            razonSocial = "Granja de Prueba S.A.C.",
+            identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}",
+            email,
+            contrasena = IdentityFactory.ContrasenaDePrueba,
+        });
+        var respuestaCliente = await clienteHttp.SendAsync(altaCliente);
+        Assert.Equal(HttpStatusCode.Created, respuestaCliente.StatusCode);
+        var clienteId = (await respuestaCliente.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+
+        if (modulos is not null)
+        {
+            var asignar = PedidoAutenticado(HttpMethod.Put, $"/clientes/{clienteId}/modulos", admin);
+            asignar.Content = JsonContent.Create(new { modulos });
+            Assert.Equal(HttpStatusCode.NoContent, (await clienteHttp.SendAsync(asignar)).StatusCode);
+        }
+
+        var login = await clienteHttp.PostAsJsonAsync("/identidad/sesion",
+            new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var cuerpo = await login.Content.ReadFromJsonAsync<JsonElement>();
+        var cookie = login.Headers.GetValues("Set-Cookie")
+            .Single(h => h.StartsWith(IdentidadEndpoints.CookieRefresh + "=", StringComparison.Ordinal))
+            .Split(';')[0];
+        return (clienteId, email, cuerpo.GetProperty("accessToken").GetString()!, cookie);
     }
 
     // Alta embebida de un trabajador con asignación opcional de funcionalidades.
@@ -195,7 +232,35 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         var respuesta = await cliente.SendAsync(
             PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
 
-        Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task ClienteSuspendidoBloqueaLoginRenovacionYTokensYaEmitidos()
+    {
+        var (clienteId, email, token, cookie) = await CrearClienteConSesion(["GestionAvicola"]);
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var cliente = _factory.CreateClient();
+
+        var suspender = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/suspender", admin));
+        Assert.Equal(HttpStatusCode.NoContent, suspender.StatusCode);
+
+        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+            new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+
+        var renovar = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+        renovar.Headers.Add("Cookie", cookie);
+        var respuestaRenovacion = await cliente.SendAsync(renovar);
+        Assert.Equal(HttpStatusCode.Unauthorized, respuestaRenovacion.StatusCode);
+
+        var me = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+        Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
+
+        var trabajadores = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, $"/clientes/{clienteId}/trabajadores", token));
+        Assert.Equal(HttpStatusCode.Unauthorized, trabajadores.StatusCode);
     }
 
     [Fact]

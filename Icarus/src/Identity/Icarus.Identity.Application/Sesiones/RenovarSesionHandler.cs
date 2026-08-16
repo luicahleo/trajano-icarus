@@ -1,3 +1,4 @@
+using Icarus.BuildingBlocks.Application;
 using MediatR;
 
 namespace Icarus.Identity.Application.Sesiones;
@@ -7,13 +8,16 @@ public sealed class RenovarSesionHandler : IRequestHandler<RenovarSesionCommand,
     private readonly IServicioRefreshTokens _refresh;
     private readonly IConsultaUsuarios _consulta;
     private readonly IEmisorAccessTokens _emisor;
+    private readonly IClienteActivo _estadoCliente;
 
     public RenovarSesionHandler(
-        IServicioRefreshTokens refresh, IConsultaUsuarios consulta, IEmisorAccessTokens emisor)
+        IServicioRefreshTokens refresh, IConsultaUsuarios consulta, IEmisorAccessTokens emisor,
+        IClienteActivo estadoCliente)
     {
         _refresh = refresh;
         _consulta = consulta;
         _emisor = emisor;
+        _estadoCliente = estadoCliente;
     }
 
     public async Task<ResultadoSesion> Handle(RenovarSesionCommand request, CancellationToken cancellationToken)
@@ -23,6 +27,10 @@ public sealed class RenovarSesionHandler : IRequestHandler<RenovarSesionCommand,
 
         var usuario = await _consulta.ObtenerPorIdAsync(usuarioId, cancellationToken)
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+
+        if (usuario.ClienteId is { } clienteId &&
+            !await _estadoCliente.EstaActivoAsync(clienteId, cancellationToken))
+            throw new UnauthorizedAccessException("La sesión no es válida.");
 
         var accessToken = _emisor.Emitir(
             usuario.Id, usuario.Rol, usuario.ClienteId, usuario.TrabajadorId, out var expiraEnSegundos);

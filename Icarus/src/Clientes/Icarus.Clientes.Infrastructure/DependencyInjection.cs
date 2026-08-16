@@ -23,6 +23,7 @@ public static class DependencyInjection
 
         servicios.AddScoped<IRepositorioClientes, RepositorioClientes>();
         servicios.AddScoped<IRepositorioTrabajadores, RepositorioTrabajadores>();
+        servicios.AddScoped<IClienteActivo, EstadoCliente>();
         servicios.AddScoped<IVerificadorEntitlement, VerificadorEntitlement>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadHabilitada>();
 

@@ -1,4 +1,5 @@
 using Icarus.Identity.Application.Sesiones;
+using Icarus.BuildingBlocks.Application;
 using NSubstitute;
 using Xunit;
 
@@ -9,11 +10,12 @@ public class RenovarSesionHandlerTests
     private readonly IServicioRefreshTokens _refresh = Substitute.For<IServicioRefreshTokens>();
     private readonly IConsultaUsuarios _consulta = Substitute.For<IConsultaUsuarios>();
     private readonly IEmisorAccessTokens _emisor = Substitute.For<IEmisorAccessTokens>();
+    private readonly IClienteActivo _estadoCliente = Substitute.For<IClienteActivo>();
     private readonly RenovarSesionHandler _handler;
 
     public RenovarSesionHandlerTests()
     {
-        _handler = new RenovarSesionHandler(_refresh, _consulta, _emisor);
+        _handler = new RenovarSesionHandler(_refresh, _consulta, _emisor, _estadoCliente);
         _emisor.Emitir(
                 Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>())
             .Returns(call =>
@@ -21,6 +23,7 @@ public class RenovarSesionHandlerTests
                 call[4] = 900;
                 return "access-token-nuevo";
             });
+        _estadoCliente.EstaActivoAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(true);
     }
 
     [Fact]
@@ -56,5 +59,22 @@ public class RenovarSesionHandlerTests
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _handler.Handle(new RenovarSesionCommand("refresh-viejo"), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RefreshDeClienteSuspendidoLanzaUnauthorized()
+    {
+        var usuarioId = Guid.NewGuid();
+        var clienteId = Guid.NewGuid();
+        _refresh.RotarAsync("refresh-viejo", Arg.Any<CancellationToken>()).Returns(usuarioId);
+        _consulta.ObtenerPorIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(new UsuarioResumen(usuarioId, "cuenta@icarus.test", "Cliente", clienteId, null));
+        _estadoCliente.EstaActivoAsync(clienteId, Arg.Any<CancellationToken>()).Returns(false);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _handler.Handle(new RenovarSesionCommand("refresh-viejo"), CancellationToken.None));
+
+        _emisor.DidNotReceive().Emitir(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>());
     }
 }

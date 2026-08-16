@@ -7,6 +7,7 @@ using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
 using Icarus.Host.Endpoints;
+using Icarus.Host.Middleware;
 using Icarus.Host.Observability;
 using Icarus.Host.Servicios;
 using Icarus.Identity.Application.Sesiones;
@@ -56,6 +57,7 @@ var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<ClienteActivoMiddleware>();
 app.UseMiddleware<RequestObservabilityMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<ClientDiagnosticsBodyLimitMiddleware>();
