@@ -27,6 +27,10 @@ docs/ai/HANDOFF.md
 # Estado de runtime de los scripts de entorno PC (Caddy, IP detectada)
 .local/
 
+# Source maps privados extraídos del build web (artefacto de observabilidad,
+# nunca servidos públicamente)
+sourcemaps/
+
 # Ajustes locales de Claude Code (no compartibles)
 .claude/settings.local.json
 

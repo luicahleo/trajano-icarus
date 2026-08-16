@@ -10,7 +10,7 @@ export function crearHostsPermitidos(host: string | undefined): string[] {
   return host ? [host] : [];
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
@@ -28,13 +28,29 @@ export default defineConfig({
         icons: [
           { src: 'pwa/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa/pwa-maskable-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: 'pwa/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: 'pwa/pwa-maskable-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: 'pwa/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
     }),
   ],
+  build: {
+    // Los source maps solo se generan con --mode sourcemaps, ocultos (sin la
+    // anotación //# sourceMappingURL) y se extraen de dist por
+    // scripts/extraer-sourcemaps.mjs antes de publicar (spec: artefacto privado).
+    sourcemap: mode === 'sourcemaps' ? 'hidden' : false,
+  },
   server: {
     host: true,
     allowedHosts: crearHostsPermitidos(allowedHost),
@@ -53,5 +69,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     maxWorkers: 2,
+    // Los tests de node (scripts/*.test.mjs) corren con `node --test`, no aquí.
+    include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
   },
-});
+}));
