@@ -22,6 +22,16 @@ finally {
 }
 if ($codigo -ne 0) { throw "No se pudo consultar el entorno $Perfil." }
 
+Write-Host ''
+Write-Host 'Seq local (UI): http://localhost:5341' -ForegroundColor Cyan
+try {
+    $ErrorActionPreference = 'Continue'
+    & docker compose @archivosCompose ps seq
+}
+finally {
+    $ErrorActionPreference = $preferenciaErrores
+}
+
 if ($Logs) {
     try {
         $ErrorActionPreference = 'Continue'

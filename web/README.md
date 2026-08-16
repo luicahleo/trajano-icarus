@@ -65,6 +65,20 @@ Sistema cerrado (roles): `admin@icarus.test`, `soporte@icarus.test`,
 El cliente semilla «Granja Demo S.A.C.» tiene el módulo `GestionAvicola` y un
 trabajador demo (datos ficticios).
 
+## Observabilidad
+
+- `?debug=1` en una pestaña descarga un JSON con los eventos de esa sesión
+  (solo en desarrollo/testing o con `VITE_HABILITAR_DIAGNOSTICO_MANUAL=true`).
+- Los errores técnicos se reportan automáticamente a
+  `POST /api/diagnosticos/frontend` con breadcrumbs seguros y sin PII.
+- `VITE_RELEASE` identifica el despliegue en los reportes (fallback
+  `development`).
+- Para conservar los source maps como artefacto privado:
+  `npm run build:sourcemaps` (los genera ocultos y los extrae a
+  `sourcemaps/<release>/`, fuera de `dist`; nunca se sirven públicamente).
+- Operación y consultas:
+  [`docs/operacion/observabilidad.md`](../docs/operacion/observabilidad.md).
+
 ## Comandos de calidad
 
 ```bash

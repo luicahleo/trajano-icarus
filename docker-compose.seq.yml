@@ -1,0 +1,45 @@
+# Plantilla del contenedor Seq central compartido en la VPS (infraestructura).
+# No es el despliegue productivo de Icarus: es el almacén de logs compartido
+# por Icarus, Caserito y cualquier aplicación autorizada. Vive fuera del ciclo
+# de vida de las aplicaciones (volumen y despliegue propios).
+#
+# Uso en la VPS (directorio propio de Seq, p. ej. /opt/seq):
+#   1. Crear la red compartida una sola vez:
+#        docker network create trajano-shared-network
+#   2. Generar el hash del admin sin exponer la contraseña (se pasa por STDIN):
+#        printf 'la-contrasena' | docker run --rm -i datalust/seq:2026.1 config hash
+#   3. Guardar ese hash en el secret store / variables de la VPS como
+#      SEQ_ADMIN_PASSWORD_HASH (nunca en este archivo ni en git).
+#   4. Levantar:
+#        docker compose -f docker-compose.seq.yml up -d
+#
+# La UI NO se publica a Internet: solo loopback de la VPS; se accede por VPN o
+# túnel SSH (p. ej. `ssh -L 5341:127.0.0.1:5341 usuario@vps`). La ingestión de
+# las aplicaciones viaja por la red interna trajano-shared-network.
+services:
+  seq:
+    image: datalust/seq:2026.1
+    environment:
+      ACCEPT_EULA: "Y"
+      # Primer arranque: crea el admin con hash salado (config hash) y exige
+      # autenticación o API key para ingerir eventos.
+      SEQ_FIRSTRUN_ADMINPASSWORDHASH: "${SEQ_ADMIN_PASSWORD_HASH:-cambiar}"
+      SEQ_FIRSTRUN_REQUIREAUTHENTICATIONFORHTTPINGESTION: "true"
+    ports:
+      - "127.0.0.1:5341:80"
+    volumes:
+      - seq-vps-data:/data
+    networks:
+      - trajano-shared-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: unless-stopped
+
+volumes:
+  seq-vps-data:
+
+networks:
+  trajano-shared-network:
+    external: true

@@ -163,6 +163,7 @@ if (-not $saludable) {
 
 Write-Host ''
 Write-Host "Icarus ${nombreEquipo}: https://$hostLan" -ForegroundColor Green
+Write-Host "Seq local (solo desarrollo): http://localhost:5341" -ForegroundColor Green
 if (Test-Path $certificado) {
     Write-Host "CA pública para instalar en el móvil: $certificado" -ForegroundColor Yellow
 } else {

@@ -6,16 +6,22 @@
 # con appsettings.Development.json para correr sin Docker).
 services:
   seq:
-    image: datalust/seq:latest
+    image: datalust/seq:2026.1
     environment:
       ACCEPT_EULA: "Y"
       # Seq reciente exige admin o renuncia explícita a autenticación en el
-      # primer arranque; sin auth alcanza para desarrollo local.
+      # primer arranque; sin auth alcanza para desarrollo local (solo localhost).
       SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
     ports:
-      - "5341:80"
+      # La UI de Seq solo se expone en localhost, nunca en la LAN (spec).
+      - "127.0.0.1:5341:80"
     volumes:
       - seq-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -45,8 +51,10 @@ services:
       ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
       # Contraseña de las cuentas semilla (paridad con Caserito, SeedUsuariosDesarrollo).
       Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Semilla-Dev-1234}"
-      # Dentro del contenedor localhost no es el host: Seq se alcanza por la red de compose.
-      Serilog__WriteTo__0__Args__serverUrl: "http://seq:80"
+      # Dentro del contenedor localhost no es el host: Seq se alcanza por la red
+      # de compose; la API key es opcional (el Seq local no exige auth).
+      Seq__Url: "http://seq:80"
+      Seq__ApiKey: "${SEQ_API_KEY:-}"
     ports:
       - "8080:8080"
     depends_on:
