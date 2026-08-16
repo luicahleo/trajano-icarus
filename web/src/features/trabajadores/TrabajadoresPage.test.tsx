@@ -13,18 +13,25 @@ function respuesta(status: number, cuerpo?: unknown) {
   });
 }
 
-function fetchSimulado(reglas: Record<string, Response>) {
+// Cada clave acepta una respuesta única o una secuencia (una por llamada):
+// permite modelar el estado antes y después de una mutación.
+function fetchSimulado(reglas: Record<string, Response | Response[]>) {
+  const colas = new Map(
+    Object.entries(reglas).map(([clave, valor]) => [clave, Array.isArray(valor) ? [...valor] : [valor]]),
+  );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
       init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
     const clave = `${req.method} ${new URL(req.url).pathname}`;
-    return reglas[clave] ?? new Response('', { status: 404 });
+    const cola = colas.get(clave);
+    const valor = cola?.shift();
+    return valor ?? new Response('', { status: 404 });
   });
   vi.stubGlobal('fetch', fn);
   return fn;
 }
 
-function baseFetch(rol: Rol, clienteId: string | null, reglas: Record<string, Response>) {
+function baseFetch(rol: Rol, clienteId: string | null, reglas: Record<string, Response | Response[]>) {
   return fetchSimulado({
     'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
     'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId }),
@@ -72,7 +79,6 @@ const trabajador2 = {
   fechaCese: '2026-02-01',
   funcionalidades: [],
 };
-
 describe('TrabajadoresPage', () => {
   beforeEach(() => vi.restoreAllMocks());
 
