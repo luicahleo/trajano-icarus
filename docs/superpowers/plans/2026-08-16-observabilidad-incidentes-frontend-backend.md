@@ -47,17 +47,17 @@ Serilog, rate limiting ASP.NET; Seq 2026.1 en Docker.
 - Modify: `web/src/app/BotonDiagnostico.test.tsx`
 - Modify: `web/src/vite-env.d.ts`
 
-- [ ] Añadir tests que demuestren en rojo que `debug=1` no activa la descarga
+- [x] Añadir tests que demuestren en rojo que `debug=1` no activa la descarga
   cuando la build no lo autoriza y sí lo hace en desarrollo/testing.
-- [ ] Añadir test rojo: dos peticiones reales obtienen `CorrelationId` distintos
+- [x] Añadir test rojo: dos peticiones reales obtienen `CorrelationId` distintos
   y comparten `SessionId`; refresh y reintento son peticiones independientes.
-- [ ] Implementar `diagnosticoManualPermitido()` con
+- [x] Implementar `diagnosticoManualPermitido()` con
   `import.meta.env.DEV || VITE_HABILITAR_DIAGNOSTICO_MANUAL === 'true'`.
-- [ ] Dejar `SessionId` estable por pestaña y generar UUID de correlación por
+- [x] Dejar `SessionId` estable por pestaña y generar UUID de correlación por
   petición, sin persistirlo.
-- [ ] Montar captura y botón en una raíz común del router para incluir login;
+- [x] Montar captura y botón en una raíz común del router para incluir login;
   retirar esos componentes de `AppLayout`.
-- [ ] Verificar que no se registra query/hash y que el buffer sigue limitado a
+- [x] Verificar que no se registra query/hash y que el buffer sigue limitado a
   100 eventos.
 
 **Red/green:**
@@ -84,13 +84,13 @@ npm run test -- src/lib/sesionDiagnostico.test.ts src/lib/correlation.test.ts sr
 - Create: `Icarus/tests/Icarus.UnitTests/Observability/RequestObservabilityMiddlewareTests.cs`
 - Modify: `Icarus/tests/Icarus.IntegrationTests/CorrelationIdIntegrationTests.cs`
 
-- [ ] Test rojo para formatos y unicidad de `ErrorId`/`SessionId`.
-- [ ] Test rojo para `X-Trace-Id`, validación de `X-Session-Id` y
+- [x] Test rojo para formatos y unicidad de `ErrorId`/`SessionId`.
+- [x] Test rojo para `X-Trace-Id`, validación de `X-Session-Id` y
   `http.request.completed` con patrón de ruta, status y duración.
-- [ ] Implementar `DiagnosticContext` sobre `HttpContext.Items`.
-- [ ] Implementar middleware después de autenticación y antes de autorización;
+- [x] Implementar `DiagnosticContext` sobre `HttpContext.Items`.
+- [x] Implementar middleware después de autenticación y antes de autorización;
   enriquecer con `ClienteId`/`Rol`, nunca actor nominal.
-- [ ] Responder siempre con `X-Correlation-ID` y `X-Trace-Id`.
+- [x] Responder siempre con `X-Correlation-ID` y `X-Trace-Id`.
 
 **Red/green:**
 
@@ -111,13 +111,13 @@ dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj 
 - Modify: `Icarus/tests/Icarus.UnitTests/Observability/ExceptionHandlingMiddlewareTests.cs`
 - Create: `Icarus/tests/Icarus.IntegrationTests/Observability/ErrorIdIntegrationTests.cs`
 
-- [ ] Test rojo: excepción inesperada produce `ErrorId`, lo incluye en
+- [x] Test rojo: excepción inesperada produce `ErrorId`, lo incluye en
   `ProblemDetails`, lo deja en `DiagnosticContext` y emite `backend.error`.
-- [ ] Test rojo: errores esperados de negocio no reciben referencia de incidente
+- [x] Test rojo: errores esperados de negocio no reciben referencia de incidente
   técnico y conservan respuesta genérica.
-- [ ] Añadir `correlationId` y `traceId` sin exponer excepción ni mensajes
+- [x] Añadir `correlationId` y `traceId` sin exponer excepción ni mensajes
   internos.
-- [ ] Verificar que `http.request.completed` comparte el mismo `ErrorId`.
+- [x] Verificar que `http.request.completed` comparte el mismo `ErrorId`.
 
 **Red/green:**
 
@@ -141,13 +141,13 @@ dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj 
 - Create: `Icarus/tests/Icarus.UnitTests/Observability/ReporteDiagnosticoFrontendTests.cs`
 - Create: `Icarus/tests/Icarus.IntegrationTests/Observability/DiagnosticosEndpointTests.cs`
 
-- [ ] Test rojo del contrato exacto y whitelist; rechazar propiedades extra,
+- [x] Test rojo del contrato exacto y whitelist; rechazar propiedades extra,
   mensajes, rutas con query, IDs inválidos, más de 50 eventos y campos largos.
-- [ ] Test rojo de `202`, `400`, `413` y `429`.
-- [ ] Configurar rate limit `diagnosticos-frontend` a 20/minuto y límite 16 KiB.
-- [ ] Mapear backend `/diagnosticos/frontend` y documentar que el navegador usa
+- [x] Test rojo de `202`, `400`, `413` y `429`.
+- [x] Configurar rate limit `diagnosticos-frontend` a 20/minuto y límite 16 KiB.
+- [x] Mapear backend `/diagnosticos/frontend` y documentar que el navegador usa
   `/api/diagnosticos/frontend`.
-- [ ] Emitir `frontend.error` y `frontend.flow` con scopes seguros y contexto de
+- [x] Emitir `frontend.error` y `frontend.flow` con scopes seguros y contexto de
   tenant/rol derivado del principal.
 
 **Red/green:**
@@ -176,16 +176,22 @@ dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj 
 - Modify: `web/src/app/router.tsx`
 - Modify: `web/src/main.tsx`
 
-- [ ] Test rojo: reporte incluye `ErrorId`, IDs técnicos, release y últimos 30
+- [x] Test rojo: reporte incluye `ErrorId`, IDs técnicos, release y últimos 30
   breadcrumbs, pero no mensaje, stack, query, body ni token.
-- [ ] Test rojo: red/5xx se reportan; 4xx esperados no; el endpoint nunca se
+- [x] Test rojo: red/5xx se reportan; 4xx esperados no; el endpoint nunca se
   reporta a sí mismo.
-- [ ] Test rojo: `window.error`, `unhandledrejection` y error de router se
+- [x] Test rojo: `window.error`, `unhandledrejection` y error de router se
   clasifican y muestran referencia.
-- [ ] Implementar envío best effort con `keepalive`, deduplicación local y
+- [x] Implementar envío best effort con `keepalive`, deduplicación local y
   bearer opcional sin persistirlo.
-- [ ] Leer `errorId`, `correlationId` y `traceId` de `ProblemDetails`/headers y
+- [x] Leer `errorId`, `correlationId` y `traceId` de `ProblemDetails`/headers y
   conservarlos en `ApiError`.
+
+**Desviaciones reales:** `CapturaErroresGlobales` se monta en `main.tsx` (raíz
+de la app, cubre login y errores previos al router); `ErrorDiagnosticoPage` es
+el `errorElement` de la raíz del router. El botón «Recargar» se verifica solo por
+presencia: `window.location.reload` no es redefinible en jsdom, y el click real
+se cubre con la prueba de humo de la página.
 
 **Red/green:**
 
@@ -211,12 +217,12 @@ npm run test -- src/lib/diagnosticos.test.ts src/lib/http.test.ts src/app/ErrorD
 - Modify: `Icarus/src/Host/Icarus.Host/appsettings.json`
 - Modify: `Icarus/src/Host/Icarus.Host/appsettings.Development.json`
 
-- [ ] Test rojo del script: extrae `.map` a artefacto privado por release y no
+- [x] Test rojo del script: extrae `.map` a artefacto privado por release y no
   deja source maps en `dist`.
-- [ ] Inyectar `VITE_RELEASE` y `ICARUS_RELEASE`, con fallback `development`.
-- [ ] Generar sourcemaps ocultos solo cuando se solicite y extraerlos antes de
+- [x] Inyectar `VITE_RELEASE` y `ICARUS_RELEASE`, con fallback `development`.
+- [x] Generar sourcemaps ocultos solo cuando se solicite y extraerlos antes de
   publicar el directorio web.
-- [ ] Enriquecer todos los logs backend con `Release`.
+- [x] Enriquecer todos los logs backend con `Release`.
 
 **Red/green:**
 
@@ -225,6 +231,15 @@ cd web
 node --test scripts/extraer-sourcemaps.test.mjs
 npm run build
 ```
+
+**Desviaciones reales:** `appsettings.json` no cambió en Task 6: `Release` se
+resuelve por `ICARUS_RELEASE` (config/env) o versión de ensamblado, sin sección
+de configuración adicional. La sección `Serilog` de
+`appsettings.Development.json` se sustituyó en Task 7 por `Seq:Url`/`Seq:ApiKey`
+leídos programáticamente en `ObservabilityExtensions` (consola siempre, Seq
+opcional). El fallback de `VITE_RELEASE` se aplica en el punto de uso
+(`import.meta.env.VITE_RELEASE || 'development'`), no con `define` de Vite, para
+respetar los `.env` de Vite.
 
 **Commit previsto:** `feat(observabilidad): identifica releases y protege source maps`
 
@@ -244,18 +259,18 @@ npm run build
 - Modify: `iniciar-pc.ps1`
 - Modify: `estado-pc.ps1`
 
-- [ ] Fijar `datalust/seq:2026.1`, bind local `127.0.0.1:5341:80`, volumen y
+- [x] Fijar `datalust/seq:2026.1`, bind local `127.0.0.1:5341:80`, volumen y
   healthcheck en desarrollo.
-- [ ] Cambiar la API a `Seq__Url=http://seq:80`; usar `Seq__ApiKey` opcional.
-- [ ] Hacer que los scripts impriman la URL local de Seq y muestren su estado.
-- [ ] Añadir plantilla independiente de VPS para un contenedor Seq central,
+- [x] Cambiar la API a `Seq__Url=http://seq:80`; usar `Seq__ApiKey` opcional.
+- [x] Hacer que los scripts impriman la URL local de Seq y muestren su estado.
+- [x] Añadir plantilla independiente de VPS para un contenedor Seq central,
   compartido por cualquier aplicación autorizada: password hash, API keys
   distintas por aplicación, propiedad `Aplicacion`, volumen propio, red externa
   `trajano-shared-network`, UI local/túnel y límites; no crear un despliegue
   productivo ficticio de Icarus.
-- [ ] Documentar consultas por `ErrorId`, `SessionId`, `CorrelationId`,
+- [x] Documentar consultas por `ErrorId`, `SessionId`, `CorrelationId`,
   `TraceId`, operación sin Seq, retención 30 días y alertas iniciales.
-- [ ] Validar compose renderizado sin exponer secretos.
+- [x] Validar compose renderizado sin exponer secretos.
 
 **Verificación:**
 
@@ -275,14 +290,15 @@ docker compose -f docker-compose.seq.yml config --quiet
 - Modify: este plan, marcando tareas completadas y desviaciones reales.
 - Delete: `docs/ai/HANDOFF.md` al cerrar.
 
-- [ ] Ejecutar pruebas dirigidas de todos los bloques.
-- [ ] Ejecutar `./verify.ps1` con Docker disponible.
-- [ ] Revisar `git diff --check`, `git diff --stat` y los diffs propios.
-- [ ] Confirmar manualmente que Seq abre en `http://localhost:5341`, recibe un
+- [x] Ejecutar pruebas dirigidas de todos los bloques.
+- [x] Ejecutar `./verify.ps1` con Docker disponible.
+- [x] Revisar `git diff --check`, `git diff --stat` y los diffs propios.
+- [x] Confirmar manualmente que Seq abre en `http://localhost:5341`, recibe un
   `http.request.completed` y permite buscar una referencia de prueba.
-- [ ] Confirmar que `?debug=1` se exporta en desarrollo y queda inerte en build
-  productiva sin opt-in.
-- [ ] Commit final de documentación si el plan necesitó correcciones, push a
+- [x] Confirmar que `?debug=1` se exporta en desarrollo y queda inerte en build
+  productiva sin opt-in (cubierto por `BotonDiagnostico.test.tsx`,
+  `sesionDiagnostico.test.ts` y el build de producción).
+- [x] Commit final de documentación si el plan necesitó correcciones, push a
   `develop` y borrar handoff.
 
 **Puerta:**
