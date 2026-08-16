@@ -79,17 +79,21 @@ public class IdentityEndpointsTests : IClassFixture<IdentityFactory>
         Assert.Equal(emailInexistente.StatusCode, contrasenaIncorrecta.StatusCode);
         var textoInexistente = await emailInexistente.Content.ReadAsStringAsync();
         var textoIncorrecta = await contrasenaIncorrecta.Content.ReadAsStringAsync();
-        Assert.Equal(SinCorrelationId(textoInexistente), SinCorrelationId(textoIncorrecta));
+        Assert.Equal(
+            SinIdentificadoresTecnicos(textoInexistente),
+            SinIdentificadoresTecnicos(textoIncorrecta));
     }
 
-    // El cuerpo de error incluye el correlationId propio de cada request
-    // (middleware de observabilidad del plan 1): se normaliza antes de comparar,
-    // porque la regla anti-enumeración es sobre el detalle del error, no el trace.
-    private static string SinCorrelationId(string texto)
+    // El cuerpo incluye los IDs técnicos propios de cada petición. Se normalizan
+    // porque la regla anti-enumeración es sobre el status y el detalle funcional.
+    private static string SinIdentificadoresTecnicos(string texto)
     {
         using var doc = JsonDocument.Parse(texto);
         var correlationId = doc.RootElement.GetProperty("correlationId").GetString()!;
-        return texto.Replace(correlationId, "*", StringComparison.Ordinal);
+        var traceId = doc.RootElement.GetProperty("traceId").GetString()!;
+        return texto
+            .Replace(correlationId, "*", StringComparison.Ordinal)
+            .Replace(traceId, "*", StringComparison.Ordinal);
     }
 
     [Fact]

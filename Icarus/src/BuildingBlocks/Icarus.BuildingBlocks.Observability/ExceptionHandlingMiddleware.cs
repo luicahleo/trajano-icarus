@@ -41,10 +41,31 @@ public sealed class ExceptionHandlingMiddleware
             _ => (StatusCodes.Status500InternalServerError, "Error interno"),
         };
 
+        string? errorId = null;
         if (status >= StatusCodes.Status500InternalServerError)
-            _logger.LogError(ex, "Error no controlado");
+        {
+            errorId = DiagnosticIds.NuevoErrorId();
+            DiagnosticContext.EstablecerErrorId(context, errorId);
+            using (_logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["ErrorId"] = errorId,
+                ["ExceptionType"] = ex.GetType().FullName,
+                ["ExceptionStackTrace"] = ex.StackTrace,
+            }))
+            {
+                _logger.LogError("{EventName}: error no controlado", "backend.error");
+            }
+        }
         else
-            _logger.LogWarning(ex, "Error de negocio ({Tipo})", ex.GetType().Name);
+        {
+            using (_logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["ExceptionType"] = ex.GetType().FullName,
+            }))
+            {
+                _logger.LogWarning("{EventName}: error esperado de negocio", "backend.business_warning");
+            }
+        }
 
         var correlationId = context.Items[CorrelationIdMiddleware.Header] as string
             ?? context.TraceIdentifier;
@@ -56,6 +77,8 @@ public sealed class ExceptionHandlingMiddleware
             Instance = context.Request.Path,
         };
         problem.Extensions["correlationId"] = correlationId;
+        problem.Extensions["traceId"] = DiagnosticContext.ObtenerTraceId(context) ?? context.TraceIdentifier;
+        if (errorId is not null) problem.Extensions["errorId"] = errorId;
 
         if (ex is ValidationException validacion)
         {

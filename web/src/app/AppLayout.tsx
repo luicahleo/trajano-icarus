@@ -30,7 +30,12 @@ export function AppLayout() {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <AppBar position="sticky" color="primary">
         <Toolbar sx={{ gap: 1 }}>
-          <Typography variant="h6" component={RouterLink} to="/" sx={{ flexGrow: 1, color: 'inherit', textDecoration: 'none' }}>
+          <Typography
+            variant="h6"
+            component={RouterLink}
+            to="/"
+            sx={{ flexGrow: 1, color: 'inherit', textDecoration: 'none' }}
+          >
             Icarus
           </Typography>
           {enlaces.map((enlace) => (

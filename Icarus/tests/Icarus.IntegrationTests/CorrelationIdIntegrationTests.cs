@@ -14,6 +14,7 @@ public class CorrelationIdIntegrationTests : IClassFixture<IdentityFactory>
         var cliente = _factory.CreateClient();
         var respuesta = await cliente.GetAsync("/health");
         Assert.True(respuesta.Headers.Contains("X-Correlation-ID"));
+        Assert.True(respuesta.Headers.Contains("X-Trace-Id"));
     }
 
     [Fact]
@@ -21,9 +22,10 @@ public class CorrelationIdIntegrationTests : IClassFixture<IdentityFactory>
     {
         var cliente = _factory.CreateClient();
         var pedido = new HttpRequestMessage(HttpMethod.Get, "/health");
-        pedido.Headers.Add("X-Correlation-ID", "trace-prueba-1");
+        const string correlationId = "20cc2ea2-2f71-45bb-a667-25f1700431bb";
+        pedido.Headers.Add("X-Correlation-ID", correlationId);
         var respuesta = await cliente.SendAsync(pedido);
-        Assert.Equal("trace-prueba-1",
+        Assert.Equal(correlationId,
             respuesta.Headers.GetValues("X-Correlation-ID").Single());
     }
 }

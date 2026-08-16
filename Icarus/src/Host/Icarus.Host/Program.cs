@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Behaviors;
@@ -6,12 +7,14 @@ using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
 using Icarus.Host.Endpoints;
+using Icarus.Host.Observability;
 using Icarus.Host.Servicios;
 using Icarus.Identity.Application.Sesiones;
 using Icarus.Identity.Infrastructure;
 using Icarus.Identity.Infrastructure.Persistencia;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddObservabilidad();
@@ -28,18 +31,41 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);
 builder.Services.AddClientesInfraestructura(builder.Configuration);
 builder.Services.AddScoped<AltaCuentasServicio>();
+builder.Services.AddRateLimiter(opciones =>
+{
+    opciones.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    opciones.AddPolicy("diagnosticos-frontend", contexto =>
+    {
+        var sessionId = contexto.Request.Headers[DiagnosticIds.SessionHeader].FirstOrDefault();
+        var particion = DiagnosticIds.EsSessionId(sessionId)
+            ? sessionId!
+            : contexto.Connection.RemoteIpAddress?.ToString() ?? "anonimo";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            particion,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            });
+    });
+});
 
 var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 app.UseAuthentication();
+app.UseMiddleware<RequestObservabilityMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<ClientDiagnosticsBodyLimitMiddleware>();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 app.MapIdentidad();
 app.MapClientes();
+app.MapDiagnosticos();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {

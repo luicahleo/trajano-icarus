@@ -1,4 +1,3 @@
-import { renovarCorrelationId } from '../../lib/correlation';
 import { peticion } from '../../lib/http';
 import { setAccessToken } from '../../lib/session';
 import type { SesionInfo, UsuarioActual } from '../../lib/tipos';
@@ -10,7 +9,6 @@ export interface Credenciales {
 
 export async function iniciarSesion(cred: Credenciales): Promise<SesionInfo> {
   const datos = await peticion<SesionInfo>({ ruta: '/identidad/sesion', metodo: 'POST', cuerpo: cred });
-  renovarCorrelationId();
   setAccessToken(datos.accessToken);
   return datos;
 }

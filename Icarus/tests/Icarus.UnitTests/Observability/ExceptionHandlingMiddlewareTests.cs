@@ -63,6 +63,8 @@ public class ExceptionHandlingMiddlewareTests
         var (status, cuerpo) = await Ejecutar(new InvalidOperationException("detalle interno sensible"));
         Assert.Equal(StatusCodes.Status500InternalServerError, status);
         Assert.DoesNotContain("detalle interno sensible", cuerpo.ToString());
+        Assert.Matches("^ERR-[0-9A-F]{12}$", cuerpo.GetProperty("errorId").GetString());
+        Assert.True(cuerpo.TryGetProperty("traceId", out _));
     }
 
     [Fact]
@@ -78,5 +80,13 @@ public class ExceptionHandlingMiddlewareTests
     {
         var (_, cuerpo) = await Ejecutar(new ConflictException("conflicto"));
         Assert.True(cuerpo.TryGetProperty("correlationId", out _));
+    }
+
+    [Fact]
+    public async Task ErrorEsperadoNoRecibeReferenciaDeIncidenteTecnico()
+    {
+        var (_, cuerpo) = await Ejecutar(new ConflictException("conflicto"));
+
+        Assert.False(cuerpo.TryGetProperty("errorId", out _));
     }
 }

@@ -1,15 +1,13 @@
-import { obtenerCorrelationId, renovarCorrelationId } from './correlation';
+import { crearCorrelationId } from './correlation';
 
 describe('correlation', () => {
-  beforeEach(() => sessionStorage.clear());
+  test('genera un UUID diferente para cada petición', () => {
+    const primero = crearCorrelationId();
+    const segundo = crearCorrelationId();
 
-  test('genera y reutiliza el mismo id dentro de la pestaña', () => {
-    const a = obtenerCorrelationId();
-    expect(obtenerCorrelationId()).toBe(a);
-  });
-
-  test('renovarCorrelationId cambia el id', () => {
-    const a = obtenerCorrelationId();
-    expect(renovarCorrelationId()).not.toBe(a);
+    expect(primero).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(segundo).not.toBe(primero);
   });
 });

@@ -1,21 +1,32 @@
-import { obtenerCorrelationId } from './correlation';
+import { crearCorrelationId } from './correlation';
+import { crearErrorId, reportarDiagnostico } from './diagnosticos';
 import { clearAccessToken, getAccessToken, setAccessToken } from './session';
+import { obtenerSesionId, registrarEventoFlujo, sanitizarRuta } from './sesionDiagnostico';
 import type { SesionInfo } from './tipos';
 
-// ApiError transporta solo status, code (title del ProblemDetails) y correlation
-// ID. Nunca cuerpos, documentos, identificadores fiscales, credenciales ni
-// tokens (anti-PII).
+// ApiError transporta solo referencias técnicas seguras. Nunca cuerpos,
+// documentos, identificadores fiscales, credenciales ni tokens (anti-PII).
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly correlationId?: string;
+  readonly traceId?: string;
+  readonly errorId?: string;
 
-  constructor(o: { status: number; code?: string; correlationId?: string }) {
+  constructor(o: {
+    status: number;
+    code?: string;
+    correlationId?: string;
+    traceId?: string;
+    errorId?: string;
+  }) {
     super(o.code ?? `Error de servidor (${o.status})`);
     this.name = 'ApiError';
     this.status = o.status;
     this.code = o.code;
     this.correlationId = o.correlationId;
+    this.traceId = o.traceId;
+    this.errorId = o.errorId;
   }
 }
 
@@ -33,7 +44,8 @@ function esRutaDeSesion(ruta: string): boolean {
 
 function conHeaders(init: RequestInit, cuerpo?: unknown): RequestInit {
   const cabeceras = new Headers(init.headers);
-  cabeceras.set('X-Correlation-ID', obtenerCorrelationId());
+  cabeceras.set('X-Correlation-ID', crearCorrelationId());
+  cabeceras.set('X-Session-Id', obtenerSesionId());
   const token = getAccessToken();
   if (token) cabeceras.set('Authorization', `Bearer ${token}`);
   if (cuerpo !== undefined) cabeceras.set('Content-Type', 'application/json');
@@ -50,7 +62,10 @@ async function renovarSesionInterna(): Promise<boolean> {
     const r = await fetch(urlCompleta('/identidad/sesion/renovar'), {
       method: 'POST',
       credentials: 'include',
-      headers: { 'X-Correlation-ID': obtenerCorrelationId() },
+      headers: {
+        'X-Correlation-ID': crearCorrelationId(),
+        'X-Session-Id': obtenerSesionId(),
+      },
     });
     if (!r.ok) return false;
     try {
@@ -72,16 +87,41 @@ export async function renovarSesion(): Promise<boolean> {
 
 async function errorDesde(respuesta: Response): Promise<ApiError> {
   let code: string | undefined;
+  let correlationId: string | undefined;
+  let traceId: string | undefined;
+  let errorId: string | undefined;
   try {
-    const cuerpo = (await respuesta.json()) as { title?: string };
+    const cuerpo = (await respuesta.json()) as {
+      title?: string;
+      correlationId?: string;
+      traceId?: string;
+      errorId?: string;
+    };
     code = cuerpo.title;
+    correlationId = cuerpo.correlationId;
+    traceId = cuerpo.traceId;
+    errorId = cuerpo.errorId;
   } catch {
     // el cuerpo puede no ser JSON (204 o 401 vacíos)
   }
   return new ApiError({
     status: respuesta.status,
     code,
-    correlationId: respuesta.headers.get('X-Correlation-ID') ?? undefined,
+    correlationId:
+      respuesta.headers.get('X-Correlation-ID') ?? correlationId ?? undefined,
+    traceId: respuesta.headers.get('X-Trace-Id') ?? traceId ?? undefined,
+    errorId,
+  });
+}
+
+function registrarLlamadaApi(request: Request, inicio: number, respuesta?: Response): void {
+  registrarEventoFlujo({
+    eventName: 'flow.api_call',
+    detail: `${request.method} ${sanitizarRuta(new URL(request.url).pathname)}`,
+    statusCode: respuesta?.status,
+    durationMs: Math.round(performance.now() - inicio),
+    correlationId: respuesta?.headers.get('X-Correlation-ID') ?? undefined,
+    traceId: respuesta?.headers.get('X-Trace-Id') ?? undefined,
   });
 }
 
@@ -91,17 +131,52 @@ export async function peticion<T>(o: {
   cuerpo?: unknown;
 }): Promise<T> {
   const { ruta, metodo = 'GET', cuerpo } = o;
-  const original = new Request(urlCompleta(ruta), conHeaders({ method: metodo, credentials: 'include' }, cuerpo));
+  const crearRequest = () =>
+    new Request(
+      urlCompleta(ruta),
+      conHeaders({ method: metodo, credentials: 'include' }, cuerpo),
+    );
+  const original = crearRequest();
   const reintentable = !esRutaDeSesion(ruta);
-  let respuesta = await fetch(original);
+  const inicio = performance.now();
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(original);
+  } catch (error) {
+    registrarLlamadaApi(original, inicio);
+    throw error;
+  }
+  registrarLlamadaApi(original, inicio, respuesta);
 
   if (respuesta.status === 401 && reintentable && (await renovarSesionInterna())) {
-    respuesta = await fetch(original.clone());
+    const reintento = crearRequest();
+    const inicioReintento = performance.now();
+    try {
+      respuesta = await fetch(reintento);
+    } catch (error) {
+      registrarLlamadaApi(reintento, inicioReintento);
+      throw error;
+    }
+    registrarLlamadaApi(reintento, inicioReintento, respuesta);
   } else if (respuesta.status === 401 && reintentable) {
     clearAccessToken();
   }
 
-  if (!respuesta.ok) throw await errorDesde(respuesta);
+  if (!respuesta.ok) {
+    const error = await errorDesde(respuesta);
+    if (respuesta.status >= 500) {
+      void reportarDiagnostico({
+        errorId: error.errorId ?? crearErrorId(),
+        eventName: 'http.server_failed',
+        category: 'server',
+        source: 'http',
+        correlationId: error.correlationId,
+        traceId: error.traceId,
+        statusCode: respuesta.status,
+      });
+    }
+    throw error;
+  }
   if (respuesta.status === 204) return undefined as T;
   return (await respuesta.json()) as T;
 }
