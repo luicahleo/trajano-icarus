@@ -1,5 +1,7 @@
 using System.Text;
 using Icarus.BuildingBlocks.Application;
+using Icarus.BuildingBlocks.Application.Observability;
+using Icarus.BuildingBlocks.Observability;
 using Icarus.Identity.Application.RegistroCuentas;
 using Icarus.Identity.Application.Sesiones;
 using Icarus.Identity.Domain;
@@ -20,8 +22,15 @@ public static class DependencyInjection
     public static IServiceCollection AddIdentidadInfraestructura(
         this IServiceCollection servicios, IConfiguration configuracion)
     {
-        servicios.AddDbContext<IdentityDbContext>(opciones =>
-            opciones.UseSqlServer(configuracion.GetConnectionString("Icarus")));
+        servicios.AddDbContext<IdentityDbContext>((sp, opciones) =>
+        {
+            opciones.UseSqlServer(configuracion.GetConnectionString("Icarus"));
+            opciones.AddInterceptors(
+                new SaveChangesRegistroVueloInterceptor(sp.GetRequiredService<IRegistroVuelo>(),
+                    new DescriptorContextoPersistencia("Identity")),
+                new TransaccionesRegistroVueloInterceptor(sp.GetRequiredService<IRegistroVuelo>(),
+                    new DescriptorContextoPersistencia("Identity")));
+        });
 
         servicios.AddIdentityCore<Usuario>()
             .AddEntityFrameworkStores<IdentityDbContext>();

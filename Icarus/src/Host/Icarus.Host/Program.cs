@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Behaviors;
+using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
@@ -27,6 +28,8 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly));
 builder.Services.AddValidatorsFromAssemblies([
     typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly]);
+builder.Services.AddScoped<IRegistroVuelo, RegistroVuelo>();
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RegistroVueloBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);

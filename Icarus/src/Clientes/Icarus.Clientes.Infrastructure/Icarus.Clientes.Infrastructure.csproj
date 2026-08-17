@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Icarus.Clientes.Application\Icarus.Clientes.Application.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Icarus.BuildingBlocks.Observability\Icarus.BuildingBlocks.Observability.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

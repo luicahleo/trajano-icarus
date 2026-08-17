@@ -1,4 +1,6 @@
 using Icarus.BuildingBlocks.Application;
+using Icarus.BuildingBlocks.Application.Observability;
+using Icarus.BuildingBlocks.Observability;
 using Icarus.Clientes.Application.Autorizacion;
 using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Application.Trabajadores;
@@ -18,8 +20,15 @@ public static class DependencyInjection
     public static IServiceCollection AddClientesInfraestructura(
         this IServiceCollection servicios, IConfiguration configuracion)
     {
-        servicios.AddDbContext<ClientesDbContext>(opciones =>
-            opciones.UseSqlServer(configuracion.GetConnectionString("Icarus")));
+        servicios.AddDbContext<ClientesDbContext>((sp, opciones) =>
+        {
+            opciones.UseSqlServer(configuracion.GetConnectionString("Icarus"));
+            opciones.AddInterceptors(
+                new SaveChangesRegistroVueloInterceptor(sp.GetRequiredService<IRegistroVuelo>(),
+                    new DescriptorContextoPersistencia("Clientes")),
+                new TransaccionesRegistroVueloInterceptor(sp.GetRequiredService<IRegistroVuelo>(),
+                    new DescriptorContextoPersistencia("Clientes")));
+        });
 
         servicios.AddScoped<IRepositorioClientes, RepositorioClientes>();
         servicios.AddScoped<IRepositorioTrabajadores, RepositorioTrabajadores>();

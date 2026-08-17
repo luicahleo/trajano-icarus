@@ -145,6 +145,32 @@ Seq es opcional: si no responde, el backend escribe solo a consola JSON
 frontend no depende de él. La retención y búsqueda de consola quedan a cargo del
 sistema de logs del contenedor.
 
+## Reconstrucción de un registro de vuelo
+
+Las mutaciones registrables narran su recorrido con eventos estructurados. La
+clave primaria de reconstrucción es el `TraceId` existente; no se crea otro
+identificador. El piloto es `clientes.alta_con_cuenta` y sus operaciones
+internas incluyen `clientes.crear` y `clientes.suspender_alta_incompleta`.
+
+Consultas reproducibles en Seq:
+
+```text
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef'
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef' and Operation = 'clientes.alta_con_cuenta'
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef' and EventName = 'operation.decision'
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef' and Outcome = 'rejected'
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef' and ReasonCode = 'identity_rejected'
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef' and PersistenceContext = 'Clientes'
+Aplicacion = 'Icarus' and TraceId = '0123456789abcdef0123456789abcdef' and Release = 'v1.2.3'
+```
+
+Los eventos `transaction.committed` y `transaction.rolled_back` describen
+transacciones físicas observadas por EF. `operation.compensation.*` describe
+compensación lógica y nunca debe interpretarse como rollback físico. Los
+eventos narrativos no contienen cuerpos, entidades, SQL, credenciales,
+biometría ni datos nominales; `backend.error` conserva por separado la
+excepción inesperada.
+
 ## Release y source maps
 
 - `Release` se inyecta por `ICARUS_RELEASE` (backend) y `VITE_RELEASE`
