@@ -119,9 +119,22 @@ if ($RecrearDatos) {
     Write-Host 'Se eliminaron los volúmenes Docker locales; se recrearán al iniciar.' -ForegroundColor Yellow
 }
 
+# En PC1/PC2/PC3 la API no tiene bind mount: sin esta reconstrucción Docker
+# puede reutilizar una imagen previa aunque el usuario haya cambiado C#.
+# Se prioriza ejecutar el código actual sobre el tiempo de arranque.
 try {
     $ErrorActionPreference = 'Continue'
-    & docker compose @archivosCompose up -d --build --renew-anon-volumes
+    & docker compose @archivosCompose build --no-cache api web
+    $codigoBuild = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $preferenciaErrores
+}
+if ($codigoBuild -ne 0) { throw "No se pudieron reconstruir api y web para $nombreEquipo." }
+
+try {
+    $ErrorActionPreference = 'Continue'
+    & docker compose @archivosCompose up -d --build --force-recreate --renew-anon-volumes
     $codigoUp = $LASTEXITCODE
 }
 finally {
