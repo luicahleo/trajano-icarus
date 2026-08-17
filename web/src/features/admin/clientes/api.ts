@@ -10,8 +10,15 @@ export async function crearCliente(datos: {
   identificadorFiscal: string;
   email: string;
   contrasena: string;
+  confirmacionContrasena: string;
 }): Promise<{ id: string }> {
-  return peticion<{ id: string }>({ ruta: '/clientes', metodo: 'POST', cuerpo: datos });
+  const cuerpo = {
+    razonSocial: datos.razonSocial,
+    identificadorFiscal: datos.identificadorFiscal,
+    email: datos.email,
+    contrasena: datos.contrasena,
+  };
+  return peticion<{ id: string }>({ ruta: '/clientes', metodo: 'POST', cuerpo });
 }
 
 export async function suspenderCliente(id: string): Promise<void> {

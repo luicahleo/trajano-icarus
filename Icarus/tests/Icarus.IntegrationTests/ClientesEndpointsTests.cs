@@ -96,6 +96,23 @@ public class ClientesEndpointsTests : IClassFixture<IdentityFactory>
     }
 
     [Fact]
+    public async Task NitConFormatoInvalidoDevuelve400SinCrearCliente()
+    {
+        var token = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var cliente = _factory.CreateClient();
+        var antes = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/clientes", token));
+        var cantidadAntes = (await antes.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength();
+        var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
+        pedido.Content = JsonContent.Create(CuerpoCliente("NIT-inválido", $"nuevo-{Guid.NewGuid():N}@icarus.test"));
+
+        var respuesta = await cliente.SendAsync(pedido);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+        var despues = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/clientes", token));
+        Assert.Equal(cantidadAntes, (await despues.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength());
+    }
+
+    [Fact]
     public async Task IdentificadorFiscalDuplicadoDevuelve409SinDetalle()
     {
         // El identificador del cliente semilla ya existe.

@@ -110,6 +110,7 @@ describe('TrabajadoresPage', () => {
     fireEvent.change(screen.getByLabelText('Fecha de ingreso'), { target: { value: '2026-01-01' } });
     await usuario.type(screen.getByLabelText('Correo electrónico'), 'nuevo@icarus.test');
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
+    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(llamadaCon(fetchMock, 'POST', '/clientes/cli1/trabajadores')).toBe(true);
@@ -185,6 +186,7 @@ describe('TrabajadoresPage', () => {
     fireEvent.change(screen.getByLabelText('Fecha de ingreso'), { target: { value: '2026-01-01' } });
     await usuario.type(screen.getByLabelText('Correo electrónico'), 'nuevo@icarus.test');
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
+    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText(/El documento de identidad ya está registrado/)).toBeInTheDocument();

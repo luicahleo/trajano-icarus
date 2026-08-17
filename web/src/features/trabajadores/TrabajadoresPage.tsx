@@ -9,6 +9,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -23,6 +25,8 @@ import {
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { ApiError } from '../../lib/http';
 import type { TrabajadorResumen } from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
@@ -35,9 +39,15 @@ const esquemaAlta = z.object({
   fechaIngreso: z.string().min(1, 'La fecha de ingreso es obligatoria.'),
   email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
   contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.'),
+  confirmacionContrasena: z.string().min(1, 'Confirma la contraseña.'),
+}).refine((valores) => valores.contrasena === valores.confirmacionContrasena, {
+  path: ['confirmacionContrasena'], message: 'Las contraseñas no coinciden.',
 });
 
 type DatosAlta = z.infer<typeof esquemaAlta>;
+const camposAlta = new Set<keyof DatosAlta>([
+  'nombre', 'documentoIdentidad', 'cargo', 'fechaIngreso', 'email', 'contrasena', 'confirmacionContrasena',
+]);
 
 function fechaDeHoy(): string {
   const d = new Date();
@@ -55,6 +65,7 @@ export function TrabajadoresPage() {
   const [errorCese, setErrorCese] = useState<string | null>(null);
   const [desactivando, setDesactivando] = useState<TrabajadorResumen | null>(null);
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
 
   const claveTrabajadores = ['trabajadores', clienteId] as const;
 
@@ -67,7 +78,7 @@ export function TrabajadoresPage() {
   const refrescar = () => queryClient.invalidateQueries({ queryKey: ['trabajadores', clienteId] });
 
   const {
-    register,
+    register, setError,
     handleSubmit,
     reset,
     formState: { errors },
@@ -81,8 +92,15 @@ export function TrabajadoresPage() {
       reset();
     },
     onError: (error) => {
-      if (error instanceof ApiError) setErrorAlta(error.code ?? 'No se pudo crear el trabajador.');
-      else setErrorAlta('No se pudo crear el trabajador.');
+      if (error instanceof ApiError && error.erroresValidacion) {
+        for (const [campo, mensajes] of Object.entries(error.erroresValidacion)) {
+          const nombreCampo = campo.charAt(0).toLowerCase() + campo.slice(1);
+          if (camposAlta.has(nombreCampo as keyof DatosAlta)) {
+            setError(nombreCampo as keyof DatosAlta, { type: 'server', message: mensajes[0] });
+          }
+        }
+      }
+      setErrorAlta(error instanceof ApiError ? error.code ?? 'No se pudo crear el trabajador.' : 'No se pudo crear el trabajador.');
     },
   });
 
@@ -221,13 +239,15 @@ export function TrabajadoresPage() {
             />
             <TextField
               label="Contraseña"
-              type="password"
+              type={mostrarContrasena ? 'text' : 'password'}
               autoComplete="new-password"
               fullWidth
               {...register('contrasena')}
               error={Boolean(errors.contrasena)}
               helperText={errors.contrasena?.message}
+              slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconButton aria-label={mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setMostrarContrasena(!mostrarContrasena)} edge="end">{mostrarContrasena ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />}</IconButton></InputAdornment> } }}
             />
+            <TextField label="Confirmar contraseña" type={mostrarContrasena ? 'text' : 'password'} autoComplete="new-password" fullWidth {...register('confirmacionContrasena')} error={Boolean(errors.confirmacionContrasena)} helperText={errors.confirmacionContrasena?.message} />
             {errorAlta && <Alert severity="error">{errorAlta}</Alert>}
           </Box>
         </DialogContent>

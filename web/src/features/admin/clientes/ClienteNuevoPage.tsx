@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Card, TextField, Typography } from '@mui/material';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import { Alert, Box, Button, Card, IconButton, InputAdornment, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -17,10 +19,13 @@ const esquema = z.object({
     .max(200, 'La razón social no puede superar los 200 caracteres.'),
   identificadorFiscal: z
     .string()
-    .min(1, 'El identificador fiscal es obligatorio.')
-    .max(32, 'El identificador fiscal no puede superar los 32 caracteres.'),
+    .min(1, 'El NIT es obligatorio.')
+    .regex(/^\d{1,15}$/, 'El NIT debe contener solo dígitos y tener como máximo 15 caracteres.'),
   email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
   contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.'),
+  confirmacionContrasena: z.string().min(1, 'Confirma la contraseña.'),
+}).refine((valores) => valores.contrasena === valores.confirmacionContrasena, {
+  path: ['confirmacionContrasena'], message: 'Las contraseñas no coinciden.',
 });
 
 type Esquema = z.infer<typeof esquema>;
@@ -29,8 +34,9 @@ export function ClienteNuevoPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [errorApi, setErrorApi] = useState<string | null>(null);
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const {
-    register,
+    register, setError,
     handleSubmit,
     formState: { errors },
   } = useForm<Esquema>({ resolver: zodResolver(esquema) });
@@ -42,8 +48,11 @@ export function ClienteNuevoPage() {
       navigate('/admin/clientes');
     },
     onError: (error) => {
-      if (error instanceof ApiError) setErrorApi(error.code ?? 'No se pudo crear el cliente.');
-      else setErrorApi('No se pudo crear el cliente.');
+      if (error instanceof ApiError && error.erroresValidacion) {
+        const nit = error.erroresValidacion.IdentificadorFiscal?.[0];
+        if (nit) setError('identificadorFiscal', { type: 'server', message: nit });
+      }
+      setErrorApi(error instanceof ApiError ? error.code ?? 'No se pudo crear el cliente.' : 'No se pudo crear el cliente.');
     },
   });
 
@@ -67,7 +76,7 @@ export function ClienteNuevoPage() {
             helperText={errors.razonSocial?.message}
           />
           <TextField
-            label="Identificador fiscal"
+            label="NIT"
             fullWidth
             {...register('identificadorFiscal')}
             error={Boolean(errors.identificadorFiscal)}
@@ -84,13 +93,15 @@ export function ClienteNuevoPage() {
           />
           <TextField
             label="Contraseña"
-            type="password"
+            type={mostrarContrasena ? 'text' : 'password'}
             autoComplete="new-password"
             fullWidth
             {...register('contrasena')}
             error={Boolean(errors.contrasena)}
             helperText={errors.contrasena?.message}
+            slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconButton aria-label={mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setMostrarContrasena(!mostrarContrasena)} edge="end">{mostrarContrasena ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />}</IconButton></InputAdornment> } }}
           />
+          <TextField label="Confirmar contraseña" type={mostrarContrasena ? 'text' : 'password'} autoComplete="new-password" fullWidth {...register('confirmacionContrasena')} error={Boolean(errors.confirmacionContrasena)} helperText={errors.confirmacionContrasena?.message} />
           {errorApi && <Alert severity="error">{errorApi}</Alert>}
           <Button type="submit" variant="contained" size="large" disabled={crear.isPending}>
             Crear cliente

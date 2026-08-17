@@ -47,7 +47,7 @@ describe('ClienteNuevoPage', () => {
     await usuario.click(screen.getByRole('button', { name: 'Crear cliente' }));
 
     expect(await screen.findByText('La razón social es obligatoria.')).toBeInTheDocument();
-    expect(screen.getByText('El identificador fiscal es obligatorio.')).toBeInTheDocument();
+    expect(screen.getByText('El NIT es obligatorio.')).toBeInTheDocument();
     expect(screen.getByText('El correo es obligatorio.')).toBeInTheDocument();
     expect(screen.getByText('La contraseña debe tener al menos 12 caracteres.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([arg]) => (arg as Request).method === 'POST')).toBe(false);
@@ -59,9 +59,10 @@ describe('ClienteNuevoPage', () => {
     renderNuevo();
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');
-    await usuario.type(screen.getByLabelText('Identificador fiscal'), '20123456789');
+    await usuario.type(screen.getByLabelText('NIT'), '20123456789');
     await usuario.type(screen.getByLabelText('Correo electrónico'), 'cliente@icarus.test');
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
+    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Crear cliente' }));
 
     expect(await screen.findByText('lista de clientes')).toBeInTheDocument();
@@ -86,9 +87,10 @@ describe('ClienteNuevoPage', () => {
     renderNuevo();
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');
-    await usuario.type(screen.getByLabelText('Identificador fiscal'), '20123456789');
+    await usuario.type(screen.getByLabelText('NIT'), '20123456789');
     await usuario.type(screen.getByLabelText('Correo electrónico'), 'cliente@icarus.test');
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
+    await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Crear cliente' }));
 
     expect(await screen.findByText(/Ya existe un cliente con ese identificador/)).toBeInTheDocument();

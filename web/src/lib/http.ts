@@ -12,6 +12,7 @@ export class ApiError extends Error {
   readonly correlationId?: string;
   readonly traceId?: string;
   readonly errorId?: string;
+  readonly erroresValidacion?: Readonly<Record<string, readonly string[]>>;
 
   constructor(o: {
     status: number;
@@ -19,6 +20,7 @@ export class ApiError extends Error {
     correlationId?: string;
     traceId?: string;
     errorId?: string;
+    erroresValidacion?: Readonly<Record<string, readonly string[]>>;
   }) {
     super(o.code ?? `Error de servidor (${o.status})`);
     this.name = 'ApiError';
@@ -27,6 +29,7 @@ export class ApiError extends Error {
     this.correlationId = o.correlationId;
     this.traceId = o.traceId;
     this.errorId = o.errorId;
+    this.erroresValidacion = o.erroresValidacion;
   }
 }
 
@@ -104,17 +107,20 @@ async function errorDesde(respuesta: Response): Promise<ApiError> {
   let correlationId: string | undefined;
   let traceId: string | undefined;
   let errorId: string | undefined;
+  let erroresValidacion: Record<string, string[]> | undefined;
   try {
     const cuerpo = (await respuesta.json()) as {
       title?: string;
       correlationId?: string;
       traceId?: string;
       errorId?: string;
+      errors?: Record<string, string[]>;
     };
     code = cuerpo.title;
     correlationId = cuerpo.correlationId;
     traceId = cuerpo.traceId;
     errorId = cuerpo.errorId;
+    erroresValidacion = cuerpo.errors;
   } catch {
     // el cuerpo puede no ser JSON (204 o 401 vacíos)
   }
@@ -124,6 +130,7 @@ async function errorDesde(respuesta: Response): Promise<ApiError> {
     correlationId: respuesta.headers.get('X-Correlation-ID') ?? correlationId ?? undefined,
     traceId: respuesta.headers.get('X-Trace-Id') ?? traceId ?? undefined,
     errorId,
+    erroresValidacion,
   });
 }
 

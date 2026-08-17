@@ -18,6 +18,8 @@ public sealed class Cliente : AggregateRoot
             throw new ReglaNegocioException("La razón social es obligatoria.");
         if (string.IsNullOrWhiteSpace(identificadorFiscal))
             throw new ReglaNegocioException("El identificador fiscal es obligatorio.");
+        if (!NitBoliviano.TieneFormatoValido(identificadorFiscal.Trim()))
+            throw new ReglaNegocioException("El NIT debe contener solo dígitos y tener como máximo 15 caracteres.");
 
         RazonSocial = razonSocial.Trim();
         IdentificadorFiscal = identificadorFiscal.Trim();

@@ -178,6 +178,32 @@ public class TrabajadoresEndpointsTests : IClassFixture<IdentityFactory>
     }
 
     [Fact]
+    public async Task TrabajadorConDatosInvalidosDevuelve400SinCrearTrabajador()
+    {
+        var token = await LoginComo(SemillaIdentidad.EmailCliente);
+        var cliente = _factory.CreateClient();
+        var ruta = $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores";
+        var antes = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, ruta, token));
+        var cantidadAntes = (await antes.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength();
+        var pedido = PedidoAutenticado(HttpMethod.Post, ruta, token);
+        pedido.Content = JsonContent.Create(new
+        {
+            nombre = "Nombre Ficticio",
+            documentoIdentidad = "89999990",
+            cargo = "",
+            fechaIngreso = "2026-01-15",
+            email = $"trabajador-{Guid.NewGuid():N}@icarus.test",
+            contrasena = IdentityFactory.ContrasenaDePrueba,
+        });
+
+        var respuesta = await cliente.SendAsync(pedido);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+        var despues = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, ruta, token));
+        Assert.Equal(cantidadAntes, (await despues.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength());
+    }
+
+    [Fact]
     public async Task MismoDocumentoEnOtroClienteSePermite()
     {
         var (otroClienteId, tokenOtro) = await CrearClienteConCuenta();
