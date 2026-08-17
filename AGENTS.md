@@ -80,8 +80,12 @@ no contexto obligatorio. No cargarlos en bloque.
 
 ## Puerta de calidad
 
-- Ejecutar `./verify.ps1` (o `./verify.sh`) antes de cada commit y push. Es
-  obligatorio y sustituye a la revisión humana del código.
+- Para cambios de código, configuración, build, tests o una mezcla de código y
+  documentación, ejecutar `./verify.ps1` (o `./verify.sh`) antes de cada
+  commit y push. Es obligatorio y sustituye a la revisión humana del código.
+- Para un cambio exclusivamente documental, ejecutar como mínimo los gates de
+  mojibake, enlaces y `git diff --check`. La puerta completa queda recomendada,
+  pero no es requisito para ese commit documental aislado.
 - Prohibido `--no-verify` en commit o push.
 - Prohibido relajar una baseline, un umbral o una exclusión para que pase el
   gate. Si el gate falla, se arregla el contenido, no el gate.
