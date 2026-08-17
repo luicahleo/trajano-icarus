@@ -22,7 +22,11 @@ const esquema = z.object({
     .min(1, 'El NIT es obligatorio.')
     .regex(/^\d{1,15}$/, 'El NIT debe contener solo dígitos y tener como máximo 15 caracteres.'),
   email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
-  contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.'),
+  contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.')
+    .regex(/[A-Z]/, 'La contraseña debe incluir una mayúscula.')
+    .regex(/[a-z]/, 'La contraseña debe incluir una minúscula.')
+    .regex(/[0-9]/, 'La contraseña debe incluir un número.')
+    .regex(/[^a-zA-Z0-9]/, 'La contraseña debe incluir un símbolo.'),
   confirmacionContrasena: z.string().min(1, 'Confirma la contraseña.'),
 }).refine((valores) => valores.contrasena === valores.confirmacionContrasena, {
   path: ['confirmacionContrasena'], message: 'Las contraseñas no coinciden.',

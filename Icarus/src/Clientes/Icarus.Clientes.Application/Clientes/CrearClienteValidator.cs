@@ -1,4 +1,5 @@
 using FluentValidation;
+using Icarus.Clientes.Application;
 using Icarus.Clientes.Domain;
 
 namespace Icarus.Clientes.Application.Clientes;
@@ -13,6 +14,6 @@ public sealed class CrearClienteValidator : AbstractValidator<CrearClienteComman
             .Must(NitBoliviano.TieneFormatoValido)
             .WithMessage("El NIT debe contener solo dígitos y tener como máximo 15 caracteres.");
         RuleFor(c => c.Email).NotEmpty().EmailAddress();
-        RuleFor(c => c.Contrasena).NotEmpty().MinimumLength(12);
+        ReglasContrasena.Aplicar(RuleFor(c => c.Contrasena));
     }
 }
