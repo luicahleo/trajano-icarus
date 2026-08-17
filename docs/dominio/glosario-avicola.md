@@ -19,7 +19,8 @@ Los identificadores de dominio van en español, igual que el resto del proyecto.
 | Término | Definición |
 |---|---|
 | CAISY | Cooperativa Agropecuaria San Juan de Yapacaní. La cooperativa a la que el granjero vende huevos y compra alimento. En el código legacy aparece como "CAICI": es un error, el nombre correcto es CAISY. |
-| Cliente (granjero) | El tenant del sistema. Granjero afiliado a CAISY. |
+| Cliente (granjero) | El tenant del sistema. Granjero afiliado a CAISY. Puede registrar cualquier dato de su granja. |
+| Trabajador recolector | Trabajador del cliente encargado de la recolección de huevos: **la recolección la registra él**, no el cliente (aunque el cliente también puede). Usa Icarus solo con las funcionalidades que el cliente le asigna (entitlement por funcionalidad); nunca tiene acceso al resto de lo que ve el cliente. |
 
 ## Entidades de Gestión avícola
 
@@ -70,6 +71,11 @@ registran aquí porque son reglas del negocio, no del código.
 1. **Eficiencia diaria por galpón** = huevos producidos del día ÷ gallinas
    vivas del galpón. La recogida la hacen los trabajadores en distintos turnos,
    así que hay varios registros de producción por galpón y día.
+2. **Quién registra**: la recolección la registra el **trabajador** (rol
+   Trabajador con la funcionalidad asignada, p. ej. ProduccionHuevos); el
+   cliente también puede registrar, pero el caso habitual es el trabajador. El
+   trabajador solo accede a sus funcionalidades asignadas, nunca al resto de lo
+   que ve el cliente.
 2. **Umbral de descarte de lote: 70 %.** Si la eficiencia de un galpón cae bajo
    ese umbral, el lote se considera para descarte y posterior venta como carne.
    Es una métrica derivada, no un estado persistido.
