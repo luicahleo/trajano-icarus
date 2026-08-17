@@ -77,4 +77,19 @@ public class RenovarSesionHandlerTests
         _emisor.DidNotReceive().Emitir(
             Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>());
     }
+
+    [Fact]
+    public async Task RefreshDeTrabajadorSinClienteLanzaUnauthorized()
+    {
+        var usuarioId = Guid.NewGuid();
+        _refresh.RotarAsync("refresh-viejo", Arg.Any<CancellationToken>()).Returns(usuarioId);
+        _consulta.ObtenerPorIdAsync(usuarioId, Arg.Any<CancellationToken>())
+            .Returns(new UsuarioResumen(usuarioId, "cuenta@icarus.test", "Trabajador", null, Guid.NewGuid()));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _handler.Handle(new RenovarSesionCommand("refresh-viejo"), CancellationToken.None));
+
+        _emisor.DidNotReceive().Emitir(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>());
+    }
 }

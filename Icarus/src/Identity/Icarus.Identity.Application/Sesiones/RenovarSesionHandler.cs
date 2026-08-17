@@ -1,4 +1,5 @@
 using Icarus.BuildingBlocks.Application;
+using Icarus.Identity.Domain;
 using MediatR;
 
 namespace Icarus.Identity.Application.Sesiones;
@@ -27,6 +28,9 @@ public sealed class RenovarSesionHandler : IRequestHandler<RenovarSesionCommand,
 
         var usuario = await _consulta.ObtenerPorIdAsync(usuarioId, cancellationToken)
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+
+        if (ReglasRol.RequiereCliente(usuario.Rol) && usuario.ClienteId is null)
+            throw new UnauthorizedAccessException("La sesión no es válida.");
 
         if (usuario.ClienteId is { } clienteId &&
             !await _estadoCliente.EstaActivoAsync(clienteId, cancellationToken))

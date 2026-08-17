@@ -1,5 +1,6 @@
 using Icarus.BuildingBlocks.Application;
 using Icarus.Identity.Application.Sesiones;
+using Icarus.Identity.Domain;
 using Icarus.Identity.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.Identity;
 
@@ -27,6 +28,8 @@ public sealed class VerificadorCredenciales : IVerificadorCredenciales
         if (usuario is null || !usuario.Activo)
             return null;
         if (!await _usuarios.CheckPasswordAsync(usuario, contrasena))
+            return null;
+        if (ReglasRol.RequiereCliente(usuario.Rol) && usuario.ClienteId is null)
             return null;
         if (usuario.ClienteId is { } clienteId &&
             !await _estadoCliente.EstaActivoAsync(clienteId, cancellationToken))

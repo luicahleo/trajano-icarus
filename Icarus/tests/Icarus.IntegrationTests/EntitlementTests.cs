@@ -4,6 +4,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Icarus.Host.Endpoints;
 using Icarus.Identity.Infrastructure;
+using Icarus.Identity.Infrastructure.Persistencia;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Icarus.IntegrationTests;
@@ -102,7 +105,7 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
 
     // Alta embebida de un trabajador con asignación opcional de funcionalidades.
     // Devuelve el token de su cuenta de rol Trabajador.
-    private async Task<string> CrearTrabajadorConCuenta(
+    private async Task<(string Email, string Token, string Cookie)> CrearTrabajadorConCuenta(
         Guid clienteId, string[]? funcionalidades, string tokenCliente)
     {
         var cliente = _factory.CreateClient();
@@ -132,7 +135,14 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
             Assert.Equal(HttpStatusCode.NoContent, (await cliente.SendAsync(asignar)).StatusCode);
         }
 
-        return await LoginComo(email);
+        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+            new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var cuerpo = await login.Content.ReadFromJsonAsync<JsonElement>();
+        var cookie = login.Headers.GetValues("Set-Cookie")
+            .Single(h => h.StartsWith(IdentidadEndpoints.CookieRefresh + "=", StringComparison.Ordinal))
+            .Split(';')[0];
+        return (email, cuerpo.GetProperty("accessToken").GetString()!, cookie);
     }
 
     [Fact]
@@ -182,7 +192,8 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
     public async Task TrabajadorNuevoSinFuncionalidadesDevuelve403()
     {
         var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
-        var tokenTrabajador = await CrearTrabajadorConCuenta(clienteId, funcionalidades: null, tokenCliente);
+        var (_, tokenTrabajador, _) = await CrearTrabajadorConCuenta(
+            clienteId, funcionalidades: null, tokenCliente);
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
@@ -195,7 +206,8 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
     public async Task TrabajadorConFuncionalidadAsignadaViaEndpointRecibe200()
     {
         var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
-        var tokenTrabajador = await CrearTrabajadorConCuenta(clienteId, ["granjas"], tokenCliente);
+        var (_, tokenTrabajador, _) = await CrearTrabajadorConCuenta(
+            clienteId, ["granjas"], tokenCliente);
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
@@ -261,6 +273,54 @@ public class EntitlementTests : IClassFixture<IdentityFactory>
         var trabajadores = await cliente.SendAsync(
             PedidoAutenticado(HttpMethod.Get, $"/clientes/{clienteId}/trabajadores", token));
         Assert.Equal(HttpStatusCode.Unauthorized, trabajadores.StatusCode);
+    }
+
+    [Fact]
+    public async Task ClienteSuspendidoBloqueaLaSesionDeSuTrabajador()
+    {
+        var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
+        var (emailTrabajador, tokenTrabajador, cookieTrabajador) = await CrearTrabajadorConCuenta(
+            clienteId, ["granjas"], tokenCliente);
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var cliente = _factory.CreateClient();
+
+        var suspender = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/suspender", admin));
+        Assert.Equal(HttpStatusCode.NoContent, suspender.StatusCode);
+
+        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+            new { email = emailTrabajador, contrasena = IdentityFactory.ContrasenaDePrueba });
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+
+        var renovar = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+        renovar.Headers.Add("Cookie", cookieTrabajador);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await cliente.SendAsync(renovar)).StatusCode);
+
+        var me = await cliente.SendAsync(PedidoAutenticado(
+            HttpMethod.Get, "/identidad/me", tokenTrabajador));
+        Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
+    }
+
+    [Fact]
+    public async Task TrabajadorSinClienteNoPuedeIniciarSesion()
+    {
+        var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
+        var (emailTrabajador, _, _) = await CrearTrabajadorConCuenta(
+            clienteId, ["granjas"], tokenCliente);
+
+        using (var alcance = _factory.Services.CreateScope())
+        {
+            var usuarios = alcance.ServiceProvider.GetRequiredService<UserManager<Usuario>>();
+            var trabajador = await usuarios.FindByEmailAsync(emailTrabajador);
+            Assert.NotNull(trabajador);
+            trabajador.ClienteId = null;
+            Assert.True((await usuarios.UpdateAsync(trabajador)).Succeeded);
+        }
+
+        var cliente = _factory.CreateClient();
+        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+            new { email = emailTrabajador, contrasena = IdentityFactory.ContrasenaDePrueba });
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
     }
 
     [Fact]

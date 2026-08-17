@@ -1,4 +1,5 @@
 using Icarus.BuildingBlocks.Application;
+using Icarus.Identity.Domain;
 
 namespace Icarus.Host.Middleware;
 
@@ -10,8 +11,9 @@ public sealed class ClienteActivoMiddleware
 
     public async Task InvokeAsync(HttpContext contexto, ICurrentUser usuario, IClienteActivo estado)
     {
-        if (usuario.EstaAutenticado && usuario.ClienteId is { } clienteId &&
-            !await estado.EstaActivoAsync(clienteId, contexto.RequestAborted))
+        if (usuario.EstaAutenticado && ReglasRol.RequiereCliente(usuario.Rol) &&
+            (usuario.ClienteId is not { } clienteId ||
+             !await estado.EstaActivoAsync(clienteId, contexto.RequestAborted)))
         {
             contexto.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
