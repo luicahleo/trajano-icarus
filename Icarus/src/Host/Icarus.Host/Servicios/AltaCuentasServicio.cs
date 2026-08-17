@@ -26,6 +26,7 @@ public sealed class AltaCuentasServicio
     public async Task<Guid> CrearClienteConCuentaAsync(
         CrearClienteCommand comando, CancellationToken cancellationToken)
     {
+        await AsegurarEmailDisponibleAsync(comando.Email, cancellationToken);
         var clienteId = await _mediator.Send(comando, cancellationToken);
         var cuentaId = await _registrador.RegistrarAsync(
             comando.Email, comando.Contrasena, nameof(Rol.Cliente), clienteId, null, cancellationToken);
@@ -42,6 +43,7 @@ public sealed class AltaCuentasServicio
     public async Task<Guid> CrearTrabajadorConCuentaAsync(
         CrearTrabajadorCommand comando, CancellationToken cancellationToken)
     {
+        await AsegurarEmailDisponibleAsync(comando.Email, cancellationToken);
         var trabajadorId = await _mediator.Send(comando, cancellationToken);
         var cuentaId = await _registrador.RegistrarAsync(
             comando.Email, comando.Contrasena, nameof(Rol.Trabajador), comando.ClienteId, trabajadorId,
@@ -52,5 +54,11 @@ public sealed class AltaCuentasServicio
             throw new ConflictException("No se pudo registrar el trabajador.");
         }
         return trabajadorId;
+    }
+
+    private async Task AsegurarEmailDisponibleAsync(string email, CancellationToken cancellationToken)
+    {
+        if (await _registrador.EstaEmailRegistradoAsync(email, cancellationToken))
+            throw new ConflictException("No se pudo registrar la cuenta.");
     }
 }

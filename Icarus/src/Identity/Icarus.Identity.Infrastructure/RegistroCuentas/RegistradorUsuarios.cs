@@ -10,12 +10,18 @@ public sealed class RegistradorUsuarios : IRegistradorUsuarios
 
     public RegistradorUsuarios(UserManager<Usuario> usuarios) => _usuarios = usuarios;
 
+    public async Task<bool> EstaEmailRegistradoAsync(string email, CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+        return await _usuarios.FindByEmailAsync(email) is not null;
+    }
+
     public async Task<Guid?> RegistrarAsync(
         string email, string contrasena, string rol, Guid? clienteId, Guid? trabajadorId,
         CancellationToken cancellationToken = default)
     {
         _ = cancellationToken;
-        if (await _usuarios.FindByEmailAsync(email) is not null)
+        if (await EstaEmailRegistradoAsync(email, cancellationToken))
             return null;
 
         var usuario = new Usuario

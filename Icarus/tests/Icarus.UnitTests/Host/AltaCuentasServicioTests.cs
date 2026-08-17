@@ -15,7 +15,33 @@ public class AltaCuentasServicioTests
     private readonly IRegistradorUsuarios _registrador = Substitute.For<IRegistradorUsuarios>();
     private readonly AltaCuentasServicio _servicio;
 
-    public AltaCuentasServicioTests() => _servicio = new AltaCuentasServicio(_mediator, _registrador);
+    public AltaCuentasServicioTests()
+    {
+        _registrador.EstaEmailRegistradoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _servicio = new AltaCuentasServicio(_mediator, _registrador);
+    }
+
+    [Fact]
+    public async Task EmailDeClienteYaRegistradoNoCreaCliente()
+    {
+        var comando = new CrearClienteCommand("Granja", "20100000001", "cliente@icarus.test", "Contrasena-123");
+        _registrador.EstaEmailRegistradoAsync(comando.Email, Arg.Any<CancellationToken>()).Returns(true);
+
+        await Assert.ThrowsAsync<ConflictException>(() => _servicio.CrearClienteConCuentaAsync(comando, CancellationToken.None));
+
+        await _mediator.DidNotReceive().Send(comando, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EmailDeTrabajadorYaRegistradoNoCreaTrabajador()
+    {
+        var comando = new CrearTrabajadorCommand(Guid.NewGuid(), "Nombre", "00000000", "Operario", new DateOnly(2026, 1, 15), "trabajador@icarus.test", "Contrasena-123");
+        _registrador.EstaEmailRegistradoAsync(comando.Email, Arg.Any<CancellationToken>()).Returns(true);
+
+        await Assert.ThrowsAsync<ConflictException>(() => _servicio.CrearTrabajadorConCuentaAsync(comando, CancellationToken.None));
+
+        await _mediator.DidNotReceive().Send(comando, Arg.Any<CancellationToken>());
+    }
 
     [Fact]
     public async Task ClienteCreadoRegistraCuentaRolClienteYDevuelveId()

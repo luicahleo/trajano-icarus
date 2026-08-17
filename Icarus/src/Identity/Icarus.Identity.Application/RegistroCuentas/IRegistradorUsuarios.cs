@@ -5,6 +5,8 @@ namespace Icarus.Identity.Application.RegistroCuentas;
 // AltaCuentasServicio.
 public interface IRegistradorUsuarios
 {
+    Task<bool> EstaEmailRegistradoAsync(string email, CancellationToken cancellationToken = default);
+
     // null: no se pudo registrar (email en uso u otra restricción). El caller
     // lo traduce a un conflicto genérico, sin revelar la causa (anti-PII).
     Task<Guid?> RegistrarAsync(
