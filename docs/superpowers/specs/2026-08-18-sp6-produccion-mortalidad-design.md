@@ -105,7 +105,8 @@ observaciones.
 - Tabla `registros_mortalidad`. Campos: `GalponId`, `ClienteId`, `Fecha`
   (inmutable, la fija el servidor), `Hora`, `CantidadMuertas` (int > 0,
   editable el mismo día), `GallinasVivas` (snapshot **después** de descontar;
-  inmutable), `IdempotencyKey`, `EstaActivo`.
+  se actualiza al editar la cantidad, porque el inventario ajustado también
+  cambia), `IdempotencyKey`, `EstaActivo`.
 - Invariantes: fecha no futura, `CantidadMuertas > 0`. Mismo sellado de dominio
   que producción al editar/desactivar.
 - **Efecto sobre el inventario** (en los handlers, con el agregado `Galpon`):
