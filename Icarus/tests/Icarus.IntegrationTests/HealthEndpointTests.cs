@@ -2,7 +2,8 @@ using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-public class HealthEndpointTests : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public class HealthEndpointTests
 {
     private readonly IdentityFactory _factory;
 

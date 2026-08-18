@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-// Un contenedor SQL Server por clase de tests (paridad con CaseritoApiFactory):
+// Un contenedor SQL Server compartido por toda la colección de integración:
 // la app arranca en entorno Testing contra el SQL Server efímero, donde Program
 // migra y siembra con las claves fijas de abajo. La imagen se pasa explícita
 // (el ctor sin parámetros es obsoleto en 4.13.0) y coincide con la de

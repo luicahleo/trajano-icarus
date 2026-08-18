@@ -14,7 +14,8 @@ namespace Icarus.IntegrationTests;
 // El mecanismo de entitlement se construye y se prueba en este incremento
 // aunque aún no haya endpoints de módulos de negocio (spec): el sondeo lo
 // ejercita de punta a punta.
-public class EntitlementTests : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public class EntitlementTests
 {
     private readonly IdentityFactory _factory;
 

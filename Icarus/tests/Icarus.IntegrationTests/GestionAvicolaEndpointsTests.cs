@@ -6,7 +6,8 @@ using Icarus.Identity.Infrastructure;
 
 namespace Icarus.IntegrationTests;
 
-public class GestionAvicolaEndpointsTests : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public class GestionAvicolaEndpointsTests
 {
     private readonly IdentityFactory _factory;
     public GestionAvicolaEndpointsTests(IdentityFactory factory) => _factory = factory;

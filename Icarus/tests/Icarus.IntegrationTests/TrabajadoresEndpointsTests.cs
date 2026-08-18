@@ -7,7 +7,8 @@ using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-public class TrabajadoresEndpointsTests : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public class TrabajadoresEndpointsTests
 {
     private readonly IdentityFactory _factory;
 

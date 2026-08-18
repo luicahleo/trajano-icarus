@@ -2,7 +2,8 @@ using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-public class CorrelationIdIntegrationTests : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public class CorrelationIdIntegrationTests
 {
     private readonly IdentityFactory _factory;
 

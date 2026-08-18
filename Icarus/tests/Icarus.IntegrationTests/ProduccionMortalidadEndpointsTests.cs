@@ -4,7 +4,8 @@ using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-public sealed class ProduccionMortalidadEndpointsTests(IdentityFactory factory) : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public sealed class ProduccionMortalidadEndpointsTests(IdentityFactory factory)
 {
     [Fact]
     public async Task ProduccionSinTokenDevuelve401()

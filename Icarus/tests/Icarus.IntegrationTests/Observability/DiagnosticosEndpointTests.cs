@@ -4,7 +4,8 @@ using System.Text;
 
 namespace Icarus.IntegrationTests.Observability;
 
-public sealed class DiagnosticosEndpointTests(IdentityFactory factory) : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public sealed class DiagnosticosEndpointTests(IdentityFactory factory)
 {
     [Fact]
     public async Task AceptaReportePermitidoSinAutenticacion()

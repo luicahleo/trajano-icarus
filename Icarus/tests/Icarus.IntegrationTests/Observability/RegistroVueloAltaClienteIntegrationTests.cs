@@ -1,6 +1,7 @@
 namespace Icarus.IntegrationTests;
 
-public sealed class RegistroVueloAltaClienteIntegrationTests : IClassFixture<IdentityFactory>
+[Collection(IntegracionCollection.Nombre)]
+public sealed class RegistroVueloAltaClienteIntegrationTests
 {
     private readonly IdentityFactory _factory;
 
