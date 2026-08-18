@@ -63,10 +63,11 @@ no contexto obligatorio. No cargarlos en bloque.
   `docs/dominio/glosario-avicola.md`. Consultarlo antes de nombrar una entidad o
   inventar una regla.
 - Backend .NET bajo `Icarus/`: solución con building blocks (Domain, Application,
-  Observability), módulo Identity completo (JWT, usuarios, roles) y módulo
+  Observability), módulo Identity completo (JWT, usuarios, roles), módulo
   Clientes completo (agregados Cliente/Trabajador, filtros de tenant, entitlement
-  por módulo), con puerta de calidad con gates de backend. El frontend React
-  bajo `web/` (plan 4) todavía no existe. No crearlo por iniciativa propia.
+  por módulo) y módulo GestionAvicola (agregados Granja/Galpón, una granja activa
+  por cliente), con puerta de calidad con gates de backend. El frontend React
+  (PWA) vive bajo `web/`.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
 

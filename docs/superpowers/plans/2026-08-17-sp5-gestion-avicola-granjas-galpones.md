@@ -1,6 +1,6 @@
 # SP5 — Gestión avícola: Granjas y Galpones — Plan de implementación
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Crear el primer bounded context de negocio avícola (`GestionAvicola`) con los agregados `Granja` y `Galpon`, sus endpoints y tests, siguiendo el patrón del módulo Clientes.
 
@@ -42,7 +42,7 @@
 **Interfaces:**
 - Produces: los tres proyectos vacíos con el grafo de referencias del spec, para que las tareas siguientes solo creen archivos `.cs`.
 
-- [ ] **Step 1: Crear los tres csproj**
+- [x] **Step 1: Crear los tres csproj**
 
 `Icarus.GestionAvicola.Domain.csproj` (copia el patrón de `Icarus.Clientes.Domain.csproj`):
 
@@ -114,7 +114,7 @@
 
 Las versiones de paquetes NO van en los csproj: están centralizadas en `Icarus/Directory.Packages.props` (CPM). Los analizadores (Roslynator, SonarAnalyzer) se aplican solos vía `GlobalPackageReference`.
 
-- [ ] **Step 2: Añadir los proyectos a la solución y a los csproj consumidores**
+- [x] **Step 2: Añadir los proyectos a la solución y a los csproj consumidores**
 
 ```bash
 dotnet sln Icarus/Icarus.sln add \
@@ -139,12 +139,12 @@ En `Icarus/tests/Icarus.UnitTests/Icarus.UnitTests.csproj`, añadir al `ItemGrou
 
 En `Icarus/tests/Icarus.ArchitectureTests/Icarus.ArchitectureTests.csproj`, añadir las mismas tres referencias (ajustando la ruta relativa si difiere; copiar el estilo de las referencias a Clientes ya presentes).
 
-- [ ] **Step 3: Verificar el build**
+- [x] **Step 3: Verificar el build**
 
 Run: `dotnet build Icarus/Icarus.sln --nologo`
 Expected: BUILD succeeded, 0 warnings (TreatWarningsAsErrors).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Icarus
@@ -163,7 +163,7 @@ git commit -m "chore(avicola): andamiaje de proyectos del modulo GestionAvicola"
 - Consumes: `AggregateRoot`, `ReglaNegocioException` de `Icarus.BuildingBlocks.Domain`.
 - Produces: `Granja(Guid clienteId, string nombre)`, `Granja(Guid id, Guid clienteId, string nombre)` (semillas/tests), propiedades `ClienteId`, `Nombre`, `EstaActivo`, métodos `Renombrar(string)` y `Desactivar()`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 ```csharp
 using Icarus.BuildingBlocks.Domain;
@@ -221,12 +221,12 @@ public class GranjaTests
 }
 ```
 
-- [ ] **Step 2: Ejecutar y ver el rojo**
+- [x] **Step 2: Ejecutar y ver el rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~GranjaTests"`
 Expected: FALLA la compilación (el tipo `Granja` no existe). Ese es el rojo.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 ```csharp
 using Icarus.BuildingBlocks.Domain;
@@ -281,12 +281,12 @@ public sealed class Granja : AggregateRoot
 }
 ```
 
-- [ ] **Step 4: Ejecutar y ver el verde**
+- [x] **Step 4: Ejecutar y ver el verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~GranjaTests"`
 Expected: PASS (6 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/Granja.cs Icarus/tests/Icarus.UnitTests/GestionAvicola/GranjaTests.cs
@@ -305,7 +305,7 @@ git commit -m "feat(avicola): agregado Granja con invariantes de dominio"
 - Consumes: `AggregateRoot`, `ReglaNegocioException`.
 - Produces: `Galpon(Guid granjaId, Guid clienteId, string numero, int capacidadMaxima, int gallinasActuales, DateOnly fechaNacimientoLote, string? descripcion)` (+ sobrecarga con `Guid id` primero para semillas/tests), propiedades `GranjaId`, `ClienteId`, `Numero`, `CapacidadMaxima`, `GallinasActuales`, `FechaNacimientoLote`, `Descripcion`, `EstaActivo`, métodos `ActualizarDatos(string numero, string? descripcion, int capacidadMaxima)`, `AjustarInventarioGallinas(int nuevoTotal)` (total absoluto, NO delta) y `Desactivar()`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 ```csharp
 using Icarus.BuildingBlocks.Domain;
@@ -408,12 +408,12 @@ public class GalponTests
 }
 ```
 
-- [ ] **Step 2: Ejecutar y ver el rojo**
+- [x] **Step 2: Ejecutar y ver el rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~GalponTests"`
 Expected: FALLA la compilación (el tipo `Galpon` no existe).
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 ```csharp
 using Icarus.BuildingBlocks.Domain;
@@ -514,12 +514,12 @@ public sealed class Galpon : AggregateRoot
 }
 ```
 
-- [ ] **Step 4: Ejecutar y ver el verde**
+- [x] **Step 4: Ejecutar y ver el verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~GalponTests"`
 Expected: PASS (10 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/Galpon.cs Icarus/tests/Icarus.UnitTests/GestionAvicola/GalponTests.cs
@@ -558,7 +558,7 @@ git commit -m "feat(avicola): agregado Galpon con invariante de inventario y fec
   - `GranjaResumen(Guid Id, string Nombre)`.
   - Commands: `CrearGranjaCommand(string Nombre) : IRequest<Guid>`, `RenombrarGranjaCommand(Guid GranjaId, string Nombre) : IRequest`, `DesactivarGranjaCommand(Guid GranjaId) : IRequest`; queries: `ObtenerGranjaQuery(Guid GranjaId) : IRequest<GranjaResumen>`, `ListarGranjasQuery : IRequest<IReadOnlyList<GranjaResumen>>`.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 `CrearGranjaHandlerTests.cs`:
 
@@ -848,12 +848,12 @@ public class ObtenerGranjaHandlerTests
 }
 ```
 
-- [ ] **Step 2: Ejecutar y ver el rojo**
+- [x] **Step 2: Ejecutar y ver el rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~Granja"`
 Expected: FALLA la compilación (no existen los tipos de Application). `DesactivarGranjaHandlerTests` además referencia `IRepositorioGalpones`, que se crea en la Tarea 5: para ver el rojo de esta tarea, crear ya el archivo `Galpones/IRepositorioGalpones.cs` con la interfaz completa de la Tarea 5 (su contenido exacto está ahí); la Tarea 5 lo dará por existente.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `IUnidadTrabajoGestionAvicola.cs`:
 
@@ -1185,12 +1185,12 @@ public sealed class ListarGranjasHandler
 }
 ```
 
-- [ ] **Step 4: Ejecutar y ver el verde**
+- [x] **Step 4: Ejecutar y ver el verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~Granja"`
 Expected: PASS. Ojo: los tests de esta tarea compilan solo cuando existe `IRepositorioGalpones` (Tarea 5, Step 1 ya lo creó si se siguió la nota del Step 2).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application Icarus/tests/Icarus.UnitTests/GestionAvicola
@@ -1221,7 +1221,7 @@ git commit -m "feat(avicola): handlers de granjas con una granja activa por clie
   - `GalponResumen(Guid Id, string Numero, int CapacidadMaxima, int GallinasActuales, DateOnly FechaNacimientoLote, string? Descripcion)`.
   - Commands: `CrearGalponCommand(Guid GranjaId, string Numero, int CapacidadMaxima, int GallinasActuales, DateOnly FechaNacimientoLote, string? Descripcion) : IRequest<Guid>`, `ActualizarGalponCommand(Guid GalponId, string Numero, string? Descripcion, int CapacidadMaxima) : IRequest`, `AjustarInventarioGalponCommand(Guid GalponId, int GallinasActuales) : IRequest`, `DesactivarGalponCommand(Guid GalponId) : IRequest`; queries: `ObtenerGalponQuery(Guid GalponId) : IRequest<GalponResumen>`, `ListarGalponesPorGranjaQuery(Guid GranjaId) : IRequest<IReadOnlyList<GalponResumen>>`.
 
-- [ ] **Step 1: Crear la interfaz de repositorio**
+- [x] **Step 1: Crear la interfaz de repositorio**
 
 `Galpones/IRepositorioGalpones.cs`:
 
@@ -1259,7 +1259,7 @@ public sealed record GalponResumen(
     DateOnly FechaNacimientoLote, string? Descripcion);
 ```
 
-- [ ] **Step 2: Escribir los tests que fallan**
+- [x] **Step 2: Escribir los tests que fallan**
 
 `CrearGalponHandlerTests.cs`:
 
@@ -1492,12 +1492,12 @@ public class DesactivarGalponHandlerTests
 }
 ```
 
-- [ ] **Step 3: Ejecutar y ver el rojo**
+- [x] **Step 3: Ejecutar y ver el rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~Galpon"`
 Expected: FALLA la compilación (no existen los tipos de Application de galpones).
 
-- [ ] **Step 4: Implementación mínima**
+- [x] **Step 4: Implementación mínima**
 
 `Galpones/CrearGalponCommand.cs`:
 
@@ -1830,12 +1830,12 @@ public sealed class ListarGalponesPorGranjaHandler
 }
 ```
 
-- [ ] **Step 5: Ejecutar y ver el verde**
+- [x] **Step 5: Ejecutar y ver el verde**
 
 Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~GestionAvicola"`
 Expected: PASS (toda la carpeta GestionAvicola).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application Icarus/tests/Icarus.UnitTests/GestionAvicola
@@ -1860,7 +1860,7 @@ git commit -m "feat(avicola): handlers de galpones con unicidad de numero y tena
 - Consumes: todo lo de las Tasks 4-5; `SaveChangesRegistroVueloInterceptor`, `TransaccionesRegistroVueloInterceptor`, `DescriptorContextoPersistencia` de BB.Observability.
 - Produces: `GestionAvicolaDbContext` (implementa `IUnidadTrabajoGestionAvicola`), `AddGestionAvicolaInfraestructura(this IServiceCollection, IConfiguration)`, migración `InicialGestionAvicola`.
 
-- [ ] **Step 1: DbContext con filtros globales**
+- [x] **Step 1: DbContext con filtros globales**
 
 ```csharp
 using Icarus.BuildingBlocks.Application;
@@ -1905,7 +1905,7 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
 }
 ```
 
-- [ ] **Step 2: Configuraciones EF**
+- [x] **Step 2: Configuraciones EF**
 
 `ConfiguracionGranja.cs`:
 
@@ -1966,7 +1966,7 @@ public sealed class ConfiguracionGalpon : IEntityTypeConfiguration<Galpon>
 }
 ```
 
-- [ ] **Step 3: Repositorios**
+- [x] **Step 3: Repositorios**
 
 `RepositorioGranjas.cs`:
 
@@ -2048,7 +2048,7 @@ public sealed class RepositorioGalpones : IRepositorioGalpones
 }
 ```
 
-- [ ] **Step 4: DependencyInjection y factory de diseño**
+- [x] **Step 4: DependencyInjection y factory de diseño**
 
 `DependencyInjection.cs`:
 
@@ -2135,7 +2135,7 @@ public sealed class DesignTimeGestionAvicolaDbContextFactory
 }
 ```
 
-- [ ] **Step 5: Generar la migración**
+- [x] **Step 5: Generar la migración**
 
 El manifiesto de herramientas ya fija `dotnet-ef` 10.0.11 en `Icarus/.config/dotnet-tools.json`.
 
@@ -2149,12 +2149,12 @@ dotnet ef migrations add InicialGestionAvicola \
 
 Expected: se generan `Migrations/<timestamp>_InicialGestionAvicola.cs`, `.Designer.cs` y `GestionAvicolaDbContextModelSnapshot.cs`. Revisar el archivo generado: tablas `gestion_avicola.granjas` y `gestion_avicola.galpones`, índice único `(ClienteId, Nombre)`, índice único filtrado `[EstaActivo] = 1` en `granjas.ClienteId`, índice único `(GranjaId, Numero)`, los dos check constraints, columna `FechaNacimientoLote` de tipo `date`.
 
-- [ ] **Step 6: Verificar build y tests**
+- [x] **Step 6: Verificar build y tests**
 
 Run: `dotnet build Icarus/Icarus.sln --nologo` y `dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~GestionAvicola"`
 Expected: BUILD succeeded, 0 warnings; tests PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Icarus/src/GestionAvicola/Icarus.GestionAvicola.Infrastructure
@@ -2174,7 +2174,7 @@ git commit -m "feat(avicola): persistencia de granjas y galpones con filtros de 
 - Consumes: `PoliticasClientes.Para(...)` y `Funcionalidades` de `Icarus.Clientes` (el Host sí puede referenciarlos: él compone), `SemillaIdentidad.ClienteDemoId`, todos los commands/queries de las Tasks 4-5.
 - Produces: endpoints `/granjas` y `/galpones` protegidos por entitlement; semilla demo en Dev/Testing.
 
-- [ ] **Step 1: Endpoints**
+- [x] **Step 1: Endpoints**
 
 `GestionAvicolaEndpoints.cs`:
 
@@ -2283,7 +2283,7 @@ public static class GestionAvicolaEndpoints
 }
 ```
 
-- [ ] **Step 2: Semilla demo**
+- [x] **Step 2: Semilla demo**
 
 `SemillaGestionAvicola.cs`:
 
@@ -2325,7 +2325,7 @@ public static class SemillaGestionAvicola
 }
 ```
 
-- [ ] **Step 3: Composición en `Program.cs`**
+- [x] **Step 3: Composición en `Program.cs`**
 
 Cinco ediciones en `Icarus/src/Host/Icarus.Host/Program.cs`:
 
@@ -2369,12 +2369,12 @@ e) Dentro del bloque `if (app.Environment.IsDevelopment() || ...)`, tras la siem
         alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId);
 ```
 
-- [ ] **Step 4: Verificar build**
+- [x] **Step 4: Verificar build**
 
 Run: `dotnet build Icarus/Icarus.sln --nologo`
 Expected: BUILD succeeded, 0 warnings.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Icarus/src/Host Icarus/src/GestionAvicola/Icarus.GestionAvicola.Infrastructure/SemillaGestionAvicola.cs
@@ -2392,7 +2392,7 @@ git commit -m "feat(avicola): endpoints de granjas y galpones con entitlement y 
 **Interfaces:**
 - Consumes: los tres ensamblados nuevos (referencias añadidas en Task 1).
 
-- [ ] **Step 1: Extender `ReglasDeCapasTests`**
+- [x] **Step 1: Extender `ReglasDeCapasTests`**
 
 - En `DominioNoDependeDeLibrerias`, añadir al array de ensamblados:
   `typeof(GestionAvicola.Domain.Granja).Assembly,`
@@ -2402,7 +2402,7 @@ git commit -m "feat(avicola): endpoints de granjas y galpones con entitlement y 
   `typeof(GestionAvicola.Application.Granjas.CrearGranjaCommand).Assembly,`
   y añadir `"Icarus.GestionAvicola.Infrastructure"` a la lista de `HaveDependencyOnAny`.
 
-- [ ] **Step 2: Extender `ReglasDeModulosTests`**
+- [x] **Step 2: Extender `ReglasDeModulosTests`**
 
 Añadir un segundo `Fact` (el módulo nuevo no conoce a los otros, y los otros no lo conocen: la composición es solo del Host):
 
@@ -2437,12 +2437,12 @@ Añadir un segundo `Fact` (el módulo nuevo no conoce a los otros, y los otros n
     }
 ```
 
-- [ ] **Step 3: Ejecutar**
+- [x] **Step 3: Ejecutar**
 
 Run: `dotnet test Icarus/tests/Icarus.ArchitectureTests`
 Expected: PASS (los 4 facts). Si falla, la causa más probable es un `using` de Clientes colado en GestionAvicola: quitarlo, no relajar el test.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Icarus/tests/Icarus.ArchitectureTests
@@ -2461,7 +2461,7 @@ git commit -m "test(avicola): reglas de arquitectura para el modulo GestionAvico
 
 **Contexto para el implementador:** el cliente semilla tiene el módulo `GestionAvicola` habilitado y, tras la Task 7, una granja demo con dos galpones. El trabajador semilla tiene asignada la funcionalidad `Granjas` (y NO `Galpones`). Las cuentas nuevas se crean con la alta embebida del Host (`POST /clientes` como admin + `PUT /clientes/{id}/modulos`). Los JSON van en camelCase por defecto (`nombre`, `numero`, `capacidadMaxima`, `gallinasActuales`, `fechaNacimientoLote` como `"2025-09-01"`, `descripcion`).
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 ```csharp
 using System.Net;
@@ -2834,17 +2834,17 @@ public class GestionAvicolaEndpointsTests : IClassFixture<IdentityFactory>
 }
 ```
 
-- [ ] **Step 2: Ejecutar y ver el rojo**
+- [x] **Step 2: Ejecutar y ver el rojo**
 
 Run: `dotnet test Icarus/tests/Icarus.IntegrationTests --filter "FullyQualifiedName~GestionAvicolaEndpointsTests"`
 Expected: PASS a la primera si las Tasks 1-7 quedaron bien (los endpoints ya existen). Si algo falla, NO tocar el test para que pase: corregir la implementación. El rojo real de estos tests se vio de forma dirigida durante el desarrollo si se escribieron antes que los endpoints; si se escriben después (válido aquí porque el comportamiento ya quedó fijado por los unit tests), verificar al menos una vez que fallan por el motivo correcto desactivando temporalmente una pieza (por ejemplo comentar `app.MapGestionAvicola();` debe dar 404 en todos) y volviendo a activarla.
 
-- [ ] **Step 3: Suite de integración completa**
+- [x] **Step 3: Suite de integración completa**
 
 Run: `dotnet test Icarus/tests/Icarus.IntegrationTests`
 Expected: PASS, incluidos los tests previos (Entitlement, Clientes, Identity): la semilla nueva no debe romper nada existente.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Icarus/tests/Icarus.IntegrationTests/GestionAvicolaEndpointsTests.cs
@@ -2859,7 +2859,7 @@ git commit -m "test(avicola): integracion de endpoints de granjas y galpones con
 - Modify: `AGENTS.md` (sección Proyecto)
 - Modify: `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` (regenerados, NO a mano)
 
-- [ ] **Step 1: Actualizar `AGENTS.md`**
+- [x] **Step 1: Actualizar `AGENTS.md`**
 
 En la sección `## Proyecto`, punto del backend: añadir el módulo nuevo y corregir la línea obsoleta del frontend (la PWA ya existe desde el plan 4). El párrafo queda aproximadamente:
 
@@ -2872,17 +2872,17 @@ En la sección `## Proyecto`, punto del backend: añadir el módulo nuevo y corr
   React (PWA) vive bajo `web/`.
 ```
 
-- [ ] **Step 2: Regenerar adaptadores**
+- [x] **Step 2: Regenerar adaptadores**
 
 Run: `node quality/generar-adaptadores.mjs`
 Expected: regenera `CLAUDE.md`, `GEMINI.md` y `.github/copilot-instructions.md` desde `AGENTS.md`.
 
-- [ ] **Step 3: Puerta de calidad completa**
+- [x] **Step 3: Puerta de calidad completa**
 
 Run: `./verify.ps1` (PowerShell, desde la raíz; exige Docker corriendo por Testcontainers)
 Expected: todos los gates en verde: tests de la puerta, adaptadores, mojibake, enlaces, frontend lint/build/test, `dotnet build`, `dotnet test` completos.
 
-- [ ] **Step 4: Releer el diff propio y push**
+- [x] **Step 4: Releer el diff propio y push**
 
 ```bash
 git status --short
@@ -2894,7 +2894,7 @@ git push origin develop
 
 La revisión humana no existe: la puerta + la lectura del propio diff son la revisión (WORKFLOW.md, paso 7).
 
-- [ ] **Step 5: Cerrar el ciclo**
+- [x] **Step 5: Cerrar el ciclo**
 
 - Marcar las tareas de este plan como hechas.
 - Si el trabajo quedó completo: borrar `docs/ai/HANDOFF.md` (es efímero). Si quedó a medias: actualizarlo con lo pendiente.
