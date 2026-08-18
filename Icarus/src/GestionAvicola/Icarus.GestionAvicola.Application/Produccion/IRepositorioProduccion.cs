@@ -1,0 +1,5 @@
+using Icarus.GestionAvicola.Domain;
+namespace Icarus.GestionAvicola.Application.Produccion;
+public interface IRepositorioProduccion { void Agregar(RegistroProduccion r); Task<RegistroProduccion?> ObtenerPorIdAsync(Guid id, CancellationToken ct = default); Task<IReadOnlyList<RegistroProduccion>> ListarPorDiaAsync(Guid galponId, DateOnly fecha, CancellationToken ct = default); Task<IReadOnlyList<RegistroProduccion>> ListarPorRangoAsync(Guid galponId, DateOnly desde, DateOnly hasta, CancellationToken ct = default); Task<RegistroProduccion?> ObtenerPorIdempotencyKeyAsync(Guid galponId, Guid key, CancellationToken ct = default); }
+public sealed record RecogidaResumen(Guid Id, DateOnly Fecha, TimeOnly Hora, int CantidadMaples, int UnidadesIncompletas, int MaplesDescarte, int UnidadesDescarte, int GallinasVivas, int TotalVendible, int TotalDescarte);
+public sealed record ProduccionDiaResumen(Guid GalponId, DateOnly Fecha, IReadOnlyList<RecogidaResumen> Recogidas, int TotalMaples, int TotalUnidadesIncompletas, int TotalVendible, int TotalMaplesDescarte, int TotalUnidadesDescarte, int TotalDescarte);
