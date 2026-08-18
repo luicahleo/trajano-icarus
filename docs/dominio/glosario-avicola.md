@@ -63,33 +63,44 @@ como número suelto en el código.
    Nunca aparecen en logs, mensajes de error ni trazas. Ver la regla anti-PII en
    `AGENTS.md`.
 
-## Reglas de producción y mortalidad (base del SP6)
+## Reglas de producción y mortalidad (SP6)
 
-Validadas con el usuario el 2026-08-17. Se implementan en el subproyecto 6; se
-registran aquí porque son reglas del negocio, no del código.
+Validadas con el usuario el 2026-08-17 y 2026-08-18. Implementadas en el
+subproyecto 6 (`docs/superpowers/specs/2026-08-18-sp6-produccion-mortalidad-design.md`).
 
-1. **Eficiencia diaria por galpón** = huevos producidos del día ÷ gallinas
-   vivas del galpón. La recogida la hacen los trabajadores en distintos turnos,
-   así que hay varios registros de producción por galpón y día.
-2. **Quién registra**: la recolección la registra el **trabajador** (rol
+1. **Eficiencia diaria por galpón** = huevos vendibles del día ÷ gallinas
+   vivas del galpón. Se calcula al consultarla (nunca se persiste), con la
+   población congelada por día: cada recogida y cada mortalidad guarda un
+   **snapshot de gallinas vivas** en ese momento, y la eficiencia del día usa
+   el último evento del día.
+2. **Recogidas, no turnos.** El trabajador recoge cuando puede a lo largo del
+   día (la gallina no tiene horario de producción): una o varias **recogidas**
+   por galpón y día, cada una con su hora. El total del día es la suma de las
+   recogidas.
+3. **Quién registra**: la recolección la registra el **trabajador** (rol
    Trabajador con la funcionalidad asignada, p. ej. ProduccionHuevos); el
    cliente también puede registrar, pero el caso habitual es el trabajador. El
    trabajador solo accede a sus funcionalidades asignadas, nunca al resto de lo
    que ve el cliente.
-2. **Umbral de descarte de lote: 70 %.** Si la eficiencia de un galpón cae bajo
+4. **Ventana del día**: producción y mortalidad solo se registran con fecha de
+   hoy. Mientras sea hoy, el registro se puede corregir (editar o desactivar).
+   Pasada la medianoche, el día queda **sellado**: prohibido editar un registro
+   pasado para agregar producción o mortalidad olvidada, porque distorsionaría
+   la eficiencia histórica.
+5. **Umbral de descarte de lote: 70 %.** Si la eficiencia de un galpón cae bajo
    ese umbral, el lote se considera para descarte y posterior venta como carne.
    Es una métrica derivada, no un estado persistido.
-3. **Los huevos de descarte no cuentan para la eficiencia** ni entran en la
-   contabilidad de huevos vendibles; se registran aparte.
-4. **La mortalidad no es retroactiva**: si ya se registró la recogida de huevos
-   de un día, no se puede editar ese registro días después para agregar
-   mortalidad olvidada, porque distorsionaría la eficiencia histórica. La
-   mortalidad se registra en su momento o no se registra.
+6. **Los huevos de descarte no cuentan para la eficiencia** ni entran en la
+   contabilidad de huevos vendibles; se registran aparte, con el mismo conteo
+   que el huevo bueno (maples y unidades sueltas por recogida).
+7. **Idempotencia**: cada recogida o mortalidad acepta una `IdempotencyKey`
+   generada por el cliente, para que los reintentos de la PWA offline no
+   dupliquen registros.
 
 ## Pendiente
 
-Las entidades de producción, mortalidad, vacunación, alimentación, despachos y
-precios se definen al migrar cada bounded context, en los subproyectos 6 y
-siguientes. Orden orientativo: SP6 producción + mortalidad → SP7 vacunación →
+Las entidades de vacunación, alimentación, despachos y precios se definen al
+migrar cada bounded context, en los subproyectos 7 y siguientes (producción y
+mortalidad ya están en SP6). Orden orientativo: SP7 vacunación →
 SP8 alimentación → SP9 despachos → SP10 precios. Cada subproyecto confirma su
 alcance en su propio spec y amplía este documento ahí; no se anticipa acá.

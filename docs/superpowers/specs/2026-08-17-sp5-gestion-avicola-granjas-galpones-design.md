@@ -242,13 +242,14 @@ registran aquí y en el glosario para que el spec de SP6 las tome como base. Su
 única influencia en SP5 es que `Galpon` sea raíz propia.
 
 1. **Eficiencia diaria por galpón** = huevos producidos del día ÷ gallinas
-   vivas del galpón. La recogida la hacen los trabajadores en distintos turnos:
-   varios registros por galpón y día. **La recolección la registra el
-   trabajador** (rol Trabajador con la funcionalidad `ProduccionHuevos`
-   asignada); el cliente también puede registrar, pero el caso habitual es el
-   trabajador. Los endpoints de SP6 se diseñan para ese uso: el trabajador solo
-   accede a sus funcionalidades asignadas, nunca al resto de lo que ve el
-   cliente (el entitlement ya construido lo garantiza).
+   vivas del galpón. La recogida la hace el trabajador cuando puede a lo largo
+   del día (no hay turnos): una o varias recogidas por galpón y día.
+   **La recolección la registra el trabajador** (rol Trabajador con la
+   funcionalidad `ProduccionHuevos` asignada); el cliente también puede
+   registrar, pero el caso habitual es el trabajador. Los endpoints de SP6 se
+   diseñan para ese uso: el trabajador solo accede a sus funcionalidades
+   asignadas, nunca al resto de lo que ve el cliente (el entitlement ya
+   construido lo garantiza).
 2. **Umbral de descarte de lote: 70 %.** Si la eficiencia cae bajo ese umbral,
    el lote se considera para descarte y venta como carne. Es métrica derivada,
    no estado persistido.
