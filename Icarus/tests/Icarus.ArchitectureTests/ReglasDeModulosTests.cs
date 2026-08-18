@@ -30,4 +30,33 @@ public class ReglasDeModulosTests
         Assert.True(identityHaciaClientes.IsSuccessful,
             string.Join(", ", identityHaciaClientes.FailingTypeNames ?? []));
     }
+
+    [Fact]
+    public void GestionAvicolaNoSeReferenciaConOtrosModulos()
+    {
+        var avicolaHaciaOtros = Types
+            .InAssemblies(new[]
+            {
+                typeof(GestionAvicola.Domain.Granja).Assembly,
+                typeof(GestionAvicola.Application.Granjas.CrearGranjaCommand).Assembly,
+                typeof(GestionAvicola.Infrastructure.Persistencia.GestionAvicolaDbContext).Assembly,
+            })
+            .ShouldNot().HaveDependencyOnAny("Icarus.Clientes", "Icarus.Identity").GetResult();
+        var otrosHaciaAvicola = Types
+            .InAssemblies(new[]
+            {
+                typeof(Clientes.Domain.Cliente).Assembly,
+                typeof(Clientes.Application.Clientes.CrearClienteCommand).Assembly,
+                typeof(Clientes.Infrastructure.Persistencia.ClientesDbContext).Assembly,
+                typeof(Identity.Domain.Rol).Assembly,
+                typeof(Identity.Application.Sesiones.IniciarSesionCommand).Assembly,
+                typeof(Identity.Infrastructure.Persistencia.IdentityDbContext).Assembly,
+            })
+            .ShouldNot().HaveDependencyOn("Icarus.GestionAvicola").GetResult();
+
+        Assert.True(avicolaHaciaOtros.IsSuccessful,
+            string.Join(", ", avicolaHaciaOtros.FailingTypeNames ?? []));
+        Assert.True(otrosHaciaAvicola.IsSuccessful,
+            string.Join(", ", otrosHaciaAvicola.FailingTypeNames ?? []));
+    }
 }

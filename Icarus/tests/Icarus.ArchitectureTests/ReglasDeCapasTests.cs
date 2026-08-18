@@ -14,6 +14,7 @@ public class ReglasDeCapasTests
                 typeof(BuildingBlocks.Domain.Entity).Assembly,
                 typeof(Identity.Domain.Rol).Assembly,
                 typeof(Clientes.Domain.Cliente).Assembly,
+                typeof(GestionAvicola.Domain.Granja).Assembly,
             })
             .ShouldNot()
             .HaveDependencyOnAny(
@@ -37,6 +38,7 @@ public class ReglasDeCapasTests
             {
                 typeof(Identity.Infrastructure.Persistencia.IdentityDbContext).Assembly,
                 typeof(Clientes.Infrastructure.Persistencia.ClientesDbContext).Assembly,
+                typeof(GestionAvicola.Infrastructure.Persistencia.GestionAvicolaDbContext).Assembly,
             })
             .ShouldNot()
             .HaveDependencyOn("Icarus.Host")
@@ -55,9 +57,10 @@ public class ReglasDeCapasTests
                 typeof(BuildingBlocks.Application.ICurrentUser).Assembly,
                 typeof(Identity.Application.Sesiones.IniciarSesionCommand).Assembly,
                 typeof(Clientes.Application.Clientes.CrearClienteCommand).Assembly,
+                typeof(GestionAvicola.Application.Granjas.CrearGranjaCommand).Assembly,
             })
             .ShouldNot()
-            .HaveDependencyOnAny("Icarus.Identity.Infrastructure", "Icarus.Clientes.Infrastructure")
+            .HaveDependencyOnAny("Icarus.Identity.Infrastructure", "Icarus.Clientes.Infrastructure", "Icarus.GestionAvicola.Infrastructure")
             .GetResult();
 
         Assert.True(resultado.IsSuccessful,
