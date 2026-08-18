@@ -28,6 +28,9 @@
     <ProjectReference Include="..\..\src\Clientes\Icarus.Clientes.Domain\Icarus.Clientes.Domain.csproj" />
     <ProjectReference Include="..\..\src\Clientes\Icarus.Clientes.Application\Icarus.Clientes.Application.csproj" />
     <ProjectReference Include="..\..\src\Clientes\Icarus.Clientes.Infrastructure\Icarus.Clientes.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\GestionAvicola\Icarus.GestionAvicola.Domain\Icarus.GestionAvicola.Domain.csproj" />
+    <ProjectReference Include="..\..\src\GestionAvicola\Icarus.GestionAvicola.Application\Icarus.GestionAvicola.Application.csproj" />
+    <ProjectReference Include="..\..\src\GestionAvicola\Icarus.GestionAvicola.Infrastructure\Icarus.GestionAvicola.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
