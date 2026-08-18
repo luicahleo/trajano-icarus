@@ -7,6 +7,9 @@ using Icarus.BuildingBlocks.Observability;
 using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
+using Icarus.GestionAvicola.Application.Granjas;
+using Icarus.GestionAvicola.Infrastructure;
+using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Icarus.Host.Endpoints;
 using Icarus.Host.Middleware;
 using Icarus.Host.Observability;
@@ -25,15 +28,18 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
-    typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly));
+    typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly,
+    typeof(CrearGranjaCommand).Assembly));
 builder.Services.AddValidatorsFromAssemblies([
-    typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly]);
+    typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly,
+    typeof(CrearGranjaCommand).Assembly]);
 builder.Services.AddScoped<IRegistroVuelo, RegistroVuelo>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RegistroVueloBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);
 builder.Services.AddClientesInfraestructura(builder.Configuration);
+builder.Services.AddGestionAvicolaInfraestructura(builder.Configuration);
 builder.Services.AddScoped<AltaCuentasServicio>();
 builder.Services.AddRateLimiter(opciones =>
 {
@@ -70,6 +76,7 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 app.MapIdentidad();
 app.MapClientes();
+app.MapGestionAvicola();
 app.MapDiagnosticos();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
@@ -94,6 +101,9 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
     // cuentas semilla debe coincidir con el cliente sembrado.
     await SemillaClientes.SembrarAsync(
         alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId);
+    var avicolaDb = alcance.ServiceProvider.GetRequiredService<GestionAvicolaDbContext>();
+    await avicolaDb.Database.MigrateAsync();
+    await SemillaGestionAvicola.SembrarAsync(alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId);
 }
 
 await app.RunAsync();
