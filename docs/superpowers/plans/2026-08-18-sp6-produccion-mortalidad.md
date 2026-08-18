@@ -1,5 +1,9 @@
 # SP6 — Producción diaria y Mortalidad — Plan de implementación
 
+> Estado de cierre: Tasks 1–10 ejecutadas. La puerta completa (`verify.ps1`) y
+> el push quedan a cargo del usuario; la suite completa de integración quedó
+> bloqueada por la salida del contenedor Testcontainers.MsSql (código 17).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Añadir al módulo `GestionAvicola` (ya existente tras SP5) los agregados `RegistroProduccion` (recogidas de huevos) y `RegistroMortalidad`, el ajuste de inventario del galpón por mortalidad y la consulta de eficiencia diaria con umbral del 70 %.

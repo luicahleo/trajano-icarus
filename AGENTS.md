@@ -65,8 +65,10 @@ no contexto obligatorio. No cargarlos en bloque.
 - Backend .NET bajo `Icarus/`: solución con building blocks (Domain, Application,
   Observability), módulo Identity completo (JWT, usuarios, roles), módulo
   Clientes completo (agregados Cliente/Trabajador, filtros de tenant, entitlement
-  por módulo) y módulo GestionAvicola (agregados Granja/Galpón, una granja activa
-  por cliente), con puerta de calidad con gates de backend. El frontend React
+  por módulo) y módulo GestionAvicola (agregados Granja/Galpón —una granja activa
+  por cliente—, recogidas de producción con huevos de descarte, mortalidad con
+  ajuste de inventario y eficiencia diaria con umbral del 70 %), con puerta de
+  calidad con gates de backend. El frontend React
   (PWA) vive bajo `web/`.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
