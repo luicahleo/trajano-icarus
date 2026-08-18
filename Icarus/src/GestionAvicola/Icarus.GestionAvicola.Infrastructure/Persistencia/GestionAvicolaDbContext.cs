@@ -14,6 +14,8 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
 
     public DbSet<Granja> Granjas => Set<Granja>();
     public DbSet<Galpon> Galpones => Set<Galpon>();
+    public DbSet<RegistroProduccion> RegistrosProduccion => Set<RegistroProduccion>();
+    public DbSet<RegistroMortalidad> RegistrosMortalidad => Set<RegistroMortalidad>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,5 +24,7 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GestionAvicolaDbContext).Assembly);
         modelBuilder.Entity<Granja>().HasQueryFilter(g => g.EstaActivo && (_clienteIdActual == null || g.ClienteId == _clienteIdActual));
         modelBuilder.Entity<Galpon>().HasQueryFilter(g => g.EstaActivo && (_clienteIdActual == null || g.ClienteId == _clienteIdActual));
+        modelBuilder.Entity<RegistroProduccion>().HasQueryFilter(r => r.EstaActivo && (_clienteIdActual == null || r.ClienteId == _clienteIdActual));
+        modelBuilder.Entity<RegistroMortalidad>().HasQueryFilter(r => r.EstaActivo && (_clienteIdActual == null || r.ClienteId == _clienteIdActual));
     }
 }
