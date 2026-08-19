@@ -25,3 +25,4 @@ export const AvicolaInicioPage = lazy(() =>
   import('../features/avicola/AvicolaInicioPage').then((modulo) => ({ default: modulo.AvicolaInicioPage })),
 );
 export const GalponesPage = lazy(() => import('../features/avicola/GalponesPage').then((modulo) => ({ default: modulo.GalponesPage })));
+export const GalponPage = lazy(() => import('../features/avicola/GalponPage').then((modulo) => ({ default: modulo.GalponPage })));
