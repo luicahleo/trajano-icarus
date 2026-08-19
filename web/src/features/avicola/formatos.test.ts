@@ -1,0 +1,2 @@
+import {describe,expect,test} from 'vitest'; import {formatearConteo,totalHuevos} from './formatos'; import {HUEVOS_POR_MAPLE,hoyIso} from './constantes';
+describe('formatos avícola',()=>{test('maple',()=>expect(HUEVOS_POR_MAPLE).toBe(30));test('total',()=>expect(totalHuevos(10,5)).toBe(305));test('texto',()=>expect(formatearConteo(10,5)).toBe('10 maples + 5 (= 305)'));test('fecha',()=>expect(hoyIso()).toMatch(/^\d{4}-\d{2}-\d{2}$/));});
