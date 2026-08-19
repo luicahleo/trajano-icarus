@@ -25,6 +25,7 @@ import { desactivarMortalidad, desactivarProduccion, listarMortalidad, listarPro
 import { hoyIso } from './constantes';
 import { formatearConteo } from './formatos';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
+import { RegistrarRecogidaDialog } from './RegistrarRecogidaDialog';
 import { EditarBajasDialog } from './EditarBajasDialog';
 import { EditarRecogidaDialog } from './EditarRecogidaDialog';
 
@@ -40,6 +41,7 @@ export function GalponPage() {
   const { galponId = '' } = useParams();
   const [fecha, setFecha] = useState(hoyIso());
   const [registrandoBajas, setRegistrandoBajas] = useState(false);
+  const [registrandoRecogida, setRegistrandoRecogida] = useState(false);
   const [recogidaEditada, setRecogidaEditada] = useState<RecogidaResumen | null>(null);
   const [bajasEditadas, setBajasEditadas] = useState<MortalidadRegistro | null>(null);
   const [registroAEliminar, setRegistroAEliminar] = useState<Evento | null>(null);
@@ -81,12 +83,13 @@ export function GalponPage() {
     </Box>
     <TextField label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: hoyIso() } }} sx={{ mt: 2 }} />
     {!esHoy && <Alert severity="info" sx={{ mt: 2 }}>Día sellado: no se puede corregir</Alert>}
-    {esHoy && <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 2 }}>{puedeProduccion && <Button variant="contained">Registrar recogida</Button>}{puedeMortalidad && <Button variant="contained" onClick={() => setRegistrandoBajas(true)}>Registrar bajas</Button>}</Box>}
+    {esHoy && <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 2 }}>{puedeProduccion && <Button variant="contained" onClick={() => setRegistrandoRecogida(true)}>Registrar recogida</Button>}{puedeMortalidad && <Button variant="contained" onClick={() => setRegistrandoBajas(true)}>Registrar bajas</Button>}</Box>}
     <Typography variant="h6" sx={{ mt: 3 }}>Total del día: {produccion.data.totalVendible} huevos vendibles · {produccion.data.totalDescarte} de descarte · {mortalidad.data.totalMuertas} bajas</Typography>
     <List aria-label="Registros del día">{eventos.map((evento) => <ListItem key={`${evento.tipo}-${evento.datos.id}`} secondaryAction={esHoy && ((evento.tipo === 'recogida' && puedeProduccion) || (evento.tipo === 'bajas' && puedeMortalidad)) && <Box sx={{ display: 'flex', flexDirection: 'row' }}><Button size="small" onClick={() => evento.tipo === 'recogida' ? setRecogidaEditada(evento.datos) : setBajasEditadas(evento.datos)}>Editar</Button><Button size="small" onClick={() => setRegistroAEliminar(evento)}>Eliminar</Button></Box>}>
       <ListItemText primary={evento.tipo === 'bajas' ? `${evento.hora.slice(0, 5)} — ${evento.datos.cantidadMuertas} bajas` : `${evento.hora.slice(0, 5)} — ${formatearConteo(evento.datos.cantidadMaples, evento.datos.unidadesIncompletas)}`} secondary={evento.tipo === 'recogida' && evento.datos.totalDescarte > 0 ? `descarte ${formatearConteo(evento.datos.maplesDescarte, evento.datos.unidadesDescarte)}` : undefined} />
     </ListItem>)}</List>
     <RegistrarBajasDialog galponId={galponId} abierto={registrandoBajas} alCerrar={() => setRegistrandoBajas(false)} />
+    <RegistrarRecogidaDialog galponId={galponId} abierto={registrandoRecogida} alCerrar={() => setRegistrandoRecogida(false)} />
     <EditarRecogidaDialog recogida={recogidaEditada} abierto={recogidaEditada !== null} alCerrar={() => setRecogidaEditada(null)} />
     <EditarBajasDialog registro={bajasEditadas} abierto={bajasEditadas !== null} alCerrar={() => setBajasEditadas(null)} />
     <Dialog open={registroAEliminar !== null} onClose={() => setRegistroAEliminar(null)}><DialogTitle>Eliminar registro</DialogTitle><DialogContent>El registro se desactiva; no se borra. Si era una baja, las gallinas vuelven al inventario.</DialogContent><DialogActions><Button onClick={() => setRegistroAEliminar(null)}>Cancelar</Button><Button onClick={() => registroAEliminar && eliminar.mutate(registroAEliminar)} disabled={eliminar.isPending}>Confirmar</Button></DialogActions></Dialog>
