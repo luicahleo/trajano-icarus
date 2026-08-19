@@ -34,6 +34,7 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioTrabajadores, RepositorioTrabajadores>();
         servicios.AddScoped<IClienteActivo, EstadoCliente>();
         servicios.AddScoped<IVerificadorEntitlement, VerificadorEntitlement>();
+        servicios.AddScoped<IConsultaPermisosActuales, ConsultaPermisosActuales>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadHabilitada>();
 
         // IUnitOfWork resuelve al contexto de Clientes. Identity no lo consume
