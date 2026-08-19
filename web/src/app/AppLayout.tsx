@@ -1,8 +1,10 @@
-import { AppBar, Box, Button, Toolbar, Typography } from '@mui/material';
+import { AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemText, Toolbar, Typography, useMediaQuery } from '@mui/material';
+import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import { Suspense } from 'react';
 import { Link as RouterLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
+import { useState } from 'react';
 import type { Rol } from '../lib/tipos';
 import { CargandoRuta } from './CargandoRuta';
 import { BannerSinConexion } from './BannerSinConexion';
@@ -20,6 +22,8 @@ const ENLACES_POR_ROL: Partial<Record<Rol, EnlaceMenu[]>> = {
 export function AppLayout() {
   const { rol, cerrarSesion, tieneFuncionalidad } = useAuth();
   const navigate = useNavigate();
+  const esMovil = useMediaQuery('(max-width:600px)');
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const enlaces: EnlaceMenu[] = [...(rol ? (ENLACES_POR_ROL[rol] ?? []) : []), ...(rol === 'Cliente' || (rol === 'Trabajador' && tieneFuncionalidad('Granjas', 'Galpones', 'ProduccionHuevos', 'Mortalidad')) ? [{ etiqueta: 'Gestión Avícola', ruta: '/avicola' }] : [])];
 
   const salir = () => {
@@ -31,6 +35,7 @@ export function AppLayout() {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <AppBar position="sticky" color="primary">
         <Toolbar sx={{ gap: 1 }}>
+          {esMovil && <IconButton color="inherit" aria-label="Abrir menú" onClick={() => setMenuAbierto(true)}><MenuRoundedIcon /></IconButton>}
           <Typography
             variant="h6"
             component={RouterLink}
@@ -39,7 +44,7 @@ export function AppLayout() {
           >
             Icarus
           </Typography>
-          {enlaces.map((enlace) => (
+          {!esMovil && enlaces.map((enlace) => (
             <Button key={enlace.ruta} component={RouterLink} to={enlace.ruta} color="inherit">
               {enlace.etiqueta}
             </Button>
@@ -49,6 +54,7 @@ export function AppLayout() {
           </Button>
         </Toolbar>
       </AppBar>
+      <Drawer open={menuAbierto} onClose={() => setMenuAbierto(false)}><List sx={{ width: 240 }}>{enlaces.map((enlace) => <ListItemButton key={enlace.ruta} component={RouterLink} to={enlace.ruta} onClick={() => setMenuAbierto(false)}><ListItemText primary={enlace.etiqueta} /></ListItemButton>)}</List></Drawer>
       <BannerSinConexion />
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Suspense fallback={<CargandoRuta />}>
