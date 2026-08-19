@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const core = readFileSync(new URL('../../iniciar-pc.ps1', import.meta.url), 'utf8');
 const pc1 = readFileSync(new URL('../../iniciar-pc1.ps1', import.meta.url), 'utf8');
+const pc1SinWifi = readFileSync(new URL('../../iniciar-pc1-sin-wifi.ps1', import.meta.url), 'utf8');
 const pc2 = readFileSync(new URL('../../iniciar-pc2.ps1', import.meta.url), 'utf8');
 const pc3 = readFileSync(new URL('../../iniciar-pc3.ps1', import.meta.url), 'utf8');
 
@@ -69,4 +70,13 @@ test('los tres wrappers delegan al core con su perfil', () => {
   for (const script of [pc1, pc2, pc3]) {
     assert.match(script, /iniciar-pc\.ps1/);
   }
+});
+
+test('el wrapper de PC1 sin WiFi inicia el entorno solo en localhost', () => {
+  assert.match(core, /\[switch\]\$SoloLocal/);
+  assert.match(core, /if \(\$SoloLocal\)[\s\S]*'127\.0\.0\.1'/);
+  assert.match(core, /if \(\$SoloLocal\)[\s\S]*'localhost'/);
+  assert.match(pc1SinWifi, /Perfil = 'pc1'/);
+  assert.match(pc1SinWifi, /SoloLocal = \$true/);
+  assert.match(pc1SinWifi, /iniciar-pc\.ps1/);
 });

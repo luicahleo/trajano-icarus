@@ -3,6 +3,7 @@
     [string]$Perfil,
     [string]$Ip,
     [string]$SsidMobil,
+    [switch]$SoloLocal,
     [switch]$Logs,
     [switch]$RecrearDatos,
     [switch]$ConfirmarBorradoDatos
@@ -52,6 +53,8 @@ function Obtener-IpWifi([string]$Ssid) {
 }
 
 function Obtener-IpLan([string]$IpSolicitada) {
+    if ($SoloLocal) { return '127.0.0.1' }
+
     if ($IpSolicitada) {
         $direccion = $null
         if (-not [System.Net.IPAddress]::TryParse($IpSolicitada, [ref]$direccion) -or
@@ -94,7 +97,7 @@ finally {
 if ($codigoDocker -ne 0) { throw 'Docker Desktop no está iniciado o no responde.' }
 
 $ipLan = Obtener-IpLan $Ip
-$hostLan = "$ipLan.sslip.io"
+$hostLan = if ($SoloLocal) { 'localhost' } else { "$ipLan.sslip.io" }
 $env:ICARUS_LAN_IP = $ipLan
 $env:ICARUS_LAN_HOST = $hostLan
 New-Item -ItemType Directory -Force (Join-Path $raiz ".local/$Perfil/caddy-data") | Out-Null
@@ -182,7 +185,11 @@ if (Test-Path $certificado) {
 } else {
     Write-Warning 'Caddy aún no creó la CA. Revisa: docker compose ... logs gateway'
 }
-Write-Host 'Si el móvil no conecta, permite los puertos TCP 80 y 443 para redes privadas en Firewall de Windows.'
+if ($SoloLocal) {
+    Write-Host 'Modo sin WiFi: el entorno solo se anuncia en este equipo.'
+} else {
+    Write-Host 'Si el móvil no conecta, permite los puertos TCP 80 y 443 para redes privadas en Firewall de Windows.'
+}
 
 if ($Logs) {
     try {
