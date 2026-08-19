@@ -20,6 +20,7 @@ import { useFuncionalidad } from '../auth/useFuncionalidad';
 import { listarMortalidad, listarProduccion, obtenerEficiencia, obtenerGalpon } from './api';
 import { hoyIso } from './constantes';
 import { formatearConteo } from './formatos';
+import { RegistrarBajasDialog } from './RegistrarBajasDialog';
 
 type Evento =
   | { hora: string; tipo: 'recogida'; datos: NonNullable<Awaited<ReturnType<typeof listarProduccion>>['recogidas']>[number] }
@@ -32,6 +33,7 @@ function diaEficiencia(dias: EficienciaDia[] | undefined): EficienciaDia | undef
 export function GalponPage() {
   const { galponId = '' } = useParams();
   const [fecha, setFecha] = useState(hoyIso());
+  const [registrandoBajas, setRegistrandoBajas] = useState(false);
   const esHoy = fecha === hoyIso();
   const galpon = useQuery({ queryKey: ['avicola', 'galpon', galponId], queryFn: () => obtenerGalpon(galponId), enabled: Boolean(galponId) });
   const produccion = useQuery({ queryKey: ['avicola', 'produccion', galponId, fecha], queryFn: () => listarProduccion(galponId, fecha), enabled: Boolean(galponId) });
@@ -65,10 +67,11 @@ export function GalponPage() {
     </Box>
     <TextField label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: hoyIso() } }} sx={{ mt: 2 }} />
     {!esHoy && <Alert severity="info" sx={{ mt: 2 }}>Día sellado: no se puede corregir</Alert>}
-    {esHoy && <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 2 }}>{puedeProduccion && <Button variant="contained">Registrar recogida</Button>}{puedeMortalidad && <Button variant="contained">Registrar bajas</Button>}</Box>}
+    {esHoy && <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 2 }}>{puedeProduccion && <Button variant="contained">Registrar recogida</Button>}{puedeMortalidad && <Button variant="contained" onClick={() => setRegistrandoBajas(true)}>Registrar bajas</Button>}</Box>}
     <Typography variant="h6" sx={{ mt: 3 }}>Total del día: {produccion.data.totalVendible} huevos vendibles · {produccion.data.totalDescarte} de descarte · {mortalidad.data.totalMuertas} bajas</Typography>
     <List aria-label="Registros del día">{eventos.map((evento) => <ListItem key={`${evento.tipo}-${'id' in evento.datos ? evento.datos.id : evento.hora}`} secondaryAction={esHoy && <Box sx={{ display: 'flex', flexDirection: 'row' }}><Button size="small">Editar</Button><Button size="small">Eliminar</Button></Box>}>
       <ListItemText primary={evento.tipo === 'bajas' ? `${evento.hora.slice(0, 5)} — ${evento.datos.cantidadMuertas} bajas` : `${evento.hora.slice(0, 5)} — ${formatearConteo(evento.datos.cantidadMaples, evento.datos.unidadesIncompletas)}`} secondary={evento.tipo === 'recogida' && evento.datos.totalDescarte > 0 ? `descarte ${formatearConteo(evento.datos.maplesDescarte, evento.datos.unidadesDescarte)}` : undefined} />
     </ListItem>)}</List>
+    <RegistrarBajasDialog galponId={galponId} abierto={registrandoBajas} alCerrar={() => setRegistrandoBajas(false)} />
   </Container>;
 }
