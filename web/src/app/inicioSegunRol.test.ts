@@ -5,11 +5,11 @@ describe('inicioSegunRol', () => {
     expect(inicioSegunRol('Administrador')).toBe('/admin/clientes');
   });
 
-  test('Cliente va a sus trabajadores', () => {
-    expect(inicioSegunRol('Cliente')).toBe('/trabajadores');
+  test('Cliente va a gestión avícola', () => {
+    expect(inicioSegunRol('Cliente')).toBe('/avicola');
   });
 
-  test('Trabajador cae en el placeholder', () => {
-    expect(inicioSegunRol('Trabajador')).toBe('/inicio');
+  test('Trabajador va a gestión avícola', () => {
+    expect(inicioSegunRol('Trabajador')).toBe('/avicola');
   });
 });

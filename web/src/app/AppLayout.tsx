@@ -18,9 +18,9 @@ const ENLACES_POR_ROL: Partial<Record<Rol, EnlaceMenu[]>> = {
 };
 
 export function AppLayout() {
-  const { rol, cerrarSesion } = useAuth();
+  const { rol, cerrarSesion, tieneFuncionalidad } = useAuth();
   const navigate = useNavigate();
-  const enlaces: EnlaceMenu[] = rol ? (ENLACES_POR_ROL[rol] ?? []) : [];
+  const enlaces: EnlaceMenu[] = [...(rol ? (ENLACES_POR_ROL[rol] ?? []) : []), ...(rol === 'Cliente' || (rol === 'Trabajador' && tieneFuncionalidad('Granjas', 'Galpones', 'ProduccionHuevos', 'Mortalidad')) ? [{ etiqueta: 'Gestión Avícola', ruta: '/avicola' }] : [])];
 
   const salir = () => {
     cerrarSesion();

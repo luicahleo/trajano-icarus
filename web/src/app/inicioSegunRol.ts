@@ -7,7 +7,8 @@ export function inicioSegunRol(rol: Rol): string {
     case 'Administrador':
       return '/admin/clientes';
     case 'Cliente':
-      return '/trabajadores';
+    case 'Trabajador':
+      return '/avicola';
     default:
       return '/inicio';
   }
