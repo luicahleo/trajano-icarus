@@ -39,3 +39,5 @@ sourcemaps/
 .idea/
 .DS_Store
 Thumbs.db
+
+.log
