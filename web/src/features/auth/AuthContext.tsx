@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { renovarSesion } from '../../lib/http';
 import { clearAccessToken } from '../../lib/session';
-import type { Rol, UsuarioActual } from '../../lib/tipos';
+import type { Funcionalidad, Modulo, Rol, UsuarioActual } from '../../lib/tipos';
 import { iniciarSesion, obtenerMe, type Credenciales } from './api';
 
 export interface EstadoAuth {
@@ -10,7 +10,10 @@ export interface EstadoAuth {
   cargando: boolean;
   rol: Rol | null;
   clienteId: string | null;
+  modulos: Modulo[];
+  funcionalidades: Funcionalidad[];
   tieneRol: (...roles: Rol[]) => boolean;
+  tieneFuncionalidad: (...funcionalidades: Funcionalidad[]) => boolean;
   iniciarSesion: (cred: Credenciales) => Promise<void>;
   cerrarSesion: () => void;
 }
@@ -56,6 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [usuario],
   );
 
+  const tieneFuncionalidad = useCallback(
+    (...funcionalidades: Funcionalidad[]) =>
+      usuario ? funcionalidades.some((f) => usuario.funcionalidades.includes(f)) : false,
+    [usuario],
+  );
+
   const estado = useMemo<EstadoAuth>(
     () => ({
       usuario,
@@ -63,11 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cargando,
       rol: usuario?.rol ?? null,
       clienteId: usuario?.clienteId ?? null,
+      modulos: usuario?.modulos ?? [],
+      funcionalidades: usuario?.funcionalidades ?? [],
       tieneRol,
+      tieneFuncionalidad,
       iniciarSesion: iniciarSesionFn,
       cerrarSesion: cerrarSesionFn,
     }),
-    [usuario, cargando, tieneRol, iniciarSesionFn, cerrarSesionFn],
+    [usuario, cargando, tieneRol, tieneFuncionalidad, iniciarSesionFn, cerrarSesionFn],
   );
 
   return <AuthContext.Provider value={estado}>{children}</AuthContext.Provider>;

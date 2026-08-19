@@ -16,7 +16,7 @@ function sesionConRol(rol: string) {
   return vi
     .fn()
     .mockResolvedValueOnce(respuesta(200, { accessToken: 'nuevo' }))
-    .mockResolvedValueOnce(respuesta(200, { usuarioId: 'u1', rol, clienteId: null }));
+    .mockResolvedValueOnce(respuesta(200, { usuarioId: 'u1', rol, clienteId: null, trabajadorId: null, modulos: [], funcionalidades: [] }));
 }
 
 function renderEnRutas(roles: Rol[], fetchMock: () => Promise<Response>) {

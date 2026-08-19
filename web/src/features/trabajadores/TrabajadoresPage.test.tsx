@@ -34,7 +34,7 @@ function fetchSimulado(reglas: Record<string, Response | Response[]>) {
 function baseFetch(rol: Rol, clienteId: string | null, reglas: Record<string, Response | Response[]>) {
   return fetchSimulado({
     'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
-    'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId }),
+    'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId, trabajadorId: null, modulos: [], funcionalidades: [] }),
     ...reglas,
   });
 }

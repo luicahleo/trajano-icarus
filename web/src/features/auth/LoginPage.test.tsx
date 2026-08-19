@@ -49,7 +49,7 @@ describe('LoginPage', () => {
       .fn()
       .mockResolvedValueOnce(respuesta(401)) // restauración de la sesión al montar
       .mockResolvedValueOnce(respuesta(200, { accessToken: 'tok', expiraEnSegundos: 900 }))
-      .mockImplementation(async () => respuesta(200, { usuarioId: 'u1', rol: 'Administrador', clienteId: null }));
+      .mockImplementation(async () => respuesta(200, { usuarioId: 'u1', rol: 'Administrador', clienteId: null, trabajadorId: null, modulos: [], funcionalidades: [] }));
 
     vi.stubGlobal('fetch', fetchMock);
     renderLogin();

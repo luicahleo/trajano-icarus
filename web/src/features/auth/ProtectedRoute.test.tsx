@@ -44,7 +44,7 @@ describe('ProtectedRoute', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(respuesta(200, { accessToken: 'nuevo' }))
-      .mockResolvedValueOnce(respuesta(200, { usuarioId: 'u1', rol: 'Administrador', clienteId: null }));
+      .mockResolvedValueOnce(respuesta(200, { usuarioId: 'u1', rol: 'Administrador', clienteId: null, trabajadorId: null, modulos: [], funcionalidades: [] }));
     renderConRutas(fetchMock);
     expect(await screen.findByText('contenido protegido')).toBeInTheDocument();
   });
