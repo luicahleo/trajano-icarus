@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> Estado 2026-08-19: Tasks 1–11, 13–15 tienen implementación parcial; Task 12 y Task 16 siguen pendientes. Ver `docs/ai/HANDOFF.md`.
+> Estado 2026-08-19: implementación frontend completada hasta el cierre operativo; verificación de calidad final queda a cargo del usuario.
 
 **Goal:** Construir la UI de la PWA para usar lo implementado en SP5/SP6: granjas, galpones, producción diaria, mortalidad y eficiencia, con permisos por funcionalidad, diseño mobile-first y estados de error/conectividad.
 
