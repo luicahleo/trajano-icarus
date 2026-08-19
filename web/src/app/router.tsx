@@ -18,6 +18,7 @@ import {
   AvicolaInicioPage,
   GalponesPage,
   GalponPage,
+  EficienciaPage,
 } from './paginasDiferidas';
 import { RedirigirSegunRol } from './RedirigirSegunRol';
 import { RaizAplicacion } from './RaizAplicacion';
@@ -110,6 +111,7 @@ export const router = createBrowserRouter([
           },
           { path: '/avicola/galpones', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['Galpones']}><Suspense fallback={<CargandoRuta />}><GalponesPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
           { path: '/avicola/galpones/:galponId', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['Galpones']}><Suspense fallback={<CargandoRuta />}><GalponPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
+          { path: '/avicola/galpones/:galponId/eficiencia', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['ProduccionHuevos']}><Suspense fallback={<CargandoRuta />}><EficienciaPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
           {
             path: '*',
             element: <NotFoundPage />,
