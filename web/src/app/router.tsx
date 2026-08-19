@@ -16,6 +16,7 @@ import {
   NotFoundPage,
   TrabajadoresPage,
   AvicolaInicioPage,
+  GalponesPage,
 } from './paginasDiferidas';
 import { RedirigirSegunRol } from './RedirigirSegunRol';
 import { RaizAplicacion } from './RaizAplicacion';
@@ -106,6 +107,7 @@ export const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
+          { path: '/avicola/galpones', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['Galpones']}><Suspense fallback={<CargandoRuta />}><GalponesPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
           {
             path: '*',
             element: <NotFoundPage />,

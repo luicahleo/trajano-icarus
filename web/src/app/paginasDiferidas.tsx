@@ -24,3 +24,4 @@ export const TrabajadoresPage = lazy(() =>
 export const AvicolaInicioPage = lazy(() =>
   import('../features/avicola/AvicolaInicioPage').then((modulo) => ({ default: modulo.AvicolaInicioPage })),
 );
+export const GalponesPage = lazy(() => import('../features/avicola/GalponesPage').then((modulo) => ({ default: modulo.GalponesPage })));
