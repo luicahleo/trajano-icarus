@@ -1,0 +1,2 @@
+import { useEffect, useState } from 'react';
+export function useConexion(){const [enLinea,setEnLinea]=useState(()=>navigator.onLine);useEffect(()=>{const online=()=>setEnLinea(true);const offline=()=>setEnLinea(false);window.addEventListener('online',online);window.addEventListener('offline',offline);return()=>{window.removeEventListener('online',online);window.removeEventListener('offline',offline);};},[]);return enLinea;}
