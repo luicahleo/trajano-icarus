@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { RequiereRol } from '../features/auth/RequiereRol';
+import { RequiereFuncionalidad } from '../features/auth/RequiereFuncionalidad';
 import type { Rol } from '../lib/tipos';
 import { AppLayout } from './AppLayout';
 import { CargandoRuta } from './CargandoRuta';
@@ -14,6 +15,7 @@ import {
   LoginPage,
   NotFoundPage,
   TrabajadoresPage,
+  AvicolaInicioPage,
 } from './paginasDiferidas';
 import { RedirigirSegunRol } from './RedirigirSegunRol';
 import { RaizAplicacion } from './RaizAplicacion';
@@ -89,6 +91,18 @@ export const router = createBrowserRouter([
                 <RequiereRol roles={['Cliente']}>
                   <TrabajadoresPage />
                 </RequiereRol>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/avicola',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['Granjas', 'Galpones', 'ProduccionHuevos', 'Mortalidad']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <AvicolaInicioPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
               </ProtectedRoute>
             ),
           },
