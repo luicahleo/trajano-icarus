@@ -6,7 +6,6 @@ import { useAuth } from '../features/auth/AuthContext';
 import type { Rol } from '../lib/tipos';
 import { CargandoRuta } from './CargandoRuta';
 import { BannerSinConexion } from './BannerSinConexion';
-import { BannerSinConexion } from './BannerSinConexion';
 
 interface EnlaceMenu {
   etiqueta: string;
@@ -50,7 +49,6 @@ export function AppLayout() {
           </Button>
         </Toolbar>
       </AppBar>
-      <BannerSinConexion />
       <BannerSinConexion />
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Suspense fallback={<CargandoRuta />}>
