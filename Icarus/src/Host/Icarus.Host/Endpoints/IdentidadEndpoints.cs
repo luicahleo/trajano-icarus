@@ -1,4 +1,5 @@
 using Icarus.BuildingBlocks.Application;
+using Icarus.Clientes.Application.Autorizacion;
 using Icarus.Identity.Application.Sesiones;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using MediatR;
@@ -35,8 +36,21 @@ public static class IdentidadEndpoints
         });
 
         // Sesión actual: el frontend la usa para las guardas y navegación por rol.
-        grupo.MapGet("/me", (ICurrentUser actual) =>
-            Results.Ok(new { actual.UsuarioId, actual.Rol, actual.ClienteId, actual.TrabajadorId }))
+        grupo.MapGet("/me", async (ICurrentUser actual, ISender mediator) =>
+        {
+            var permisos = actual.ClienteId is { } clienteId
+                ? await mediator.Send(new ObtenerPermisosActualesQuery(clienteId, actual.TrabajadorId))
+                : new PermisosActuales([], []);
+            return Results.Ok(new
+            {
+                actual.UsuarioId,
+                actual.Rol,
+                actual.ClienteId,
+                actual.TrabajadorId,
+                permisos.Modulos,
+                permisos.Funcionalidades,
+            });
+        })
             .RequireAuthorization();
 
         return app;

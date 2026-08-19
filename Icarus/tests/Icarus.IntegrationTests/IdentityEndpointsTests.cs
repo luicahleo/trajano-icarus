@@ -115,6 +115,53 @@ public class IdentityEndpointsTests
     }
 
     [Fact]
+    public async Task MeComoClienteDevuelveModulosYTodasLasFuncionalidades()
+    {
+        var cliente = _factory.CreateClient();
+        var token = await LoginComo(SemillaIdentidad.EmailCliente);
+
+        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        var modulos = cuerpo.GetProperty("modulos").EnumerateArray().Select(e => e.GetString()).ToList();
+        var funcionalidades = cuerpo.GetProperty("funcionalidades").EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.Contains("GestionAvicola", modulos);
+        Assert.Contains("ProduccionHuevos", funcionalidades);
+        Assert.Contains("Mortalidad", funcionalidades);
+    }
+
+    [Fact]
+    public async Task MeComoTrabajadorDevuelveSoloSusFuncionalidadesAsignadas()
+    {
+        var cliente = _factory.CreateClient();
+        var token = await LoginComo(SemillaIdentidad.EmailTrabajador);
+
+        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        var modulos = cuerpo.GetProperty("modulos").EnumerateArray().Select(e => e.GetString()).ToList();
+        var funcionalidades = cuerpo.GetProperty("funcionalidades").EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.Empty(modulos);
+        Assert.Equal(["Granjas"], funcionalidades);
+    }
+
+    [Fact]
+    public async Task MeComoAdminDevuelveListasVacias()
+    {
+        var cliente = _factory.CreateClient();
+        var token = await LoginComo(SemillaIdentidad.EmailAdmin);
+
+        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Empty(cuerpo.GetProperty("modulos").EnumerateArray());
+        Assert.Empty(cuerpo.GetProperty("funcionalidades").EnumerateArray());
+    }
+
+    [Fact]
     public async Task MeSinTokenDevuelve401()
     {
         var cliente = _factory.CreateClient();
