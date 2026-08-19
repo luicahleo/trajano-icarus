@@ -21,6 +21,7 @@ Los identificadores de dominio van en español, igual que el resto del proyecto.
 | CAISY | Cooperativa Agropecuaria San Juan de Yapacaní. La cooperativa a la que el granjero vende huevos y compra alimento. En el código legacy aparece como "CAICI": es un error, el nombre correcto es CAISY. |
 | Cliente (granjero) | El tenant del sistema. Granjero afiliado a CAISY. Puede registrar cualquier dato de su granja. |
 | Trabajador recolector | Trabajador del cliente encargado de la recolección de huevos: **la recolección la registra él**, no el cliente (aunque el cliente también puede). Usa Icarus solo con las funcionalidades que el cliente le asigna (entitlement por funcionalidad); nunca tiene acceso al resto de lo que ve el cliente. |
+| Permisos operativos del trabajador | El cliente con `GestionAvicola` administra la estructura de su única granja y opera todo el módulo. El trabajador solo recibe `ProduccionHuevos` y/o `Mortalidad`; esas funcionalidades le conceden lectura estructural implícita de la granja y sus galpones, pero nunca administración de estructura ni ajuste manual de inventario. Los permisos son efectivos únicamente mientras cliente y trabajador estén activos y el módulo siga habilitado. |
 
 ## Entidades de Gestión avícola
 

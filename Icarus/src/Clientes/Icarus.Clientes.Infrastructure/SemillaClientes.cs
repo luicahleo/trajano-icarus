@@ -33,7 +33,7 @@ public static class SemillaClientes
         var trabajador = new Trabajador(
             trabajadorDemoId, clienteDemoId, "Trabajador Demo", DocumentoTrabajadorDemo,
             "Operario", new DateOnly(2026, 1, 15));
-        trabajador.DefinirFuncionalidades(Funcionalidades.Granjas);
+        trabajador.DefinirFuncionalidades(Funcionalidades.ProduccionHuevos);
         db.Trabajadores.Add(trabajador);
 
         await db.SaveChangesAsync();

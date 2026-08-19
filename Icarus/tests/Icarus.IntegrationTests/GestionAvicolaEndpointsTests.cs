@@ -86,7 +86,7 @@ public class GestionAvicolaEndpointsTests
     }
 
     [Fact]
-    public async Task TrabajadorSinGalponesRecibe403()
+    public async Task TrabajadorConProduccionPuedeConsultarGalpones()
     {
         var clienteToken = await LoginComo(SemillaIdentidad.EmailCliente);
         var trabajadorToken = await LoginComo(SemillaIdentidad.EmailTrabajador);
@@ -94,7 +94,7 @@ public class GestionAvicolaEndpointsTests
         var granjas = await cliente.SendAsync(Autenticado(HttpMethod.Get, "/granjas", clienteToken));
         var id = (await granjas.Content.ReadFromJsonAsync<JsonElement>())[0].GetProperty("id").GetGuid();
         var respuesta = await cliente.SendAsync(Autenticado(HttpMethod.Get, $"/granjas/{id}/galpones", trabajadorToken));
-        Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
 
     [Fact]

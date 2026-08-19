@@ -19,12 +19,15 @@ public sealed class VerificadorEntitlement : IVerificadorEntitlement
     {
         if (trabajadorId is { } id)
         {
-            // Rol Trabajador: solo sus funcionalidades asignadas.
-            var asignadas = await _db.Trabajadores.IgnoreQueryFilters().AsNoTracking()
+            var contexto = await _db.Trabajadores.IgnoreQueryFilters().AsNoTracking()
                 .Where(t => t.Id == id && t.ClienteId == clienteId && t.EstaActivo)
-                .Select(t => (Funcionalidades?)t.Funcionalidades)
+                .Join(_db.Clientes.IgnoreQueryFilters().AsNoTracking().Where(c => c.EstaActivo),
+                    t => t.ClienteId, c => c.Id, (t, c) => new { t.Funcionalidades, c.ModulosHabilitados })
                 .SingleOrDefaultAsync(cancellationToken);
-            return asignadas is { } funcionalidades && funcionalidades.HasFlag(funcionalidad);
+            if (contexto is null || !FuncionalidadesTrabajador.EsAsignable(funcionalidad))
+                return false;
+            var disponibles = FuncionalidadesModulos.FuncionalidadesDelModulo(contexto.ModulosHabilitados);
+            return (contexto.Funcionalidades & disponibles).HasFlag(funcionalidad);
         }
 
         // Rol Cliente: todas las funcionalidades de los módulos de su empresa.
@@ -32,6 +35,8 @@ public sealed class VerificadorEntitlement : IVerificadorEntitlement
             .Where(c => c.Id == clienteId && c.EstaActivo)
             .Select(c => (Modulos?)c.ModulosHabilitados)
             .SingleOrDefaultAsync(cancellationToken);
-        return modulos is { } habilitados && habilitados.HasFlag(FuncionalidadesModulos.ModuloDe(funcionalidad));
+        return modulos is { } habilitados
+            && FuncionalidadesModulos.ModuloDe(funcionalidad) != Modulos.Ninguno
+            && habilitados.HasFlag(FuncionalidadesModulos.ModuloDe(funcionalidad));
     }
 }

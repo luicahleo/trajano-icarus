@@ -95,6 +95,10 @@ public static class ClientesEndpoints
             .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.Granjas));
         grupo.MapGet("/funcionalidad/vacunacion", () => Results.Ok(new { estado = "ok" }))
             .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.Vacunacion));
+        grupo.MapGet("/funcionalidad/produccionhuevos", () => Results.Ok(new { estado = "ok" }))
+            .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.ProduccionHuevos));
+        grupo.MapGet("/funcionalidad/mortalidad", () => Results.Ok(new { estado = "ok" }))
+            .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.Mortalidad));
 
         return app;
     }

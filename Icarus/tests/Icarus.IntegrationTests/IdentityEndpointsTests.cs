@@ -144,7 +144,7 @@ public class IdentityEndpointsTests
         var modulos = cuerpo.GetProperty("modulos").EnumerateArray().Select(e => e.GetString()).ToList();
         var funcionalidades = cuerpo.GetProperty("funcionalidades").EnumerateArray().Select(e => e.GetString()).ToList();
         Assert.Empty(modulos);
-        Assert.Equal(["Granjas"], funcionalidades);
+        Assert.Equal(["ProduccionHuevos"], funcionalidades);
     }
 
     [Fact]

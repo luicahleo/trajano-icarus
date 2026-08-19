@@ -48,43 +48,43 @@ export function GalponPage() {
   const queryClient = useQueryClient();
   const esHoy = fecha === hoyIso();
   const galpon = useQuery({ queryKey: ['avicola', 'galpon', galponId], queryFn: () => obtenerGalpon(galponId), enabled: Boolean(galponId) });
-  const produccion = useQuery({ queryKey: ['avicola', 'produccion', galponId, fecha], queryFn: () => listarProduccion(galponId, fecha), enabled: Boolean(galponId) });
-  const mortalidad = useQuery({ queryKey: ['avicola', 'mortalidad', galponId, fecha], queryFn: () => listarMortalidad(galponId, fecha), enabled: Boolean(galponId) });
-  const eficiencia = useQuery({ queryKey: ['avicola', 'eficiencia', galponId, fecha, fecha], queryFn: () => obtenerEficiencia(galponId, fecha, fecha), enabled: Boolean(galponId) });
   const puedeProduccion = useFuncionalidad('ProduccionHuevos');
   const puedeMortalidad = useFuncionalidad('Mortalidad');
+  const produccion = useQuery({ queryKey: ['avicola', 'produccion', galponId, fecha], queryFn: () => listarProduccion(galponId, fecha), enabled: Boolean(galponId) && puedeProduccion });
+  const mortalidad = useQuery({ queryKey: ['avicola', 'mortalidad', galponId, fecha], queryFn: () => listarMortalidad(galponId, fecha), enabled: Boolean(galponId) && puedeMortalidad });
+  const eficiencia = useQuery({ queryKey: ['avicola', 'eficiencia', galponId, fecha, fecha], queryFn: () => obtenerEficiencia(galponId, fecha, fecha), enabled: Boolean(galponId) && puedeProduccion });
   const eliminar = useMutation({
     mutationFn: (evento: Evento) => evento.tipo === 'recogida' ? desactivarProduccion(evento.datos.id) : desactivarMortalidad(evento.datos.id),
     onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['avicola', 'produccion'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'galpon'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'eficiencia'] }); setRegistroAEliminar(null); },
   });
 
-  if (galpon.isLoading || produccion.isLoading || mortalidad.isLoading || eficiencia.isLoading) {
+  if (galpon.isLoading || (puedeProduccion && (produccion.isLoading || eficiencia.isLoading)) || (puedeMortalidad && mortalidad.isLoading)) {
     return <Container sx={{ py: 3 }}><CircularProgress aria-label="Cargando" /></Container>;
   }
   if (galpon.isError && galpon.error instanceof ApiError && galpon.error.status === 404) {
     return <Container sx={{ py: 3 }}><Alert severity="error">No se encontró el galpón.</Alert></Container>;
   }
-  const error = galpon.error ?? produccion.error ?? mortalidad.error ?? eficiencia.error;
+  const error = galpon.error ?? (puedeProduccion ? produccion.error ?? eficiencia.error : null) ?? (puedeMortalidad ? mortalidad.error : null);
   if (error) {
     return <Container sx={{ py: 3 }}><Alert severity="error" action={<Button onClick={() => { void galpon.refetch(); void produccion.refetch(); void mortalidad.refetch(); void eficiencia.refetch(); }}>Reintentar</Button>}>No se pudo cargar el galpón.</Alert></Container>;
   }
-  if (!galpon.data || !produccion.data || !mortalidad.data) return null;
+  if (!galpon.data || (puedeProduccion && !produccion.data) || (puedeMortalidad && !mortalidad.data)) return null;
 
   const eventos: Evento[] = [
-    ...mortalidad.data.registros.map((datos) => ({ hora: datos.hora, tipo: 'bajas' as const, datos })),
-    ...produccion.data.recogidas.map((datos) => ({ hora: datos.hora ?? '', tipo: 'recogida' as const, datos })),
+    ...(mortalidad.data?.registros ?? []).map((datos) => ({ hora: datos.hora, tipo: 'bajas' as const, datos })),
+    ...(produccion.data?.recogidas ?? []).map((datos) => ({ hora: datos.hora ?? '', tipo: 'recogida' as const, datos })),
   ].sort((a, b) => a.hora.localeCompare(b.hora));
   const dia = diaEficiencia(eficiencia.data?.dias);
 
   return <Container sx={{ py: 2 }}>
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { sm: 'center' }, gap: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { sm: 'center' }, gap: 1 }}>
       <Box><Typography variant="h4">Galpón {galpon.data.numero}</Typography><Typography>{galpon.data.gallinasActuales} / {galpon.data.capacidadMaxima} gallinas</Typography></Box>
-      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}>{dia && <Typography>{dia.eficiencia.toLocaleString('es-ES')} %</Typography>}{dia?.bajoUmbral && <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />}<Button component={Link} to={`/avicola/galpones/${galponId}/eficiencia`}>Ver eficiencia</Button></Box>
+      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}>{puedeProduccion && dia && <Typography>{dia.eficiencia.toLocaleString('es-ES')} %</Typography>}{puedeProduccion && dia?.bajoUmbral && <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />}{puedeProduccion && <Button component={Link} to={`/avicola/galpones/${galponId}/eficiencia`}>Ver eficiencia</Button>}</Box>
     </Box>
     <TextField label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: hoyIso() } }} sx={{ mt: 2 }} />
     {!esHoy && <Alert severity="info" sx={{ mt: 2 }}>Día sellado: no se puede corregir</Alert>}
     {esHoy && <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 2 }}>{puedeProduccion && <Button variant="contained" onClick={() => setRegistrandoRecogida(true)}>Registrar recogida</Button>}{puedeMortalidad && <Button variant="contained" onClick={() => setRegistrandoBajas(true)}>Registrar bajas</Button>}</Box>}
-    <Typography variant="h6" sx={{ mt: 3 }}>Total del día: {produccion.data.totalVendible} huevos vendibles · {produccion.data.totalDescarte} de descarte · {mortalidad.data.totalMuertas} bajas</Typography>
+    <Typography variant="h6" sx={{ mt: 3 }}>Total del día: {puedeProduccion ? `${produccion.data?.totalVendible ?? 0} huevos vendibles · ${produccion.data?.totalDescarte ?? 0} de descarte` : ''}{puedeProduccion && puedeMortalidad ? ' · ' : ''}{puedeMortalidad ? `${mortalidad.data?.totalMuertas ?? 0} bajas` : ''}</Typography>
     <List aria-label="Registros del día">{eventos.map((evento) => <ListItem key={`${evento.tipo}-${evento.datos.id}`} secondaryAction={esHoy && ((evento.tipo === 'recogida' && puedeProduccion) || (evento.tipo === 'bajas' && puedeMortalidad)) && <Box sx={{ display: 'flex', flexDirection: 'row' }}><Button size="small" onClick={() => evento.tipo === 'recogida' ? setRecogidaEditada(evento.datos) : setBajasEditadas(evento.datos)}>Editar</Button><Button size="small" onClick={() => setRegistroAEliminar(evento)}>Eliminar</Button></Box>}>
       <ListItemText primary={evento.tipo === 'bajas' ? `${evento.hora.slice(0, 5)} — ${evento.datos.cantidadMuertas} bajas` : `${evento.hora.slice(0, 5)} — ${formatearConteo(evento.datos.cantidadMaples, evento.datos.unidadesIncompletas)}`} secondary={evento.tipo === 'recogida' && evento.datos.totalDescarte > 0 ? `descarte ${formatearConteo(evento.datos.maplesDescarte, evento.datos.unidadesDescarte)}` : undefined} />
     </ListItem>)}</List>

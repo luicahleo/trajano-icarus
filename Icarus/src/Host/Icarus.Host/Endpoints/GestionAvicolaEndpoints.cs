@@ -17,20 +17,21 @@ public static class GestionAvicolaEndpoints
         var politicaGalpones = PoliticasClientes.Para(Funcionalidades.Galpones);
         var politicaProduccion = PoliticasClientes.Para(Funcionalidades.ProduccionHuevos);
         var politicaMortalidad = PoliticasClientes.Para(Funcionalidades.Mortalidad);
+        const string politicaEstructura = "GestionAvicolaEstructura";
         var granjas = app.MapGroup("/granjas");
         granjas.MapPost("/", async (CrearGranjaRequest cuerpo, ISender mediator) =>
         {
             var id = await mediator.Send(new CrearGranjaCommand(cuerpo.Nombre));
             return Results.Created($"/granjas/{id}", new { id });
         }).RequireAuthorization(politicaGranjas);
-        granjas.MapGet("/", async (ISender mediator) => Results.Ok(await mediator.Send(new ListarGranjasQuery()))).RequireAuthorization(politicaGranjas);
-        granjas.MapGet("/{id:guid}", async (Guid id, ISender mediator) => Results.Ok(await mediator.Send(new ObtenerGranjaQuery(id)))).RequireAuthorization(politicaGranjas);
+        granjas.MapGet("/", async (ISender mediator) => Results.Ok(await mediator.Send(new ListarGranjasQuery()))).RequireAuthorization(politicaEstructura);
+        granjas.MapGet("/{id:guid}", async (Guid id, ISender mediator) => Results.Ok(await mediator.Send(new ObtenerGranjaQuery(id)))).RequireAuthorization(politicaEstructura);
         granjas.MapPut("/{id:guid}", async (Guid id, RenombrarGranjaRequest cuerpo, ISender mediator) => { await mediator.Send(new RenombrarGranjaCommand(id, cuerpo.Nombre)); return Results.NoContent(); }).RequireAuthorization(politicaGranjas);
         granjas.MapDelete("/{id:guid}", async (Guid id, ISender mediator) => { await mediator.Send(new DesactivarGranjaCommand(id)); return Results.NoContent(); }).RequireAuthorization(politicaGranjas);
         granjas.MapPost("/{granjaId:guid}/galpones", async (Guid granjaId, CrearGalponRequest c, ISender mediator) => { var id = await mediator.Send(new CrearGalponCommand(granjaId, c.Numero, c.CapacidadMaxima, c.GallinasActuales, c.FechaNacimientoLote, c.Descripcion)); return Results.Created($"/galpones/{id}", new { id }); }).RequireAuthorization(politicaGalpones);
-        granjas.MapGet("/{granjaId:guid}/galpones", async (Guid granjaId, ISender mediator) => Results.Ok(await mediator.Send(new ListarGalponesPorGranjaQuery(granjaId)))).RequireAuthorization(politicaGalpones);
+        granjas.MapGet("/{granjaId:guid}/galpones", async (Guid granjaId, ISender mediator) => Results.Ok(await mediator.Send(new ListarGalponesPorGranjaQuery(granjaId)))).RequireAuthorization(politicaEstructura);
         var galpones = app.MapGroup("/galpones");
-        galpones.MapGet("/{id:guid}", async (Guid id, ISender mediator) => Results.Ok(await mediator.Send(new ObtenerGalponQuery(id)))).RequireAuthorization(politicaGalpones);
+        galpones.MapGet("/{id:guid}", async (Guid id, ISender mediator) => Results.Ok(await mediator.Send(new ObtenerGalponQuery(id)))).RequireAuthorization(politicaEstructura);
         galpones.MapPut("/{id:guid}", async (Guid id, ActualizarGalponRequest c, ISender mediator) => { await mediator.Send(new ActualizarGalponCommand(id, c.Numero, c.Descripcion, c.CapacidadMaxima)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);
         galpones.MapPut("/{id:guid}/inventario", async (Guid id, InventarioGalponRequest c, ISender mediator) => { await mediator.Send(new AjustarInventarioGalponCommand(id, c.GallinasActuales)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);
         galpones.MapDelete("/{id:guid}", async (Guid id, ISender mediator) => { await mediator.Send(new DesactivarGalponCommand(id)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);

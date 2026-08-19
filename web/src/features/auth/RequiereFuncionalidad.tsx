@@ -15,6 +15,6 @@ export function RequiereFuncionalidad({
   const { tieneFuncionalidad, cargando } = useAuth();
 
   if (cargando) return null;
-  if (!tieneFuncionalidad(...funcionalidades)) return <Navigate to="/" replace />;
+  if (!tieneFuncionalidad(...funcionalidades)) return <Navigate to="/inicio" replace />;
   return <>{children}</>;
 }

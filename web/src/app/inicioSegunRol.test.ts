@@ -9,7 +9,11 @@ describe('inicioSegunRol', () => {
     expect(inicioSegunRol('Cliente')).toBe('/avicola');
   });
 
-  test('Trabajador va a gestión avícola', () => {
-    expect(inicioSegunRol('Trabajador')).toBe('/avicola');
+  test('Trabajador con producción va a gestión avícola', () => {
+    expect(inicioSegunRol('Trabajador', ['ProduccionHuevos'])).toBe('/avicola');
+  });
+
+  test('Trabajador sin funcionalidades va al inicio terminal', () => {
+    expect(inicioSegunRol('Trabajador', [])).toBe('/inicio');
   });
 });

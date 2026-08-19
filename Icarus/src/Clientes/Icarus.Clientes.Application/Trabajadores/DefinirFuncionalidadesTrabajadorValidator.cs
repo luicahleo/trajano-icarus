@@ -14,7 +14,7 @@ public sealed class DefinirFuncionalidadesTrabajadorValidator
         RuleForEach(c => c.Funcionalidades)
             .Must(nombre =>
                 Enum.TryParse<Funcionalidades>(nombre, ignoreCase: true, out var funcionalidad)
-                && funcionalidad != Funcionalidades.Ninguno)
+                && FuncionalidadesTrabajador.EsAsignable(funcionalidad))
             .WithMessage("Funcionalidad inválida.");
     }
 }

@@ -36,6 +36,9 @@ public static class DependencyInjection
         servicios.AddScoped<IVerificadorEntitlement, VerificadorEntitlement>();
         servicios.AddScoped<IConsultaPermisosActuales, ConsultaPermisosActuales>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadHabilitada>();
+        servicios.AddScoped<IAuthorizationHandler, ManejadorAlgunaFuncionalidadHabilitada>();
+
+        politicasEstructura(servicios);
 
         // IUnitOfWork resuelve al contexto de Clientes. Identity no lo consume
         // (nada lo inyecta; su registro se quitó en este plan).
@@ -53,5 +56,13 @@ public static class DependencyInjection
         }
 
         return servicios;
+    }
+
+    private static void politicasEstructura(IServiceCollection servicios)
+    {
+        servicios.AddAuthorizationBuilder().AddPolicy("GestionAvicolaEstructura", builder => builder
+            .RequireAuthenticatedUser()
+            .AddRequirements(new RequisitoAlgunaFuncionalidadHabilitada(
+                Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad)));
     }
 }

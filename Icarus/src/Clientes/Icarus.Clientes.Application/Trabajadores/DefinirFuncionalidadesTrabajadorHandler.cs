@@ -36,6 +36,8 @@ public sealed class DefinirFuncionalidadesTrabajadorHandler : IRequestHandler<De
         foreach (var nombre in request.Funcionalidades)
         {
             var funcionalidad = Enum.Parse<Funcionalidades>(nombre, ignoreCase: true);
+            if (!FuncionalidadesTrabajador.EsAsignable(funcionalidad))
+                throw new ReglaNegocioException("Funcionalidad no disponible para este cliente.");
             if (!cliente.TieneModulo(FuncionalidadesModulos.ModuloDe(funcionalidad)))
                 throw new ReglaNegocioException("Funcionalidad no disponible para este cliente.");
             asignadas |= funcionalidad;

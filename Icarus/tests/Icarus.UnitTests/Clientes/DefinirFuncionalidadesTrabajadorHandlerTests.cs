@@ -38,11 +38,11 @@ public class DefinirFuncionalidadesTrabajadorHandlerTests
         _trabajadores.ObtenerPorIdAsync(trabajador.Id, Arg.Any<CancellationToken>()).Returns(trabajador);
 
         await _handler.Handle(
-            new DefinirFuncionalidadesTrabajadorCommand(clienteId, trabajador.Id, ["Granjas", "precios"]),
+            new DefinirFuncionalidadesTrabajadorCommand(clienteId, trabajador.Id, ["ProduccionHuevos", "mortalidad"]),
             CancellationToken.None);
 
-        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Granjas));
-        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Precios));
+        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.ProduccionHuevos));
+        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Mortalidad));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -59,6 +59,28 @@ public class DefinirFuncionalidadesTrabajadorHandlerTests
             _handler.Handle(
                 new DefinirFuncionalidadesTrabajadorCommand(clienteId, trabajador.Id, ["Granjas"]),
                 CancellationToken.None));
+
+        Assert.Equal("Funcionalidad no disponible para este cliente.", ex.Message);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("Granjas")]
+    [InlineData("Galpones")]
+    [InlineData("Vacunacion")]
+    [InlineData("Alimentacion")]
+    [InlineData("Despachos")]
+    [InlineData("Precios")]
+    public async Task FuncionalidadNoAsignableLanzaMensajeGenerico(string funcionalidad)
+    {
+        var clienteId = Guid.NewGuid();
+        _clientes.ObtenerPorIdAsync(clienteId, Arg.Any<CancellationToken>())
+            .Returns(ClienteConModulo(Modulos.GestionAvicola));
+        var trabajador = TrabajadorValido(clienteId);
+        _trabajadores.ObtenerPorIdAsync(trabajador.Id, Arg.Any<CancellationToken>()).Returns(trabajador);
+
+        var ex = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            _handler.Handle(new DefinirFuncionalidadesTrabajadorCommand(clienteId, trabajador.Id, [funcionalidad]), CancellationToken.None));
 
         Assert.Equal("Funcionalidad no disponible para este cliente.", ex.Message);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());

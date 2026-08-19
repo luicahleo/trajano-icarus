@@ -101,7 +101,7 @@ export const router = createBrowserRouter([
             path: '/avicola',
             element: (
               <ProtectedRoute>
-                <RequiereFuncionalidad funcionalidades={['Granjas', 'Galpones', 'ProduccionHuevos', 'Mortalidad']}>
+                  <RequiereFuncionalidad funcionalidades={['ProduccionHuevos', 'Mortalidad']}>
                   <Suspense fallback={<CargandoRuta />}>
                     <AvicolaInicioPage />
                   </Suspense>
@@ -109,8 +109,8 @@ export const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          { path: '/avicola/galpones', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['Galpones']}><Suspense fallback={<CargandoRuta />}><GalponesPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
-          { path: '/avicola/galpones/:galponId', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['Galpones']}><Suspense fallback={<CargandoRuta />}><GalponPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
+          { path: '/avicola/galpones', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['ProduccionHuevos', 'Mortalidad']}><Suspense fallback={<CargandoRuta />}><GalponesPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
+          { path: '/avicola/galpones/:galponId', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['ProduccionHuevos', 'Mortalidad']}><Suspense fallback={<CargandoRuta />}><GalponPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
           { path: '/avicola/galpones/:galponId/eficiencia', element: <ProtectedRoute><RequiereFuncionalidad funcionalidades={['ProduccionHuevos']}><Suspense fallback={<CargandoRuta />}><EficienciaPage /></Suspense></RequiereFuncionalidad></ProtectedRoute> },
           {
             path: '*',

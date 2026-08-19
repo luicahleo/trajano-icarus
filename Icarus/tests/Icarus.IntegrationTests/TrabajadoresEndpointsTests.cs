@@ -273,7 +273,7 @@ public class TrabajadoresEndpointsTests
 
         var asignar = PedidoAutenticado(
             HttpMethod.Put, $"/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades", token);
-        asignar.Content = JsonContent.Create(new { funcionalidades = new[] { "Granjas", "precios" } });
+        asignar.Content = JsonContent.Create(new { funcionalidades = new[] { "ProduccionHuevos", "mortalidad" } });
         var respuestaAsignar = await cliente.SendAsync(asignar);
 
         Assert.Equal(HttpStatusCode.NoContent, respuestaAsignar.StatusCode);
@@ -284,7 +284,7 @@ public class TrabajadoresEndpointsTests
             .EnumerateArray().Single(t => t.GetProperty("id").GetGuid() == trabajadorId);
         var funcionalidades = resumen.GetProperty("funcionalidades").EnumerateArray()
             .Select(f => f.GetString()).ToList();
-        Assert.Contains("Granjas", funcionalidades);
-        Assert.Contains("Precios", funcionalidades);
+        Assert.Contains("ProduccionHuevos", funcionalidades);
+        Assert.Contains("Mortalidad", funcionalidades);
     }
 }

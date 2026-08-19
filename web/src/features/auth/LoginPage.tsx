@@ -36,7 +36,7 @@ export function LoginPage() {
     try {
       await iniciarSesion(valores);
       const me = await obtenerMe();
-      navigate(inicioSegunRol(me.rol));
+      navigate(inicioSegunRol(me.rol, me.funcionalidades));
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorApi({ code: error.code ?? `Error de servidor (${error.status})`, correlationId: error.correlationId });

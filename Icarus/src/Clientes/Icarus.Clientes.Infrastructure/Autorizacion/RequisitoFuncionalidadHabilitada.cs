@@ -18,6 +18,12 @@ public sealed class RequisitoFuncionalidadHabilitada : IAuthorizationRequirement
     public Funcionalidades Funcionalidad { get; }
 }
 
+public sealed class RequisitoAlgunaFuncionalidadHabilitada : IAuthorizationRequirement
+{
+    public RequisitoAlgunaFuncionalidadHabilitada(Funcionalidades funcionalidades) => Funcionalidades = funcionalidades;
+    public Funcionalidades Funcionalidades { get; }
+}
+
 public sealed class ManejadorFuncionalidadHabilitada : AuthorizationHandler<RequisitoFuncionalidadHabilitada>
 {
     private readonly ICurrentUser _usuario;
@@ -43,5 +49,33 @@ public sealed class ManejadorFuncionalidadHabilitada : AuthorizationHandler<Requ
         if (await _entitlement.TieneFuncionalidadAsync(
                 clienteId, _usuario.TrabajadorId, requisito.Funcionalidad, cancelacion))
             context.Succeed(requisito);
+    }
+}
+
+public sealed class ManejadorAlgunaFuncionalidadHabilitada : AuthorizationHandler<RequisitoAlgunaFuncionalidadHabilitada>
+{
+    private readonly ICurrentUser _usuario;
+    private readonly IVerificadorEntitlement _entitlement;
+
+    public ManejadorAlgunaFuncionalidadHabilitada(ICurrentUser usuario, IVerificadorEntitlement entitlement)
+    {
+        _usuario = usuario;
+        _entitlement = entitlement;
+    }
+
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, RequisitoAlgunaFuncionalidadHabilitada requisito)
+    {
+        if (!_usuario.EstaAutenticado || _usuario.ClienteId is not { } clienteId)
+            return;
+        var cancelacion = context.Resource is HttpContext http ? http.RequestAborted : CancellationToken.None;
+        foreach (var funcionalidad in Enum.GetValues<Funcionalidades>())
+        {
+            if (funcionalidad != Funcionalidades.Ninguno && requisito.Funcionalidades.HasFlag(funcionalidad)
+                && await _entitlement.TieneFuncionalidadAsync(clienteId, _usuario.TrabajadorId, funcionalidad, cancelacion))
+            {
+                context.Succeed(requisito);
+                return;
+            }
+        }
     }
 }

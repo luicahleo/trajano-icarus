@@ -4,11 +4,13 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   InputAdornment,
   Paper,
@@ -30,7 +32,8 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { ApiError } from '../../lib/http';
 import type { TrabajadorResumen } from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
-import { cesarTrabajador, crearTrabajador, desactivarTrabajador, listarTrabajadores } from './api';
+import { cesarTrabajador, crearTrabajador, definirFuncionalidades, desactivarTrabajador, listarTrabajadores } from './api';
+import type { FuncionalidadOperativaTrabajador } from '../../lib/tipos';
 
 const esquemaAlta = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio.'),
@@ -70,6 +73,8 @@ export function TrabajadoresPage() {
   const [desactivando, setDesactivando] = useState<TrabajadorResumen | null>(null);
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [configurando, setConfigurando] = useState<TrabajadorResumen | null>(null);
+  const [funcionalidades, setFuncionalidades] = useState<FuncionalidadOperativaTrabajador[]>([]);
 
   const claveTrabajadores = ['trabajadores', clienteId] as const;
 
@@ -124,6 +129,14 @@ export function TrabajadoresPage() {
     },
   });
 
+  const guardarFuncionalidades = useMutation({
+    mutationFn: () => definirFuncionalidades(clienteId!, configurando!.id, funcionalidades),
+    onSuccess: () => {
+      refrescar();
+      setConfigurando(null);
+    },
+  });
+
   const onEnviarCese = () => {
     const hoy = fechaDeHoy();
     if (!fechaCese) {
@@ -161,6 +174,7 @@ export function TrabajadoresPage() {
                 <TableCell>Cargo</TableCell>
                 <TableCell>Fecha de ingreso</TableCell>
                 <TableCell>Fecha de cese</TableCell>
+                <TableCell>Funcionalidades</TableCell>
                 <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -172,6 +186,7 @@ export function TrabajadoresPage() {
                   <TableCell>{t.cargo}</TableCell>
                   <TableCell>{t.fechaIngreso}</TableCell>
                   <TableCell>{t.fechaCese ?? '—'}</TableCell>
+                  <TableCell>{t.funcionalidades.filter((f) => f === 'ProduccionHuevos' || f === 'Mortalidad').map((f) => f === 'ProduccionHuevos' ? 'Producción de huevos' : 'Mortalidad').join(', ') || 'Ninguna'}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                       <Button size="small" variant="outlined" onClick={() => setCesando(t)}>
@@ -180,6 +195,9 @@ export function TrabajadoresPage() {
                       <Button size="small" variant="outlined" color="error" onClick={() => setDesactivando(t)}>
                         Desactivar
                       </Button>
+                      {!t.fechaCese && <Button size="small" variant="outlined" onClick={() => { setConfigurando(t); setFuncionalidades(t.funcionalidades.filter((f): f is FuncionalidadOperativaTrabajador => f === 'ProduccionHuevos' || f === 'Mortalidad')); }}>
+                        Funcionalidades
+                      </Button>}
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -260,6 +278,18 @@ export function TrabajadoresPage() {
           <Button type="submit" form="form-alta-trabajador" variant="contained" disabled={crear.isPending}>
             Guardar
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={configurando !== null} onClose={() => setConfigurando(null)}>
+        <DialogTitle>Funcionalidades de {configurando?.nombre}</DialogTitle>
+        <DialogContent>
+          <FormControlLabel control={<Checkbox checked={funcionalidades.includes('ProduccionHuevos')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'ProduccionHuevos'), 'ProduccionHuevos'] : actuales.filter((f) => f !== 'ProduccionHuevos'))} />} label="Producción de huevos" />
+          <FormControlLabel control={<Checkbox checked={funcionalidades.includes('Mortalidad')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'Mortalidad'), 'Mortalidad'] : actuales.filter((f) => f !== 'Mortalidad'))} />} label="Mortalidad" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfigurando(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={() => guardarFuncionalidades.mutate()} disabled={guardarFuncionalidades.isPending}>Guardar</Button>
         </DialogActions>
       </Dialog>
 

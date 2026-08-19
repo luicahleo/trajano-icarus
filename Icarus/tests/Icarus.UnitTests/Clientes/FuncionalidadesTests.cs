@@ -46,4 +46,24 @@ public class FuncionalidadesTests
         Assert.Equal(8, valores.Length);
         Assert.Equal(new[] { 1, 2, 4, 8, 16, 32, 64, 128 }, valores);
     }
+
+    [Theory]
+    [InlineData(Funcionalidades.ProduccionHuevos)]
+    [InlineData(Funcionalidades.Mortalidad)]
+    public void SoloFuncionalidadesOperativasSonAsignables(Funcionalidades funcionalidad)
+    {
+        Assert.True(FuncionalidadesTrabajador.EsAsignable(funcionalidad));
+    }
+
+    [Theory]
+    [InlineData(Funcionalidades.Granjas)]
+    [InlineData(Funcionalidades.Galpones)]
+    [InlineData(Funcionalidades.Vacunacion)]
+    [InlineData(Funcionalidades.Alimentacion)]
+    [InlineData(Funcionalidades.Despachos)]
+    [InlineData(Funcionalidades.Precios)]
+    public void FuncionalidadesEstructuralesYFuturasNoSonAsignables(Funcionalidades funcionalidad)
+    {
+        Assert.False(FuncionalidadesTrabajador.EsAsignable(funcionalidad));
+    }
 }

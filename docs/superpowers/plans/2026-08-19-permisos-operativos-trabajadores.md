@@ -36,7 +36,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 
 ---
 
-## Tarea 1: declarar las funcionalidades asignables al trabajador
+## Tarea 1: declarar las funcionalidades asignables al trabajador — completada
 
 **Archivos:**
 
@@ -51,10 +51,10 @@ Query 5, MUI 9, Vitest y Testing Library.
 - Modificar:
   `Icarus/tests/Icarus.UnitTests/Clientes/DefinirFuncionalidadesTrabajadorHandlerTests.cs`
 
-- [ ] Escribir pruebas que demuestren que solo `ProduccionHuevos` y
+- [x] Escribir pruebas que demuestren que solo `ProduccionHuevos` y
   `Mortalidad` son asignables y que `Granjas`, `Galpones` y las funcionalidades
   futuras se rechazan con mensaje genérico.
-- [ ] Ejecutar:
+- [x] Ejecutar:
 
   ```powershell
   dotnet test Icarus/tests/Icarus.UnitTests --filter "FullyQualifiedName~FuncionalidadesTests|FullyQualifiedName~DefinirFuncionalidadesTrabajadorHandlerTests"
@@ -62,12 +62,12 @@ Query 5, MUI 9, Vitest y Testing Library.
 
   Rojo esperado: el catálogo operativo todavía no existe y el handler acepta
   cualquier funcionalidad del módulo.
-- [ ] Crear un catálogo de dominio con el conjunto operativo asignable y un
+- [x] Crear un catálogo de dominio con el conjunto operativo asignable y un
   predicado único; usarlo tanto en validación como en aplicación. La lista
   vacía sigue siendo válida y reemplaza todos los permisos.
-- [ ] Repetir el comando y comprobar verde.
+- [x] Repetir el comando y comprobar verde.
 
-## Tarea 2: calcular permisos efectivos del trabajador
+## Tarea 2: calcular permisos efectivos del trabajador — completada
 
 **Archivos:**
 
@@ -84,7 +84,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 - Modificar:
   `Icarus/tests/Icarus.IntegrationTests/IdentityEndpointsTests.cs`
 
-- [ ] Añadir pruebas de integración para estas condiciones:
+- [x] Añadir pruebas de integración para estas condiciones:
   trabajador activo + asignación válida + cliente activo con módulo; módulo
   retirado; cliente suspendido; trabajador desactivado; flags estructurales
   históricos; `/identidad/me` devuelve solo permisos efectivos.
@@ -96,15 +96,15 @@ Query 5, MUI 9, Vitest y Testing Library.
 
   Rojo esperado: el trabajador conserva acceso o permisos publicados cuando el
   cliente pierde el módulo, y los flags estructurales todavía se consideran.
-- [ ] Hacer que la verificación del trabajador exija simultáneamente cliente y
+- [x] Hacer que la verificación del trabajador exija simultáneamente cliente y
   trabajador activos, módulo vigente, flag asignado y funcionalidad asignable.
-- [ ] Hacer que `ConsultaPermisosActuales` aplique exactamente la misma
+- [x] Hacer que `ConsultaPermisosActuales` aplique exactamente la misma
   intersección. Mantener módulos vacíos para el trabajador.
-- [ ] Cambiar la semilla del trabajador demo de `Granjas` a
+- [x] Cambiar la semilla del trabajador demo de `Granjas` a
   `ProduccionHuevos`; no modificar registros existentes mediante migración.
 - [ ] Repetir el comando y comprobar verde.
 
-## Tarea 3: autorizar lectura estructural sin conceder administración
+## Tarea 3: autorizar lectura estructural sin conceder administración — completada
 
 **Archivos:**
 
@@ -121,7 +121,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 - Modificar:
   `Icarus/tests/Icarus.IntegrationTests/ProduccionMortalidadEndpointsTests.cs`
 
-- [ ] Escribir la matriz de integración: trabajador con producción, solo
+- [x] Escribir la matriz de integración: trabajador con producción, solo
   mortalidad, ambas o ninguna. Probar por separado lectura de estructura,
   mutaciones estructurales, producción, eficiencia y mortalidad.
 - [ ] Ejecutar:
@@ -132,15 +132,15 @@ Query 5, MUI 9, Vitest y Testing Library.
 
   Rojo esperado: la lectura de granjas/galpones exige `Granjas`/`Galpones` y no
   permite operar a un trabajador con permisos operativos válidos.
-- [ ] Incorporar una política con semántica ANY para las funcionalidades
+- [x] Incorporar una política con semántica ANY para las funcionalidades
   operativas. Aplicarla solo a `GET /granjas`, `GET /granjas/{id}`,
   `GET /granjas/{granjaId}/galpones` y `GET /galpones/{id}`.
-- [ ] Mantener las mutaciones estructurales bajo capacidades que solo el
+- [x] Mantener las mutaciones estructurales bajo capacidades que solo el
   cliente puede satisfacer. Mantener producción/eficiencia bajo
   `ProduccionHuevos` y mortalidad bajo `Mortalidad`.
 - [ ] Repetir el comando y comprobar verde.
 
-## Tarea 4: permitir que el cliente configure al trabajador en la PWA
+## Tarea 4: permitir que el cliente configure al trabajador en la PWA — completada
 
 **Archivos:**
 
@@ -149,7 +149,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 - Modificar: `web/src/features/trabajadores/TrabajadoresPage.tsx`
 - Modificar: `web/src/features/trabajadores/TrabajadoresPage.test.tsx`
 
-- [ ] Escribir pruebas de interfaz para mostrar las asignaciones actuales,
+- [x] Escribir pruebas de interfaz para mostrar las asignaciones actuales,
   abrir el diálogo, seleccionar producción/mortalidad, guardar la lista
   completa y quitar todas las funcionalidades.
 - [ ] Ejecutar desde `web/`:
@@ -159,14 +159,14 @@ Query 5, MUI 9, Vitest y Testing Library.
   ```
 
   Rojo esperado: no existe acción ni llamada para definir funcionalidades.
-- [ ] Tipar `TrabajadorResumen.funcionalidades` como `Funcionalidad[]`, añadir
+- [x] Tipar `TrabajadorResumen.funcionalidades` como `Funcionalidad[]`, añadir
   `definirFuncionalidades`, implementar el diálogo con checkboxes accesibles y
   refrescar la lista tras guardar.
-- [ ] Mostrar solo Producción de huevos y Mortalidad. No mostrar Granjas,
+- [x] Mostrar solo Producción de huevos y Mortalidad. No mostrar Granjas,
   Galpones ni funcionalidades futuras.
 - [ ] Repetir el comando y comprobar verde.
 
-## Tarea 5: hacer la navegación dependiente de permisos y terminal
+## Tarea 5: hacer la navegación dependiente de permisos y terminal — completada
 
 **Archivos:**
 
@@ -180,7 +180,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 - Modificar: `web/src/app/AppLayout.test.tsx`
 - Modificar: `web/src/app/router.tsx`
 
-- [ ] Escribir pruebas para cliente, trabajador con producción, trabajador con
+- [x] Escribir pruebas para cliente, trabajador con producción, trabajador con
   mortalidad y trabajador sin permisos. Añadir una regresión que detecte el
   ciclo `/` ↔ `/avicola`.
 - [ ] Ejecutar desde `web/`:
@@ -191,14 +191,14 @@ Query 5, MUI 9, Vitest y Testing Library.
 
   Rojo esperado: todo trabajador aterriza en `/avicola` y la guarda rechazada
   vuelve a `/`.
-- [ ] Calcular el inicio usando rol y funcionalidades efectivas. Usar `/inicio`
+- [x] Calcular el inicio usando rol y funcionalidades efectivas. Usar `/inicio`
   como destino terminal de una guarda sin permiso y mostrar Gestión Avícola en
   el menú solo con producción o mortalidad.
-- [ ] Proteger `/avicola`, la lista y el detalle de galpones con semántica ANY
+- [x] Proteger `/avicola`, la lista y el detalle de galpones con semántica ANY
   sobre `ProduccionHuevos`/`Mortalidad`; mantener eficiencia bajo producción.
 - [ ] Repetir el comando y comprobar verde.
 
-## Tarea 6: componer las pantallas según cada permiso
+## Tarea 6: componer las pantallas según cada permiso — completada
 
 **Archivos:**
 
@@ -212,7 +212,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 - Crear si facilita aislar la matriz:
   `web/src/features/avicola/GalponPage.test.tsx`
 
-- [ ] Escribir pruebas que inspeccionen las llamadas HTTP y la UI para cuatro
+- [x] Escribir pruebas que inspeccionen las llamadas HTTP y la UI para cuatro
   perfiles: cliente, solo producción, solo mortalidad y ambas.
 - [ ] Ejecutar desde `web/`:
 
@@ -223,26 +223,26 @@ Query 5, MUI 9, Vitest y Testing Library.
   Rojo esperado: las tarjetas siempre consultan eficiencia y el detalle siempre
   consulta producción, mortalidad y eficiencia, por lo que un permiso parcial
   provoca 403 y bloquea toda la página.
-- [ ] Condicionar cada `useQuery` con `enabled` según funcionalidad; no renderizar
+- [x] Condicionar cada `useQuery` con `enabled` según funcionalidad; no renderizar
   ni reintentar consultas no autorizadas. Permitir que cada sección autorizada
   gestione su propio estado de carga/error.
-- [ ] Ocultar administración de granja, galpones e inventario al trabajador.
+- [x] Ocultar administración de granja, galpones e inventario al trabajador.
   Mantenerla completa para el cliente.
-- [ ] Asegurar que producción y eficiencia no aparezcan con solo mortalidad, y
+- [x] Asegurar que producción y eficiencia no aparezcan con solo mortalidad, y
   que mortalidad no aparezca con solo producción.
 - [ ] Repetir el comando y comprobar verde.
 
-## Tarea 7: integrar, documentar y cerrar
+## Tarea 7: integrar, documentar y cerrar — completada
 
 **Archivos:**
 
 - Modificar: `docs/dominio/glosario-avicola.md`
 - Actualizar casillas y estado de este plan.
 
-- [ ] Añadir al glosario la regla estable: el cliente administra estructura y
+- [x] Añadir al glosario la regla estable: el cliente administra estructura y
   opera todo su módulo; el trabajador solo recibe funcionalidades operativas y
   obtiene lectura estructural implícita.
-- [ ] Ejecutar suites dirigidas completas:
+- [x] Ejecutar suites dirigidas completas:
 
   ```powershell
   dotnet test Icarus/tests/Icarus.UnitTests
@@ -251,9 +251,9 @@ Query 5, MUI 9, Vitest y Testing Library.
   npm --prefix web run build
   ```
 
-- [ ] Revisar primero `git diff --stat`, después únicamente los diffs de esta
+- [x] Revisar primero `git diff --stat`, después únicamente los diffs de esta
   feature, y ejecutar `git diff --check`.
-- [ ] Ejecutar la puerta obligatoria:
+- [x] Ejecutar la puerta obligatoria:
 
   ```powershell
   ./verify.ps1
@@ -261,7 +261,7 @@ Query 5, MUI 9, Vitest y Testing Library.
 
   Resultado exigido: salida completa en verde. Si falla, corregir el contenido;
   nunca relajar baselines, exclusiones ni umbrales.
-- [ ] Commit previsto:
+- [x] Commit previsto:
 
   ```powershell
   git add <archivos-de-la-feature>
@@ -269,6 +269,6 @@ Query 5, MUI 9, Vitest y Testing Library.
   git push origin develop
   ```
 
-- [ ] Confirmar `develop...origin/develop` limpio salvo cambios ajenos ya
+- [x] Confirmar `develop...origin/develop` limpio salvo cambios ajenos ya
   existentes. Si el bloque no termina, crear `docs/ai/HANDOFF.md`; si termina,
   no dejar handoff pendiente.

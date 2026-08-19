@@ -166,12 +166,12 @@ public class EntitlementTests
     [Fact]
     public async Task TrabajadorConFuncionalidadAsignadaRecibe200()
     {
-        // El trabajador semilla tiene Granjas asignado (sembrado en este plan).
+        // El trabajador semilla tiene ProduccionHuevos asignado.
         var token = await LoginComo(SemillaIdentidad.EmailTrabajador);
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/produccionhuevos", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
@@ -208,11 +208,11 @@ public class EntitlementTests
     {
         var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
         var (_, tokenTrabajador, _) = await CrearTrabajadorConCuenta(
-            clienteId, ["granjas"], tokenCliente);
+            clienteId, ["produccionhuevos"], tokenCliente);
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", tokenTrabajador));
+            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/produccionhuevos", tokenTrabajador));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
@@ -281,7 +281,7 @@ public class EntitlementTests
     {
         var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
         var (emailTrabajador, tokenTrabajador, cookieTrabajador) = await CrearTrabajadorConCuenta(
-            clienteId, ["granjas"], tokenCliente);
+            clienteId, ["produccionhuevos"], tokenCliente);
         var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
         var cliente = _factory.CreateClient();
 
@@ -307,7 +307,7 @@ public class EntitlementTests
     {
         var (clienteId, tokenCliente) = await CrearClienteConCuenta(["GestionAvicola"]);
         var (emailTrabajador, _, _) = await CrearTrabajadorConCuenta(
-            clienteId, ["granjas"], tokenCliente);
+            clienteId, ["produccionhuevos"], tokenCliente);
 
         using (var alcance = _factory.Services.CreateScope())
         {

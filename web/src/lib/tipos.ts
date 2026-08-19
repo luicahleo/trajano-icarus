@@ -9,6 +9,7 @@ export type Funcionalidad =
   | 'Alimentacion'
   | 'Despachos'
   | 'Precios';
+export type FuncionalidadOperativaTrabajador = 'ProduccionHuevos' | 'Mortalidad';
 
 export interface SesionInfo {
   accessToken: string;
@@ -113,5 +114,5 @@ export interface TrabajadorResumen {
   cargo: string;
   fechaIngreso: string;
   fechaCese: string | null;
-  funcionalidades: string[];
+  funcionalidades: Funcionalidad[];
 }

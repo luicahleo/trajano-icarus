@@ -19,11 +19,17 @@ public sealed class ConsultaPermisosActuales : IConsultaPermisosActuales
     {
         if (trabajadorId is { } id)
         {
-            var asignadas = await _db.Trabajadores.IgnoreQueryFilters().AsNoTracking()
+            var contexto = await _db.Trabajadores.IgnoreQueryFilters().AsNoTracking()
                 .Where(t => t.Id == id && t.ClienteId == clienteId && t.EstaActivo)
-                .Select(t => (Funcionalidades?)t.Funcionalidades)
+                .Join(_db.Clientes.IgnoreQueryFilters().AsNoTracking().Where(c => c.EstaActivo),
+                    t => t.ClienteId, c => c.Id, (t, c) => new { t.Funcionalidades, c.ModulosHabilitados })
                 .SingleOrDefaultAsync(cancellationToken);
-            return new PermisosActuales([], NombresFuncionalidades(asignadas ?? Funcionalidades.Ninguno));
+            if (contexto is null)
+                return new PermisosActuales([], []);
+            var efectivas = contexto.Funcionalidades
+                & FuncionalidadesTrabajador.Asignables
+                & FuncionalidadesDe(contexto.ModulosHabilitados);
+            return new PermisosActuales([], NombresFuncionalidades(efectivas));
         }
 
         var modulos = await _db.Clientes.IgnoreQueryFilters().AsNoTracking()
