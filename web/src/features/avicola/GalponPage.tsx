@@ -10,17 +10,23 @@ import {
   ListItemText,
   TextField,
   Typography,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import type { EficienciaDia } from '../../lib/tipos';
+import type { EficienciaDia, MortalidadRegistro, RecogidaResumen } from '../../lib/tipos';
 import { ApiError } from '../../lib/http';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
-import { listarMortalidad, listarProduccion, obtenerEficiencia, obtenerGalpon } from './api';
+import { desactivarMortalidad, desactivarProduccion, listarMortalidad, listarProduccion, obtenerEficiencia, obtenerGalpon } from './api';
 import { hoyIso } from './constantes';
 import { formatearConteo } from './formatos';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
+import { EditarBajasDialog } from './EditarBajasDialog';
+import { EditarRecogidaDialog } from './EditarRecogidaDialog';
 
 type Evento =
   | { hora: string; tipo: 'recogida'; datos: NonNullable<Awaited<ReturnType<typeof listarProduccion>>['recogidas']>[number] }
@@ -34,6 +40,10 @@ export function GalponPage() {
   const { galponId = '' } = useParams();
   const [fecha, setFecha] = useState(hoyIso());
   const [registrandoBajas, setRegistrandoBajas] = useState(false);
+  const [recogidaEditada, setRecogidaEditada] = useState<RecogidaResumen | null>(null);
+  const [bajasEditadas, setBajasEditadas] = useState<MortalidadRegistro | null>(null);
+  const [registroAEliminar, setRegistroAEliminar] = useState<Evento | null>(null);
+  const queryClient = useQueryClient();
   const esHoy = fecha === hoyIso();
   const galpon = useQuery({ queryKey: ['avicola', 'galpon', galponId], queryFn: () => obtenerGalpon(galponId), enabled: Boolean(galponId) });
   const produccion = useQuery({ queryKey: ['avicola', 'produccion', galponId, fecha], queryFn: () => listarProduccion(galponId, fecha), enabled: Boolean(galponId) });
@@ -41,6 +51,10 @@ export function GalponPage() {
   const eficiencia = useQuery({ queryKey: ['avicola', 'eficiencia', galponId, fecha, fecha], queryFn: () => obtenerEficiencia(galponId, fecha, fecha), enabled: Boolean(galponId) });
   const puedeProduccion = useFuncionalidad('ProduccionHuevos');
   const puedeMortalidad = useFuncionalidad('Mortalidad');
+  const eliminar = useMutation({
+    mutationFn: (evento: Evento) => evento.tipo === 'recogida' ? desactivarProduccion(evento.datos.id) : desactivarMortalidad(evento.datos.id),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['avicola', 'produccion'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'galpon'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'eficiencia'] }); setRegistroAEliminar(null); },
+  });
 
   if (galpon.isLoading || produccion.isLoading || mortalidad.isLoading || eficiencia.isLoading) {
     return <Container sx={{ py: 3 }}><CircularProgress aria-label="Cargando" /></Container>;
@@ -69,9 +83,12 @@ export function GalponPage() {
     {!esHoy && <Alert severity="info" sx={{ mt: 2 }}>Día sellado: no se puede corregir</Alert>}
     {esHoy && <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, mt: 2 }}>{puedeProduccion && <Button variant="contained">Registrar recogida</Button>}{puedeMortalidad && <Button variant="contained" onClick={() => setRegistrandoBajas(true)}>Registrar bajas</Button>}</Box>}
     <Typography variant="h6" sx={{ mt: 3 }}>Total del día: {produccion.data.totalVendible} huevos vendibles · {produccion.data.totalDescarte} de descarte · {mortalidad.data.totalMuertas} bajas</Typography>
-    <List aria-label="Registros del día">{eventos.map((evento) => <ListItem key={`${evento.tipo}-${'id' in evento.datos ? evento.datos.id : evento.hora}`} secondaryAction={esHoy && <Box sx={{ display: 'flex', flexDirection: 'row' }}><Button size="small">Editar</Button><Button size="small">Eliminar</Button></Box>}>
+    <List aria-label="Registros del día">{eventos.map((evento) => <ListItem key={`${evento.tipo}-${evento.datos.id}`} secondaryAction={esHoy && ((evento.tipo === 'recogida' && puedeProduccion) || (evento.tipo === 'bajas' && puedeMortalidad)) && <Box sx={{ display: 'flex', flexDirection: 'row' }}><Button size="small" onClick={() => evento.tipo === 'recogida' ? setRecogidaEditada(evento.datos) : setBajasEditadas(evento.datos)}>Editar</Button><Button size="small" onClick={() => setRegistroAEliminar(evento)}>Eliminar</Button></Box>}>
       <ListItemText primary={evento.tipo === 'bajas' ? `${evento.hora.slice(0, 5)} — ${evento.datos.cantidadMuertas} bajas` : `${evento.hora.slice(0, 5)} — ${formatearConteo(evento.datos.cantidadMaples, evento.datos.unidadesIncompletas)}`} secondary={evento.tipo === 'recogida' && evento.datos.totalDescarte > 0 ? `descarte ${formatearConteo(evento.datos.maplesDescarte, evento.datos.unidadesDescarte)}` : undefined} />
     </ListItem>)}</List>
     <RegistrarBajasDialog galponId={galponId} abierto={registrandoBajas} alCerrar={() => setRegistrandoBajas(false)} />
+    <EditarRecogidaDialog recogida={recogidaEditada} abierto={recogidaEditada !== null} alCerrar={() => setRecogidaEditada(null)} />
+    <EditarBajasDialog registro={bajasEditadas} abierto={bajasEditadas !== null} alCerrar={() => setBajasEditadas(null)} />
+    <Dialog open={registroAEliminar !== null} onClose={() => setRegistroAEliminar(null)}><DialogTitle>Eliminar registro</DialogTitle><DialogContent>El registro se desactiva; no se borra. Si era una baja, las gallinas vuelven al inventario.</DialogContent><DialogActions><Button onClick={() => setRegistroAEliminar(null)}>Cancelar</Button><Button onClick={() => registroAEliminar && eliminar.mutate(registroAEliminar)} disabled={eliminar.isPending}>Confirmar</Button></DialogActions></Dialog>
   </Container>;
 }
