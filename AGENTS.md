@@ -69,7 +69,8 @@ no contexto obligatorio. No cargarlos en bloque.
   por cliente—, recogidas de producción con huevos de descarte, mortalidad con
   ajuste de inventario y eficiencia diaria con umbral del 70 %), con puerta de
   calidad con gates de backend. El frontend React
-  (PWA) vive bajo `web/`.
+  (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola online-first
+  (granjas, galpones, recogida, mortalidad y eficiencia).
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
 
