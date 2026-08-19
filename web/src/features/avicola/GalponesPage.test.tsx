@@ -45,6 +45,7 @@ describe('GalponesPage', () => {
     expect(screen.getByText(/4[.\u00a0]?800 \/ 5[.\u00a0]?000 gallinas/)).toBeInTheDocument();
     expect(await screen.findByText(/62.5 %|62,5 %/)).toBeInTheDocument();
     expect(await screen.findByText(/bajo umbral/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /abrir galpón 1/i })).toHaveAttribute('href', '/avicola/galpones/ga1');
   });
   test('estado vacío invita a crear', async () => { baseFetchAvicola({ 'GET /api/granjas': respuesta(200, [granja]), 'GET /api/granjas/gr1/galpones': respuesta(200, []) }); renderPagina('/avicola/galpones'); expect(await screen.findByText(/todavía no hay galpones/i)).toBeInTheDocument(); expect(screen.getByRole('button', { name: /crear el primero/i })).toBeInTheDocument(); });
   test('alta crea galpón', async () => {
