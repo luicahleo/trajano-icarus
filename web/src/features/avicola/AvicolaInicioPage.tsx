@@ -7,8 +7,7 @@ import { z } from 'zod';
 import { ApiError } from '../../lib/http';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
 import { crearGranja, listarGranjas } from './api';
-
-export const CLAVE_GRANJAS = ['avicola', 'granjas'] as const;
+import { CLAVE_GRANJAS } from './constantes';
 
 const esquema = z.object({ nombre: z.string().trim().min(1, 'Ingresá el nombre de la granja.') });
 type DatosFormulario = z.infer<typeof esquema>;
