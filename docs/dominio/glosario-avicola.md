@@ -34,6 +34,19 @@ Definidas en el spec del subproyecto 5
 | Galpón | Nave dentro de la granja que alberga **un lote** de gallinas ponedoras. Tiene capacidad máxima e inventario de gallinas vivas (`0 ≤ GallinasActuales ≤ CapacidadMaxima`). |
 | Lote | Grupo de gallinas que puebla un galpón. No hay lotes mezclados en un galpón. La `FechaNacimientoLote` es la fecha en que se pobló el galpón. |
 
+## Vacunación (SP7)
+
+Definida en el spec del subproyecto 7
+(`docs/superpowers/specs/2026-08-19-sp7-vacunacion-design.md`).
+
+| Término | Definición |
+|---|---|
+| Programa de vacunación | Plan sanitario por edad del lote, emitido por CAISY. **Catálogo global** (sin tenant): lo sube el Administrador de plataforma y cada cliente lo asigna a sus galpones. No es solo vacunas: incluye manejos (paracetamol, recorte de pico, desparasitación, traslado). |
+| Ítem de plan | Una fila del cronograma: `EdadDia` (obligatoria, > 0, única por programa), `Vacuna` (texto libre: vacuna o manejo), `ModoAplicacion` y observaciones. No hay fecha absoluta: la fecha se calcula por galpón. |
+| Asignación de plan | El cliente asigna un programa a un galpón: se materializa una tarea por ítem con `FechaProgramada = FechaNacimientoLote + EdadDia`. Al reasignar, las pendientes del plan anterior se desactivan y las completadas/canceladas quedan como historial. Nunca se borra físicamente. |
+| Tarea de vacunación | La ejecución de un ítem sobre un galpón. Estados: `Pendiente` → `Completada` o `Cancelada`. Completar registra `FechaAplicacion` (informada por el usuario, nunca futura; por defecto hoy), aves vacunadas y quién la registró. Cancelar es decisión solo del cliente, con motivo opcional. No hay reprogramación individual. |
+| Notificación de vacunación | Consulta de pendientes del tenant: vencidas y del día (`FechaProgramada <= hoy`) más próximas (7 días). Es el valor central de la feature: indica al trabajador qué toca vacunar. No hay jobs ni push. |
+
 ## Unidades
 
 | Término | Definición |
@@ -100,8 +113,8 @@ subproyecto 6 (`docs/superpowers/specs/2026-08-18-sp6-produccion-mortalidad-desi
 
 ## Pendiente
 
-Las entidades de vacunación, alimentación, despachos y precios se definen al
-migrar cada bounded context, en los subproyectos 7 y siguientes (producción y
-mortalidad ya están en SP6). Orden orientativo: SP7 vacunación →
-SP8 alimentación → SP9 despachos → SP10 precios. Cada subproyecto confirma su
-alcance en su propio spec y amplía este documento ahí; no se anticipa acá.
+Las entidades de alimentación, despachos y precios se definen al migrar cada
+bounded context, en los subproyectos siguientes (producción y mortalidad en
+SP6, vacunación en SP7). Orden orientativo: SP8 alimentación → SP9 despachos →
+SP10 precios. Cada subproyecto confirma su alcance en su propio spec y amplía
+este documento ahí; no se anticipa acá.
