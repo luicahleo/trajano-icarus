@@ -23,7 +23,7 @@ import { ApiError } from '../../lib/http';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
 import { desactivarMortalidad, desactivarProduccion, listarMortalidad, listarProduccion, obtenerEficiencia, obtenerGalpon, listarTareasVacunacion, quitarPlanVacunacion } from './api';
 import { CLAVE_NOTIFICACION_VACUNACION, CLAVE_TAREAS_VACUNACION, hoyIso } from './constantes';
-import { formatearConteo } from './formatos';
+import { formatearConteo, clasificarTarea } from './formatos';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
 import { RegistrarRecogidaDialog } from './RegistrarRecogidaDialog';
 import { EditarBajasDialog } from './EditarBajasDialog';
@@ -36,6 +36,13 @@ type Evento =
 
 function diaEficiencia(dias: EficienciaDia[] | undefined): EficienciaDia | undefined {
   return dias?.[0];
+}
+
+function etiquetaEstado(t: TareaVacunacionResumen): { etiqueta: string; color: 'default' | 'success' | 'error' | 'warning' | 'info' } {
+  if (t.estado === 'Completada') return { etiqueta: 'Completada', color: 'success' };
+  if (t.estado === 'Cancelada') return { etiqueta: 'Cancelada', color: 'default' };
+  const clasificacion = clasificarTarea(t.fechaProgramada);
+  return { etiqueta: clasificacion, color: clasificacion === 'Vencida' ? 'error' : clasificacion === 'Hoy' ? 'warning' : 'info' };
 }
 
 export function GalponPage() {
@@ -119,7 +126,7 @@ export function GalponPage() {
         {(tareasVacunacion.data ?? []).map((t: TareaVacunacionResumen) => (
           <ListItem key={t.id}>
             <ListItemText
-              primary={<>{t.vacuna} <Chip size="small" label={t.estado} color={t.estado === 'Completada' ? 'success' : t.estado === 'Cancelada' ? 'default' : 'warning'} /></>}
+              primary={<>{t.vacuna} <Chip size="small" label={etiquetaEstado(t).etiqueta} color={etiquetaEstado(t).color} /></>}
               secondary={`Día ${t.edadDia} · programada ${t.fechaProgramada}${t.fechaAplicacion ? ` · aplicada ${t.fechaAplicacion}` : ''}${t.avesVacunadas ? ` · ${t.avesVacunadas} aves` : ''}${t.motivoCancelacion ? ` · motivo: ${t.motivoCancelacion}` : ''}`}
             />
           </ListItem>
