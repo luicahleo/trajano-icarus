@@ -38,11 +38,12 @@ public class DefinirFuncionalidadesTrabajadorHandlerTests
         _trabajadores.ObtenerPorIdAsync(trabajador.Id, Arg.Any<CancellationToken>()).Returns(trabajador);
 
         await _handler.Handle(
-            new DefinirFuncionalidadesTrabajadorCommand(clienteId, trabajador.Id, ["ProduccionHuevos", "mortalidad"]),
+            new DefinirFuncionalidadesTrabajadorCommand(clienteId, trabajador.Id, ["ProduccionHuevos", "mortalidad", "Vacunacion"]),
             CancellationToken.None);
 
         Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.ProduccionHuevos));
         Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Mortalidad));
+        Assert.True(trabajador.Funcionalidades.HasFlag(Funcionalidades.Vacunacion));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -67,7 +68,6 @@ public class DefinirFuncionalidadesTrabajadorHandlerTests
     [Theory]
     [InlineData("Granjas")]
     [InlineData("Galpones")]
-    [InlineData("Vacunacion")]
     [InlineData("Alimentacion")]
     [InlineData("Despachos")]
     [InlineData("Precios")]

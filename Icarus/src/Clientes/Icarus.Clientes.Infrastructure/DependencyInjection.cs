@@ -37,6 +37,7 @@ public static class DependencyInjection
         servicios.AddScoped<IConsultaPermisosActuales, ConsultaPermisosActuales>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadHabilitada>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorAlgunaFuncionalidadHabilitada>();
+        servicios.AddScoped<IAuthorizationHandler, ManejadorCatalogoVacunacion>();
 
         politicasEstructura(servicios);
 
@@ -63,6 +64,9 @@ public static class DependencyInjection
         servicios.AddAuthorizationBuilder().AddPolicy("GestionAvicolaEstructura", builder => builder
             .RequireAuthenticatedUser()
             .AddRequirements(new RequisitoAlgunaFuncionalidadHabilitada(
-                Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad)));
+                Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad | Funcionalidades.Vacunacion)));
+        servicios.AddAuthorizationBuilder().AddPolicy(PoliticasClientes.CatalogoVacunacion, builder => builder
+            .RequireAuthenticatedUser()
+            .AddRequirements(new RequisitoCatalogoVacunacion()));
     }
 }

@@ -5,6 +5,8 @@ using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Produccion;
 using Icarus.GestionAvicola.Application.Mortalidad;
 using Icarus.GestionAvicola.Application.Eficiencia;
+using Icarus.GestionAvicola.Application.Vacunacion;
+using Icarus.Identity.Infrastructure.Autenticacion;
 using MediatR;
 
 namespace Icarus.Host.Endpoints;
@@ -17,6 +19,7 @@ public static class GestionAvicolaEndpoints
         var politicaGalpones = PoliticasClientes.Para(Funcionalidades.Galpones);
         var politicaProduccion = PoliticasClientes.Para(Funcionalidades.ProduccionHuevos);
         var politicaMortalidad = PoliticasClientes.Para(Funcionalidades.Mortalidad);
+        var politicaVacunacion = PoliticasClientes.Para(Funcionalidades.Vacunacion);
         const string politicaEstructura = "GestionAvicolaEstructura";
         var granjas = app.MapGroup("/granjas");
         granjas.MapPost("/", async (CrearGranjaRequest cuerpo, ISender mediator) =>
@@ -46,8 +49,81 @@ public static class GestionAvicolaEndpoints
         var mortalidad = app.MapGroup("/mortalidad");
         mortalidad.MapPut("/{id:guid}", async (Guid id, EditarMortalidadRequest c, ISender mediator) => { await mediator.Send(new EditarMortalidadCommand(id, c.Hora, c.CantidadMuertas)); return Results.NoContent(); }).RequireAuthorization(politicaMortalidad);
         mortalidad.MapDelete("/{id:guid}", async (Guid id, ISender mediator) => { await mediator.Send(new DesactivarMortalidadCommand(id)); return Results.NoContent(); }).RequireAuthorization(politicaMortalidad);
+
+        // Catálogo global de programas (spec SP7): escritura solo
+        // Administrador; lectura con la política CatalogoVacunacion
+        // (funcionalidad Vacunacion o rol de plataforma).
+        var programasVacunacion = app.MapGroup("/vacunacion/programas");
+        programasVacunacion.MapPost("/", async (CrearProgramaVacunacionRequest c, ISender mediator) =>
+        {
+            var id = await mediator.Send(new CrearProgramaVacunacionCommand(c.Nombre, c.FechaEmision, c.CantidadAves, c.Observaciones));
+            return Results.Created($"/vacunacion/programas/{id}", new { id });
+        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
+        programasVacunacion.MapGet("/", async (bool? incluirInactivos, ISender mediator) =>
+            Results.Ok(await mediator.Send(new ListarProgramasVacunacionQuery(incluirInactivos ?? false))))
+            .RequireAuthorization(PoliticasClientes.CatalogoVacunacion);
+        programasVacunacion.MapGet("/{id:guid}", async (Guid id, ISender mediator) =>
+            Results.Ok(await mediator.Send(new ObtenerProgramaVacunacionQuery(id))))
+            .RequireAuthorization(PoliticasClientes.CatalogoVacunacion);
+        programasVacunacion.MapPut("/{id:guid}", async (Guid id, ActualizarProgramaVacunacionRequest c, ISender mediator) =>
+        {
+            await mediator.Send(new ActualizarProgramaVacunacionCommand(id, c.Nombre, c.FechaEmision, c.CantidadAves, c.Observaciones));
+            return Results.NoContent();
+        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
+        programasVacunacion.MapDelete("/{id:guid}", async (Guid id, ISender mediator) =>
+        {
+            await mediator.Send(new DesactivarProgramaVacunacionCommand(id));
+            return Results.NoContent();
+        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
+        // Subida del Excel que reemplaza el cronograma completo. Sin
+        // antiforgery: la autenticación es Bearer, no cookie.
+        programasVacunacion.MapPost("/{id:guid}/cronograma-excel", async (Guid id, IFormFile archivo, ISender mediator, CancellationToken cancellationToken) =>
+        {
+            await using var contenido = archivo.OpenReadStream();
+            var importados = await mediator.Send(new ImportarCronogramaExcelCommand(id, contenido), cancellationToken);
+            return Results.Ok(new { itemsImportados = importados });
+        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador).DisableAntiforgery();
+
+        // Asignar/quitar plan: decisión estructural del cliente (los
+        // trabajadores nunca tienen la funcionalidad Galpones).
+        galpones.MapPost("/{galponId:guid}/plan-vacunacion", async (Guid galponId, AsignarPlanVacunacionRequest c, ISender mediator) =>
+        {
+            await mediator.Send(new AsignarPlanVacunacionCommand(galponId, c.ProgramaId));
+            return Results.NoContent();
+        }).RequireAuthorization(politicaGalpones);
+        galpones.MapDelete("/{galponId:guid}/plan-vacunacion", async (Guid galponId, ISender mediator) =>
+        {
+            await mediator.Send(new QuitarPlanVacunacionCommand(galponId));
+            return Results.NoContent();
+        }).RequireAuthorization(politicaGalpones);
+        galpones.MapGet("/{galponId:guid}/vacunacion/tareas", async (Guid galponId, ISender mediator) =>
+            Results.Ok(await mediator.Send(new ListarTareasPorGalponQuery(galponId))))
+            .RequireAuthorization(politicaVacunacion);
+
+        var vacunacion = app.MapGroup("/vacunacion");
+        vacunacion.MapGet("/tareas", async (ISender mediator) =>
+            Results.Ok(await mediator.Send(new ListarNotificacionVacunacionQuery())))
+            .RequireAuthorization(politicaVacunacion);
+        vacunacion.MapPost("/tareas/{id:guid}/completar", async (Guid id, CompletarTareaVacunacionRequest c, ISender mediator) =>
+        {
+            await mediator.Send(new CompletarTareaVacunacionCommand(id, c.FechaAplicacion, c.AvesVacunadas, c.Observaciones));
+            return Results.NoContent();
+        }).RequireAuthorization(politicaVacunacion);
+        // Cancelar: solo cliente (AND de las dos políticas: rol Cliente +
+        // funcionalidad Vacunacion del módulo).
+        vacunacion.MapPost("/tareas/{id:guid}/cancelar", async (Guid id, CancelarTareaVacunacionRequest c, ISender mediator) =>
+        {
+            await mediator.Send(new CancelarTareaVacunacionCommand(id, c.Motivo));
+            return Results.NoContent();
+        }).RequireAuthorization(PoliticasAutorizacion.SoloCliente, politicaVacunacion);
+
         return app;
     }
+    private sealed record CrearProgramaVacunacionRequest(string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones);
+    private sealed record ActualizarProgramaVacunacionRequest(string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones);
+    private sealed record AsignarPlanVacunacionRequest(Guid ProgramaId);
+    private sealed record CompletarTareaVacunacionRequest(DateOnly? FechaAplicacion, int? AvesVacunadas, string? Observaciones);
+    private sealed record CancelarTareaVacunacionRequest(string? Motivo);
     private sealed record CrearGranjaRequest(string Nombre);
     private sealed record RenombrarGranjaRequest(string Nombre);
     private sealed record CrearGalponRequest(string Numero, int CapacidadMaxima, int GallinasActuales, DateOnly FechaNacimientoLote, string? Descripcion);

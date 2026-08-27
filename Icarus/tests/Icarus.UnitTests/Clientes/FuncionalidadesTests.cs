@@ -50,6 +50,7 @@ public class FuncionalidadesTests
     [Theory]
     [InlineData(Funcionalidades.ProduccionHuevos)]
     [InlineData(Funcionalidades.Mortalidad)]
+    [InlineData(Funcionalidades.Vacunacion)]
     public void SoloFuncionalidadesOperativasSonAsignables(Funcionalidades funcionalidad)
     {
         Assert.True(FuncionalidadesTrabajador.EsAsignable(funcionalidad));
@@ -58,12 +59,19 @@ public class FuncionalidadesTests
     [Theory]
     [InlineData(Funcionalidades.Granjas)]
     [InlineData(Funcionalidades.Galpones)]
-    [InlineData(Funcionalidades.Vacunacion)]
     [InlineData(Funcionalidades.Alimentacion)]
     [InlineData(Funcionalidades.Despachos)]
     [InlineData(Funcionalidades.Precios)]
     public void FuncionalidadesEstructuralesYFuturasNoSonAsignables(Funcionalidades funcionalidad)
     {
         Assert.False(FuncionalidadesTrabajador.EsAsignable(funcionalidad));
+    }
+
+    [Fact]
+    public void AsignablesIncluyeProduccionMortalidadYVacunacion()
+    {
+        Assert.Equal(
+            Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad | Funcionalidades.Vacunacion,
+            FuncionalidadesTrabajador.Asignables);
     }
 }
