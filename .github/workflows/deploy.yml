@@ -1,0 +1,329 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: Escribe PRODUCCION para confirmar el despliegue
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: trajano-icarus-production
+  cancel-in-progress: false
+
+env:
+  RELEASE_SHA: ${{ github.sha }}
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master' && inputs.confirmar == 'PRODUCCION'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Verificar CI verde del commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          conclusion="$(
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&branch=master&event=push&per_page=20" \
+              --jq '.workflow_runs | sort_by(.updated_at) | last | .conclusion // ""'
+          )"
+          if [ "$conclusion" != "success" ]; then
+            echo "El commit de master no tiene un CI verde."
+            exit 1
+          fi
+
+      - name: Descargar código validado
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: Icarus/global.json
+
+      - name: Configurar Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Publicar API
+        run: dotnet publish src/Host/Icarus.Host/Icarus.Host.csproj -c Release -o ../payload/web
+        working-directory: Icarus
+
+      - name: Compilar PWA
+        run: npm ci && npm run build
+        working-directory: web
+
+      - name: Preparar y validar payload
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p payload/web/wwwroot
+          cp -r web/dist/. payload/web/wwwroot/
+          cp Dockerfile.web docker-compose.yml payload/
+          cp deploy/.dockerignore payload/.dockerignore
+          test -s payload/web/Icarus.Host.dll
+          test -s payload/web/wwwroot/index.html
+          test -s payload/Dockerfile.web
+          test -s payload/docker-compose.yml
+          test -s payload/.dockerignore
+
+      - name: Smoke de la imagen Linux final
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          imagen="trajano-icarus:${RELEASE_SHA}-runner"
+          contenedor="trajano-icarus-runner-smoke-${GITHUB_RUN_ID}"
+          limpiar() {
+            if docker container inspect "$contenedor" >/dev/null 2>&1; then
+              docker rm -f "$contenedor" >/dev/null
+            fi
+          }
+          diagnosticar() {
+            docker inspect --format '{{json .State}}' "$contenedor"
+            docker logs --tail 200 "$contenedor"
+          }
+          trap limpiar EXIT
+          docker build --file payload/Dockerfile.web --tag "trajano-icarus:${RELEASE_SHA}-runner" payload
+          docker run --detach --name "$contenedor" --restart=no \
+            --env ASPNETCORE_ENVIRONMENT=Production \
+            --env Jwt__Clave=clave-smoke-runner-solo-pruebas-0123456789abcdef \
+            --publish 127.0.0.1:18080:8080 "$imagen"
+          for intento in $(seq 1 24); do
+            estado="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$contenedor")"
+            if [ "$estado" = healthy ] && curl --fail --silent --show-error -H 'Host: icarusv2.trajano.online' --max-time 5 http://127.0.0.1:18080/health >/dev/null; then
+              exit 0
+            fi
+            if [ "$estado" = exited ] || [ "$estado" = dead ]; then
+              break
+            fi
+            sleep 5
+          done
+          diagnosticar
+          exit 1
+
+      - name: Configurar agente SSH
+        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Instalar clave pública conocida del VPS
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 0600 ~/.ssh/known_hosts
+          ssh-keygen -F "$VPS_HOST" -f ~/.ssh/known_hosts >/dev/null
+
+      - name: Sincronizar release aislado
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -Eeuo pipefail
+          destino="$VPS_USER@$VPS_HOST"
+          release="/var/apps/trajano-icarus/releases/${RELEASE_SHA}"
+          timeout 60s ssh -o BatchMode=yes -o ConnectTimeout=15 "$destino" "mkdir -p '$release'"
+          rsync -az --delete --timeout=60 -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' payload/ "$destino:$release/"
+
+      - name: Desplegar candidato y promover con rollback
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -Eeuo pipefail
+          destino="$VPS_USER@$VPS_HOST"
+          timeout 15m ssh -o BatchMode=yes -o ConnectTimeout=15 "$destino" \
+            "bash -s -- '${RELEASE_SHA}'" <<'ENDSSH'
+          set -Eeuo pipefail
+
+          sha="$1"
+          raiz='/var/apps/trajano-icarus'
+          release="$raiz/releases/$sha"
+          candidato="trajano-icarus-candidate-${sha:0:12}"
+          contexto_build=''
+
+          limpiar_contexto_build() {
+            if [[ -n "$contexto_build" && "$contexto_build" == "$raiz"/build-context-* ]]; then
+              rm -rf -- "$contexto_build"
+            fi
+          }
+          trap limpiar_contexto_build EXIT
+
+          test -s "$release/web/Icarus.Host.dll"
+          test -s "$release/web/wwwroot/index.html"
+          test -s "$release/Dockerfile.web"
+          test -s "$release/docker-compose.yml"
+          test -s "$release/.dockerignore"
+          test -s "$raiz/.env"
+
+          conexion_icarus_valida=false
+          clave_jwt_valida=false
+          while IFS='=' read -r clave valor; do
+            if [ "$clave" = 'ConnectionStrings__Icarus' ] && [ -n "$valor" ]; then
+              conexion_icarus_valida=true
+            fi
+            if [ "$clave" = 'Jwt__Clave' ] && [ "${#valor}" -ge 32 ]; then
+              clave_jwt_valida=true
+            fi
+          done < "$raiz/.env"
+          if [ "$conexion_icarus_valida" != true ] || [ "$clave_jwt_valida" != true ]; then
+            echo 'La configuración productiva requerida no está disponible en .env.'
+            exit 1
+          fi
+
+          if docker container inspect trajano-icarus >/dev/null 2>&1; then
+            imagen_anterior="$(docker inspect --format '{{.Config.Image}}' trajano-icarus)"
+          else
+            imagen_anterior=''
+          fi
+
+          diagnosticar() {
+            nombre="$1"
+            archivo="$2"
+            {
+              docker inspect --format '{{json .State}}' "$nombre"
+              docker logs --tail 200 "$nombre"
+            } 2>&1 | tee "$archivo"
+            chmod 0600 "$archivo"
+          }
+
+          esperar_contenedor() {
+            nombre="$1"
+            puerto="$2"
+            for intento in $(seq 1 30); do
+              if estado="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$nombre" 2>/dev/null)"; then
+                :
+              else
+                estado=ausente
+              fi
+              if [ "$estado" = healthy ] && curl --fail --silent --show-error -H 'Host: icarusv2.trajano.online' --max-time 5 "http://127.0.0.1:${puerto}/health" >/dev/null; then
+                return 0
+              fi
+              if [ "$estado" = exited ] || [ "$estado" = dead ] || [ "$estado" = ausente ]; then
+                break
+              fi
+              echo "Esperando salud del contenedor ($intento/30)..."
+              sleep 5
+            done
+            return 1
+          }
+
+          esperar_externo() {
+            for intento in $(seq 1 12); do
+              if curl --fail --silent --show-error --max-time 10 https://icarusv2.trajano.online/health >/dev/null; then
+                return 0
+              fi
+              echo "Esperando salud HTTPS ($intento/12)..."
+              sleep 5
+            done
+            return 1
+          }
+
+          esperar_activo() {
+            for intento in $(seq 1 30); do
+              estado="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' trajano-icarus)"
+              if [ "$estado" = healthy ] && curl --fail --silent --show-error -H 'Host: icarusv2.trajano.online' --max-time 5 http://127.0.0.1:8085/health >/dev/null; then
+                return 0
+              fi
+              sleep 5
+            done
+            return 1
+          }
+
+          rollback() {
+            echo 'El despliegue falló; iniciando rollback.'
+            case "$imagen_anterior" in
+              trajano-icarus:*) etiqueta_anterior="${imagen_anterior#trajano-icarus:}" ;;
+              *) echo 'No existe una imagen anterior válida para restaurar.'; return 1 ;;
+            esac
+            TRAJANOICARUS_IMAGE_TAG="$etiqueta_anterior" docker compose --file "$raiz/docker-compose.yml" --project-directory "$raiz" up -d --no-build --force-recreate trajano-icarus
+            esperar_activo && esperar_externo
+          }
+
+          install -m 0644 "$release/.dockerignore" "$raiz/.dockerignore"
+          TRAJANOICARUS_IMAGE_TAG="$sha" docker compose --file "$release/docker-compose.yml" --project-directory "$raiz" config --quiet
+
+          contexto_build="$(mktemp -d "$raiz/build-context-${sha:0:12}.XXXXXX")"
+          cp -a "$release/." "$contexto_build/"
+
+          if [ -s "$raiz/current-release" ]; then
+            sha_anterior="$(tr -d '\r\n' < "$raiz/current-release")"
+            if [[ "$sha_anterior" =~ ^[0-9a-f]{40}$ ]]; then
+              assets_anteriores="$raiz/releases/$sha_anterior/web/wwwroot/assets"
+              if [ -d "$assets_anteriores" ]; then
+                cp -an "$assets_anteriores/." "$contexto_build/web/wwwroot/assets/"
+                echo 'Assets de la versión anterior añadidos al candidato.'
+              fi
+            fi
+          fi
+
+          docker build --file "$contexto_build/Dockerfile.web" --tag "trajano-icarus:$sha" "$contexto_build"
+          limpiar_contexto_build
+          contexto_build=''
+
+          if docker container inspect "$candidato" >/dev/null 2>&1; then
+            docker rm -f "$candidato" >/dev/null
+          fi
+
+          echo 'Validando candidato aislado.'
+          docker run --detach --name "$candidato" --restart=no \
+            --env-file "$raiz/.env" \
+            --env ASPNETCORE_ENVIRONMENT=Production \
+            --env ASPNETCORE_HTTP_PORTS=8080 \
+            --env TZ=America/La_Paz \
+            --env Migraciones__EjecutarAlArranque=true \
+            --network trajano-shared-network \
+            --publish 127.0.0.1:18085:8080 \
+            "trajano-icarus:$sha"
+
+          if ! esperar_contenedor "$candidato" 18085; then
+            diagnosticar "$candidato" "$release/candidate-diagnostics.log"
+            docker rm -f "$candidato" >/dev/null
+            exit 1
+          fi
+          docker rm -f "$candidato" >/dev/null
+
+          echo 'Promoviendo candidato validado.'
+          install -m 0644 "$release/Dockerfile.web" "$raiz/Dockerfile.web"
+          install -m 0644 "$release/docker-compose.yml" "$raiz/docker-compose.yml"
+          if ! TRAJANOICARUS_IMAGE_TAG="$sha" docker compose --file "$raiz/docker-compose.yml" --project-directory "$raiz" up -d --no-build --force-recreate trajano-icarus; then
+            rollback
+            exit 1
+          fi
+          if ! esperar_activo; then
+            diagnosticar trajano-icarus "$release/promotion-diagnostics.log"
+            rollback
+            exit 1
+          fi
+          echo 'Validando https://icarusv2.trajano.online/health después de promover.'
+          if ! esperar_externo; then
+            diagnosticar trajano-icarus "$release/external-diagnostics.log"
+            rollback
+            exit 1
+          fi
+
+          docker image tag "trajano-icarus:$sha" trajano-icarus:latest
+          printf '%s\n' "$sha" > "$raiz/current-release"
+          echo 'Despliegue validado correctamente.'
+          ENDSSH

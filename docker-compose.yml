@@ -1,0 +1,32 @@
+# Producción VPS Trajano. La imagen se construye y valida por SHA desde el workflow.
+# Desarrollo local: docker-compose.dev.yml.
+services:
+  trajano-icarus:
+    image: trajano-icarus:${TRAJANOICARUS_IMAGE_TAG:-latest}
+    container_name: trajano-icarus
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file: .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_HTTP_PORTS: "8080"
+      TZ: "America/La_Paz"
+      Migraciones__EjecutarAlArranque: "true"
+    ports:
+      - "127.0.0.1:8085:8080"
+    networks: [trajano-shared-network]
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Host: icarusv2.trajano.online' http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  trajano-shared-network:
+    external: true

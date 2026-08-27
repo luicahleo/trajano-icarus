@@ -1,0 +1,22 @@
+# Dockerfile de producción de trajano-icarus (estándar VPS Trajano).
+# Runtime-only: copia el payload publicado por CI (binarios .NET + wwwroot de la PWA).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:1fa23fc4872d95fd71c2833ebe65d7e84a43b2d51a31d119516852f13d9505a7
+
+WORKDIR /app
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY web/ .
+
+ENV ASPNETCORE_HTTP_PORTS=8080
+EXPOSE 8080
+
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=12 \
+  CMD curl -fsS -H 'Host: icarusv2.trajano.online' http://localhost:8080/health || exit 1
+
+USER app
+
+ENTRYPOINT ["dotnet", "Icarus.Host.dll"]
