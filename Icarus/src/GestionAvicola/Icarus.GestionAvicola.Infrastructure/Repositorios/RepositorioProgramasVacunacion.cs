@@ -36,4 +36,9 @@ public sealed class RepositorioProgramasVacunacion(GestionAvicolaDbContext db) :
             : db.ProgramasVacunacion;
         return await consulta.OrderBy(p => p.Nombre).ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> ObtenerNombresAsync(
+        CancellationToken cancellationToken = default) =>
+        await db.ProgramasVacunacion.IgnoreQueryFilters()
+            .ToDictionaryAsync(p => p.Id, p => p.Nombre, cancellationToken);
 }

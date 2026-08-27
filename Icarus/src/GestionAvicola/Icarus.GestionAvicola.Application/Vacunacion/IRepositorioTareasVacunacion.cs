@@ -33,7 +33,8 @@ public interface IRepositorioTareasVacunacion
 public sealed record TareaVacunacionResumen(
     Guid Id, Guid GalponId, int EdadDia, string Vacuna, string? ModoAplicacion,
     DateOnly FechaProgramada, string Estado, DateOnly? FechaAplicacion, int? AvesVacunadas,
-    string? ObservacionesProgramadas, string? ObservacionesAplicacion, string? MotivoCancelacion);
+    string? ObservacionesProgramadas, string? ObservacionesAplicacion, string? MotivoCancelacion,
+    string? ProgramaNombre);
 
 public sealed record NotificacionVacunacionResumen(
     IReadOnlyList<TareaVacunacionResumen> VencidasYHoy,

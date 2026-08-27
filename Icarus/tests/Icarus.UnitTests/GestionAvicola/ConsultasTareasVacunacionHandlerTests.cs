@@ -14,16 +14,20 @@ public class ConsultasTareasVacunacionHandlerTests
 
     private readonly IRepositorioGalpones _galpones = Substitute.For<IRepositorioGalpones>();
     private readonly IRepositorioTareasVacunacion _tareas = Substitute.For<IRepositorioTareasVacunacion>();
+    private readonly IRepositorioProgramasVacunacion _programas = Substitute.For<IRepositorioProgramasVacunacion>();
     private readonly ICurrentUser _usuario = Substitute.For<ICurrentUser>();
 
     private static TareaVacunacion Tarea(Guid galponId, Guid clienteId, DateOnly fechaProgramada, string vacuna) =>
         new(galponId, clienteId, Guid.NewGuid(), Guid.NewGuid(), 3, vacuna, null, null, fechaProgramada);
 
+    private static Dictionary<Guid, string> Nombres(params (Guid Id, string Nombre)[] pares) =>
+        pares.ToDictionary(p => p.Id, p => p.Nombre);
+
     [Fact]
     public async Task HistorialDeGalponAjenoLanzaNotFound()
     {
         _galpones.ObtenerPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Galpon?)null);
-        var handler = new ListarTareasPorGalponHandler(_galpones, _tareas);
+        var handler = new ListarTareasPorGalponHandler(_galpones, _tareas, _programas);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
             handler.Handle(new(Guid.NewGuid()), CancellationToken.None));
@@ -41,13 +45,16 @@ public class ConsultasTareasVacunacionHandlerTests
         var pendiente = Tarea(galpon.Id, galpon.ClienteId, Hoy.AddDays(5), "B");
         _tareas.ListarPorGalponAsync(galpon.Id, Arg.Any<CancellationToken>())
             .Returns([pendiente, completada]);
-        var handler = new ListarTareasPorGalponHandler(_galpones, _tareas);
+        _programas.ObtenerNombresAsync(Arg.Any<CancellationToken>())
+            .Returns(Nombres((pendiente.ProgramaVacunacionId, "PLAN CAISY 1000")));
+        var handler = new ListarTareasPorGalponHandler(_galpones, _tareas, _programas);
 
         var historial = await handler.Handle(new(galpon.Id), CancellationToken.None);
 
         Assert.Equal(2, historial.Count);
         Assert.Equal("Completada", historial[0].Estado);
         Assert.Equal("Pendiente", historial[1].Estado);
+        Assert.Equal("PLAN CAISY 1000", historial[1].ProgramaNombre);
     }
 
     [Fact]
@@ -61,12 +68,15 @@ public class ConsultasTareasVacunacionHandlerTests
         var proxima = Tarea(galponId, clienteId, Hoy.AddDays(5), "PROXIMA");
         _tareas.ListarNotificacionAsync(clienteId, Hoy, Hoy.AddDays(7), Arg.Any<CancellationToken>())
             .Returns([proxima, vencida, deHoy]);
-        var handler = new ListarNotificacionVacunacionHandler(_tareas, _usuario);
+        _programas.ObtenerNombresAsync(Arg.Any<CancellationToken>())
+            .Returns(Nombres((proxima.ProgramaVacunacionId, "PLAN CAISY 1000")));
+        var handler = new ListarNotificacionVacunacionHandler(_tareas, _programas, _usuario);
 
         var notificacion = await handler.Handle(new(), CancellationToken.None);
 
         Assert.Equal(["VENCIDA", "DE HOY"], notificacion.VencidasYHoy.Select(t => t.Vacuna));
         Assert.Equal(["PROXIMA"], notificacion.Proximas.Select(t => t.Vacuna));
+        Assert.Equal("PLAN CAISY 1000", notificacion.Proximas[0].ProgramaNombre);
         await _tareas.Received(1).ListarNotificacionAsync(clienteId, Hoy, Hoy.AddDays(7), Arg.Any<CancellationToken>());
     }
 }

@@ -40,8 +40,8 @@ describe('VacunacionNotificacion', () => {
     const isoAyer = `${ayer.getFullYear()}-${String(ayer.getMonth() + 1).padStart(2, '0')}-${String(ayer.getDate()).padStart(2, '0')}`;
     fetchConSesion(['Vacunacion'], {
       'GET /api/vacunacion/tareas': respuesta(200, {
-        vencidasYHoy: [{ id: 't1', galponId: 'ga1', edadDia: 3, vacuna: 'BIO COCCIVET R', modoAplicacion: null, fechaProgramada: isoAyer, estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null, observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null }],
-        proximas: [{ id: 't2', galponId: 'ga1', edadDia: 10, vacuna: 'HIPRAVIAR B1/H120', modoAplicacion: null, fechaProgramada: hoyIso(), estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null, observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null }],
+        vencidasYHoy: [{ id: 't1', galponId: 'ga1', edadDia: 3, vacuna: 'BIO COCCIVET R', modoAplicacion: null, fechaProgramada: isoAyer, estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null, observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null, programaNombre: 'PLAN CAISY 1000' }],
+        proximas: [{ id: 't2', galponId: 'ga1', edadDia: 10, vacuna: 'HIPRAVIAR B1/H120', modoAplicacion: null, fechaProgramada: hoyIso(), estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null, observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null, programaNombre: 'PLAN CAISY 1000' }],
       }),
     });
     renderNotificacion();

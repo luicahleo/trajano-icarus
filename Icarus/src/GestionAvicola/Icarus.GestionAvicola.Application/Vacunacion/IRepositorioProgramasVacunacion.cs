@@ -24,6 +24,10 @@ public interface IRepositorioProgramasVacunacion
     Task<bool> ExisteNombreAsync(string nombre, Guid? excluyendoId = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProgramaVacunacion>> ListarAsync(bool incluirInactivos, CancellationToken cancellationToken = default);
+
+    // Nombres del catálogo (incluidos inactivos) para decorar tareas: el
+    // historial sanitario no pierde el nombre aunque el programa se desactive.
+    Task<IReadOnlyDictionary<Guid, string>> ObtenerNombresAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed record ItemPlanVacunacionResumen(

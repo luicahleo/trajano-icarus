@@ -84,6 +84,7 @@ export function GalponPage() {
     ...(produccion.data?.recogidas ?? []).map((datos) => ({ hora: datos.hora ?? '', tipo: 'recogida' as const, datos })),
   ].sort((a, b) => a.hora.localeCompare(b.hora));
   const dia = diaEficiencia(eficiencia.data?.dias);
+  const planVigente = (tareasVacunacion.data ?? []).find((t) => t.estado === 'Pendiente')?.programaNombre ?? null;
 
   return <Container sx={{ py: 2 }}>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { sm: 'center' }, gap: 1 }}>
@@ -102,7 +103,7 @@ export function GalponPage() {
     <EditarRecogidaDialog recogida={recogidaEditada} abierto={recogidaEditada !== null} alCerrar={() => setRecogidaEditada(null)} />
     <EditarBajasDialog registro={bajasEditadas} abierto={bajasEditadas !== null} alCerrar={() => setBajasEditadas(null)} />
     <Dialog open={registroAEliminar !== null} onClose={() => setRegistroAEliminar(null)}><DialogTitle>Eliminar registro</DialogTitle><DialogContent>El registro se desactiva; no se borra. Si era una baja, las gallinas vuelven al inventario.</DialogContent><DialogActions><Button onClick={() => setRegistroAEliminar(null)}>Cancelar</Button><Button onClick={() => registroAEliminar && eliminar.mutate(registroAEliminar)} disabled={eliminar.isPending}>Confirmar</Button></DialogActions></Dialog>
-    {puedeVacunacion && <Box component="section" sx={{ mt: 4 }}>
+      {puedeVacunacion && <Box component="section" sx={{ mt: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">Vacunación</Typography>
         {puedeEstructura && <Box sx={{ display: 'flex', gap: 1 }}>
@@ -110,6 +111,9 @@ export function GalponPage() {
           {(tareasVacunacion.data ?? []).some((t) => t.estado === 'Pendiente') && <Button size="small" color="error" onClick={() => quitarPlan.mutate()} disabled={quitarPlan.isPending}>Quitar plan</Button>}
         </Box>}
       </Box>
+      <Typography variant="body2" color={planVigente ? 'text.primary' : 'text.secondary'} sx={{ my: 1 }}>
+        {planVigente ? `Plan asignado: ${planVigente}` : 'Sin plan asignado'}
+      </Typography>
       {tareasVacunacion.isError && <Alert severity="error">No se pudo cargar la vacunación.</Alert>}
       <List aria-label="Historial de vacunación">
         {(tareasVacunacion.data ?? []).map((t: TareaVacunacionResumen) => (

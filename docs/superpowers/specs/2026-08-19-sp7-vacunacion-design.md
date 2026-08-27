@@ -316,7 +316,7 @@ Patrón existente: TanStack Query + MUI, online-first, páginas diferidas,
 - **Cliente**: acción "Asignar plan de vacunación" en la pantalla del galpón
   (selector del catálogo; confirmación que advierte cuántas pendientes del
   plan anterior se desactivarán); sección "Vacunación" del galpón con el
-  historial de tareas; vista de vacunación en `/avicola` con `VencidasYHoy` y
+  plan asignado (nombre del programa vigente) y el historial de tareas; vista de vacunación en `/avicola` con `VencidasYHoy` y
   `Proximas` agrupadas por galpón; completar (fecha editable con default hoy,
   aves vacunadas, observaciones) y cancelar (motivo).
 - **Trabajador con `Vacunacion`**: la vista de tareas (sin asignar ni

@@ -27,7 +27,7 @@ export function VacunacionNotificacion({ galpones }: { galpones: Galpon[] }) {
     }>
       <ListItemText
         primary={`Galpón ${numeroGalpon(tarea.galponId)} — ${tarea.vacuna}`}
-        secondary={`Día ${tarea.edadDia} · programada ${tarea.fechaProgramada}${tarea.modoAplicacion ? ` · ${tarea.modoAplicacion}` : ''}`}
+        secondary={`Plan ${tarea.programaNombre ?? '—'} · Día ${tarea.edadDia} · programada ${tarea.fechaProgramada}${tarea.modoAplicacion ? ` · ${tarea.modoAplicacion}` : ''}`}
       />
     </ListItem>
   );

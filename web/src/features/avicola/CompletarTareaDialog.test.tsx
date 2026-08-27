@@ -8,7 +8,7 @@ import { CompletarTareaDialog } from './CompletarTareaDialog';
 const tarea: TareaVacunacionResumen = {
   id: 't1', galponId: 'ga1', edadDia: 3, vacuna: 'BIO COCCIVET R', modoAplicacion: 'Vía oral',
   fechaProgramada: hoyIso(), estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null,
-  observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null,
+  observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null, programaNombre: 'PLAN CAISY 1000',
 };
 
 function respuesta(status: number, cuerpo?: unknown) {

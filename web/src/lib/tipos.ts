@@ -153,6 +153,7 @@ export interface TareaVacunacionResumen {
   observacionesProgramadas: string | null;
   observacionesAplicacion: string | null;
   motivoCancelacion: string | null;
+  programaNombre: string | null;
 }
 
 export interface NotificacionVacunacion {
