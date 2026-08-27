@@ -24,7 +24,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const esMovil = useMediaQuery('(max-width:600px)');
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const enlaces: EnlaceMenu[] = [...(rol ? (ENLACES_POR_ROL[rol] ?? []) : []), ...(rol === 'Cliente' || (rol === 'Trabajador' && tieneFuncionalidad('ProduccionHuevos', 'Mortalidad')) ? [{ etiqueta: 'Gestión Avícola', ruta: '/avicola' }] : [])];
+  const enlaces: EnlaceMenu[] = [...(rol ? (ENLACES_POR_ROL[rol] ?? []) : []), ...(rol === 'Cliente' || (rol === 'Trabajador' && tieneFuncionalidad('ProduccionHuevos', 'Mortalidad', 'Vacunacion')) ? [{ etiqueta: 'Gestión Avícola', ruta: '/avicola' }] : [])];
 
   const salir = () => {
     cerrarSesion();

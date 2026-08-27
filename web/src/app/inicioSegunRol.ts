@@ -9,7 +9,7 @@ export function inicioSegunRol(rol: Rol, funcionalidades: Funcionalidad[] = []):
     case 'Cliente':
       return '/avicola';
     case 'Trabajador':
-      return funcionalidades.includes('ProduccionHuevos') || funcionalidades.includes('Mortalidad') ? '/avicola' : '/inicio';
+      return funcionalidades.includes('ProduccionHuevos') || funcionalidades.includes('Mortalidad') || funcionalidades.includes('Vacunacion') ? '/avicola' : '/inicio';
     default:
       return '/inicio';
   }

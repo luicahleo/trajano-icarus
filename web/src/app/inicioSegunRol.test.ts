@@ -16,4 +16,8 @@ describe('inicioSegunRol', () => {
   test('Trabajador sin funcionalidades va al inicio terminal', () => {
     expect(inicioSegunRol('Trabajador', [])).toBe('/inicio');
   });
+
+  test('Trabajador con vacunación va a gestión avícola', () => {
+    expect(inicioSegunRol('Trabajador', ['Vacunacion'])).toBe('/avicola');
+  });
 });
