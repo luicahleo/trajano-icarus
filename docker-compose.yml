@@ -21,7 +21,7 @@ services:
     networks: [trajano-shared-network]
     mem_limit: 768m
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -H 'Host: icarusv2.trajano.online' http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -H 'Host: icarusv2.trajano.online' http://localhost:8080/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -88,11 +88,10 @@ app.UseMiddleware<ClientDiagnosticsBodyLimitMiddleware>();
 app.UseRateLimiter();
 app.UseAuthorization();
 
-app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
-
 // La API vive bajo /api (paridad con Caserito): la PWA y su service worker se
 // sirven desde wwwroot y el fallback de SPA cubre el enrutado del frontend.
 var api = app.MapGroup("/api");
+api.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 api.MapIdentidad();
 api.MapClientes();
 api.MapGestionAvicola();

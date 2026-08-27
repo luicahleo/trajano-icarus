@@ -11,7 +11,7 @@ public sealed class PersistenciaRegistroVueloIntegrationTests
     public async Task PeticionRealConservaTraceIdParaLaNarracionDeLaPeticion()
     {
         using var cliente = _factory.CreateClient();
-        using var respuesta = await cliente.GetAsync("/health");
+        using var respuesta = await cliente.GetAsync("/api/health");
 
         Assert.True(respuesta.Headers.TryGetValues("X-Trace-Id", out var valores));
         Assert.Matches("^[0-9a-f]{32}$", valores!.Single());

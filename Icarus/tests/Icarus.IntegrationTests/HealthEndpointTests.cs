@@ -13,7 +13,7 @@ public class HealthEndpointTests
     public async Task HealthResponde200()
     {
         var cliente = _factory.CreateClient();
-        var respuesta = await cliente.GetAsync("/health");
+        var respuesta = await cliente.GetAsync("/api/health");
         Assert.Equal(System.Net.HttpStatusCode.OK, respuesta.StatusCode);
     }
 }

@@ -13,7 +13,7 @@ public class CorrelationIdIntegrationTests
     public async Task TodaRespuestaLlevaCorrelationId()
     {
         var cliente = _factory.CreateClient();
-        var respuesta = await cliente.GetAsync("/health");
+        var respuesta = await cliente.GetAsync("/api/health");
         Assert.True(respuesta.Headers.Contains("X-Correlation-ID"));
         Assert.True(respuesta.Headers.Contains("X-Trace-Id"));
     }
@@ -22,7 +22,7 @@ public class CorrelationIdIntegrationTests
     public async Task CorrelationIdEntranteSePropagaALaRespuesta()
     {
         var cliente = _factory.CreateClient();
-        var pedido = new HttpRequestMessage(HttpMethod.Get, "/health");
+        var pedido = new HttpRequestMessage(HttpMethod.Get, "/api/health");
         const string correlationId = "20cc2ea2-2f71-45bb-a667-25f1700431bb";
         pedido.Headers.Add("X-Correlation-ID", correlationId);
         var respuesta = await cliente.SendAsync(pedido);
