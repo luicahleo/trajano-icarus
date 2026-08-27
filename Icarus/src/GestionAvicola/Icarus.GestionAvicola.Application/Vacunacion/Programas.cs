@@ -120,6 +120,11 @@ public sealed class ImportarCronogramaExcelHandler(
                 new ValidationFailure("Cronograma", $"Fila {e.Fila}: {e.Mensaje}")));
         programa.ReemplazarCronograma(resultado.Items.Select(i =>
             new DatosItemPlanVacunacion(i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones)));
+        // Los ítems nuevos llevan clave Guid generada en el dominio: se registran
+        // como Added explícitamente (el DetectChanges de EF Core los marcaría
+        // Modified por asumir que ya existen).
+        foreach (var item in programa.Items.Where(i => i.EstaActivo))
+            programas.AgregarItem(item);
         registroVuelo.Decidir("avicola.vacunacion.programas.importar-cronograma", "importacion", "aplicada",
             new Dictionary<string, object?> { ["ItemsImportados"] = resultado.Items.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);

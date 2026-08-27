@@ -11,6 +11,11 @@ public interface IRepositorioProgramasVacunacion
 {
     void Agregar(ProgramaVacunacion programa);
 
+    // Los ítems nuevos del último ReemplazarCronograma se registran como Added
+    // explícitamente (spec SP7): con clave Guid generada en el dominio, el
+    // DetectChanges de EF Core no distingue "nuevo" de "existente".
+    void AgregarItem(ItemPlanVacunacion item);
+
     Task<ProgramaVacunacion?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<ProgramaVacunacion?> ObtenerPorIdIncluyendoInactivosAsync(Guid id, CancellationToken cancellationToken = default);

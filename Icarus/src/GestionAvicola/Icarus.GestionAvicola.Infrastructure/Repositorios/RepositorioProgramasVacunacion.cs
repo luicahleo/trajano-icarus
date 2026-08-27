@@ -9,6 +9,8 @@ public sealed class RepositorioProgramasVacunacion(GestionAvicolaDbContext db) :
 {
     public void Agregar(ProgramaVacunacion programa) => db.ProgramasVacunacion.Add(programa);
 
+    public void AgregarItem(ItemPlanVacunacion item) => db.ItemsPlanVacunacion.Add(item);
+
     public async Task<ProgramaVacunacion?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default) =>
         await db.ProgramasVacunacion.Include(p => p.Items)
