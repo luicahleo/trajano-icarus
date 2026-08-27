@@ -20,6 +20,8 @@ using Icarus.Identity.Infrastructure.Persistencia;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddObservabilidad();
@@ -64,6 +66,19 @@ builder.Services.AddRateLimiter(opciones =>
 
 var app = builder.Build();
 
+// nginx termina TLS y llega desde la red bridge de Docker. Se aceptan sus
+// cabeceras porque el puerto de la aplicación solo se publica en loopback en
+// el compose de producción (paridad con Caserito).
+var forwardedHeaders = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost,
+};
+forwardedHeaders.KnownIPNetworks.Clear();
+forwardedHeaders.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaders);
+
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<ClienteActivoMiddleware>();
@@ -74,36 +89,65 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
-app.MapIdentidad();
-app.MapClientes();
-app.MapGestionAvicola();
-app.MapDiagnosticos();
 
-if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+// La API vive bajo /api (paridad con Caserito): la PWA y su service worker se
+// sirven desde wwwroot y el fallback de SPA cubre el enrutado del frontend.
+var api = app.MapGroup("/api");
+api.MapIdentidad();
+api.MapClientes();
+api.MapGestionAvicola();
+api.MapDiagnosticos();
+
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
+
+var esDesarrollo = app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing");
+var ejecutarMigraciones = esDesarrollo
+    || app.Configuration.GetValue<bool>("Migraciones:EjecutarAlArranque");
+
+if (esDesarrollo)
 {
     // Sondeo de entitlement (spec: el mecanismo se construye y se prueba en
     // este incremento aunque aún no haya endpoints de módulos de negocio).
-    app.MapSondeoEntitlement();
+    api.MapSondeoEntitlement();
+}
 
-    // Migra ambos schemas y siembra las cuentas y los datos de prueba por rol
-    // (dev y tests de integración). En Testing la factory inyecta la cadena
-    // de conexión y las claves fijas.
+if (ejecutarMigraciones)
+{
+    // En Development y Testing migra y siembra los datos de prueba por rol (la
+    // factory de Testing inyecta la cadena y las claves fijas). En Production
+    // es opt-in vía Migraciones:EjecutarAlArranque (ruta de migración
+    // controlada por el despliegue, paridad con Caserito) y solo siembra el
+    // administrador de plataforma si SeedSettings está completo.
     using var alcance = app.Services.CreateScope();
     var db = alcance.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await db.Database.MigrateAsync();
-    await SemillaIdentidad.SembrarAsync(
-        alcance.ServiceProvider,
-        app.Configuration["Semilla:ContrasenaPrueba"] ?? "Solo-Desarrollo-123");
-
     var clientesDb = alcance.ServiceProvider.GetRequiredService<ClientesDbContext>();
     await clientesDb.Database.MigrateAsync();
-    // Los ids fijos vienen de SemillaIdentidad: el claim clienteId de las
-    // cuentas semilla debe coincidir con el cliente sembrado.
-    await SemillaClientes.SembrarAsync(
-        alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId);
     var avicolaDb = alcance.ServiceProvider.GetRequiredService<GestionAvicolaDbContext>();
     await avicolaDb.Database.MigrateAsync();
-    await SemillaGestionAvicola.SembrarAsync(alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId);
+
+    if (esDesarrollo)
+    {
+        await SemillaIdentidad.SembrarAsync(
+            alcance.ServiceProvider,
+            app.Configuration["Semilla:ContrasenaPrueba"] ?? "Solo-Desarrollo-123");
+        // Los ids fijos vienen de SemillaIdentidad: el claim clienteId de las
+        // cuentas semilla debe coincidir con el cliente sembrado.
+        await SemillaClientes.SembrarAsync(
+            alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId);
+        await SemillaGestionAvicola.SembrarAsync(alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId);
+    }
+    else
+    {
+        var opcionesSeedAdmin = app.Configuration
+            .GetSection(OpcionesSeedAdmin.Seccion)
+            .Get<OpcionesSeedAdmin>() ?? new OpcionesSeedAdmin();
+        var seedAdmin = new SeedAdminPlataforma(
+            alcance.ServiceProvider.GetRequiredService<UserManager<Usuario>>(),
+            alcance.ServiceProvider.GetRequiredService<ILogger<SeedAdminPlataforma>>());
+        await seedAdmin.EjecutarAsync(opcionesSeedAdmin);
+    }
 }
 
 await app.RunAsync();
