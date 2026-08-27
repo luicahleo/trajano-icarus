@@ -9,7 +9,7 @@ export type Funcionalidad =
   | 'Alimentacion'
   | 'Despachos'
   | 'Precios';
-export type FuncionalidadOperativaTrabajador = 'ProduccionHuevos' | 'Mortalidad';
+export type FuncionalidadOperativaTrabajador = 'ProduccionHuevos' | 'Mortalidad' | 'Vacunacion';
 
 export interface SesionInfo {
   accessToken: string;
@@ -115,4 +115,47 @@ export interface TrabajadorResumen {
   fechaIngreso: string;
   fechaCese: string | null;
   funcionalidades: Funcionalidad[];
+}
+
+export type EstadoTareaVacunacion = 'Pendiente' | 'Completada' | 'Cancelada';
+
+export interface ProgramaVacunacionResumen {
+  id: string;
+  nombre: string;
+  fechaEmision: string;
+  cantidadAves: number;
+  observaciones: string | null;
+  estaActivo: boolean;
+}
+
+export interface ItemPlanVacunacionResumen {
+  id: string;
+  edadDia: number;
+  vacuna: string;
+  modoAplicacion: string | null;
+  observaciones: string | null;
+}
+
+export interface ProgramaVacunacionDetalle extends ProgramaVacunacionResumen {
+  items: ItemPlanVacunacionResumen[];
+}
+
+export interface TareaVacunacionResumen {
+  id: string;
+  galponId: string;
+  edadDia: number;
+  vacuna: string;
+  modoAplicacion: string | null;
+  fechaProgramada: string;
+  estado: EstadoTareaVacunacion;
+  fechaAplicacion: string | null;
+  avesVacunadas: number | null;
+  observacionesProgramadas: string | null;
+  observacionesAplicacion: string | null;
+  motivoCancelacion: string | null;
+}
+
+export interface NotificacionVacunacion {
+  vencidasYHoy: TareaVacunacionResumen[];
+  proximas: TareaVacunacionResumen[];
 }

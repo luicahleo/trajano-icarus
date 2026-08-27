@@ -65,11 +65,14 @@ function conHeaders(init: RequestInit, cuerpo?: unknown): RequestInit {
   cabeceras.set('X-Session-Id', obtenerSesionId());
   const token = getAccessToken();
   if (token) cabeceras.set('Authorization', `Bearer ${token}`);
-  if (cuerpo !== undefined) cabeceras.set('Content-Type', 'application/json');
+  // FormData (subida del Excel de vacunación): el navegador fija el boundary;
+  // nunca forzar Content-Type ni serializar como JSON.
+  const esFormData = cuerpo instanceof FormData;
+  if (cuerpo !== undefined && !esFormData) cabeceras.set('Content-Type', 'application/json');
   return {
     ...init,
     headers: cabeceras,
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    body: cuerpo === undefined || esFormData ? (cuerpo as BodyInit | undefined) : JSON.stringify(cuerpo),
   };
 }
 
