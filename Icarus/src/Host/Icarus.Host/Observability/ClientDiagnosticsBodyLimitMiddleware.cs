@@ -6,7 +6,7 @@ public sealed class ClientDiagnosticsBodyLimitMiddleware(RequestDelegate next)
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (context.Request.Path.Equals("/diagnosticos/frontend")
+        if (context.Request.Path.Equals("/api/diagnosticos/frontend")
             && context.Request.ContentLength > MaximoBytes)
         {
             context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;

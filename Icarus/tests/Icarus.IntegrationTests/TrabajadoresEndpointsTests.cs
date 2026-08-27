@@ -17,7 +17,7 @@ public class TrabajadoresEndpointsTests
     private async Task<string> LoginComo(string email)
     {
         var cliente = _factory.CreateClient();
-        var respuesta = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var respuesta = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -37,7 +37,7 @@ public class TrabajadoresEndpointsTests
         var token = await LoginComo(SemillaIdentidad.EmailAdmin);
         var cliente = _factory.CreateClient();
         var email = $"cliente-{Guid.NewGuid():N}@icarus.test";
-        var pedido = PedidoAutenticado(HttpMethod.Post, "/clientes", token);
+        var pedido = PedidoAutenticado(HttpMethod.Post, "/api/clientes", token);
         pedido.Content = JsonContent.Create(new
         {
             razonSocial = "Granja de Prueba S.A.C.",
@@ -70,7 +70,7 @@ public class TrabajadoresEndpointsTests
         var documento = $"8{Random.Shared.Next(10000000, 99999999)}";
         var email = $"trabajador-{Guid.NewGuid():N}@icarus.test";
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
+            HttpMethod.Post, $"/api/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
         pedido.Content = JsonContent.Create(new
         {
             nombre = "Nombre Ficticio",
@@ -97,7 +97,7 @@ public class TrabajadoresEndpointsTests
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{clienteAjenoId}/trabajadores", token);
+            HttpMethod.Post, $"/api/clientes/{clienteAjenoId}/trabajadores", token);
         pedido.Content = JsonContent.Create(CuerpoTrabajador("89999999"));
 
         var respuesta = await cliente.SendAsync(pedido);
@@ -113,7 +113,7 @@ public class TrabajadoresEndpointsTests
         var token = await LoginComo(SemillaIdentidad.EmailAdmin);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
+            HttpMethod.Post, $"/api/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
         pedido.Content = JsonContent.Create(CuerpoTrabajador("89999998"));
 
         var respuesta = await cliente.SendAsync(pedido);
@@ -127,7 +127,7 @@ public class TrabajadoresEndpointsTests
         var (clienteAjenoId, tokenAjeno) = await CrearClienteConCuenta();
         var clienteHttp = _factory.CreateClient();
         var altaAjena = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{clienteAjenoId}/trabajadores", tokenAjeno);
+            HttpMethod.Post, $"/api/clientes/{clienteAjenoId}/trabajadores", tokenAjeno);
         altaAjena.Content = JsonContent.Create(CuerpoTrabajador("89999997"));
         Assert.Equal(HttpStatusCode.Created, (await clienteHttp.SendAsync(altaAjena)).StatusCode);
 
@@ -135,13 +135,13 @@ public class TrabajadoresEndpointsTests
 
         // La empresa ajena existe pero el filtro de tenant la vacía.
         var listaAjena = await clienteHttp.SendAsync(PedidoAutenticado(
-            HttpMethod.Get, $"/clientes/{clienteAjenoId}/trabajadores", tokenCliente));
+            HttpMethod.Get, $"/api/clientes/{clienteAjenoId}/trabajadores", tokenCliente));
         Assert.Equal(HttpStatusCode.OK, listaAjena.StatusCode);
         Assert.Empty((await listaAjena.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
 
         // La propia lista al trabajador semilla.
         var listaPropia = await clienteHttp.SendAsync(PedidoAutenticado(
-            HttpMethod.Get, $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", tokenCliente));
+            HttpMethod.Get, $"/api/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", tokenCliente));
         var propios = (await listaPropia.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().ToList();
         Assert.Contains(propios,
             t => t.GetProperty("id").GetGuid() == SemillaIdentidad.TrabajadorDemoId);
@@ -153,7 +153,7 @@ public class TrabajadoresEndpointsTests
         var token = await LoginComo(SemillaIdentidad.EmailTrabajador);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
+            HttpMethod.Post, $"/api/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
         pedido.Content = JsonContent.Create(CuerpoTrabajador("89999996"));
 
         var respuesta = await cliente.SendAsync(pedido);
@@ -167,7 +167,7 @@ public class TrabajadoresEndpointsTests
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
+            HttpMethod.Post, $"/api/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores", token);
         pedido.Content = JsonContent.Create(
             CuerpoTrabajador(Icarus.Clientes.Infrastructure.SemillaClientes.DocumentoTrabajadorDemo));
 
@@ -183,7 +183,7 @@ public class TrabajadoresEndpointsTests
     {
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
         var cliente = _factory.CreateClient();
-        var ruta = $"/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores";
+        var ruta = $"/api/clientes/{SemillaIdentidad.ClienteDemoId}/trabajadores";
         var antes = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, ruta, token));
         var cantidadAntes = (await antes.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength();
         var pedido = PedidoAutenticado(HttpMethod.Post, ruta, token);
@@ -210,7 +210,7 @@ public class TrabajadoresEndpointsTests
         var (otroClienteId, tokenOtro) = await CrearClienteConCuenta();
         var cliente = _factory.CreateClient();
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{otroClienteId}/trabajadores", tokenOtro);
+            HttpMethod.Post, $"/api/clientes/{otroClienteId}/trabajadores", tokenOtro);
         pedido.Content = JsonContent.Create(
             CuerpoTrabajador(Icarus.Clientes.Infrastructure.SemillaClientes.DocumentoTrabajadorDemo));
 
@@ -226,7 +226,7 @@ public class TrabajadoresEndpointsTests
         var cliente = _factory.CreateClient();
         var futura = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30).ToString("yyyy-MM-dd");
         var pedido = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/trabajadores/{SemillaIdentidad.TrabajadorDemoId}/cese", token);
+            HttpMethod.Post, $"/api/clientes/trabajadores/{SemillaIdentidad.TrabajadorDemoId}/cese", token);
         pedido.Content = JsonContent.Create(new { fechaCese = futura });
 
         var respuesta = await cliente.SendAsync(pedido);
@@ -239,18 +239,18 @@ public class TrabajadoresEndpointsTests
     {
         var (clienteId, token) = await CrearClienteConCuenta();
         var cliente = _factory.CreateClient();
-        var alta = PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/trabajadores", token);
+        var alta = PedidoAutenticado(HttpMethod.Post, $"/api/clientes/{clienteId}/trabajadores", token);
         alta.Content = JsonContent.Create(CuerpoTrabajador("89999995"));
         var respuestaAlta = await cliente.SendAsync(alta);
         var trabajadorId = (await respuestaAlta.Content.ReadFromJsonAsync<JsonElement>())
             .GetProperty("id").GetGuid();
 
         var baja = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Delete, $"/clientes/trabajadores/{trabajadorId}", token));
+            PedidoAutenticado(HttpMethod.Delete, $"/api/clientes/trabajadores/{trabajadorId}", token));
         Assert.Equal(HttpStatusCode.NoContent, baja.StatusCode);
 
         var lista = await cliente.SendAsync(PedidoAutenticado(
-            HttpMethod.Get, $"/clientes/{clienteId}/trabajadores", token));
+            HttpMethod.Get, $"/api/clientes/{clienteId}/trabajadores", token));
         var restantes = (await lista.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().ToList();
         Assert.DoesNotContain(restantes, t => t.GetProperty("id").GetGuid() == trabajadorId);
     }
@@ -261,25 +261,25 @@ public class TrabajadoresEndpointsTests
         var (clienteId, token) = await CrearClienteConCuenta();
         var cliente = _factory.CreateClient();
         var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
-        var asignarModulos = PedidoAutenticado(HttpMethod.Put, $"/clientes/{clienteId}/modulos", admin);
+        var asignarModulos = PedidoAutenticado(HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", admin);
         asignarModulos.Content = JsonContent.Create(new { modulos = new[] { "GestionAvicola" } });
         Assert.Equal(HttpStatusCode.NoContent, (await cliente.SendAsync(asignarModulos)).StatusCode);
 
-        var alta = PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/trabajadores", token);
+        var alta = PedidoAutenticado(HttpMethod.Post, $"/api/clientes/{clienteId}/trabajadores", token);
         alta.Content = JsonContent.Create(CuerpoTrabajador("89999994"));
         var respuestaAlta = await cliente.SendAsync(alta);
         var trabajadorId = (await respuestaAlta.Content.ReadFromJsonAsync<JsonElement>())
             .GetProperty("id").GetGuid();
 
         var asignar = PedidoAutenticado(
-            HttpMethod.Put, $"/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades", token);
+            HttpMethod.Put, $"/api/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades", token);
         asignar.Content = JsonContent.Create(new { funcionalidades = new[] { "ProduccionHuevos", "mortalidad" } });
         var respuestaAsignar = await cliente.SendAsync(asignar);
 
         Assert.Equal(HttpStatusCode.NoContent, respuestaAsignar.StatusCode);
 
         var lista = await cliente.SendAsync(PedidoAutenticado(
-            HttpMethod.Get, $"/clientes/{clienteId}/trabajadores", token));
+            HttpMethod.Get, $"/api/clientes/{clienteId}/trabajadores", token));
         var resumen = (await lista.Content.ReadFromJsonAsync<JsonElement>())
             .EnumerateArray().Single(t => t.GetProperty("id").GetGuid() == trabajadorId);
         var funcionalidades = resumen.GetProperty("funcionalidades").EnumerateArray()

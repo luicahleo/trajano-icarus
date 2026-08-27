@@ -20,7 +20,7 @@ public class IdentityEndpointsTests
     private async Task<string> LoginComo(string email)
     {
         var cliente = _factory.CreateClient();
-        var respuesta = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var respuesta = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email, contrasena = ContrasenaSemilla });
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -38,7 +38,7 @@ public class IdentityEndpointsTests
     {
         var cliente = _factory.CreateClient();
 
-        var respuesta = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var respuesta = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = SemillaIdentidad.EmailAdmin, contrasena = ContrasenaSemilla });
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
@@ -55,7 +55,7 @@ public class IdentityEndpointsTests
     {
         var cliente = _factory.CreateClient();
 
-        var respuesta = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var respuesta = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = SemillaIdentidad.EmailAdmin, contrasena = "incorrecta" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
@@ -72,9 +72,9 @@ public class IdentityEndpointsTests
         // indistinguibles en status y cuerpo.
         var cliente = _factory.CreateClient();
 
-        var emailInexistente = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var emailInexistente = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = "nadie@icarus.test", contrasena = "x" });
-        var contrasenaIncorrecta = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var contrasenaIncorrecta = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = SemillaIdentidad.EmailAdmin, contrasena = "x" });
 
         Assert.Equal(emailInexistente.StatusCode, contrasenaIncorrecta.StatusCode);
@@ -104,7 +104,7 @@ public class IdentityEndpointsTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/identidad/me", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -120,7 +120,7 @@ public class IdentityEndpointsTests
         var cliente = _factory.CreateClient();
         var token = await LoginComo(SemillaIdentidad.EmailCliente);
 
-        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/api/identidad/me", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -137,7 +137,7 @@ public class IdentityEndpointsTests
         var cliente = _factory.CreateClient();
         var token = await LoginComo(SemillaIdentidad.EmailTrabajador);
 
-        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/api/identidad/me", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -153,7 +153,7 @@ public class IdentityEndpointsTests
         var cliente = _factory.CreateClient();
         var token = await LoginComo(SemillaIdentidad.EmailAdmin);
 
-        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+        var respuesta = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/api/identidad/me", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -166,7 +166,7 @@ public class IdentityEndpointsTests
     {
         var cliente = _factory.CreateClient();
 
-        var respuesta = await cliente.GetAsync("/identidad/me");
+        var respuesta = await cliente.GetAsync("/api/identidad/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -175,20 +175,20 @@ public class IdentityEndpointsTests
     public async Task RenovarConCookieValidaDaNuevaSesionYRevocaElRefreshAnterior()
     {
         var cliente = _factory.CreateClient();
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var login = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = SemillaIdentidad.EmailAdmin, contrasena = ContrasenaSemilla });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var cookie = login.Headers.GetValues("Set-Cookie")
             .Single(h => h.StartsWith(IdentidadEndpoints.CookieRefresh + "=", StringComparison.Ordinal))
             .Split(';')[0];
 
-        var renovar1 = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+        var renovar1 = new HttpRequestMessage(HttpMethod.Post, "/api/identidad/sesion/renovar");
         renovar1.Headers.Add("Cookie", cookie);
         var respuesta1 = await cliente.SendAsync(renovar1);
         Assert.Equal(HttpStatusCode.OK, respuesta1.StatusCode);
 
         // El refresh original ya fue rotado: reusarlo es un 401.
-        var renovar2 = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+        var renovar2 = new HttpRequestMessage(HttpMethod.Post, "/api/identidad/sesion/renovar");
         renovar2.Headers.Add("Cookie", cookie);
         var respuesta2 = await cliente.SendAsync(renovar2);
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta2.StatusCode);
@@ -198,7 +198,7 @@ public class IdentityEndpointsTests
     public async Task RenovacionesConcurrentesConElMismoRefreshSoloUnaRota()
     {
         var cliente = _factory.CreateClient();
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var login = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = SemillaIdentidad.EmailAdmin, contrasena = ContrasenaSemilla });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var cookie = login.Headers.GetValues("Set-Cookie")
@@ -209,7 +209,7 @@ public class IdentityEndpointsTests
         // pestañas o StrictMode de React): solo una puede rotar el refresh.
         HttpRequestMessage PedidoRenovacion()
         {
-            var pedido = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+            var pedido = new HttpRequestMessage(HttpMethod.Post, "/api/identidad/sesion/renovar");
             pedido.Headers.Add("Cookie", cookie);
             return pedido;
         }
@@ -229,7 +229,7 @@ public class IdentityEndpointsTests
     {
         var cliente = _factory.CreateClient();
 
-        var respuesta = await cliente.PostAsync("/identidad/sesion/renovar", null);
+        var respuesta = await cliente.PostAsync("/api/identidad/sesion/renovar", null);
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }

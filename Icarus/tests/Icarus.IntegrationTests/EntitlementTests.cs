@@ -24,7 +24,7 @@ public class EntitlementTests
     private async Task<string> LoginComo(string email)
     {
         var cliente = _factory.CreateClient();
-        var respuesta = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var respuesta = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
@@ -45,7 +45,7 @@ public class EntitlementTests
         var clienteHttp = _factory.CreateClient();
 
         var email = $"cuenta-{Guid.NewGuid():N}@icarus.test";
-        var altaCliente = PedidoAutenticado(HttpMethod.Post, "/clientes", admin);
+        var altaCliente = PedidoAutenticado(HttpMethod.Post, "/api/clientes", admin);
         altaCliente.Content = JsonContent.Create(new
         {
             razonSocial = "Granja de Prueba S.A.C.",
@@ -60,7 +60,7 @@ public class EntitlementTests
 
         if (modulos is not null)
         {
-            var asignar = PedidoAutenticado(HttpMethod.Put, $"/clientes/{clienteId}/modulos", admin);
+            var asignar = PedidoAutenticado(HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", admin);
             asignar.Content = JsonContent.Create(new { modulos });
             Assert.Equal(HttpStatusCode.NoContent, (await clienteHttp.SendAsync(asignar)).StatusCode);
         }
@@ -74,7 +74,7 @@ public class EntitlementTests
         var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
         var clienteHttp = _factory.CreateClient();
         var email = $"cuenta-{Guid.NewGuid():N}@icarus.test";
-        var altaCliente = PedidoAutenticado(HttpMethod.Post, "/clientes", admin);
+        var altaCliente = PedidoAutenticado(HttpMethod.Post, "/api/clientes", admin);
         altaCliente.Content = JsonContent.Create(new
         {
             razonSocial = "Granja de Prueba S.A.C.",
@@ -89,12 +89,12 @@ public class EntitlementTests
 
         if (modulos is not null)
         {
-            var asignar = PedidoAutenticado(HttpMethod.Put, $"/clientes/{clienteId}/modulos", admin);
+            var asignar = PedidoAutenticado(HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", admin);
             asignar.Content = JsonContent.Create(new { modulos });
             Assert.Equal(HttpStatusCode.NoContent, (await clienteHttp.SendAsync(asignar)).StatusCode);
         }
 
-        var login = await clienteHttp.PostAsJsonAsync("/identidad/sesion",
+        var login = await clienteHttp.PostAsJsonAsync("/api/identidad/sesion",
             new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var cuerpo = await login.Content.ReadFromJsonAsync<JsonElement>();
@@ -112,7 +112,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
         var email = $"trabajador-{Guid.NewGuid():N}@icarus.test";
         var altaTrabajador = PedidoAutenticado(
-            HttpMethod.Post, $"/clientes/{clienteId}/trabajadores", tokenCliente);
+            HttpMethod.Post, $"/api/clientes/{clienteId}/trabajadores", tokenCliente);
         altaTrabajador.Content = JsonContent.Create(new
         {
             nombre = "Nombre Ficticio",
@@ -130,13 +130,13 @@ public class EntitlementTests
         if (funcionalidades is not null)
         {
             var asignar = PedidoAutenticado(
-                HttpMethod.Put, $"/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades",
+                HttpMethod.Put, $"/api/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades",
                 tokenCliente);
             asignar.Content = JsonContent.Create(new { funcionalidades });
             Assert.Equal(HttpStatusCode.NoContent, (await cliente.SendAsync(asignar)).StatusCode);
         }
 
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var login = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var cuerpo = await login.Content.ReadFromJsonAsync<JsonElement>();
@@ -155,9 +155,9 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var granjas = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/granjas", token));
         var vacunacion = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/vacunacion", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/vacunacion", token));
 
         Assert.Equal(HttpStatusCode.OK, granjas.StatusCode);
         Assert.Equal(HttpStatusCode.OK, vacunacion.StatusCode);
@@ -171,7 +171,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/produccionhuevos", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/produccionhuevos", token));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
@@ -184,7 +184,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/vacunacion", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/vacunacion", token));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -198,7 +198,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", tokenTrabajador));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/granjas", tokenTrabajador));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -212,7 +212,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/produccionhuevos", tokenTrabajador));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/produccionhuevos", tokenTrabajador));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
@@ -224,7 +224,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -239,11 +239,11 @@ public class EntitlementTests
         // El entitlement se lee de la BD en cada request: suspender después
         // del login también corta el acceso.
         var suspender = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/suspender", admin));
+            PedidoAutenticado(HttpMethod.Post, $"/api/clientes/{clienteId}/suspender", admin));
         Assert.Equal(HttpStatusCode.NoContent, suspender.StatusCode);
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -256,23 +256,23 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var suspender = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/suspender", admin));
+            PedidoAutenticado(HttpMethod.Post, $"/api/clientes/{clienteId}/suspender", admin));
         Assert.Equal(HttpStatusCode.NoContent, suspender.StatusCode);
 
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var login = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
 
-        var renovar = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+        var renovar = new HttpRequestMessage(HttpMethod.Post, "/api/identidad/sesion/renovar");
         renovar.Headers.Add("Cookie", cookie);
         var respuestaRenovacion = await cliente.SendAsync(renovar);
         Assert.Equal(HttpStatusCode.Unauthorized, respuestaRenovacion.StatusCode);
 
-        var me = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/identidad/me", token));
+        var me = await cliente.SendAsync(PedidoAutenticado(HttpMethod.Get, "/api/identidad/me", token));
         Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
 
         var trabajadores = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, $"/clientes/{clienteId}/trabajadores", token));
+            PedidoAutenticado(HttpMethod.Get, $"/api/clientes/{clienteId}/trabajadores", token));
         Assert.Equal(HttpStatusCode.Unauthorized, trabajadores.StatusCode);
     }
 
@@ -286,19 +286,19 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var suspender = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Post, $"/clientes/{clienteId}/suspender", admin));
+            PedidoAutenticado(HttpMethod.Post, $"/api/clientes/{clienteId}/suspender", admin));
         Assert.Equal(HttpStatusCode.NoContent, suspender.StatusCode);
 
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var login = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = emailTrabajador, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
 
-        var renovar = new HttpRequestMessage(HttpMethod.Post, "/identidad/sesion/renovar");
+        var renovar = new HttpRequestMessage(HttpMethod.Post, "/api/identidad/sesion/renovar");
         renovar.Headers.Add("Cookie", cookieTrabajador);
         Assert.Equal(HttpStatusCode.Unauthorized, (await cliente.SendAsync(renovar)).StatusCode);
 
         var me = await cliente.SendAsync(PedidoAutenticado(
-            HttpMethod.Get, "/identidad/me", tokenTrabajador));
+            HttpMethod.Get, "/api/identidad/me", tokenTrabajador));
         Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
     }
 
@@ -319,7 +319,7 @@ public class EntitlementTests
         }
 
         var cliente = _factory.CreateClient();
-        var login = await cliente.PostAsJsonAsync("/identidad/sesion",
+        var login = await cliente.PostAsJsonAsync("/api/identidad/sesion",
             new { email = emailTrabajador, contrasena = IdentityFactory.ContrasenaDePrueba });
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
     }
@@ -332,7 +332,7 @@ public class EntitlementTests
         var cliente = _factory.CreateClient();
 
         var respuesta = await cliente.SendAsync(
-            PedidoAutenticado(HttpMethod.Get, "/clientes/sondeo/funcionalidad/granjas", token));
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/granjas", token));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
@@ -342,7 +342,7 @@ public class EntitlementTests
     {
         var cliente = _factory.CreateClient();
 
-        var respuesta = await cliente.GetAsync("/clientes/sondeo/funcionalidad/granjas");
+        var respuesta = await cliente.GetAsync("/api/clientes/sondeo/funcionalidad/granjas");
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }

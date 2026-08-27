@@ -12,7 +12,7 @@ public sealed class DiagnosticosEndpointTests(IdentityFactory factory)
     {
         using var client = factory.CreateClient();
 
-        using var response = await client.PostAsJsonAsync("/diagnosticos/frontend", ReporteValido());
+        using var response = await client.PostAsJsonAsync("/api/diagnosticos/frontend", ReporteValido());
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
@@ -24,7 +24,7 @@ public sealed class DiagnosticosEndpointTests(IdentityFactory factory)
         var reporte = ReporteValido();
         reporte["mensaje"] = "contenido-que-no-debe-registrarse";
 
-        using var response = await client.PostAsJsonAsync("/diagnosticos/frontend", reporte);
+        using var response = await client.PostAsJsonAsync("/api/diagnosticos/frontend", reporte);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.DoesNotContain("contenido-que-no-debe-registrarse", await response.Content.ReadAsStringAsync());
@@ -39,7 +39,7 @@ public sealed class DiagnosticosEndpointTests(IdentityFactory factory)
             Encoding.UTF8,
             "application/json");
 
-        using var response = await client.PostAsync("/diagnosticos/frontend", content);
+        using var response = await client.PostAsync("/api/diagnosticos/frontend", content);
 
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
     }

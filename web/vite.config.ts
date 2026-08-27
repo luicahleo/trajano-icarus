@@ -55,12 +55,11 @@ export default defineConfig(({ mode }) => ({
     host: true,
     allowedHosts: crearHostsPermitidos(allowedHost),
     proxy: {
-      // El backend sirve bajo la raíz sin prefijo (spec): el frontend usa la base
-      // /api y el proxy reescribe a la API real (compose la publica en :8080).
+      // La API vive bajo /api (paridad con el despliegue productivo): el proxy
+      // reenvía la base al backend sin reescribir la ruta.
       '/api': {
         target: apiTarget,
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ''),
       },
     },
   },
