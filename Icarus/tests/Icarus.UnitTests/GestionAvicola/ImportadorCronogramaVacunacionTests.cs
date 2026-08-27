@@ -59,6 +59,36 @@ public class ImportadorCronogramaVacunacionTests
     }
 
     [Fact]
+    public void LaPrimeraFechaDelArchivoEsLaFechaDeEmision()
+    {
+        using var excel = ExcelCon(EncabezadoCaisy,
+        [
+            ["2026-08-06", "3", "A", "", ""],
+            ["2026-08-13", "10", "B", "", ""],
+        ]);
+
+        var resultado = new ImportadorCronogramaVacunacion().Importar(excel);
+
+        Assert.Empty(resultado.Errores);
+        Assert.Equal(new DateOnly(2026, 8, 6), resultado.PrimeraFecha);
+    }
+
+    [Fact]
+    public void ArchivoSinFechasNoDevuelveFechaDeEmision()
+    {
+        using var excel = ExcelCon(EncabezadoCaisy,
+        [
+            ["", "3", "A", "", ""],
+            ["", "10", "B", "", ""],
+        ]);
+
+        var resultado = new ImportadorCronogramaVacunacion().Importar(excel);
+
+        Assert.Empty(resultado.Errores);
+        Assert.Null(resultado.PrimeraFecha);
+    }
+
+    [Fact]
     public void FilaSinEdadSeReportaPorNumeroDeFila()
     {
         using var excel = ExcelCon(EncabezadoCaisy, [["", "", "GUMBORO", "", ""]]);

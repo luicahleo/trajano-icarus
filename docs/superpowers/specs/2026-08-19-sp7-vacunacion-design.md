@@ -99,7 +99,9 @@ al asignar, con snapshot**.
   - `Id` (Guid).
   - `Nombre` (string, requerido, `Trim()`, máx 200). Unicidad **incluyendo
     inactivos** (criterio del proyecto: el soft delete no libera el nombre).
-  - `FechaEmision` (`DateOnly`, requerida, no futura).
+  - `FechaEmision` (`DateOnly?`, opcional, no futura). **No se pide en el
+    alta**: la establece la primera fecha de la columna `FECHA` del Excel al
+    importar el cronograma. `null` hasta entonces.
   - `CantidadAves` (int > 0, informativa: el "PARA 1000 AVES" del encabezado).
   - `Observaciones` (string?, máx 1000).
   - `EstaActivo` (bool, soft delete).
@@ -195,8 +197,9 @@ decisión de gestión, no de operación.
   completo del programa (`ReemplazarCronograma`).
 - Formato (el del papel de CAISY): columnas `FECHA`, `EDAD`, `VACUNA`,
   `MODO DE APLICACION`, `OBSERVACIONES`; nombres de columna tolerantes
-  (mayúsculas/minúsculas, tildes, espacios). **La columna FECHA se ignora**:
-  la fuente de verdad es `EDAD`.
+  (mayúsculas/minúsculas, tildes, espacios). **La primera fecha de la columna
+  `FECHA` es la fecha de emisión del programa** (la establece el handler); el
+  resto de las fechas no gobierna las tareas: la fuente de verdad es `EDAD`.
 - Reglas por fila: `EDAD` obligatoria, entera, > 0; `VACUNA` obligatoria.
   **Filas con la misma edad se fusionan en un solo ítem**: se concatenan
   `VACUNA`, `MODO DE APLICACION` y observaciones separadas por "; ", sin

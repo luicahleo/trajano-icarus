@@ -36,7 +36,7 @@ public class ProgramasVacunacionHandlerTests
     {
         var handler = new CrearProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
-        var id = await handler.Handle(new("PLAN CAISY 1000", Hoy, 1000, null), CancellationToken.None);
+        var id = await handler.Handle(new("PLAN CAISY 1000", 1000, null), CancellationToken.None);
 
         Assert.NotEqual(Guid.Empty, id);
         _programas.Received(1).Agregar(Arg.Is<ProgramaVacunacion>(p =>
@@ -53,7 +53,7 @@ public class ProgramasVacunacionHandlerTests
         var handler = new CrearProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
         var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            handler.Handle(new("PLAN CAISY 1000", Hoy, 1000, null), CancellationToken.None));
+            handler.Handle(new("PLAN CAISY 1000", 1000, null), CancellationToken.None));
 
         Assert.Equal("No se pudo registrar el programa de vacunación.", ex.Message);
         _programas.DidNotReceive().Agregar(Arg.Any<ProgramaVacunacion>());
@@ -67,7 +67,7 @@ public class ProgramasVacunacionHandlerTests
         var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new(Guid.NewGuid(), "X", Hoy, 100, null), CancellationToken.None));
+            handler.Handle(new(Guid.NewGuid(), "X", 100, null), CancellationToken.None));
 
         Assert.Equal("Programa de vacunación no encontrado.", ex.Message);
     }
@@ -81,7 +81,7 @@ public class ProgramasVacunacionHandlerTests
         var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            handler.Handle(new(programa.Id, "OTRO PLAN", Hoy, 100, null), CancellationToken.None));
+            handler.Handle(new(programa.Id, "OTRO PLAN", 100, null), CancellationToken.None));
 
         Assert.Equal("PLAN CAISY 1000", programa.Nombre);
     }
@@ -94,7 +94,7 @@ public class ProgramasVacunacionHandlerTests
         _programas.ExisteNombreAsync("PLAN RENOMBRADO", programa.Id, Arg.Any<CancellationToken>()).Returns(false);
         var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
-        await handler.Handle(new(programa.Id, "PLAN RENOMBRADO", Hoy, 2000, "nota"), CancellationToken.None);
+        await handler.Handle(new(programa.Id, "PLAN RENOMBRADO", 2000, "nota"), CancellationToken.None);
 
         Assert.Equal("PLAN RENOMBRADO", programa.Nombre);
         Assert.Equal(2000, programa.CantidadAves);
@@ -149,6 +149,33 @@ public class ProgramasVacunacionHandlerTests
         _vuelo.Received().Decidir("avicola.vacunacion.programas.importar-cronograma", "importacion", "aplicada",
             Arg.Any<IReadOnlyDictionary<string, object?>>());
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ImportarConFechaEnElExcelEstableceLaFechaDeEmision()
+    {
+        var programa = new ProgramaVacunacion("PLAN CAISY 1000", null, 1000, null);
+        programa.ReemplazarCronograma([new DatosItemPlanVacunacion(10, "B", null, null)]);
+        Assert.Null(programa.FechaEmision);
+        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        _importador.Importar(Arg.Any<Stream>()).Returns(new ResultadoImportacionCronograma(
+            [new ItemCronogramaImportado(1, "NEWCASTLE", "Gota ocular", null)],
+            [], new DateOnly(2026, 8, 6)));
+        var handler = new ImportarCronogramaExcelHandler(_programas, _importador, _vuelo, _unidad);
+
+        await handler.Handle(new(programa.Id, new MemoryStream()), CancellationToken.None);
+
+        Assert.Equal(new DateOnly(2026, 8, 6), programa.FechaEmision);
+    }
+
+    [Fact]
+    public async Task CrearNoPideFechaDeEmisionYDejaElProgramaSinEmitir()
+    {
+        var handler = new CrearProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+
+        await handler.Handle(new("PLAN CAISY 1000", 1000, null), CancellationToken.None);
+
+        _programas.Received(1).Agregar(Arg.Is<ProgramaVacunacion>(p => p.FechaEmision == null));
     }
 
     [Fact]

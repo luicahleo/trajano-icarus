@@ -14,4 +14,5 @@ public sealed record ItemCronogramaImportado(int EdadDia, string Vacuna, string?
 public sealed record ErrorFilaImportacion(int Fila, string Mensaje);
 
 public sealed record ResultadoImportacionCronograma(
-    IReadOnlyList<ItemCronogramaImportado> Items, IReadOnlyList<ErrorFilaImportacion> Errores);
+    IReadOnlyList<ItemCronogramaImportado> Items, IReadOnlyList<ErrorFilaImportacion> Errores,
+    DateOnly? PrimeraFecha = null);

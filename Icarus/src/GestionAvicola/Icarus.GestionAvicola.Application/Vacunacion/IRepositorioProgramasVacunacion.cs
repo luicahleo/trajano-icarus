@@ -30,8 +30,8 @@ public sealed record ItemPlanVacunacionResumen(
     Guid Id, int EdadDia, string Vacuna, string? ModoAplicacion, string? Observaciones);
 
 public sealed record ProgramaVacunacionResumen(
-    Guid Id, string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones, bool EstaActivo);
+    Guid Id, string Nombre, DateOnly? FechaEmision, int CantidadAves, string? Observaciones, bool EstaActivo);
 
 public sealed record ProgramaVacunacionDetalle(
-    Guid Id, string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones,
+    Guid Id, string Nombre, DateOnly? FechaEmision, int CantidadAves, string? Observaciones,
     bool EstaActivo, IReadOnlyList<ItemPlanVacunacionResumen> Items);

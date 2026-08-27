@@ -122,7 +122,7 @@ export type EstadoTareaVacunacion = 'Pendiente' | 'Completada' | 'Cancelada';
 export interface ProgramaVacunacionResumen {
   id: string;
   nombre: string;
-  fechaEmision: string;
+  fechaEmision: string | null;
   cantidadAves: number;
   observaciones: string | null;
   estaActivo: boolean;

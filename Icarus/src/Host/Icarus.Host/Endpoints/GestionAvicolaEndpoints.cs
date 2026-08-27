@@ -56,7 +56,7 @@ public static class GestionAvicolaEndpoints
         var programasVacunacion = app.MapGroup("/vacunacion/programas");
         programasVacunacion.MapPost("/", async (CrearProgramaVacunacionRequest c, ISender mediator) =>
         {
-            var id = await mediator.Send(new CrearProgramaVacunacionCommand(c.Nombre, c.FechaEmision, c.CantidadAves, c.Observaciones));
+            var id = await mediator.Send(new CrearProgramaVacunacionCommand(c.Nombre, c.CantidadAves, c.Observaciones));
             return Results.Created($"/vacunacion/programas/{id}", new { id });
         }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
         programasVacunacion.MapGet("/", async (bool? incluirInactivos, ISender mediator) =>
@@ -67,7 +67,7 @@ public static class GestionAvicolaEndpoints
             .RequireAuthorization(PoliticasClientes.CatalogoVacunacion);
         programasVacunacion.MapPut("/{id:guid}", async (Guid id, ActualizarProgramaVacunacionRequest c, ISender mediator) =>
         {
-            await mediator.Send(new ActualizarProgramaVacunacionCommand(id, c.Nombre, c.FechaEmision, c.CantidadAves, c.Observaciones));
+            await mediator.Send(new ActualizarProgramaVacunacionCommand(id, c.Nombre, c.CantidadAves, c.Observaciones));
             return Results.NoContent();
         }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
         programasVacunacion.MapDelete("/{id:guid}", async (Guid id, ISender mediator) =>
@@ -119,8 +119,8 @@ public static class GestionAvicolaEndpoints
 
         return app;
     }
-    private sealed record CrearProgramaVacunacionRequest(string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones);
-    private sealed record ActualizarProgramaVacunacionRequest(string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones);
+    private sealed record CrearProgramaVacunacionRequest(string Nombre, int CantidadAves, string? Observaciones);
+    private sealed record ActualizarProgramaVacunacionRequest(string Nombre, int CantidadAves, string? Observaciones);
     private sealed record AsignarPlanVacunacionRequest(Guid ProgramaId);
     private sealed record CompletarTareaVacunacionRequest(DateOnly? FechaAplicacion, int? AvesVacunadas, string? Observaciones);
     private sealed record CancelarTareaVacunacionRequest(string? Motivo);

@@ -10,7 +10,7 @@ namespace Icarus.GestionAvicola.Application.Vacunacion;
 
 // Registro de vuelo (spec SP7): solo campos no-PII (cantidades). Nunca
 // nombres de vacuna, motivos ni observaciones (texto libre).
-public sealed record CrearProgramaVacunacionCommand(string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones)
+public sealed record CrearProgramaVacunacionCommand(string Nombre, int CantidadAves, string? Observaciones)
     : IRequest<Guid>, IOperacionRegistrable
 {
     public DescriptorOperacionRegistroVuelo Registro { get; } = new(
@@ -18,7 +18,7 @@ public sealed record CrearProgramaVacunacionCommand(string Nombre, DateOnly Fech
         new Dictionary<string, DatoRegistroVuelo> { ["CantidadAves"] = DatoRegistroVuelo.Entero });
 }
 
-public sealed record ActualizarProgramaVacunacionCommand(Guid ProgramaId, string Nombre, DateOnly FechaEmision, int CantidadAves, string? Observaciones)
+public sealed record ActualizarProgramaVacunacionCommand(Guid ProgramaId, string Nombre, int CantidadAves, string? Observaciones)
     : IRequest, IOperacionRegistrable
 {
     public DescriptorOperacionRegistroVuelo Registro { get; } = new(
@@ -75,7 +75,7 @@ public sealed class CrearProgramaVacunacionHandler(
     {
         if (await programas.ExisteNombreAsync(request.Nombre.Trim(), null, cancellationToken))
             throw new ConflictException("No se pudo registrar el programa de vacunación.");
-        var programa = new ProgramaVacunacion(request.Nombre, request.FechaEmision, request.CantidadAves, request.Observaciones);
+        var programa = new ProgramaVacunacion(request.Nombre, null, request.CantidadAves, request.Observaciones);
         programas.Agregar(programa);
         registroVuelo.Decidir("avicola.vacunacion.programas.crear", "alta", "aplicada",
             new Dictionary<string, object?> { ["CantidadAves"] = programa.CantidadAves });
@@ -95,7 +95,7 @@ public sealed class ActualizarProgramaVacunacionHandler(
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
         if (await programas.ExisteNombreAsync(request.Nombre.Trim(), programa.Id, cancellationToken))
             throw new ConflictException("No se pudo actualizar el programa de vacunación.");
-        programa.ActualizarDatos(request.Nombre, request.FechaEmision, request.CantidadAves, request.Observaciones);
+        programa.ActualizarDatos(request.Nombre, request.CantidadAves, request.Observaciones);
         registroVuelo.Decidir("avicola.vacunacion.programas.actualizar", "edicion", "aplicada",
             new Dictionary<string, object?> { ["CantidadAves"] = programa.CantidadAves });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
@@ -121,6 +121,10 @@ public sealed class ImportarCronogramaExcelHandler(
                 new ValidationFailure("Cronograma", $"Fila {e.Fila}: {e.Mensaje}")));
         programa.ReemplazarCronograma(resultado.Items.Select(i =>
             new DatosItemPlanVacunacion(i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones)));
+        // La fecha de emisión es la primera fecha del Excel (spec SP7): no se
+        // pide en el alta ni en la edición.
+        if (resultado.PrimeraFecha is { } primeraFecha)
+            programa.EstablecerFechaEmision(primeraFecha);
         // Los ítems nuevos llevan clave Guid generada en el dominio: se registran
         // como Added explícitamente (el DetectChanges de EF Core los marcaría
         // Modified por asumir que ya existen).

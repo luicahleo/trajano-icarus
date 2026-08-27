@@ -99,7 +99,10 @@ public class VacunacionEndpointsTests
         return (await galpon.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
     }
 
-    private static MultipartFormDataContent ExcelCronograma(params (int Edad, string Vacuna)[] items)
+    private static MultipartFormDataContent ExcelCronograma(params (int Edad, string Vacuna)[] items) =>
+        ExcelCronogramaDesde(items, null);
+
+    private static MultipartFormDataContent ExcelCronogramaDesde((int Edad, string Vacuna)[] items, DateOnly? inicio)
     {
         using var libro = new XLWorkbook();
         var hoja = libro.AddWorksheet("Plan");
@@ -111,6 +114,8 @@ public class VacunacionEndpointsTests
         var fila = 2;
         foreach (var (edad, vacuna) in items)
         {
+            if (inicio is { } fecha)
+                hoja.Cell(fila, 1).Value = fecha.ToDateTime(TimeOnly.MinValue);
             hoja.Cell(fila, 2).Value = edad;
             hoja.Cell(fila, 3).Value = vacuna;
             fila++;
@@ -128,7 +133,6 @@ public class VacunacionEndpointsTests
         var alta = await cliente.SendAsync(Autenticado(HttpMethod.Post, "/api/vacunacion/programas", admin, new
         {
             nombre = $"PLAN {Guid.NewGuid():N}",
-            fechaEmision = Hoy.ToString("yyyy-MM-dd"),
             cantidadAves = 1000,
             observaciones = (string?)null,
         }));
@@ -250,6 +254,41 @@ public class VacunacionEndpointsTests
     }
 
     [Fact]
+    public async Task ImportarExcelEstableceLaFechaDeEmisionConLaPrimeraFecha()
+    {
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        using var cliente = _factory.CreateClient();
+        var alta = await cliente.SendAsync(Autenticado(HttpMethod.Post, "/api/vacunacion/programas", admin, new
+        {
+            nombre = $"PLAN {Guid.NewGuid():N}",
+            cantidadAves = 1000,
+            observaciones = (string?)null,
+        }));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var programaId = (await alta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        // Sin Excel el programa aún no tiene fecha de emisión.
+        var antes = await cliente.SendAsync(Autenticado(HttpMethod.Get,
+            $"/api/vacunacion/programas/{programaId}", admin));
+        Assert.True((await antes.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("fechaEmision").ValueKind == JsonValueKind.Null);
+
+        var inicio = new DateOnly(2026, 8, 6);
+        var importar = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/vacunacion/programas/{programaId}/cronograma-excel")
+        {
+            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", admin) },
+            Content = ExcelCronogramaDesde([(3, "BIO COCCIVET R"), (10, "NEWCASTLE")], inicio),
+        };
+        Assert.Equal(HttpStatusCode.OK, (await cliente.SendAsync(importar)).StatusCode);
+
+        var despues = await cliente.SendAsync(Autenticado(HttpMethod.Get,
+            $"/api/vacunacion/programas/{programaId}", admin));
+        var programa = await despues.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("2026-08-06", programa.GetProperty("fechaEmision").GetString());
+    }
+
+    [Fact]
     public async Task ClienteNoGestionaElCatalogo()
     {
         var (_, tokenCliente) = await CrearClienteAvicola();
@@ -257,7 +296,7 @@ public class VacunacionEndpointsTests
 
         var crear = await cliente.SendAsync(Autenticado(HttpMethod.Post, "/api/vacunacion/programas", tokenCliente, new
         {
-            nombre = "PLAN", fechaEmision = Hoy.ToString("yyyy-MM-dd"), cantidadAves = 100, observaciones = (string?)null,
+            nombre = "PLAN", cantidadAves = 100, observaciones = (string?)null,
         }));
         Assert.Equal(HttpStatusCode.Forbidden, crear.StatusCode);
         var desactivar = await cliente.SendAsync(Autenticado(HttpMethod.Delete,

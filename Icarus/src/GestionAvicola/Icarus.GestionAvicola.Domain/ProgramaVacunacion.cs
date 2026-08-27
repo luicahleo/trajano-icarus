@@ -15,19 +15,23 @@ public sealed class ProgramaVacunacion : AggregateRoot
     {
     }
 
-    public ProgramaVacunacion(string nombre, DateOnly fechaEmision, int cantidadAves, string? observaciones)
+    public ProgramaVacunacion(string nombre, DateOnly? fechaEmision, int cantidadAves, string? observaciones)
     {
-        AsignarDatos(nombre, fechaEmision, cantidadAves, observaciones);
+        AsignarDatos(nombre, cantidadAves, observaciones);
+        if (fechaEmision is not null)
+            EstablecerFechaEmision(fechaEmision.Value);
         EstaActivo = true;
     }
 
     // Para la semilla y tests que necesitan ids fijos.
-    public ProgramaVacunacion(Guid id, string nombre, DateOnly fechaEmision, int cantidadAves, string? observaciones)
+    public ProgramaVacunacion(Guid id, string nombre, DateOnly? fechaEmision, int cantidadAves, string? observaciones)
         : this(nombre, fechaEmision, cantidadAves, observaciones) => Id = id;
 
     public string Nombre { get; private set; } = string.Empty;
 
-    public DateOnly FechaEmision { get; private set; }
+    // La fecha de emisión no se pide en el alta: la establece la primera fecha
+    // del Excel al importar el cronograma (spec SP7). Null hasta ese momento.
+    public DateOnly? FechaEmision { get; private set; }
 
     public int CantidadAves { get; private set; }
 
@@ -37,8 +41,16 @@ public sealed class ProgramaVacunacion : AggregateRoot
 
     public IReadOnlyCollection<ItemPlanVacunacion> Items => _items.AsReadOnly();
 
-    public void ActualizarDatos(string nombre, DateOnly fechaEmision, int cantidadAves, string? observaciones) =>
-        AsignarDatos(nombre, fechaEmision, cantidadAves, observaciones);
+    public void ActualizarDatos(string nombre, int cantidadAves, string? observaciones) =>
+        AsignarDatos(nombre, cantidadAves, observaciones);
+
+    // La emisión sale del cronograma (primera fecha del Excel), no del editor.
+    public void EstablecerFechaEmision(DateOnly fecha)
+    {
+        if (fecha > Hoy())
+            throw new ReglaNegocioException("La fecha de emisión no puede ser futura.");
+        FechaEmision = fecha;
+    }
 
     public void ReemplazarCronograma(IEnumerable<DatosItemPlanVacunacion> items)
     {
@@ -56,17 +68,14 @@ public sealed class ProgramaVacunacion : AggregateRoot
 
     public void Desactivar() => EstaActivo = false;
 
-    private void AsignarDatos(string nombre, DateOnly fechaEmision, int cantidadAves, string? observaciones)
+    private void AsignarDatos(string nombre, int cantidadAves, string? observaciones)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ReglaNegocioException("El nombre del programa es obligatorio.");
-        if (fechaEmision > Hoy())
-            throw new ReglaNegocioException("La fecha de emisión no puede ser futura.");
         if (cantidadAves <= 0)
             throw new ReglaNegocioException("La cantidad de aves debe ser mayor que cero.");
 
         Nombre = nombre.Trim();
-        FechaEmision = fechaEmision;
         CantidadAves = cantidadAves;
         Observaciones = string.IsNullOrWhiteSpace(observaciones) ? null : observaciones.Trim();
     }

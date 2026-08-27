@@ -108,14 +108,31 @@ public class ProgramaVacunacionTests
     }
 
     [Fact]
-    public void ActualizarDatosModificaLosDatosBasicos()
+    public void ActualizarDatosModificaLosDatosBasicosSinTocarLaEmision()
     {
         var programa = CrearPrograma();
-        programa.ActualizarDatos("PLAN NUEVO", Hoy.AddDays(-5), 2000, "  Observación  ");
+        programa.ActualizarDatos("PLAN NUEVO", 2000, "  Observación  ");
         Assert.Equal("PLAN NUEVO", programa.Nombre);
-        Assert.Equal(Hoy.AddDays(-5), programa.FechaEmision);
+        Assert.Equal(Hoy.AddDays(-30), programa.FechaEmision);
         Assert.Equal(2000, programa.CantidadAves);
         Assert.Equal("Observación", programa.Observaciones);
+    }
+
+    [Fact]
+    public void CtorSinFechaDejaLaEmisionEnNull()
+    {
+        var programa = new ProgramaVacunacion("PLAN", null, 1000, null);
+        Assert.Null(programa.FechaEmision);
+    }
+
+    [Fact]
+    public void EstablecerFechaEmisionValidaYRechazaFutura()
+    {
+        var programa = new ProgramaVacunacion("PLAN", null, 1000, null);
+        programa.EstablecerFechaEmision(Hoy.AddDays(-2));
+        Assert.Equal(Hoy.AddDays(-2), programa.FechaEmision);
+        var ex = Assert.Throws<ReglaNegocioException>(() => programa.EstablecerFechaEmision(Hoy.AddDays(1)));
+        Assert.Equal("La fecha de emisión no puede ser futura.", ex.Message);
     }
 
     [Fact]

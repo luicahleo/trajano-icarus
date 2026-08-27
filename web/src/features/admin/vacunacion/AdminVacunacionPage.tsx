@@ -4,11 +4,11 @@ import { useRef, useState } from 'react';
 import { ApiError } from '../../../lib/http';
 import type { ProgramaVacunacionResumen } from '../../../lib/tipos';
 import { actualizarProgramaVacunacion, crearProgramaVacunacion, desactivarProgramaVacunacion, importarCronogramaExcel, listarProgramasVacunacion } from '../../avicola/api';
-import { CLAVE_PROGRAMAS_VACUNACION, hoyIso } from '../../avicola/constantes';
+import { CLAVE_PROGRAMAS_VACUNACION } from '../../avicola/constantes';
 
-interface FormularioPrograma { nombre: string; fechaEmision: string; cantidadAves: string; observaciones: string; }
+interface FormularioPrograma { nombre: string; cantidadAves: string; observaciones: string; }
 
-const formularioVacio: FormularioPrograma = { nombre: '', fechaEmision: hoyIso(), cantidadAves: '', observaciones: '' };
+const formularioVacio: FormularioPrograma = { nombre: '', cantidadAves: '', observaciones: '' };
 
 export function AdminVacunacionPage() {
   const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export function AdminVacunacionPage() {
 
   const guardar = useMutation({
     mutationFn: (): Promise<void> => {
-      const datos = { nombre: form.nombre.trim(), fechaEmision: form.fechaEmision, cantidadAves: Number(form.cantidadAves), observaciones: form.observaciones.trim() || null };
+      const datos = { nombre: form.nombre.trim(), cantidadAves: Number(form.cantidadAves), observaciones: form.observaciones.trim() || null };
       return editando ? actualizarProgramaVacunacion(editando.id, datos) : crearProgramaVacunacion(datos).then(() => undefined);
     },
     onSuccess: () => { setFormAbierto(false); setEditando(null); void queryClient.invalidateQueries({ queryKey: CLAVE_PROGRAMAS_VACUNACION }); },
@@ -60,12 +60,12 @@ export function AdminVacunacionPage() {
         {(programas.data ?? []).map((p) => (
           <ListItem key={p.id} secondaryAction={
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button size="small" onClick={() => { setEditando(p); setForm({ nombre: p.nombre, fechaEmision: p.fechaEmision, cantidadAves: String(p.cantidadAves), observaciones: p.observaciones ?? '' }); setFormAbierto(true); }}>Editar</Button>
+              <Button size="small" onClick={() => { setEditando(p); setForm({ nombre: p.nombre, cantidadAves: String(p.cantidadAves), observaciones: p.observaciones ?? '' }); setFormAbierto(true); }}>Editar</Button>
               <Button size="small" onClick={() => { setSubiendoEn(p); inputArchivo.current?.click(); }}>Subir Excel</Button>
               {p.estaActivo && <Button size="small" color="error" onClick={() => desactivar.mutate(p.id)}>Desactivar</Button>}
             </Box>
           }>
-            <ListItemText primary={<>{p.nombre} {!p.estaActivo && <Chip size="small" label="Inactivo" />}</>} secondary={`Emitido ${p.fechaEmision} · para ${p.cantidadAves} aves`} />
+            <ListItemText primary={<>{p.nombre} {!p.estaActivo && <Chip size="small" label="Inactivo" />}</>} secondary={`Emitido ${p.fechaEmision ?? '—'} · para ${p.cantidadAves} aves`} />
           </ListItem>
         ))}
       </List>
@@ -91,7 +91,6 @@ export function AdminVacunacionPage() {
         <DialogTitle>{editando ? 'Editar programa' : 'Nuevo programa'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} fullWidth />
-          <TextField label="Fecha de emisión" type="date" value={form.fechaEmision} onChange={(e) => setForm({ ...form, fechaEmision: e.target.value })} slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: hoyIso() } }} fullWidth />
           <TextField label="Cantidad de aves" value={form.cantidadAves} onChange={(e) => setForm({ ...form, cantidadAves: e.target.value })} inputMode="numeric" fullWidth />
           <TextField label="Observaciones" value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} multiline fullWidth />
           {guardar.isError && <Alert severity="error">{guardar.error instanceof ApiError ? guardar.error.message : 'No se pudo guardar el programa.'}</Alert>}
