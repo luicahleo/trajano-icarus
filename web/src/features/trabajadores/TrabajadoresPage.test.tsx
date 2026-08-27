@@ -192,4 +192,25 @@ describe('TrabajadoresPage', () => {
     expect(await screen.findByText(/El documento de identidad ya está registrado/)).toBeInTheDocument();
     expect(screen.queryByText(/DNI-00000099/)).not.toBeInTheDocument();
   });
+
+  test('el diálogo de funcionalidades ofrece Vacunación y la envía al guardar', async () => {
+    const usuario = userEvent.setup();
+    const fetchMock = baseFetch('Cliente', 'cli1', {
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+      'PUT /api/clientes/cli1/trabajadores/t1/funcionalidades': respuesta(204),
+    });
+    renderPagina('/trabajadores');
+
+    await usuario.click(await screen.findByRole('button', { name: 'Funcionalidades' }));
+    await usuario.click(screen.getByRole('checkbox', { name: 'Vacunación' }));
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    const llamada = fetchMock.mock.calls.find(([arg]) => {
+      const req = arg as Request;
+      return req.method === 'PUT' && req.url.endsWith('/clientes/cli1/trabajadores/t1/funcionalidades');
+    });
+    expect(llamada).toBeDefined();
+    const cuerpo = JSON.parse(await (llamada![0] as Request).clone().text());
+    expect(cuerpo.funcionalidades).toContain('Vacunacion');
+  });
 });

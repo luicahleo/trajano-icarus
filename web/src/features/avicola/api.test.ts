@@ -4,29 +4,30 @@ describe('api avícola',()=>{beforeEach(()=>vi.restoreAllMocks());test('galpones
 
 describe('api vacunación', () => {
   beforeEach(() => vi.restoreAllMocks());
+  const solicitudVacunacion = (f: ReturnType<typeof vi.fn>) => f.mock.calls.at(0)?.[0] as unknown as Request;
 
   test('obtenerNotificacionVacunacion hace GET /api/vacunacion/tareas', async () => {
     const cuerpo = { vencidasYHoy: [], proximas: [] };
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify(cuerpo), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(cuerpo), { status: 200, headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
 
     const resultado = await obtenerNotificacionVacunacion();
 
     expect(resultado.vencidasYHoy).toEqual([]);
-    const req = fetchMock.mock.calls[0][0] as Request;
+    const req = solicitudVacunacion(fetchMock);
     expect(req.method).toBe('GET');
     expect(new URL(req.url).pathname).toBe('/api/vacunacion/tareas');
   });
 
   test('importarCronogramaExcel sube FormData sin Content-Type JSON', async () => {
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ itemsImportados: 3 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ itemsImportados: 3 }), { status: 200, headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
     const archivo = new File(['x'], 'plan.xlsx');
 
     const resultado = await importarCronogramaExcel('p1', archivo);
 
     expect(resultado.itemsImportados).toBe(3);
-    const req = fetchMock.mock.calls[0][0] as Request;
+    const req = solicitudVacunacion(fetchMock);
     expect(req.method).toBe('POST');
     expect(new URL(req.url).pathname).toBe('/api/vacunacion/programas/p1/cronograma-excel');
     expect(req.headers.get('content-type')).not.toContain('application/json');
@@ -34,12 +35,12 @@ describe('api vacunación', () => {
   });
 
   test('completarTareaVacunacion envía fecha, aves y observaciones', async () => {
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 204 }));
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
 
     await completarTareaVacunacion('t1', { fechaAplicacion: '2026-08-18', avesVacunadas: 4800, observaciones: null });
 
-    const req = fetchMock.mock.calls[0][0] as Request;
+    const req = solicitudVacunacion(fetchMock);
     expect(new URL(req.url).pathname).toBe('/api/vacunacion/tareas/t1/completar');
     expect(JSON.parse(await req.clone().text())).toEqual({ fechaAplicacion: '2026-08-18', avesVacunadas: 4800, observaciones: null });
   });

@@ -67,10 +67,13 @@ no contexto obligatorio. No cargarlos en bloque.
   Clientes completo (agregados Cliente/Trabajador, filtros de tenant, entitlement
   por módulo) y módulo GestionAvicola (agregados Granja/Galpón —una granja activa
   por cliente—, recogidas de producción con huevos de descarte, mortalidad con
-  ajuste de inventario y eficiencia diaria con umbral del 70 %), con puerta de
-  calidad con gates de backend. El frontend React
+  ajuste de inventario, eficiencia diaria con umbral del 70 % y vacunación
+  (catálogo global de programas de CAISY subido por el Administrador, asignación
+  por galpón con día 0 = fecha de poblado, notificación de tareas al trabajador)),
+  con puerta de calidad con gates de backend. El frontend React
   (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola online-first
-  (granjas, galpones, recogida, mortalidad y eficiencia).
+  (granjas, galpones, recogida, mortalidad, eficiencia y vacunación) y la
+  administración del catálogo de vacunación.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
 

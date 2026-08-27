@@ -25,7 +25,7 @@ describe('CompletarTareaDialog', () => {
 
   test('la fecha de aplicación viene prellenada con hoy y se envía con las aves', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => respuesta(204));
+    const fetchMock = vi.fn(async () => respuesta(204));
     vi.stubGlobal('fetch', fetchMock);
     renderDialog();
 
@@ -33,14 +33,16 @@ describe('CompletarTareaDialog', () => {
     await usuario.type(screen.getByLabelText('Aves vacunadas'), '4800');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    const llamada = fetchMock.mock.calls.find(([arg]) => (arg as Request).method === 'POST');
-    expect(new URL((llamada![0] as Request).url).pathname).toBe('/api/vacunacion/tareas/t1/completar');
-    expect(JSON.parse(await (llamada![0] as Request).clone().text())).toEqual({ fechaAplicacion: hoyIso(), avesVacunadas: 4800, observaciones: null });
+    const llamadas = fetchMock.mock.calls as unknown as Array<[Request, RequestInit?]>;
+    const req = llamadas.find(([arg]) => arg.method === 'POST')?.[0];
+    expect(req).toBeDefined();
+    expect(new URL(req!.url).pathname).toBe('/api/vacunacion/tareas/t1/completar');
+    expect(JSON.parse(await req!.clone().text())).toEqual({ fechaAplicacion: hoyIso(), avesVacunadas: 4800, observaciones: null });
   });
 
   test('rechaza una fecha futura sin llamar a la API', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => respuesta(204));
+    const fetchMock = vi.fn(async () => respuesta(204));
     vi.stubGlobal('fetch', fetchMock);
     renderDialog();
 

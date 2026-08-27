@@ -186,7 +186,7 @@ export function TrabajadoresPage() {
                   <TableCell>{t.cargo}</TableCell>
                   <TableCell>{t.fechaIngreso}</TableCell>
                   <TableCell>{t.fechaCese ?? '—'}</TableCell>
-                  <TableCell>{t.funcionalidades.filter((f) => f === 'ProduccionHuevos' || f === 'Mortalidad').map((f) => f === 'ProduccionHuevos' ? 'Producción de huevos' : 'Mortalidad').join(', ') || 'Ninguna'}</TableCell>
+                  <TableCell>{t.funcionalidades.filter((f) => f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion').map((f) => f === 'ProduccionHuevos' ? 'Producción de huevos' : f === 'Mortalidad' ? 'Mortalidad' : 'Vacunación').join(', ') || 'Ninguna'}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                       <Button size="small" variant="outlined" onClick={() => setCesando(t)}>
@@ -195,7 +195,7 @@ export function TrabajadoresPage() {
                       <Button size="small" variant="outlined" color="error" onClick={() => setDesactivando(t)}>
                         Desactivar
                       </Button>
-                      {!t.fechaCese && <Button size="small" variant="outlined" onClick={() => { setConfigurando(t); setFuncionalidades(t.funcionalidades.filter((f): f is FuncionalidadOperativaTrabajador => f === 'ProduccionHuevos' || f === 'Mortalidad')); }}>
+                      {!t.fechaCese && <Button size="small" variant="outlined" onClick={() => { setConfigurando(t); setFuncionalidades(t.funcionalidades.filter((f): f is FuncionalidadOperativaTrabajador => f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion')); }}>
                         Funcionalidades
                       </Button>}
                     </Stack>
@@ -286,6 +286,7 @@ export function TrabajadoresPage() {
         <DialogContent>
           <FormControlLabel control={<Checkbox checked={funcionalidades.includes('ProduccionHuevos')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'ProduccionHuevos'), 'ProduccionHuevos'] : actuales.filter((f) => f !== 'ProduccionHuevos'))} />} label="Producción de huevos" />
           <FormControlLabel control={<Checkbox checked={funcionalidades.includes('Mortalidad')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'Mortalidad'), 'Mortalidad'] : actuales.filter((f) => f !== 'Mortalidad'))} />} label="Mortalidad" />
+          <FormControlLabel control={<Checkbox checked={funcionalidades.includes('Vacunacion')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'Vacunacion'), 'Vacunacion'] : actuales.filter((f) => f !== 'Vacunacion'))} />} label="Vacunación" />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfigurando(null)}>Cancelar</Button>
