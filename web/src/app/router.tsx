@@ -8,6 +8,7 @@ import { AppLayout } from './AppLayout';
 import { CargandoRuta } from './CargandoRuta';
 import { ErrorDiagnosticoPage } from './ErrorDiagnosticoPage';
 import {
+  AdminVacunacionPage,
   ClienteDetallePage,
   ClienteNuevoPage,
   ClientesListaPage,
@@ -83,6 +84,16 @@ export const router = createBrowserRouter([
               <ProtectedRoute>
                 <RequiereRol roles={admin}>
                   <ClienteDetallePage />
+                </RequiereRol>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/admin/vacunacion',
+            element: (
+              <ProtectedRoute>
+                <RequiereRol roles={admin}>
+                  <AdminVacunacionPage />
                 </RequiereRol>
               </ProtectedRoute>
             ),

@@ -15,7 +15,7 @@ interface EnlaceMenu {
 }
 
 const ENLACES_POR_ROL: Partial<Record<Rol, EnlaceMenu[]>> = {
-  Administrador: [{ etiqueta: 'Clientes', ruta: '/admin/clientes' }],
+  Administrador: [{ etiqueta: 'Clientes', ruta: '/admin/clientes' }, { etiqueta: 'Vacunación', ruta: '/admin/vacunacion' }],
   Cliente: [{ etiqueta: 'Trabajadores', ruta: '/trabajadores' }],
 };
 
