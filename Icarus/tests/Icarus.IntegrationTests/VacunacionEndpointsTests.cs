@@ -215,6 +215,41 @@ public class VacunacionEndpointsTests
     }
 
     [Fact]
+    public async Task DesactivarProgramaQuitaElPlanVigenteDeLosGalpones()
+    {
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        var programaId = await CrearProgramaConCronograma(admin, (3, "BIO COCCIVET R"), (10, "NEWCASTLE"));
+        var (_, tokenCliente) = await CrearClienteAvicola();
+        using var cliente = _factory.CreateClient();
+        var galponId = await CrearGalpon(tokenCliente, Hoy.AddDays(-3));
+        var asignar = await cliente.SendAsync(Autenticado(HttpMethod.Post,
+            $"/api/galpones/{galponId}/plan-vacunacion", tokenCliente, new { programaId }));
+        Assert.Equal(HttpStatusCode.NoContent, asignar.StatusCode);
+
+        // Notificación con las pendientes del programa antes de desactivarlo.
+        var antes = await cliente.SendAsync(Autenticado(HttpMethod.Get, "/api/vacunacion/tareas", tokenCliente));
+        var cuerpoAntes = await antes.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, cuerpoAntes.GetProperty("vencidasYHoy").EnumerateArray().Count()
+            + cuerpoAntes.GetProperty("proximas").EnumerateArray().Count());
+
+        // El admin desactiva el programa: deja de ser vigente donde estaba asignado.
+        var desactivar = await cliente.SendAsync(Autenticado(HttpMethod.Delete,
+            $"/api/vacunacion/programas/{programaId}", admin));
+        Assert.Equal(HttpStatusCode.NoContent, desactivar.StatusCode);
+
+        // Las pendientes del programa desaparecen del historial del galpón.
+        var historial = await cliente.SendAsync(Autenticado(HttpMethod.Get,
+            $"/api/galpones/{galponId}/vacunacion/tareas", tokenCliente));
+        Assert.Empty((await historial.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+
+        // La notificación ya no trae tareas del programa desactivado.
+        var despues = await cliente.SendAsync(Autenticado(HttpMethod.Get, "/api/vacunacion/tareas", tokenCliente));
+        var cuerpoDespues = await despues.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, cuerpoDespues.GetProperty("vencidasYHoy").EnumerateArray().Count()
+            + cuerpoDespues.GetProperty("proximas").EnumerateArray().Count());
+    }
+
+    [Fact]
     public async Task ClienteNoGestionaElCatalogo()
     {
         var (_, tokenCliente) = await CrearClienteAvicola();

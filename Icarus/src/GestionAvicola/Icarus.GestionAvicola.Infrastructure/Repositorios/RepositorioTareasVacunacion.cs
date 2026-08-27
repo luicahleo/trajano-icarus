@@ -37,4 +37,19 @@ public sealed class RepositorioTareasVacunacion(GestionAvicolaDbContext db) : IR
             tarea.Desactivar();
         return pendientes.Count;
     }
+
+    // Al desactivar un programa, las pendientes que lo materializaban en los
+    // galpones se desactivan (el plan deja de ser vigente); el historial
+    // completado/cancelado se conserva.
+    public async Task<int> DesactivarPendientesDeProgramaAsync(
+        Guid programaId, CancellationToken cancellationToken = default)
+    {
+        var pendientes = await db.TareasVacunacion
+            .Where(t => t.ProgramaVacunacionId == programaId
+                && t.Estado == EstadoTareaVacunacion.Pendiente)
+            .ToListAsync(cancellationToken);
+        foreach (var tarea in pendientes)
+            tarea.Desactivar();
+        return pendientes.Count;
+    }
 }

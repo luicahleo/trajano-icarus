@@ -41,7 +41,7 @@ Definida en el spec del subproyecto 7
 
 | Término | Definición |
 |---|---|
-| Programa de vacunación | Plan sanitario por edad del lote, emitido por CAISY. **Catálogo global** (sin tenant): lo sube el Administrador de plataforma y cada cliente lo asigna a sus galpones. No es solo vacunas: incluye manejos (paracetamol, recorte de pico, desparasitación, traslado). |
+| Programa de vacunación | Plan sanitario por edad del lote, emitido por CAISY. **Catálogo global** (sin tenant): lo sube el Administrador de plataforma y cada cliente lo asigna a sus galpones. No es solo vacunas: incluye manejos (paracetamol, recorte de pico, desparasitación, traslado). Un programa desactivado no es asignable y deja de ser vigente donde estaba: se desactivan sus tareas pendientes en todos los galpones (el historial completado/cancelado se conserva). |
 | Ítem de plan | Una fila del cronograma: `EdadDia` (obligatoria, > 0, única por programa), `Vacuna` (texto libre: vacuna o manejo), `ModoAplicacion` y observaciones. No hay fecha absoluta: la fecha se calcula por galpón. |
 | Asignación de plan | El cliente asigna un programa a un galpón: se materializa una tarea por ítem con `FechaProgramada = FechaNacimientoLote + EdadDia`. Al reasignar, las pendientes del plan anterior se desactivan y las completadas/canceladas quedan como historial. Nunca se borra físicamente. |
 | Tarea de vacunación | La ejecución de un ítem sobre un galpón. Estados: `Pendiente` → `Completada` o `Cancelada`. Completar registra `FechaAplicacion` (informada por el usuario, nunca futura; por defecto hoy), aves vacunadas y quién la registró. Cancelar es decisión solo del cliente, con motivo opcional. No hay reprogramación individual. |

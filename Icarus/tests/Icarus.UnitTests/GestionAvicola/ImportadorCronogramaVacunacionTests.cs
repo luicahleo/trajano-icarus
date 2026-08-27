@@ -72,20 +72,57 @@ public class ImportadorCronogramaVacunacionTests
     }
 
     [Fact]
-    public void EdadRepetidaSeReporta()
+    public void EdadRepetidaSeFusionaEnUnSoloItem()
     {
         using var excel = ExcelCon(EncabezadoCaisy,
         [
-            ["", "3", "A", "", ""],
-            ["", "3", "B", "", ""],
+            ["", "3", "A", "Agua de bebida", "Nota 1"],
+            ["", "3", "B", "Inyección", "Nota 2"],
         ]);
 
         var resultado = new ImportadorCronogramaVacunacion().Importar(excel);
 
-        var error = Assert.Single(resultado.Errores);
-        Assert.Equal(3, error.Fila);
-        Assert.Contains("repetida", error.Mensaje);
-        Assert.Single(resultado.Items);
+        Assert.Empty(resultado.Errores);
+        var item = Assert.Single(resultado.Items);
+        Assert.Equal(3, item.EdadDia);
+        Assert.Equal("A; B", item.Vacuna);
+        Assert.Equal("Agua de bebida; Inyección", item.ModoAplicacion);
+        Assert.Equal("Nota 1; Nota 2", item.Observaciones);
+    }
+
+    [Fact]
+    public void EdadRepetidaFusionaSinArtefactosCuandoFaltaUnCampo()
+    {
+        using var excel = ExcelCon(EncabezadoCaisy,
+        [
+            ["", "10", "A", "", ""],
+            ["", "10", "B", "Gota ocular", ""],
+        ]);
+
+        var resultado = new ImportadorCronogramaVacunacion().Importar(excel);
+
+        Assert.Empty(resultado.Errores);
+        var item = Assert.Single(resultado.Items);
+        Assert.Equal("A; B", item.Vacuna);
+        Assert.Equal("Gota ocular", item.ModoAplicacion);
+        Assert.Null(item.Observaciones);
+    }
+
+    [Fact]
+    public void EdadRepetidaNoDuplicaTextoIdentico()
+    {
+        using var excel = ExcelCon(EncabezadoCaisy,
+        [
+            ["", "60", "INFLUENZA AVIAR", "Intramuscular", ""],
+            ["", "60", "INFLUENZA AVIAR", "Intramuscular", ""],
+        ]);
+
+        var resultado = new ImportadorCronogramaVacunacion().Importar(excel);
+
+        Assert.Empty(resultado.Errores);
+        var item = Assert.Single(resultado.Items);
+        Assert.Equal("INFLUENZA AVIAR", item.Vacuna);
+        Assert.Equal("Intramuscular", item.ModoAplicacion);
     }
 
     [Fact]

@@ -23,6 +23,11 @@ public interface IRepositorioTareasVacunacion
 
     // Soft delete de las pendientes del galpón; devuelve cuántas se desactivaron.
     Task<int> DesactivarPendientesDeGalponAsync(Guid galponId, CancellationToken cancellationToken = default);
+
+    // Soft delete de las pendientes de un programa (todos los galpones que lo
+    // tienen asignado); devuelve cuántas se desactivaron. Completadas y
+    // canceladas quedan como historial sanitario (spec SP7).
+    Task<int> DesactivarPendientesDeProgramaAsync(Guid programaId, CancellationToken cancellationToken = default);
 }
 
 public sealed record TareaVacunacionResumen(

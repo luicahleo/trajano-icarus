@@ -31,7 +31,6 @@ public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacuna
             return new ResultadoImportacionCronograma(items, errores);
         }
 
-        var edadesVistas = new HashSet<int>();
         var fila = 2;
         while (!hoja.Row(fila).IsEmpty())
         {
@@ -47,11 +46,6 @@ public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacuna
                 errores.Add(new ErrorFilaImportacion(fila, "La edad debe ser un número entero mayor que cero."));
                 valida = false;
             }
-            else if (!edadesVistas.Add(edad))
-            {
-                errores.Add(new ErrorFilaImportacion(fila, $"La edad {edad} está repetida en el archivo."));
-                valida = false;
-            }
             if (string.IsNullOrWhiteSpace(vacuna))
             {
                 errores.Add(new ErrorFilaImportacion(fila, "La vacuna es obligatoria."));
@@ -59,10 +53,26 @@ public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacuna
             }
 
             if (valida)
-                items.Add(new ItemCronogramaImportado(
-                    edad, vacuna.Trim(),
-                    string.IsNullOrWhiteSpace(modo) ? null : modo.Trim(),
-                    string.IsNullOrWhiteSpace(observaciones) ? null : observaciones.Trim()));
+            {
+                var indice = items.FindIndex(i => i.EdadDia == edad);
+                if (indice >= 0)
+                {
+                    var existente = items[indice];
+                    items[indice] = existente with
+                    {
+                        Vacuna = Combinar(existente.Vacuna, vacuna.Trim())!,
+                        ModoAplicacion = Combinar(existente.ModoAplicacion, TextoNulo(modo)),
+                        Observaciones = Combinar(existente.Observaciones, TextoNulo(observaciones))
+                    };
+                }
+                else
+                {
+                    items.Add(new ItemCronogramaImportado(
+                        edad, vacuna.Trim(),
+                        TextoNulo(modo),
+                        TextoNulo(observaciones)));
+                }
+            }
             fila++;
         }
 
@@ -93,6 +103,23 @@ public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacuna
 
     private static string TextoCelda(IXLWorksheet hoja, int fila, int? columna) =>
         columna is null ? string.Empty : hoja.Cell(fila, columna.Value).GetString().Trim();
+
+    // Los ítems con la misma edad se fusionan en uno solo (spec SP7): se
+    // concatenan VACUNA, MODO DE APLICACION y observaciones separadas por "; ",
+    // sin duplicar segmentos idénticos y sin artefactos cuando un campo falta.
+    private static string? Combinar(string? actual, string? adicional)
+    {
+        if (string.IsNullOrWhiteSpace(actual))
+            return adicional;
+        if (string.IsNullOrWhiteSpace(adicional))
+            return actual;
+        if (string.Equals(actual, adicional, StringComparison.OrdinalIgnoreCase))
+            return actual;
+        return actual + "; " + adicional;
+    }
+
+    private static string? TextoNulo(string texto) =>
+        string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
 
     private static string Normalizar(string texto)
     {

@@ -15,6 +15,7 @@ public class ProgramasVacunacionHandlerTests
     private static readonly DateOnly Hoy = DateOnly.FromDateTime(DateTime.UtcNow);
 
     private readonly IRepositorioProgramasVacunacion _programas = Substitute.For<IRepositorioProgramasVacunacion>();
+    private readonly IRepositorioTareasVacunacion _tareas = Substitute.For<IRepositorioTareasVacunacion>();
     private readonly IImportadorCronogramaVacunacion _importador = Substitute.For<IImportadorCronogramaVacunacion>();
     private readonly ICurrentUser _usuario = Substitute.For<ICurrentUser>();
     private readonly IRegistroVuelo _vuelo = Substitute.For<IRegistroVuelo>();
@@ -155,22 +156,26 @@ public class ProgramasVacunacionHandlerTests
     {
         _programas.ObtenerPorIdIncluyendoInactivosAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((ProgramaVacunacion?)null);
-        var handler = new DesactivarProgramaVacunacionHandler(_programas, _unidad);
+        var handler = new DesactivarProgramaVacunacionHandler(_programas, _tareas, _vuelo, _unidad);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             handler.Handle(new(Guid.NewGuid()), CancellationToken.None));
     }
 
     [Fact]
-    public async Task DesactivarMarcaInactivoYGuarda()
+    public async Task DesactivarDesactivaLasPendientesDelProgramaYGuarda()
     {
         var programa = ProgramaDemo();
         _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
-        var handler = new DesactivarProgramaVacunacionHandler(_programas, _unidad);
+        _tareas.DesactivarPendientesDeProgramaAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(3);
+        var handler = new DesactivarProgramaVacunacionHandler(_programas, _tareas, _vuelo, _unidad);
 
         await handler.Handle(new(programa.Id), CancellationToken.None);
 
         Assert.False(programa.EstaActivo);
+        await _tareas.Received(1).DesactivarPendientesDeProgramaAsync(programa.Id, Arg.Any<CancellationToken>());
+        _vuelo.Received().Decidir("avicola.vacunacion.programas.desactivar", "desactivacion", "aplicada",
+            Arg.Is<IReadOnlyDictionary<string, object?>>(c => (int)c["TareasPendientesDesactivadas"]! == 3));
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

@@ -37,7 +37,8 @@ public sealed record ImportarCronogramaExcelCommand(Guid ProgramaId, Stream Cont
 public sealed record DesactivarProgramaVacunacionCommand(Guid ProgramaId) : IRequest, IOperacionRegistrable
 {
     public DescriptorOperacionRegistroVuelo Registro { get; } = new(
-        "avicola.vacunacion.programas.desactivar", new Dictionary<string, DatoRegistroVuelo>());
+        "avicola.vacunacion.programas.desactivar",
+        new Dictionary<string, DatoRegistroVuelo> { ["TareasPendientesDesactivadas"] = DatoRegistroVuelo.Entero });
 }
 
 public sealed record ListarProgramasVacunacionQuery(bool IncluirInactivos)
@@ -133,14 +134,21 @@ public sealed class ImportarCronogramaExcelHandler(
 }
 
 public sealed class DesactivarProgramaVacunacionHandler(
-    IRepositorioProgramasVacunacion programas, IUnidadTrabajoGestionAvicola unidadTrabajo)
+    IRepositorioProgramasVacunacion programas, IRepositorioTareasVacunacion tareas,
+    IRegistroVuelo registroVuelo, IUnidadTrabajoGestionAvicola unidadTrabajo)
     : IRequestHandler<DesactivarProgramaVacunacionCommand>
 {
     public async Task Handle(DesactivarProgramaVacunacionCommand request, CancellationToken cancellationToken)
     {
         var programa = await programas.ObtenerPorIdIncluyendoInactivosAsync(request.ProgramaId, cancellationToken)
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        // Un programa desactivado deja de ser vigente donde estaba asignado:
+        // sus tareas pendientes se desactivan en todos los galpones; las
+        // completadas y canceladas quedan como historial sanitario (spec SP7).
+        var desactivadas = await tareas.DesactivarPendientesDeProgramaAsync(programa.Id, cancellationToken);
         programa.Desactivar();
+        registroVuelo.Decidir("avicola.vacunacion.programas.desactivar", "desactivacion", "aplicada",
+            new Dictionary<string, object?> { ["TareasPendientesDesactivadas"] = desactivadas });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }

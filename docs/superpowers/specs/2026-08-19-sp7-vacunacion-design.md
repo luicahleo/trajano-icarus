@@ -115,8 +115,10 @@ al asignar, con snapshot**.
   `ReemplazarCronograma(items)` (desactiva los ítems actuales y agrega los
   nuevos; **no afecta** a las tareas ya materializadas en galpones, que tienen
   snapshot), `Desactivar()`.
-- Un programa desactivado **no es asignable**; los galpones que ya lo tenían
-  conservan sus tareas.
+- Un programa desactivado **no es asignable** y **deja de ser vigente donde
+  estaba asignado**: al desactivarlo se desactivan sus tareas pendientes en
+  todos los galpones (el plan deja de aparecer); las completadas y canceladas
+  quedan como historial sanitario.
 
 ### Agregado `TareaVacunacion` (raíz propia, del tenant)
 
@@ -195,8 +197,11 @@ decisión de gestión, no de operación.
   `MODO DE APLICACION`, `OBSERVACIONES`; nombres de columna tolerantes
   (mayúsculas/minúsculas, tildes, espacios). **La columna FECHA se ignora**:
   la fuente de verdad es `EDAD`.
-- Reglas por fila: `EDAD` obligatoria, entera, > 0, no repetida en el archivo;
-  `VACUNA` obligatoria. **Todo-o-nada**: una fila inválida rechaza la
+- Reglas por fila: `EDAD` obligatoria, entera, > 0; `VACUNA` obligatoria.
+  **Filas con la misma edad se fusionan en un solo ítem**: se concatenan
+  `VACUNA`, `MODO DE APLICACION` y observaciones separadas por "; ", sin
+  duplicar segmentos idénticos ni dejar artefactos si un campo falta.
+  **Todo-o-nada**: una fila inválida (edad o vacuna) rechaza la
   importación completa con la lista de errores por número de fila, sin guardar
   nada.
 - Librería: **ClosedXML** (la del legacy). El parseo vive en Infrastructure
@@ -213,7 +218,7 @@ no-PII:
 - `avicola.vacunacion.programas.crear` → `{ CantidadAves: Entero }`
 - `avicola.vacunacion.programas.actualizar` → `{ CantidadAves: Entero }`
 - `avicola.vacunacion.programas.importar-cronograma` → `{ ItemsImportados: Entero }`
-- `avicola.vacunacion.programas.desactivar` → `{}`
+- `avicola.vacunacion.programas.desactivar` → `{ TareasPendientesDesactivadas: Entero }`
 - `avicola.vacunacion.asignar` → `{ TareasCreadas: Entero, TareasPendientesDesactivadas: Entero }`
 - `avicola.vacunacion.quitar-plan` → `{ TareasPendientesDesactivadas: Entero }`
 - `avicola.vacunacion.completar` → `{ AvesVacunadas: Entero }` (si se informa)
@@ -231,7 +236,8 @@ Application: `IRepositorioProgramasVacunacion` (catálogo global; documenta
 qué métodos ignoran el filtro de activos para el rol de plataforma) e
 `IRepositorioTareasVacunacion` (`Agregar`, `ObtenerPorIdAsync`,
 `ListarPendientesPorGalponAsync`, `ListarPorGalponAsync`,
-`ListarNotificacionAsync(clienteId, hoy, hasta)`, `DesactivarPendientesDeGalponAsync`).
+`ListarNotificacionAsync(clienteId, hoy, hasta)`, `DesactivarPendientesDeGalponAsync`,
+`DesactivarPendientesDeProgramaAsync`).
 DTOs de lectura `sealed record` en el mismo archivo.
 
 ### API (Host)
