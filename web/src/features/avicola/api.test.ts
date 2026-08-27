@@ -7,7 +7,7 @@ describe('api vacunación', () => {
 
   test('obtenerNotificacionVacunacion hace GET /api/vacunacion/tareas', async () => {
     const cuerpo = { vencidasYHoy: [], proximas: [] };
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(cuerpo), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify(cuerpo), { status: 200, headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
 
     const resultado = await obtenerNotificacionVacunacion();
@@ -19,7 +19,7 @@ describe('api vacunación', () => {
   });
 
   test('importarCronogramaExcel sube FormData sin Content-Type JSON', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ itemsImportados: 3 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ itemsImportados: 3 }), { status: 200, headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
     const archivo = new File(['x'], 'plan.xlsx');
 
@@ -34,7 +34,7 @@ describe('api vacunación', () => {
   });
 
   test('completarTareaVacunacion envía fecha, aves y observaciones', async () => {
-    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
 
     await completarTareaVacunacion('t1', { fechaAplicacion: '2026-08-18', avesVacunadas: 4800, observaciones: null });

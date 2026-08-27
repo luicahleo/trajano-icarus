@@ -25,9 +25,9 @@ export function AdminVacunacionPage() {
   });
 
   const guardar = useMutation({
-    mutationFn: () => {
+    mutationFn: (): Promise<void> => {
       const datos = { nombre: form.nombre.trim(), fechaEmision: form.fechaEmision, cantidadAves: Number(form.cantidadAves), observaciones: form.observaciones.trim() || null };
-      return editando ? actualizarProgramaVacunacion(editando.id, datos) : crearProgramaVacunacion(datos);
+      return editando ? actualizarProgramaVacunacion(editando.id, datos) : crearProgramaVacunacion(datos).then(() => undefined);
     },
     onSuccess: () => { setFormAbierto(false); setEditando(null); void queryClient.invalidateQueries({ queryKey: CLAVE_PROGRAMAS_VACUNACION }); },
   });

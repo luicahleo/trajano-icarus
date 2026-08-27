@@ -18,16 +18,17 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import type { EficienciaDia, MortalidadRegistro, RecogidaResumen } from '../../lib/tipos';
+import type { EficienciaDia, MortalidadRegistro, RecogidaResumen, TareaVacunacionResumen } from '../../lib/tipos';
 import { ApiError } from '../../lib/http';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
-import { desactivarMortalidad, desactivarProduccion, listarMortalidad, listarProduccion, obtenerEficiencia, obtenerGalpon } from './api';
-import { hoyIso } from './constantes';
+import { desactivarMortalidad, desactivarProduccion, listarMortalidad, listarProduccion, obtenerEficiencia, obtenerGalpon, listarTareasVacunacion, quitarPlanVacunacion } from './api';
+import { CLAVE_NOTIFICACION_VACUNACION, CLAVE_TAREAS_VACUNACION, hoyIso } from './constantes';
 import { formatearConteo } from './formatos';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
 import { RegistrarRecogidaDialog } from './RegistrarRecogidaDialog';
 import { EditarBajasDialog } from './EditarBajasDialog';
 import { EditarRecogidaDialog } from './EditarRecogidaDialog';
+import { AsignarPlanDialog } from './AsignarPlanDialog';
 
 type Evento =
   | { hora: string; tipo: 'recogida'; datos: NonNullable<Awaited<ReturnType<typeof listarProduccion>>['recogidas']>[number] }
@@ -45,14 +46,22 @@ export function GalponPage() {
   const [recogidaEditada, setRecogidaEditada] = useState<RecogidaResumen | null>(null);
   const [bajasEditadas, setBajasEditadas] = useState<MortalidadRegistro | null>(null);
   const [registroAEliminar, setRegistroAEliminar] = useState<Evento | null>(null);
+  const [asignandoPlan, setAsignandoPlan] = useState(false);
   const queryClient = useQueryClient();
   const esHoy = fecha === hoyIso();
   const galpon = useQuery({ queryKey: ['avicola', 'galpon', galponId], queryFn: () => obtenerGalpon(galponId), enabled: Boolean(galponId) });
   const puedeProduccion = useFuncionalidad('ProduccionHuevos');
   const puedeMortalidad = useFuncionalidad('Mortalidad');
+  const puedeVacunacion = useFuncionalidad('Vacunacion');
+  const puedeEstructura = useFuncionalidad('Galpones');
   const produccion = useQuery({ queryKey: ['avicola', 'produccion', galponId, fecha], queryFn: () => listarProduccion(galponId, fecha), enabled: Boolean(galponId) && puedeProduccion });
   const mortalidad = useQuery({ queryKey: ['avicola', 'mortalidad', galponId, fecha], queryFn: () => listarMortalidad(galponId, fecha), enabled: Boolean(galponId) && puedeMortalidad });
   const eficiencia = useQuery({ queryKey: ['avicola', 'eficiencia', galponId, fecha, fecha], queryFn: () => obtenerEficiencia(galponId, fecha, fecha), enabled: Boolean(galponId) && puedeProduccion });
+  const tareasVacunacion = useQuery({ queryKey: [...CLAVE_TAREAS_VACUNACION, galponId], queryFn: () => listarTareasVacunacion(galponId), enabled: Boolean(galponId) && puedeVacunacion });
+  const quitarPlan = useMutation({
+    mutationFn: () => quitarPlanVacunacion(galponId),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: CLAVE_TAREAS_VACUNACION }); void queryClient.invalidateQueries({ queryKey: CLAVE_NOTIFICACION_VACUNACION }); },
+  });
   const eliminar = useMutation({
     mutationFn: (evento: Evento) => evento.tipo === 'recogida' ? desactivarProduccion(evento.datos.id) : desactivarMortalidad(evento.datos.id),
     onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['avicola', 'produccion'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'galpon'] }); void queryClient.invalidateQueries({ queryKey: ['avicola', 'eficiencia'] }); setRegistroAEliminar(null); },
@@ -93,5 +102,26 @@ export function GalponPage() {
     <EditarRecogidaDialog recogida={recogidaEditada} abierto={recogidaEditada !== null} alCerrar={() => setRecogidaEditada(null)} />
     <EditarBajasDialog registro={bajasEditadas} abierto={bajasEditadas !== null} alCerrar={() => setBajasEditadas(null)} />
     <Dialog open={registroAEliminar !== null} onClose={() => setRegistroAEliminar(null)}><DialogTitle>Eliminar registro</DialogTitle><DialogContent>El registro se desactiva; no se borra. Si era una baja, las gallinas vuelven al inventario.</DialogContent><DialogActions><Button onClick={() => setRegistroAEliminar(null)}>Cancelar</Button><Button onClick={() => registroAEliminar && eliminar.mutate(registroAEliminar)} disabled={eliminar.isPending}>Confirmar</Button></DialogActions></Dialog>
+    {puedeVacunacion && <Box component="section" sx={{ mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">Vacunación</Typography>
+        {puedeEstructura && <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button size="small" variant="outlined" onClick={() => setAsignandoPlan(true)}>Asignar plan</Button>
+          {(tareasVacunacion.data ?? []).some((t) => t.estado === 'Pendiente') && <Button size="small" color="error" onClick={() => quitarPlan.mutate()} disabled={quitarPlan.isPending}>Quitar plan</Button>}
+        </Box>}
+      </Box>
+      {tareasVacunacion.isError && <Alert severity="error">No se pudo cargar la vacunación.</Alert>}
+      <List aria-label="Historial de vacunación">
+        {(tareasVacunacion.data ?? []).map((t: TareaVacunacionResumen) => (
+          <ListItem key={t.id}>
+            <ListItemText
+              primary={<>{t.vacuna} <Chip size="small" label={t.estado} color={t.estado === 'Completada' ? 'success' : t.estado === 'Cancelada' ? 'default' : 'warning'} /></>}
+              secondary={`Día ${t.edadDia} · programada ${t.fechaProgramada}${t.fechaAplicacion ? ` · aplicada ${t.fechaAplicacion}` : ''}${t.avesVacunadas ? ` · ${t.avesVacunadas} aves` : ''}${t.motivoCancelacion ? ` · motivo: ${t.motivoCancelacion}` : ''}`}
+            />
+          </ListItem>
+        ))}
+      </List>
+      <AsignarPlanDialog galponId={galponId} abierto={asignandoPlan} alCerrar={() => setAsignandoPlan(false)} />
+    </Box>}
   </Container>;
 }

@@ -25,7 +25,7 @@ describe('CompletarTareaDialog', () => {
 
   test('la fecha de aplicación viene prellenada con hoy y se envía con las aves', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = vi.fn(async () => respuesta(204));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => respuesta(204));
     vi.stubGlobal('fetch', fetchMock);
     renderDialog();
 
@@ -40,7 +40,7 @@ describe('CompletarTareaDialog', () => {
 
   test('rechaza una fecha futura sin llamar a la API', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = vi.fn(async () => respuesta(204));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => respuesta(204));
     vi.stubGlobal('fetch', fetchMock);
     renderDialog();
 
