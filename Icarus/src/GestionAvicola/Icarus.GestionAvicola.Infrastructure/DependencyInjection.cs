@@ -6,6 +6,8 @@ using Icarus.GestionAvicola.Application.Galpones;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Produccion;
 using Icarus.GestionAvicola.Application.Mortalidad;
+using Icarus.GestionAvicola.Application.Vacunacion;
+using Icarus.GestionAvicola.Infrastructure.Importacion;
 using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Icarus.GestionAvicola.Infrastructure.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +31,9 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioGalpones, RepositorioGalpones>();
         servicios.AddScoped<IRepositorioProduccion, RepositorioProduccion>();
         servicios.AddScoped<IRepositorioMortalidad, RepositorioMortalidad>();
+        servicios.AddScoped<IRepositorioProgramasVacunacion, RepositorioProgramasVacunacion>();
+        servicios.AddScoped<IRepositorioTareasVacunacion, RepositorioTareasVacunacion>();
+        servicios.AddScoped<IImportadorCronogramaVacunacion, ImportadorCronogramaVacunacion>();
         servicios.AddScoped<IUnidadTrabajoGestionAvicola>(sp => sp.GetRequiredService<GestionAvicolaDbContext>());
         return servicios;
     }

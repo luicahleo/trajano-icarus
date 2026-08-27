@@ -16,6 +16,9 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     public DbSet<Galpon> Galpones => Set<Galpon>();
     public DbSet<RegistroProduccion> RegistrosProduccion => Set<RegistroProduccion>();
     public DbSet<RegistroMortalidad> RegistrosMortalidad => Set<RegistroMortalidad>();
+    public DbSet<ProgramaVacunacion> ProgramasVacunacion => Set<ProgramaVacunacion>();
+    public DbSet<ItemPlanVacunacion> ItemsPlanVacunacion => Set<ItemPlanVacunacion>();
+    public DbSet<TareaVacunacion> TareasVacunacion => Set<TareaVacunacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,5 +29,10 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         modelBuilder.Entity<Galpon>().HasQueryFilter(g => g.EstaActivo && (_clienteIdActual == null || g.ClienteId == _clienteIdActual));
         modelBuilder.Entity<RegistroProduccion>().HasQueryFilter(r => r.EstaActivo && (_clienteIdActual == null || r.ClienteId == _clienteIdActual));
         modelBuilder.Entity<RegistroMortalidad>().HasQueryFilter(r => r.EstaActivo && (_clienteIdActual == null || r.ClienteId == _clienteIdActual));
+        // Catálogo global (spec SP7): sin filtro de tenant, solo EstaActivo.
+        modelBuilder.Entity<ProgramaVacunacion>().HasQueryFilter(p => p.EstaActivo);
+        modelBuilder.Entity<ItemPlanVacunacion>().HasQueryFilter(i => i.EstaActivo);
+        modelBuilder.Entity<TareaVacunacion>().HasQueryFilter(t =>
+            t.EstaActivo && (_clienteIdActual == null || t.ClienteId == _clienteIdActual));
     }
 }
