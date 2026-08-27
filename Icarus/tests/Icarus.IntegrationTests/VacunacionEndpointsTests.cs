@@ -100,9 +100,12 @@ public class VacunacionEndpointsTests
     }
 
     private static MultipartFormDataContent ExcelCronograma(params (int Edad, string Vacuna)[] items) =>
-        ExcelCronogramaDesde(items, null);
+        ExcelCronogramaDesde(items, new DateOnly?[items.Length]);
 
-    private static MultipartFormDataContent ExcelCronogramaDesde((int Edad, string Vacuna)[] items, DateOnly? inicio)
+    private static MultipartFormDataContent ExcelCronogramaDesde((int Edad, string Vacuna)[] items, DateOnly inicio) =>
+        ExcelCronogramaDesde(items, Enumerable.Repeat<DateOnly?>(inicio, items.Length).ToArray());
+
+    private static MultipartFormDataContent ExcelCronogramaDesde((int Edad, string Vacuna)[] items, DateOnly?[] fechas)
     {
         using var libro = new XLWorkbook();
         var hoja = libro.AddWorksheet("Plan");
@@ -112,12 +115,12 @@ public class VacunacionEndpointsTests
         hoja.Cell(1, 4).Value = "MODO DE APLICACION";
         hoja.Cell(1, 5).Value = "OBSERVACIONES";
         var fila = 2;
-        foreach (var (edad, vacuna) in items)
+        for (var i = 0; i < items.Length; i++)
         {
-            if (inicio is { } fecha)
+            if (i < fechas.Length && fechas[i] is { } fecha)
                 hoja.Cell(fila, 1).Value = fecha.ToDateTime(TimeOnly.MinValue);
-            hoja.Cell(fila, 2).Value = edad;
-            hoja.Cell(fila, 3).Value = vacuna;
+            hoja.Cell(fila, 2).Value = items[i].Edad;
+            hoja.Cell(fila, 3).Value = items[i].Vacuna;
             fila++;
         }
         using var memoria = new MemoryStream();
@@ -286,6 +289,44 @@ public class VacunacionEndpointsTests
             $"/api/vacunacion/programas/{programaId}", admin));
         var programa = await despues.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("2026-08-06", programa.GetProperty("fechaEmision").GetString());
+    }
+
+    [Fact]
+    public async Task AsignarPlanUsaLaFechaProgramadaDelExcel()
+    {
+        var admin = await LoginComo(SemillaIdentidad.EmailAdmin);
+        using var cliente = _factory.CreateClient();
+        var alta = await cliente.SendAsync(Autenticado(HttpMethod.Post, "/api/vacunacion/programas", admin, new
+        {
+            nombre = $"PLAN {Guid.NewGuid():N}",
+            cantidadAves = 1000,
+            observaciones = (string?)null,
+        }));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var programaId = (await alta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var fechas = new DateOnly?[] { new DateOnly(2026, 8, 6), new DateOnly(2026, 8, 8) };
+        var importar = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/vacunacion/programas/{programaId}/cronograma-excel")
+        {
+            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", admin) },
+            Content = ExcelCronogramaDesde([(3, "BIO COCCIVET R"), (10, "NEWCASTLE")], fechas),
+        };
+        Assert.Equal(HttpStatusCode.OK, (await cliente.SendAsync(importar)).StatusCode);
+
+        // Galpón con un lote distinto al del plan: la tarea usa la fecha del Excel.
+        var (_, tokenCliente) = await CrearClienteAvicola();
+        var galponId = await CrearGalpon(tokenCliente, new DateOnly(2025, 9, 1));
+        var asignar = await cliente.SendAsync(Autenticado(HttpMethod.Post,
+            $"/api/galpones/{galponId}/plan-vacunacion", tokenCliente, new { programaId }));
+        Assert.Equal(HttpStatusCode.NoContent, asignar.StatusCode);
+
+        var tareas = await cliente.SendAsync(Autenticado(HttpMethod.Get,
+            $"/api/galpones/{galponId}/vacunacion/tareas", tokenCliente));
+        var lista = (await tareas.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().ToList();
+        Assert.Equal("2026-08-06",
+            lista.Single(t => t.GetProperty("edadDia").GetInt32() == 3).GetProperty("fechaProgramada").GetString());
+        Assert.Equal("2026-08-08",
+            lista.Single(t => t.GetProperty("edadDia").GetInt32() == 10).GetProperty("fechaProgramada").GetString());
     }
 
     [Fact]

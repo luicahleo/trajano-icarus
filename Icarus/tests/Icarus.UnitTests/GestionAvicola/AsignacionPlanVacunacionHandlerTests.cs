@@ -100,6 +100,26 @@ public class AsignacionPlanVacunacionHandlerTests
     }
 
     [Fact]
+    public async Task AsignarUsaLaFechaDelExcelCuandoElItemLaTrae()
+    {
+        var galpon = GalponDemo();
+        var programa = new ProgramaVacunacion("PLAN CON FECHAS", null, 1000, null);
+        programa.ReemplazarCronograma([
+            new DatosItemPlanVacunacion(3, "BIO COCCIVET R", "Agua de bebida", null, new DateOnly(2026, 8, 8)),
+            new DatosItemPlanVacunacion(10, "NEWCASTLE", null, null),
+        ]);
+        _galpones.ObtenerPorIdAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(galpon);
+        _programas.ObtenerPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+
+        await HandlerAsignar().Handle(new(galpon.Id, programa.Id), CancellationToken.None);
+
+        _tareas.Received(1).Agregar(Arg.Is<TareaVacunacion>(t =>
+            t.EdadDia == 3 && t.FechaProgramada == new DateOnly(2026, 8, 8)));
+        _tareas.Received(1).Agregar(Arg.Is<TareaVacunacion>(t =>
+            t.EdadDia == 10 && t.FechaProgramada == galpon.FechaNacimientoLote.AddDays(10)));
+    }
+
+    [Fact]
     public async Task AsignarDesactivaLasPendientesAnterioresYNarraElResultado()
     {
         var galpon = GalponDemo();

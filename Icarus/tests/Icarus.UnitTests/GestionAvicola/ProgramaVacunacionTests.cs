@@ -60,6 +60,15 @@ public class ProgramaVacunacionTests
     }
 
     [Fact]
+    public void ReemplazarCronogramaGuardaLaFechaProgramadaDelItem()
+    {
+        var programa = CrearPrograma();
+        programa.ReemplazarCronograma([
+            new DatosItemPlanVacunacion(3, "BIO COCCIVET R", null, null, new DateOnly(2026, 8, 8))]);
+        Assert.Equal(new DateOnly(2026, 8, 8), programa.Items.Single().Fecha);
+    }
+
+    [Fact]
     public void ReemplazarCronogramaDesactivaLosAnterioresSinBorrarlos()
     {
         var programa = CrearPrograma();

@@ -53,7 +53,7 @@ public sealed class AsignarPlanVacunacionHandler(
             tareas.Agregar(new TareaVacunacion(
                 galpon.Id, galpon.ClienteId, programa.Id, item.Id,
                 item.EdadDia, item.Vacuna, item.ModoAplicacion, item.Observaciones,
-                galpon.FechaNacimientoLote.AddDays(item.EdadDia)));
+                item.Fecha ?? galpon.FechaNacimientoLote.AddDays(item.EdadDia)));
 
         registroVuelo.Decidir("avicola.vacunacion.asignar", "asignacion", "aplicada",
             new Dictionary<string, object?>

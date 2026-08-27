@@ -11,9 +11,10 @@ La cooperativa **CAISY** emite planes de vacunación en papel (ejemplo real:
 "PROGRAMA DE VACUNACION PARA 1000 AVES", con columnas FECHA, EDAD DIA, VACUNA
 y MODO DE APLICACION). El plan es una **plantilla por edad del lote**: cada
 ítem indica "a los N días de edad, aplicar X". La columna FECHA del papel es
-derivada: `FECHA = fecha de entrada del lote + EdadDia` (verificado con el
-ejemplo: entrada 06-oct-2023 → día 3 = 09-oct, día 10 = 16-oct, día 245 =
-07-jun-2024). El documento real no es solo vacunas: incluye filas de **manejo**
+la **fecha programada** de cada fila (derivada en el papel como
+`FECHA = fecha de entrada del lote + EdadDia`; ejemplo: entrada 06-oct-2023 →
+día 3 = 09-oct, día 10 = 16-oct, día 245 = 07-jun-2024). El documento real no
+es solo vacunas: incluye filas de **manejo**
 (paracetamol al ingreso, recorte de pico, desparasitaciones, antibioterapia,
 traslado al galpón de producción) y tablas de iluminación y alimentación al
 final.
@@ -108,7 +109,8 @@ al asignar, con snapshot**.
 - Ítems del cronograma como **entidades hijas del agregado** (`ItemPlanVacunacion`,
   tabla `programas_vacunacion_items`): `EdadDia` (int > 0, obligatorio),
   `Vacuna` (string, requerido, `Trim()`, máx 200), `ModoAplicacion` (string?,
-  máx 500), `Observaciones` (string?, máx 1000), `EstaActivo`.
+  máx 500), `Observaciones` (string?, máx 1000), `Fecha` (`DateOnly?`: la
+  fecha programada de la fila del Excel), `EstaActivo`.
   - Invariante: **no puede haber dos ítems activos con la misma `EdadDia`**
     en el mismo programa (el papel de CAISY agrupa varias vacunas del mismo
     día en una sola fila; si el Excel trae dos filas con la misma edad, la
@@ -132,8 +134,9 @@ Tabla `tareas_vacunacion`. Campos (todos `private set`):
   dura al catálogo global: el catálogo puede cambiar y el historial no).
 - Snapshot: `EdadDia` (int), `Vacuna` (string), `ModoAplicacion` (string?),
   `ObservacionesProgramadas` (string?).
-- `FechaProgramada` (`DateOnly`, inmutable; calculada al asignar:
-  `galpon.FechaNacimientoLote + EdadDia` días).
+- `FechaProgramada` (`DateOnly`, inmutable; calculada al asignar: la fecha
+  programada de la fila del Excel si la trae —`item.Fecha`—, con fallback a
+  `galpon.FechaNacimientoLote + EdadDia`).
 - `Estado` (enum `EstadoTareaVacunacion`: `Pendiente`, `Completada`,
   `Cancelada`; empieza en `Pendiente`).
 - Ejecución (nullables hasta completar): `FechaAplicacion` (`DateOnly?`,
@@ -161,8 +164,8 @@ Tabla `tareas_vacunacion`. Campos (todos `private set`):
    (soft delete; historial "reemplazadas"). Las completadas y canceladas no
    se tocan.
 3. Se crea una `TareaVacunacion` por ítem activo del programa, con
-   `FechaProgramada = galpon.FechaNacimientoLote + EdadDia` y snapshot de
-   vacuna/modo/edad/observaciones.
+   `FechaProgramada = item.Fecha ?? galpon.FechaNacimientoLote + EdadDia` y
+   snapshot de vacuna/modo/edad/observaciones.
 4. Un galpón tiene a lo sumo un plan vigente: la asignación anterior queda
    sin pendientes tras el paso 2, así que no hace falta un campo "plan
    actual" en `Galpon`; el plan vigente se deriva de las tareas pendientes.
@@ -197,9 +200,10 @@ decisión de gestión, no de operación.
   completo del programa (`ReemplazarCronograma`).
 - Formato (el del papel de CAISY): columnas `FECHA`, `EDAD`, `VACUNA`,
   `MODO DE APLICACION`, `OBSERVACIONES`; nombres de columna tolerantes
-  (mayúsculas/minúsculas, tildes, espacios). **La primera fecha de la columna
-  `FECHA` es la fecha de emisión del programa** (la establece el handler); el
-  resto de las fechas no gobierna las tareas: la fuente de verdad es `EDAD`.
+  (mayúsculas/minúsculas, tildes, espacios). La columna `FECHA` aporta la
+  **fecha programada de cada fila** (se guarda en el ítem) y su **primera
+  fecha es la fecha de emisión** del programa. Si una fila no trae fecha, el
+  ítem queda sin `Fecha` y la tarea usa `FechaNacimientoLote + EdadDia`.
 - Reglas por fila: `EDAD` obligatoria, entera, > 0; `VACUNA` obligatoria.
   **Filas con la misma edad se fusionan en un solo ítem**: se concatenan
   `VACUNA`, `MODO DE APLICACION` y observaciones separadas por "; ", sin

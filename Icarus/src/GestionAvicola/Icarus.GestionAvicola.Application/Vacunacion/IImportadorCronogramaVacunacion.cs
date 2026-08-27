@@ -9,7 +9,8 @@ public interface IImportadorCronogramaVacunacion
     ResultadoImportacionCronograma Importar(Stream contenido);
 }
 
-public sealed record ItemCronogramaImportado(int EdadDia, string Vacuna, string? ModoAplicacion, string? Observaciones);
+public sealed record ItemCronogramaImportado(
+    int EdadDia, string Vacuna, string? ModoAplicacion, string? Observaciones, DateOnly? Fecha = null);
 
 public sealed record ErrorFilaImportacion(int Fila, string Mensaje);
 

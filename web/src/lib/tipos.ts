@@ -134,6 +134,7 @@ export interface ItemPlanVacunacionResumen {
   vacuna: string;
   modoAplicacion: string | null;
   observaciones: string | null;
+  fecha: string | null;
 }
 
 export interface ProgramaVacunacionDetalle extends ProgramaVacunacionResumen {

@@ -120,7 +120,7 @@ public sealed class ImportarCronogramaExcelHandler(
             throw new ValidationException(resultado.Errores.Select(e =>
                 new ValidationFailure("Cronograma", $"Fila {e.Fila}: {e.Mensaje}")));
         programa.ReemplazarCronograma(resultado.Items.Select(i =>
-            new DatosItemPlanVacunacion(i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones)));
+            new DatosItemPlanVacunacion(i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones, i.Fecha)));
         // La fecha de emisión es la primera fecha del Excel (spec SP7): no se
         // pide en el alta ni en la edición.
         if (resultado.PrimeraFecha is { } primeraFecha)
@@ -191,7 +191,7 @@ public sealed class ObtenerProgramaVacunacionHandler(
             programa.Id, programa.Nombre, programa.FechaEmision, programa.CantidadAves,
             programa.Observaciones, programa.EstaActivo,
             programa.Items.Where(i => i.EstaActivo).OrderBy(i => i.EdadDia)
-                .Select(i => new ItemPlanVacunacionResumen(i.Id, i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones))
+                .Select(i => new ItemPlanVacunacionResumen(i.Id, i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones, i.Fecha))
                 .ToList());
     }
 }

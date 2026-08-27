@@ -63,7 +63,7 @@ public sealed class ProgramaVacunacion : AggregateRoot
         foreach (var item in _items.Where(i => i.EstaActivo))
             item.Desactivar();
         foreach (var datos in lista)
-            _items.Add(new ItemPlanVacunacion(datos.EdadDia, datos.Vacuna, datos.ModoAplicacion, datos.Observaciones));
+            _items.Add(new ItemPlanVacunacion(datos.EdadDia, datos.Vacuna, datos.ModoAplicacion, datos.Observaciones, datos.Fecha));
     }
 
     public void Desactivar() => EstaActivo = false;

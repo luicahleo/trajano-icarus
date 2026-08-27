@@ -31,7 +31,7 @@ public interface IRepositorioProgramasVacunacion
 }
 
 public sealed record ItemPlanVacunacionResumen(
-    Guid Id, int EdadDia, string Vacuna, string? ModoAplicacion, string? Observaciones);
+    Guid Id, int EdadDia, string Vacuna, string? ModoAplicacion, string? Observaciones, DateOnly? Fecha);
 
 public sealed record ProgramaVacunacionResumen(
     Guid Id, string Nombre, DateOnly? FechaEmision, int CantidadAves, string? Observaciones, bool EstaActivo);

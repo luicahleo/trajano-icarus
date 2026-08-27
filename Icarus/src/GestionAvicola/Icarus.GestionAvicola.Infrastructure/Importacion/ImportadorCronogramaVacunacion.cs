@@ -7,10 +7,10 @@ namespace Icarus.GestionAvicola.Infrastructure.Importacion;
 
 // Parseo tolerante del Excel del papel de CAISY (spec SP7): columnas FECHA,
 // EDAD, VACUNA, MODO DE APLICACION y OBSERVACIONES, con nombres tolerantes a
-// mayúsculas, tildes y espacios. La primera fecha de la columna FECHA es la
-// fecha de emisión del programa; las fechas por fila no gobiernan las tareas
-// (se derivan de EDAD). No decide el all-or-nothing: devuelve ítems y errores
-// por fila; el handler rechaza la importación completa si hay errores.
+// mayúsculas, tildes y espacios. La columna FECHA aporta la fecha de emisión
+// (primera fecha) y la fecha programada de cada fila. No decide el
+// all-or-nothing: devuelve ítems y errores por fila; el handler rechaza la
+// importación completa si hay errores.
 public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacunacion
 {
     public ResultadoImportacionCronograma Importar(Stream contenido)
@@ -74,7 +74,8 @@ public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacuna
                     items.Add(new ItemCronogramaImportado(
                         edad, vacuna.Trim(),
                         TextoNulo(modo),
-                        TextoNulo(observaciones)));
+                        TextoNulo(observaciones),
+                        fecha));
                 }
             }
             fila++;
@@ -85,8 +86,9 @@ public sealed class ImportadorCronogramaVacunacion : IImportadorCronogramaVacuna
         return new ResultadoImportacionCronograma(items, errores, primeraFecha);
     }
 
-    // La columna FECHA deja de ser solo informativa: su primera fecha es la
-    // fecha de emisión del programa (spec SP7). El resto se deriva de EdadDia.
+    // La columna FECHA del Excel (spec SP7) tiene doble uso: la primera fecha
+    // es la fecha de emisión del programa, y cada fila es la fecha programada
+    // de su ítem (las tareas la usan al asignar).
     private static (int? Fecha, int? Edad, int? Vacuna, int? ModoAplicacion, int? Observaciones) IndicesColumnas(IXLRow encabezado)
     {
         int? fecha = null, edad = null, vacuna = null, modo = null, observaciones = null;
