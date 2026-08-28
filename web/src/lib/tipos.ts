@@ -18,6 +18,7 @@ export interface SesionInfo {
 
 export interface UsuarioActual {
   usuarioId: string;
+  correo: string | null;
   rol: Rol;
   clienteId: string | null;
   trabajadorId: string | null;

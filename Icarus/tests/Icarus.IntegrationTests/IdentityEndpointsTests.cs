@@ -115,6 +115,20 @@ public class IdentityEndpointsTests
     }
 
     [Fact]
+    public async Task MeDevuelveElCorreoDelUsuarioAutenticado()
+    {
+        var token = await LoginComo(SemillaIdentidad.EmailCliente);
+        var cliente = _factory.CreateClient();
+
+        var respuesta = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, "/api/identidad/me", token));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(SemillaIdentidad.EmailCliente, cuerpo.GetProperty("correo").GetString());
+    }
+
+    [Fact]
     public async Task MeComoClienteDevuelveModulosYTodasLasFuncionalidades()
     {
         var cliente = _factory.CreateClient();

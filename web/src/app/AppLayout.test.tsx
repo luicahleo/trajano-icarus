@@ -23,6 +23,7 @@ function renderLayout(rol: Rol, rutaInicial = '/', funcionalidades: Funcionalida
       .mockResolvedValueOnce(
         respuesta(200, {
           usuarioId: 'u1',
+          correo: 'persona@icarus.test',
           rol,
           clienteId: null,
           trabajadorId: null,
@@ -89,6 +90,11 @@ describe('AppLayout', () => {
 
     renderLayout('Trabajador', '/', ['Vacunacion']);
     expect(await screen.findByText('Gestión Avícola')).toBeInTheDocument();
+  });
+
+  test('muestra el correo de la sesión en la barra', async () => {
+    renderLayout('Cliente');
+    expect(await screen.findByText('persona@icarus.test')).toBeInTheDocument();
   });
 
   test('cerrar sesión navega a /login y deja anónimo', async () => {

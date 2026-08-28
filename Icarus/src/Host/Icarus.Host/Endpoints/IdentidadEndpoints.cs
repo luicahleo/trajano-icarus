@@ -36,14 +36,20 @@ public static class IdentidadEndpoints
         });
 
         // Sesión actual: el frontend la usa para las guardas y navegación por rol.
-        grupo.MapGet("/me", async (ICurrentUser actual, ISender mediator) =>
+        grupo.MapGet("/me", async (ICurrentUser actual, ISender mediator, IConsultaUsuarios usuarios) =>
         {
             var permisos = actual.ClienteId is { } clienteId
                 ? await mediator.Send(new ObtenerPermisosActualesQuery(clienteId, actual.TrabajadorId))
                 : new PermisosActuales([], []);
+            // El correo identifica la sesión en la barra del frontend; no se
+            // registra en logs (anti-PII).
+            var usuario = actual.UsuarioId is { } usuarioId
+                ? await usuarios.ObtenerPorIdAsync(usuarioId)
+                : null;
             return Results.Ok(new
             {
                 actual.UsuarioId,
+                Correo = usuario?.Email,
                 actual.Rol,
                 actual.ClienteId,
                 actual.TrabajadorId,

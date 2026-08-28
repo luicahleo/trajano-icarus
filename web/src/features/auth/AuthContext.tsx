@@ -17,6 +17,7 @@ export interface EstadoAuth {
   estaAutenticado: boolean;
   cargando: boolean;
   rol: Rol | null;
+  correo: string | null;
   clienteId: string | null;
   modulos: Modulo[];
   funcionalidades: Funcionalidad[];
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       estaAutenticado: usuario !== null,
       cargando,
       rol: usuario?.rol ?? null,
+      correo: usuario?.correo ?? null,
       clienteId: usuario?.clienteId ?? null,
       modulos: usuario?.modulos ?? [],
       funcionalidades: usuario?.funcionalidades ?? [],

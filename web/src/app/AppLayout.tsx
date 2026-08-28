@@ -25,7 +25,7 @@ const ANCHO_NAVEGACION = 248;
 const ANCHO_NAVEGACION_MOVIL = 288;
 
 export function AppLayout() {
-  const { rol, cerrarSesion, tieneFuncionalidad } = useAuth();
+  const { rol, correo, cerrarSesion, tieneFuncionalidad } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const tema = useTheme();
@@ -112,6 +112,22 @@ export function AppLayout() {
           >
             {titulo}
           </Typography>
+          {correo && (
+            <Typography
+              variant="body2"
+              title={correo}
+              sx={{
+                display: { xs: 'none', sm: 'block' },
+                maxWidth: 240,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                opacity: 0.85,
+              }}
+            >
+              {correo}
+            </Typography>
+          )}
           <SelectorTema />
           <Button color="inherit" startIcon={<LogoutRoundedIcon />} onClick={salir}>
             Cerrar sesión
