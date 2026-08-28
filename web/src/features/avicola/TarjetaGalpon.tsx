@@ -25,11 +25,15 @@ export function TarjetaGalpon({ galpon }: { galpon: Galpon }) {
       >
         <CardContent>
           <Typography variant="h6">Galpón {galpon.numero}</Typography>
-          <Typography>{galpon.gallinasActuales} / {galpon.capacidadMaxima} gallinas</Typography>
+          <Typography>
+            {galpon.gallinasActuales} / {galpon.capacidadMaxima} gallinas
+          </Typography>
           {dia && (
             <Typography component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {dia.eficiencia} %
-              {dia.bajoUmbral && <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />}
+              {dia.bajoUmbral && (
+                <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />
+              )}
             </Typography>
           )}
         </CardContent>

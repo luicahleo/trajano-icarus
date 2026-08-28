@@ -49,7 +49,16 @@ describe('LoginPage', () => {
       .fn()
       .mockResolvedValueOnce(respuesta(401)) // restauración de la sesión al montar
       .mockResolvedValueOnce(respuesta(200, { accessToken: 'tok', expiraEnSegundos: 900 }))
-      .mockImplementation(async () => respuesta(200, { usuarioId: 'u1', rol: 'Administrador', clienteId: null, trabajadorId: null, modulos: [], funcionalidades: [] }));
+      .mockImplementation(async () =>
+        respuesta(200, {
+          usuarioId: 'u1',
+          rol: 'Administrador',
+          clienteId: null,
+          trabajadorId: null,
+          modulos: [],
+          funcionalidades: [],
+        }),
+      );
 
     vi.stubGlobal('fetch', fetchMock);
     renderLogin();
@@ -76,7 +85,9 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('El correo es obligatorio.')).toBeInTheDocument();
     expect(screen.getByText('La contraseña es obligatoria.')).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([arg]) => esLlamadaA('/api/identidad/sesion')(arg))).toBe(false);
+    expect(fetchMock.mock.calls.some(([arg]) => esLlamadaA('/api/identidad/sesion')(arg))).toBe(
+      false,
+    );
   });
 
   test('ApiError 401 muestra el title genérico y el correlation ID sin credenciales', async () => {
@@ -84,7 +95,9 @@ describe('LoginPage', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(respuesta(401))
-      .mockResolvedValueOnce(respuesta(401, { title: 'No autorizado' }, { 'X-Correlation-ID': 'abc-123' }))
+      .mockResolvedValueOnce(
+        respuesta(401, { title: 'No autorizado' }, { 'X-Correlation-ID': 'abc-123' }),
+      )
       .mockImplementation(async () => respuesta(401));
     vi.stubGlobal('fetch', fetchMock);
 

@@ -1,10 +1,10 @@
-import { Box, Typography } from '@mui/material';
+import { Container } from '@mui/material';
+import { PaginaCabecera } from './ui/PaginaCabecera';
 
 export function NotFoundPage() {
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4">Página no encontrada</Typography>
-      <Typography sx={{ color: 'text.secondary' }}>La página que buscas no existe.</Typography>
-    </Box>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <PaginaCabecera titulo="Página no encontrada" subtitulo="La página que buscas no existe." />
+    </Container>
   );
 }

@@ -40,4 +40,9 @@ describe('EstadoCarga', () => {
     expect(screen.getByText('contenido')).toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
+
+  test('funciona sin hijos, por ejemplo en un retorno temprano', () => {
+    render(<EstadoCarga cargando error={false} />);
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
 });

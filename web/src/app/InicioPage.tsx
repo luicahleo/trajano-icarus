@@ -1,12 +1,13 @@
-import { Box, Typography } from '@mui/material';
+import { Container } from '@mui/material';
+import { PaginaCabecera } from './ui/PaginaCabecera';
 
 export function InicioPage() {
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4">Inicio</Typography>
-      <Typography sx={{ color: 'text.secondary' }}>
-        Tu rol todavía no tiene módulos habilitados en esta aplicación.
-      </Typography>
-    </Box>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <PaginaCabecera
+        titulo="Inicio"
+        subtitulo="Tu rol todavía no tiene módulos habilitados en esta aplicación."
+      />
+    </Container>
   );
 }

@@ -4,14 +4,30 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
 
 function respuesta(status: number, cuerpo?: unknown) {
-  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 function baseFetchAvicola(reglas: Record<string, Response | Response[]>) {
-  const colas = new Map(Object.entries(reglas).map(([clave, valor]) => [clave, Array.isArray(valor) ? [...valor] : [valor]]));
+  const colas = new Map(
+    Object.entries(reglas).map(([clave, valor]) => [
+      clave,
+      Array.isArray(valor) ? [...valor] : [valor],
+    ]),
+  );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req = init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
-    return colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift() ?? new Response('', { status: 404 });
+    const req =
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
+    return (
+      colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift() ??
+      new Response('', { status: 404 })
+    );
   });
   vi.stubGlobal('fetch', fn);
   return fn;
@@ -19,11 +35,18 @@ function baseFetchAvicola(reglas: Record<string, Response | Response[]>) {
 
 function renderDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><RegistrarBajasDialog galponId="ga1" abierto alCerrar={vi.fn()} /></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RegistrarBajasDialog galponId="ga1" abierto alCerrar={vi.fn()} />
+    </QueryClientProvider>,
+  );
 }
 
 function llamadaCon(fetchMock: ReturnType<typeof vi.fn>, metodo: string, sufijo: string) {
-  return fetchMock.mock.calls.some(([arg]) => { const req = arg as Request; return req.method === metodo && req.url.endsWith(sufijo); });
+  return fetchMock.mock.calls.some(([arg]) => {
+    const req = arg as Request;
+    return req.method === metodo && req.url.endsWith(sufijo);
+  });
 }
 
 describe('RegistrarBajasDialog', () => {
@@ -31,7 +54,9 @@ describe('RegistrarBajasDialog', () => {
 
   test('registra bajas solas con idempotencyKey', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = baseFetchAvicola({ 'POST /api/galpones/ga1/mortalidad': respuesta(201, { id: 'm1' }) });
+    const fetchMock = baseFetchAvicola({
+      'POST /api/galpones/ga1/mortalidad': respuesta(201, { id: 'm1' }),
+    });
     renderDialog();
 
     await usuario.type(screen.getByLabelText('Gallinas muertas'), '10');

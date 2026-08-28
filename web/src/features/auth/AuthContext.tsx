@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { renovarSesion } from '../../lib/http';
 import { clearAccessToken } from '../../lib/session';
 import type { Funcionalidad, Modulo, Rol, UsuarioActual } from '../../lib/tipos';

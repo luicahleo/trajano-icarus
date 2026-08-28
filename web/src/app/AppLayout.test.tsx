@@ -18,7 +18,16 @@ function renderLayout(rol: Rol) {
     vi
       .fn()
       .mockResolvedValueOnce(respuesta(200, { accessToken: 'nuevo' }))
-      .mockResolvedValueOnce(respuesta(200, { usuarioId: 'u1', rol, clienteId: null, trabajadorId: null, modulos: [], funcionalidades: [] })),
+      .mockResolvedValueOnce(
+        respuesta(200, {
+          usuarioId: 'u1',
+          rol,
+          clienteId: null,
+          trabajadorId: null,
+          modulos: [],
+          funcionalidades: [],
+        }),
+      ),
   );
   return render(
     <MemoryRouter initialEntries={['/']}>

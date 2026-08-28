@@ -9,7 +9,8 @@ function respuesta(status: number, cuerpo?: unknown) {
 }
 
 function Consumidor() {
-  const { estaAutenticado, cargando, rol, usuario, modulos, funcionalidades, tieneFuncionalidad } = useAuth();
+  const { estaAutenticado, cargando, rol, usuario, modulos, funcionalidades, tieneFuncionalidad } =
+    useAuth();
   return (
     <div>
       <span data-testid="autenticado">{String(estaAutenticado)}</span>
@@ -20,7 +21,9 @@ function Consumidor() {
       <span data-testid="funcionalidades">{funcionalidades.join(',')}</span>
       <span data-testid="tiene-produccion">{String(tieneFuncionalidad('ProduccionHuevos'))}</span>
       <span data-testid="tiene-granjas">{String(tieneFuncionalidad('Granjas'))}</span>
-      <span data-testid="tiene-cualquiera">{String(tieneFuncionalidad('Granjas', 'Mortalidad'))}</span>
+      <span data-testid="tiene-cualquiera">
+        {String(tieneFuncionalidad('Granjas', 'Mortalidad'))}
+      </span>
     </div>
   );
 }
@@ -36,7 +39,16 @@ describe('AuthProvider', () => {
       vi
         .fn()
         .mockResolvedValueOnce(respuesta(200, { accessToken: 'nuevo' }))
-        .mockResolvedValueOnce(respuesta(200, { usuarioId: 'u1', rol: 'Cliente', clienteId: 'c1', trabajadorId: null, modulos: [], funcionalidades: [] })),
+        .mockResolvedValueOnce(
+          respuesta(200, {
+            usuarioId: 'u1',
+            rol: 'Cliente',
+            clienteId: 'c1',
+            trabajadorId: null,
+            modulos: [],
+            funcionalidades: [],
+          }),
+        ),
     );
 
     render(
@@ -77,7 +89,11 @@ describe('AuthProvider', () => {
       </AuthProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('funcionalidades')).toHaveTextContent('ProduccionHuevos,Mortalidad'));
+    await waitFor(() =>
+      expect(screen.getByTestId('funcionalidades')).toHaveTextContent(
+        'ProduccionHuevos,Mortalidad',
+      ),
+    );
     expect(screen.getByTestId('modulos')).toHaveTextContent('');
     expect(screen.getByTestId('tiene-produccion')).toHaveTextContent('true');
     expect(screen.getByTestId('tiene-granjas')).toHaveTextContent('false');

@@ -8,7 +8,11 @@ export interface Credenciales {
 }
 
 export async function iniciarSesion(cred: Credenciales): Promise<SesionInfo> {
-  const datos = await peticion<SesionInfo>({ ruta: '/identidad/sesion', metodo: 'POST', cuerpo: cred });
+  const datos = await peticion<SesionInfo>({
+    ruta: '/identidad/sesion',
+    metodo: 'POST',
+    cuerpo: cred,
+  });
   setAccessToken(datos.accessToken);
   return datos;
 }

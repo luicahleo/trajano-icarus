@@ -6,20 +6,49 @@ import { hoyIso } from './constantes';
 import { VacunacionNotificacion } from './VacunacionNotificacion';
 
 function respuesta(status: number, cuerpo?: unknown) {
-  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 const galpones: Galpon[] = [
-  { id: 'ga1', numero: '1', capacidadMaxima: 5000, gallinasActuales: 4800, fechaNacimientoLote: '2026-08-01', descripcion: null },
+  {
+    id: 'ga1',
+    numero: '1',
+    capacidadMaxima: 5000,
+    gallinasActuales: 4800,
+    fechaNacimientoLote: '2026-08-01',
+    descripcion: null,
+  },
 ];
 
-function fetchConSesion(funcionalidades: string[], reglas: Record<string, Response>, rol: Rol = 'Trabajador') {
+function fetchConSesion(
+  funcionalidades: string[],
+  reglas: Record<string, Response>,
+  rol: Rol = 'Trabajador',
+) {
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req = init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
+    const req =
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
     const clave = `${req.method} ${new URL(req.url).pathname}`;
     const fijas: Record<string, Response> = {
-      'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
-      'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId: 'cli1', trabajadorId: 'tr1', modulos: [], funcionalidades }),
+      'POST /api/identidad/sesion/renovar': respuesta(200, {
+        accessToken: 't',
+        expiraEnSegundos: 900,
+      }),
+      'GET /api/identidad/me': respuesta(200, {
+        usuarioId: 'u1',
+        rol,
+        clienteId: 'cli1',
+        trabajadorId: 'tr1',
+        modulos: [],
+        funcionalidades,
+      }),
     };
     return fijas[clave] ?? reglas[clave] ?? new Response('', { status: 404 });
   });
@@ -29,7 +58,13 @@ function fetchConSesion(funcionalidades: string[], reglas: Record<string, Respon
 
 function renderNotificacion() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><AuthProvider><VacunacionNotificacion galpones={galpones} /></AuthProvider></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <VacunacionNotificacion galpones={galpones} />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe('VacunacionNotificacion', () => {
@@ -40,8 +75,40 @@ describe('VacunacionNotificacion', () => {
     const isoAyer = `${ayer.getFullYear()}-${String(ayer.getMonth() + 1).padStart(2, '0')}-${String(ayer.getDate()).padStart(2, '0')}`;
     fetchConSesion(['Vacunacion'], {
       'GET /api/vacunacion/tareas': respuesta(200, {
-        vencidasYHoy: [{ id: 't1', galponId: 'ga1', edadDia: 3, vacuna: 'BIO COCCIVET R', modoAplicacion: null, fechaProgramada: isoAyer, estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null, observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null, programaNombre: 'PLAN CAISY 1000' }],
-        proximas: [{ id: 't2', galponId: 'ga1', edadDia: 10, vacuna: 'HIPRAVIAR B1/H120', modoAplicacion: null, fechaProgramada: hoyIso(), estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null, observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null, programaNombre: 'PLAN CAISY 1000' }],
+        vencidasYHoy: [
+          {
+            id: 't1',
+            galponId: 'ga1',
+            edadDia: 3,
+            vacuna: 'BIO COCCIVET R',
+            modoAplicacion: null,
+            fechaProgramada: isoAyer,
+            estado: 'Pendiente',
+            fechaAplicacion: null,
+            avesVacunadas: null,
+            observacionesProgramadas: null,
+            observacionesAplicacion: null,
+            motivoCancelacion: null,
+            programaNombre: 'PLAN CAISY 1000',
+          },
+        ],
+        proximas: [
+          {
+            id: 't2',
+            galponId: 'ga1',
+            edadDia: 10,
+            vacuna: 'HIPRAVIAR B1/H120',
+            modoAplicacion: null,
+            fechaProgramada: hoyIso(),
+            estado: 'Pendiente',
+            fechaAplicacion: null,
+            avesVacunadas: null,
+            observacionesProgramadas: null,
+            observacionesAplicacion: null,
+            motivoCancelacion: null,
+            programaNombre: 'PLAN CAISY 1000',
+          },
+        ],
       }),
     });
     renderNotificacion();

@@ -4,14 +4,30 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminVacunacionPage } from './AdminVacunacionPage';
 
 function respuesta(status: number, cuerpo?: unknown) {
-  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 function baseFetch(reglas: Record<string, Response | Response[]>) {
-  const colas = new Map(Object.entries(reglas).map(([clave, valor]) => [clave, Array.isArray(valor) ? [...valor] : [valor]]));
+  const colas = new Map(
+    Object.entries(reglas).map(([clave, valor]) => [
+      clave,
+      Array.isArray(valor) ? [...valor] : [valor],
+    ]),
+  );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req = init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
-    return colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift() ?? new Response('', { status: 404 });
+    const req =
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
+    return (
+      colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift() ??
+      new Response('', { status: 404 })
+    );
   });
   vi.stubGlobal('fetch', fn);
   return fn;
@@ -19,7 +35,11 @@ function baseFetch(reglas: Record<string, Response | Response[]>) {
 
 function renderPagina() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><AdminVacunacionPage /></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AdminVacunacionPage />
+    </QueryClientProvider>,
+  );
 }
 
 describe('AdminVacunacionPage', () => {
@@ -28,7 +48,14 @@ describe('AdminVacunacionPage', () => {
   test('lista los programas del catálogo', async () => {
     baseFetch({
       'GET /api/vacunacion/programas': respuesta(200, [
-        { id: 'p1', nombre: 'Plan CAISY 2026', fechaEmision: '2026-01-15', cantidadAves: 1000, observaciones: null, estaActivo: true },
+        {
+          id: 'p1',
+          nombre: 'Plan CAISY 2026',
+          fechaEmision: '2026-01-15',
+          cantidadAves: 1000,
+          observaciones: null,
+          estaActivo: true,
+        },
       ]),
     });
     renderPagina();
@@ -59,9 +86,24 @@ describe('AdminVacunacionPage', () => {
     const usuario = userEvent.setup();
     baseFetch({
       'GET /api/vacunacion/programas': respuesta(200, [
-        { id: 'p1', nombre: 'Plan CAISY 2026', fechaEmision: '2026-01-15', cantidadAves: 1000, observaciones: null, estaActivo: true },
+        {
+          id: 'p1',
+          nombre: 'Plan CAISY 2026',
+          fechaEmision: '2026-01-15',
+          cantidadAves: 1000,
+          observaciones: null,
+          estaActivo: true,
+        },
       ]),
-      'GET /api/vacunacion/programas/p1': respuesta(200, { id: 'p1', nombre: 'Plan CAISY 2026', fechaEmision: '2026-01-15', cantidadAves: 1000, observaciones: null, estaActivo: true, items: [] }),
+      'GET /api/vacunacion/programas/p1': respuesta(200, {
+        id: 'p1',
+        nombre: 'Plan CAISY 2026',
+        fechaEmision: '2026-01-15',
+        cantidadAves: 1000,
+        observaciones: null,
+        estaActivo: true,
+        items: [],
+      }),
       'POST /api/vacunacion/programas/p1/cronograma-excel': respuesta(400, {
         title: 'Error de validación',
         errors: { Contenido: ['Fila 4: La edad debe ser un número entero mayor que cero.'] },

@@ -54,7 +54,7 @@ function renderGuarda() {
           <Route path="/inicio" element={<div>Inicio</div>} />
         </Routes>
       </AuthProvider>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 

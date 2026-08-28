@@ -15,10 +15,18 @@ function respuesta(status: number, cuerpo?: unknown) {
 
 function fetchSimulado(reglas: Record<string, Response | Response[]>) {
   const colas = new Map(
-    Object.entries(reglas).map(([clave, valor]) => [clave, Array.isArray(valor) ? [...valor] : [valor]]),
+    Object.entries(reglas).map(([clave, valor]) => [
+      clave,
+      Array.isArray(valor) ? [...valor] : [valor],
+    ]),
   );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req = init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
+    const req =
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
     const valor = colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift();
     return valor ?? new Response('', { status: 404 });
   });
@@ -26,12 +34,23 @@ function fetchSimulado(reglas: Record<string, Response | Response[]>) {
   return fn;
 }
 
-function baseFetch(rol: Rol, funcionalidades: string[], reglas: Record<string, Response | Response[]>) {
+function baseFetch(
+  rol: Rol,
+  funcionalidades: string[],
+  reglas: Record<string, Response | Response[]>,
+) {
   return fetchSimulado({
-    'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
+    'POST /api/identidad/sesion/renovar': respuesta(200, {
+      accessToken: 't',
+      expiraEnSegundos: 900,
+    }),
     'GET /api/identidad/me': respuesta(200, {
-      usuarioId: 'u1', rol, clienteId: 'cli1', trabajadorId: null,
-      modulos: ['GestionAvicola'], funcionalidades,
+      usuarioId: 'u1',
+      rol,
+      clienteId: 'cli1',
+      trabajadorId: null,
+      modulos: ['GestionAvicola'],
+      funcionalidades,
     }),
     ...reglas,
   });
@@ -64,7 +83,9 @@ describe('AvicolaInicioPage', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   test('con granja existente redirige a la lista de galpones', async () => {
-    baseFetch('Cliente', ['Granjas', 'Galpones'], { 'GET /api/granjas': respuesta(200, [{ id: 'gr1', nombre: 'Granja Norte' }]) });
+    baseFetch('Cliente', ['Granjas', 'Galpones'], {
+      'GET /api/granjas': respuesta(200, [{ id: 'gr1', nombre: 'Granja Norte' }]),
+    });
     renderPagina('/avicola');
     expect(await screen.findByText('Lista de galpones')).toBeInTheDocument();
   });
@@ -72,7 +93,10 @@ describe('AvicolaInicioPage', () => {
   test('sin granja muestra el alta y crea la primera granja', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetch('Cliente', ['Granjas', 'Galpones'], {
-      'GET /api/granjas': [respuesta(200, []), respuesta(200, [{ id: 'gr1', nombre: 'Granja Nueva' }])],
+      'GET /api/granjas': [
+        respuesta(200, []),
+        respuesta(200, [{ id: 'gr1', nombre: 'Granja Nueva' }]),
+      ],
       'POST /api/granjas': respuesta(201, { id: 'gr1' }),
     });
     renderPagina('/avicola');

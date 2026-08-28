@@ -72,7 +72,10 @@ function conHeaders(init: RequestInit, cuerpo?: unknown): RequestInit {
   return {
     ...init,
     headers: cabeceras,
-    body: cuerpo === undefined || esFormData ? (cuerpo as BodyInit | undefined) : JSON.stringify(cuerpo),
+    body:
+      cuerpo === undefined || esFormData
+        ? (cuerpo as BodyInit | undefined)
+        : JSON.stringify(cuerpo),
   };
 }
 

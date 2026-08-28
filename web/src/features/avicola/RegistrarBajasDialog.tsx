@@ -1,5 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+} from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -13,15 +21,28 @@ const esquema = z.object({
 });
 type DatosFormulario = z.infer<typeof esquema>;
 
-export function RegistrarBajasDialog({ galponId, abierto, alCerrar }: { galponId: string; abierto: boolean; alCerrar: () => void }) {
+export function RegistrarBajasDialog({
+  galponId,
+  abierto,
+  alCerrar,
+}: {
+  galponId: string;
+  abierto: boolean;
+  alCerrar: () => void;
+}) {
   const online = useConexion();
   const queryClient = useQueryClient();
-  const { register, handleSubmit, formState: { errors } } = useForm<DatosFormulario>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<DatosFormulario>({
     resolver: zodResolver(esquema),
     defaultValues: { hora: new Date().toTimeString().slice(0, 5) },
   });
   const guardar = useMutation({
-    mutationFn: (datos: DatosFormulario) => registrarMortalidad(galponId, { ...datos, idempotencyKey: crypto.randomUUID() }),
+    mutationFn: (datos: DatosFormulario) =>
+      registrarMortalidad(galponId, { ...datos, idempotencyKey: crypto.randomUUID() }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] });
       void queryClient.invalidateQueries({ queryKey: ['avicola', 'galpon'] });
@@ -31,16 +52,42 @@ export function RegistrarBajasDialog({ galponId, abierto, alCerrar }: { galponId
   });
   const enviar = (datos: DatosFormulario) => guardar.mutate(datos);
 
-  return <Dialog open={abierto} onClose={alCerrar}>
-    <DialogTitle>Registrar bajas</DialogTitle>
-    <DialogContent>
-      <TextField label="Hora" type="time" {...register('hora')} error={Boolean(errors.hora)} helperText={errors.hora?.message} fullWidth margin="dense" />
-      <TextField label="Gallinas muertas" {...register('cantidadMuertas', { valueAsNumber: true })} error={Boolean(errors.cantidadMuertas)} helperText={errors.cantidadMuertas?.message} inputMode="numeric" fullWidth margin="dense" />
-      {guardar.isError && <Alert severity="error" sx={{ mt: 1 }}>{guardar.error instanceof ApiError ? guardar.error.message : 'No se pudieron registrar las bajas.'}</Alert>}
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={alCerrar}>Cancelar</Button>
-      <Button onClick={() => void handleSubmit(enviar)()} disabled={!online || guardar.isPending}>Guardar</Button>
-    </DialogActions>
-  </Dialog>;
+  return (
+    <Dialog open={abierto} onClose={alCerrar}>
+      <DialogTitle>Registrar bajas</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Hora"
+          type="time"
+          {...register('hora')}
+          error={Boolean(errors.hora)}
+          helperText={errors.hora?.message}
+          fullWidth
+          margin="dense"
+        />
+        <TextField
+          label="Gallinas muertas"
+          {...register('cantidadMuertas', { valueAsNumber: true })}
+          error={Boolean(errors.cantidadMuertas)}
+          helperText={errors.cantidadMuertas?.message}
+          inputMode="numeric"
+          fullWidth
+          margin="dense"
+        />
+        {guardar.isError && (
+          <Alert severity="error" sx={{ mt: 1 }}>
+            {guardar.error instanceof ApiError
+              ? guardar.error.message
+              : 'No se pudieron registrar las bajas.'}
+          </Alert>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={alCerrar}>Cancelar</Button>
+        <Button onClick={() => void handleSubmit(enviar)()} disabled={!online || guardar.isPending}>
+          Guardar
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 }

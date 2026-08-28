@@ -6,34 +6,82 @@ import type { Rol } from '../../lib/tipos';
 import { GalponAcciones } from './GalponAcciones';
 
 function respuesta(status: number, cuerpo?: unknown) {
-  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 function fetchSimulado(reglas: Record<string, Response | Response[]>) {
-  const colas = new Map(Object.entries(reglas).map(([clave, valor]) => [clave, Array.isArray(valor) ? [...valor] : [valor]]));
+  const colas = new Map(
+    Object.entries(reglas).map(([clave, valor]) => [
+      clave,
+      Array.isArray(valor) ? [...valor] : [valor],
+    ]),
+  );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req = init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
-    return colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift() ?? new Response('', { status: 404 });
+    const req =
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
+    return (
+      colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift() ??
+      new Response('', { status: 404 })
+    );
   });
   vi.stubGlobal('fetch', fn);
   return fn;
 }
 
-function baseFetchAvicolaConFuncionalidades(funcionalidades: string[], reglas: Record<string, Response | Response[]>, rol: Rol = 'Cliente') {
+function baseFetchAvicolaConFuncionalidades(
+  funcionalidades: string[],
+  reglas: Record<string, Response | Response[]>,
+  rol: Rol = 'Cliente',
+) {
   return fetchSimulado({
-    'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
-    'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId: 'cli1', trabajadorId: null, modulos: ['GestionAvicola'], funcionalidades }),
+    'POST /api/identidad/sesion/renovar': respuesta(200, {
+      accessToken: 't',
+      expiraEnSegundos: 900,
+    }),
+    'GET /api/identidad/me': respuesta(200, {
+      usuarioId: 'u1',
+      rol,
+      clienteId: 'cli1',
+      trabajadorId: null,
+      modulos: ['GestionAvicola'],
+      funcionalidades,
+    }),
     ...reglas,
   });
 }
 
 function renderConGalpon() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><AuthProvider><GalponAcciones galpon={{ id: 'ga1', numero: '1', capacidadMaxima: 5000, gallinasActuales: 4800, fechaNacimientoLote: '2026-01-15', descripcion: null }} /></AuthProvider></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <GalponAcciones
+          galpon={{
+            id: 'ga1',
+            numero: '1',
+            capacidadMaxima: 5000,
+            gallinasActuales: 4800,
+            fechaNacimientoLote: '2026-01-15',
+            descripcion: null,
+          }}
+        />
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
 }
 
 function llamadaCon(fetchMock: ReturnType<typeof vi.fn>, metodo: string, sufijo: string) {
-  return fetchMock.mock.calls.some(([arg]) => { const req = arg as Request; return req.method === metodo && req.url.endsWith(sufijo); });
+  return fetchMock.mock.calls.some(([arg]) => {
+    const req = arg as Request;
+    return req.method === metodo && req.url.endsWith(sufijo);
+  });
 }
 
 describe('GalponAcciones', () => {
@@ -41,19 +89,27 @@ describe('GalponAcciones', () => {
 
   test('editar manda numero, descripcion y capacidad', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], { 'PUT /api/galpones/ga1': respuesta(204) });
+    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], {
+      'PUT /api/galpones/ga1': respuesta(204),
+    });
     renderConGalpon();
     await usuario.click(await screen.findByRole('button', { name: 'Editar' }));
     await usuario.clear(screen.getByLabelText('Número'));
     await usuario.type(screen.getByLabelText('Número'), '2');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
     const llamada = fetchMock.mock.calls.find(([arg]) => (arg as Request).method === 'PUT');
-    expect(JSON.parse(await (llamada![0] as Request).clone().text())).toEqual({ numero: '2', descripcion: null, capacidadMaxima: 5000 });
+    expect(JSON.parse(await (llamada![0] as Request).clone().text())).toEqual({
+      numero: '2',
+      descripcion: null,
+      capacidadMaxima: 5000,
+    });
   });
 
   test('ajustar inventario manda el total absoluto', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], { 'PUT /api/galpones/ga1/inventario': respuesta(204) });
+    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], {
+      'PUT /api/galpones/ga1/inventario': respuesta(204),
+    });
     renderConGalpon();
     await usuario.click(await screen.findByRole('button', { name: 'Inventario' }));
     await usuario.clear(screen.getByLabelText('Gallinas actuales'));
@@ -64,7 +120,9 @@ describe('GalponAcciones', () => {
 
   test('desactivar pide confirmación y llama al DELETE', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], { 'DELETE /api/galpones/ga1': respuesta(204) });
+    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], {
+      'DELETE /api/galpones/ga1': respuesta(204),
+    });
     renderConGalpon();
     await usuario.click(await screen.findByRole('button', { name: 'Desactivar' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();

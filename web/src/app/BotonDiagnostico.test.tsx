@@ -21,8 +21,6 @@ describe('BotonDiagnostico', () => {
 
     render(<BotonDiagnostico permitido={false} />);
 
-    expect(
-      screen.queryByRole('button', { name: 'Descargar diagnóstico' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Descargar diagnóstico' })).not.toBeInTheDocument();
   });
 });

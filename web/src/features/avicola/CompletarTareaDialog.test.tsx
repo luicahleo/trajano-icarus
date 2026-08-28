@@ -6,18 +6,35 @@ import { hoyIso } from './constantes';
 import { CompletarTareaDialog } from './CompletarTareaDialog';
 
 const tarea: TareaVacunacionResumen = {
-  id: 't1', galponId: 'ga1', edadDia: 3, vacuna: 'BIO COCCIVET R', modoAplicacion: 'Vía oral',
-  fechaProgramada: hoyIso(), estado: 'Pendiente', fechaAplicacion: null, avesVacunadas: null,
-  observacionesProgramadas: null, observacionesAplicacion: null, motivoCancelacion: null, programaNombre: 'PLAN CAISY 1000',
+  id: 't1',
+  galponId: 'ga1',
+  edadDia: 3,
+  vacuna: 'BIO COCCIVET R',
+  modoAplicacion: 'Vía oral',
+  fechaProgramada: hoyIso(),
+  estado: 'Pendiente',
+  fechaAplicacion: null,
+  avesVacunadas: null,
+  observacionesProgramadas: null,
+  observacionesAplicacion: null,
+  motivoCancelacion: null,
+  programaNombre: 'PLAN CAISY 1000',
 };
 
 function respuesta(status: number, cuerpo?: unknown) {
-  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 function renderDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><CompletarTareaDialog tarea={tarea} abierto alCerrar={vi.fn()} /></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CompletarTareaDialog tarea={tarea} abierto alCerrar={vi.fn()} />
+    </QueryClientProvider>,
+  );
 }
 
 describe('CompletarTareaDialog', () => {
@@ -37,7 +54,11 @@ describe('CompletarTareaDialog', () => {
     const req = llamadas.find(([arg]) => arg.method === 'POST')?.[0];
     expect(req).toBeDefined();
     expect(new URL(req!.url).pathname).toBe('/api/vacunacion/tareas/t1/completar');
-    expect(JSON.parse(await req!.clone().text())).toEqual({ fechaAplicacion: hoyIso(), avesVacunadas: 4800, observaciones: null });
+    expect(JSON.parse(await req!.clone().text())).toEqual({
+      fechaAplicacion: hoyIso(),
+      avesVacunadas: 4800,
+      observaciones: null,
+    });
   });
 
   test('rechaza una fecha futura sin llamar a la API', async () => {

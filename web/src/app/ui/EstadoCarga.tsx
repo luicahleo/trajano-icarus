@@ -6,7 +6,7 @@ interface EstadoCargaProps {
   error: boolean;
   mensajeError?: string;
   onReintentar?: () => void;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function EstadoCarga({

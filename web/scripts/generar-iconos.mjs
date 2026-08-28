@@ -45,7 +45,12 @@ function png(tam) {
   }
   const scanlines = Buffer.concat(Array.from({ length: tam }, () => fila));
   const idat = deflateSync(scanlines);
-  return Buffer.concat([firma, chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
+  return Buffer.concat([
+    firma,
+    chunk('IHDR', ihdr),
+    chunk('IDAT', idat),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 mkdirSync(salida, { recursive: true });
