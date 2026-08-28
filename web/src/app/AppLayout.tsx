@@ -2,50 +2,39 @@ import {
   AppBar,
   Box,
   Button,
+  Divider,
   Drawer,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
   Toolbar,
   Typography,
   useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import { Suspense } from 'react';
-import { Link as RouterLink, Outlet, useNavigate } from 'react-router-dom';
+import { Suspense, useState } from 'react';
+import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
-import { useState } from 'react';
-import type { Rol } from '../lib/tipos';
 import { CargandoRuta } from './CargandoRuta';
 import { BannerSinConexion } from './BannerSinConexion';
+import { obtenerEnlacesNavegacion, obtenerTituloRuta } from './navegacion';
+import { NavegacionPrincipal } from './NavegacionPrincipal';
 
-interface EnlaceMenu {
-  etiqueta: string;
-  ruta: string;
-}
-
-const ENLACES_POR_ROL: Partial<Record<Rol, EnlaceMenu[]>> = {
-  Administrador: [
-    { etiqueta: 'Clientes', ruta: '/admin/clientes' },
-    { etiqueta: 'Vacunación', ruta: '/admin/vacunacion' },
-  ],
-  Cliente: [{ etiqueta: 'Trabajadores', ruta: '/trabajadores' }],
-};
+const ANCHO_NAVEGACION = 248;
+const ANCHO_NAVEGACION_MOVIL = 288;
 
 export function AppLayout() {
   const { rol, cerrarSesion, tieneFuncionalidad } = useAuth();
   const navigate = useNavigate();
-  const esMovil = useMediaQuery('(max-width:600px)');
+  const { pathname } = useLocation();
+  const tema = useTheme();
+  const esMovil = useMediaQuery(tema.breakpoints.down('md'));
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const enlaces: EnlaceMenu[] = [
-    ...(rol ? (ENLACES_POR_ROL[rol] ?? []) : []),
-    ...(rol === 'Cliente' ||
-    (rol === 'Trabajador' && tieneFuncionalidad('ProduccionHuevos', 'Mortalidad', 'Vacunacion'))
-      ? [{ etiqueta: 'Gestión Avícola', ruta: '/avicola' }]
-      : []),
-  ];
+  const enlaces = obtenerEnlacesNavegacion(
+    rol,
+    tieneFuncionalidad('ProduccionHuevos', 'Mortalidad', 'Vacunacion'),
+  );
+  const titulo = obtenerTituloRuta(pathname, enlaces);
 
   const salir = () => {
     cerrarSesion();
@@ -54,11 +43,32 @@ export function AppLayout() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      <AppBar position="sticky" color="primary">
-        <Toolbar sx={{ gap: 1 }}>
-          {esMovil && (
+      <Box
+        component="a"
+        href="#contenido-principal"
+        sx={{
+          position: 'absolute',
+          left: 8,
+          top: -64,
+          zIndex: (t) => t.zIndex.tooltip,
+          px: 2,
+          py: 1,
+          borderRadius: '12px',
+          backgroundColor: 'background.paper',
+          color: 'primary.dark',
+          fontWeight: 700,
+          textDecoration: 'none',
+          '&:focus': { top: 8 },
+        }}
+      >
+        Saltar al contenido
+      </Box>
+      <AppBar position="sticky" elevation={0} sx={{ backgroundColor: 'primary.dark' }}>
+        <Toolbar sx={{ gap: 1.5 }}>
+          {esMovil && enlaces.length > 0 && (
             <IconButton
               color="inherit"
+              edge="start"
               aria-label="Abrir menú"
               onClick={() => setMenuAbierto(true)}
             >
@@ -69,40 +79,93 @@ export function AppLayout() {
             variant="h6"
             component={RouterLink}
             to="/"
-            sx={{ flexGrow: 1, color: 'inherit', textDecoration: 'none' }}
+            sx={{ color: 'inherit', textDecoration: 'none', whiteSpace: 'nowrap' }}
           >
-            Icarus
+            Trajano Icarus
           </Typography>
-          {!esMovil &&
-            enlaces.map((enlace) => (
-              <Button key={enlace.ruta} component={RouterLink} to={enlace.ruta} color="inherit">
-                {enlace.etiqueta}
-              </Button>
-            ))}
+          <Box
+            aria-hidden
+            sx={{
+              display: { xs: 'none', sm: 'block' },
+              opacity: 0.5,
+              userSelect: 'none',
+            }}
+          >
+            /
+          </Box>
+          <Typography
+            component="h1"
+            variant="subtitle1"
+            sx={{
+              flexGrow: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              opacity: 0.9,
+            }}
+          >
+            {titulo}
+          </Typography>
           <Button color="inherit" startIcon={<LogoutRoundedIcon />} onClick={salir}>
             Cerrar sesión
           </Button>
         </Toolbar>
       </AppBar>
-      <Drawer open={menuAbierto} onClose={() => setMenuAbierto(false)}>
-        <List sx={{ width: 240 }}>
-          {enlaces.map((enlace) => (
-            <ListItemButton
-              key={enlace.ruta}
-              component={RouterLink}
-              to={enlace.ruta}
-              onClick={() => setMenuAbierto(false)}
-            >
-              <ListItemText primary={enlace.etiqueta} />
-            </ListItemButton>
-          ))}
-        </List>
-      </Drawer>
       <BannerSinConexion />
-      <Box component="main" sx={{ flexGrow: 1 }}>
-        <Suspense fallback={<CargandoRuta />}>
-          <Outlet />
-        </Suspense>
+      <Box sx={{ display: 'flex', flexGrow: 1, minHeight: 0 }}>
+        {enlaces.length > 0 && (
+          <Box
+            component="nav"
+            aria-label="Navegación principal"
+            sx={{ flexShrink: 0, width: { md: ANCHO_NAVEGACION } }}
+          >
+            {esMovil ? (
+              <Drawer
+                open={menuAbierto}
+                onClose={() => setMenuAbierto(false)}
+                sx={{
+                  '& .MuiDrawer-paper': {
+                    width: ANCHO_NAVEGACION_MOVIL,
+                    backgroundColor: 'background.paper',
+                  },
+                }}
+              >
+                <Toolbar sx={{ px: 2 }}>
+                  <Typography variant="h6" color="primary.dark">
+                    Trajano Icarus
+                  </Typography>
+                </Toolbar>
+                <Divider />
+                <NavegacionPrincipal enlaces={enlaces} alNavegar={() => setMenuAbierto(false)} />
+              </Drawer>
+            ) : (
+              <Drawer
+                variant="permanent"
+                sx={{
+                  '& .MuiDrawer-paper': {
+                    position: 'static',
+                    width: ANCHO_NAVEGACION,
+                    borderRight: '1px solid',
+                    borderColor: 'divider',
+                    backgroundColor: 'background.paper',
+                  },
+                }}
+              >
+                <NavegacionPrincipal enlaces={enlaces} />
+              </Drawer>
+            )}
+          </Box>
+        )}
+        <Box
+          component="main"
+          id="contenido-principal"
+          sx={{ flexGrow: 1, minWidth: 0, backgroundColor: 'background.default' }}
+        >
+          <Suspense fallback={<CargandoRuta />}>
+            <Outlet />
+          </Suspense>
+        </Box>
       </Box>
     </Box>
   );

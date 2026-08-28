@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import type { Rol } from '../lib/tipos';
+import type { Funcionalidad, Rol } from '../lib/tipos';
 import { AuthProvider } from '../features/auth/AuthContext';
 import { AppLayout } from './AppLayout';
 
@@ -12,7 +12,7 @@ function respuesta(status: number, cuerpo?: unknown) {
   });
 }
 
-function renderLayout(rol: Rol) {
+function renderLayout(rol: Rol, rutaInicial = '/', funcionalidades: Funcionalidad[] = []) {
   vi.stubGlobal(
     'fetch',
     vi
@@ -25,16 +25,17 @@ function renderLayout(rol: Rol) {
           clienteId: null,
           trabajadorId: null,
           modulos: [],
-          funcionalidades: [],
+          funcionalidades,
         }),
       ),
   );
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={[rutaInicial]}>
       <AuthProvider>
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<div>contenido del layout</div>} />
+            <Route path="/admin/clientes" element={<div>listado de clientes</div>} />
           </Route>
           <Route path="/login" element={<div>pantalla de login</div>} />
         </Routes>
@@ -46,18 +47,44 @@ function renderLayout(rol: Rol) {
 describe('AppLayout', () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  test('el administrador solo ve Clientes', async () => {
+  test('presenta la plantilla maestra y su navegación accesible', async () => {
     renderLayout('Administrador');
-    expect(await screen.findByText('Clientes')).toBeInTheDocument();
+
+    expect(await screen.findByText('Trajano Icarus')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Navegación principal' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Saltar al contenido' })).toHaveAttribute(
+      'href',
+      '#contenido-principal',
+    );
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'contenido-principal');
+  });
+
+  test('el administrador ve sus módulos y destaca la ruta activa', async () => {
+    renderLayout('Administrador', '/admin/clientes');
+
+    const clientes = await screen.findByRole('link', { name: 'Clientes' });
+    expect(clientes).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('heading', { name: 'Clientes', level: 1 })).toBeInTheDocument();
     expect(screen.queryByText('Usuarios')).not.toBeInTheDocument();
     expect(screen.queryByText('Trabajadores')).not.toBeInTheDocument();
   });
 
-  test('el cliente solo ve Trabajadores', async () => {
+  test('el cliente solo ve sus módulos', async () => {
     renderLayout('Cliente');
     expect(await screen.findByText('Trabajadores')).toBeInTheDocument();
+    expect(screen.getByText('Gestión Avícola')).toBeInTheDocument();
     expect(screen.queryByText('Clientes')).not.toBeInTheDocument();
     expect(screen.queryByText('Usuarios')).not.toBeInTheDocument();
+  });
+
+  test('el trabajador solo ve gestión avícola si tiene una funcionalidad operativa', async () => {
+    const { unmount } = renderLayout('Trabajador');
+    await screen.findByText('Trajano Icarus');
+    expect(screen.queryByText('Gestión Avícola')).not.toBeInTheDocument();
+    unmount();
+
+    renderLayout('Trabajador', '/', ['Vacunacion']);
+    expect(await screen.findByText('Gestión Avícola')).toBeInTheDocument();
   });
 
   test('cerrar sesión navega a /login y deja anónimo', async () => {
