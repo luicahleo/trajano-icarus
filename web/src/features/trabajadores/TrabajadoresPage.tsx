@@ -11,14 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material';
 import { useState } from 'react';
@@ -28,6 +21,8 @@ import { CampoContrasena } from '../../app/ui/CampoContrasena';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
+import { TablaDatos } from '../../app/ui/TablaDatos';
+import type { Columna } from '../../app/ui/TablaDatos';
 import { ApiError } from '../../lib/http';
 import type { FuncionalidadOperativaTrabajador, TrabajadorResumen } from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
@@ -180,6 +175,58 @@ export function TrabajadoresPage() {
     cesar.mutate(fechaCese);
   };
 
+  const columnas: Columna<TrabajadorResumen>[] = [
+    { clave: 'nombre', encabezado: 'Nombre', render: (t) => t.nombre },
+    { clave: 'documento', encabezado: 'Documento', render: (t) => t.documentoIdentidad },
+    { clave: 'cargo', encabezado: 'Cargo', render: (t) => t.cargo },
+    { clave: 'fechaIngreso', encabezado: 'Fecha de ingreso', render: (t) => t.fechaIngreso },
+    { clave: 'fechaCese', encabezado: 'Fecha de cese', render: (t) => t.fechaCese ?? '—' },
+    {
+      clave: 'funcionalidades',
+      encabezado: 'Funcionalidades',
+      render: (t) =>
+        t.funcionalidades
+          .filter(
+            (f): f is FuncionalidadOperativaTrabajador =>
+              f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion',
+          )
+          .map(etiquetaFuncionalidad)
+          .join(', ') || 'Ninguna',
+    },
+    {
+      clave: 'acciones',
+      encabezado: 'Acciones',
+      alinear: 'right',
+      render: (t) => (
+        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+          <Button size="small" variant="outlined" onClick={() => setCesando(t)}>
+            Cesar
+          </Button>
+          <Button size="small" variant="outlined" color="error" onClick={() => setDesactivando(t)}>
+            Desactivar
+          </Button>
+          {!t.fechaCese && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setConfigurando(t);
+                setFuncionalidades(
+                  t.funcionalidades.filter(
+                    (f): f is FuncionalidadOperativaTrabajador =>
+                      f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion',
+                  ),
+                );
+              }}
+            >
+              Funcionalidades
+            </Button>
+          )}
+        </Stack>
+      ),
+    },
+  ];
+
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
       <PaginaCabecera
@@ -199,83 +246,12 @@ export function TrabajadoresPage() {
         mensajeError="No se pudo cargar la lista de trabajadores."
       >
         {trabajadores && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Documento</TableCell>
-                  <TableCell>Cargo</TableCell>
-                  <TableCell>Fecha de ingreso</TableCell>
-                  <TableCell>Fecha de cese</TableCell>
-                  <TableCell>Funcionalidades</TableCell>
-                  <TableCell align="right">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {trabajadores.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                      No hay trabajadores todavía.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  trabajadores.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell>{t.nombre}</TableCell>
-                      <TableCell>{t.documentoIdentidad}</TableCell>
-                      <TableCell>{t.cargo}</TableCell>
-                      <TableCell>{t.fechaIngreso}</TableCell>
-                      <TableCell>{t.fechaCese ?? '—'}</TableCell>
-                      <TableCell>
-                        {t.funcionalidades
-                          .filter(
-                            (f): f is FuncionalidadOperativaTrabajador =>
-                              f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion',
-                          )
-                          .map(etiquetaFuncionalidad)
-                          .join(', ') || 'Ninguna'}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                          <Button size="small" variant="outlined" onClick={() => setCesando(t)}>
-                            Cesar
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            onClick={() => setDesactivando(t)}
-                          >
-                            Desactivar
-                          </Button>
-                          {!t.fechaCese && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => {
-                                setConfigurando(t);
-                                setFuncionalidades(
-                                  t.funcionalidades.filter(
-                                    (f): f is FuncionalidadOperativaTrabajador =>
-                                      f === 'ProduccionHuevos' ||
-                                      f === 'Mortalidad' ||
-                                      f === 'Vacunacion',
-                                  ),
-                                );
-                              }}
-                            >
-                              Funcionalidades
-                            </Button>
-                          )}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <TablaDatos
+            columnas={columnas}
+            filas={trabajadores}
+            claveDeFila={(t) => t.id}
+            mensajeVacio="No hay trabajadores todavía."
+          />
         )}
       </EstadoCarga>
 

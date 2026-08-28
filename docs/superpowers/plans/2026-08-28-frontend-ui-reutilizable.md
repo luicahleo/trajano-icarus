@@ -20,6 +20,17 @@ Testing Library. Sin dependencias nuevas.
 
 **Estado: completado** (2026-08-28, 3 commits en `develop`, puerta verde).
 
+**Seguimiento 2026-08-28:** el usuario pidió revisar cada página y asegurar
+tablas visibles y homogéneas. Se añadió `web/src/app/ui/TablaDatos.tsx`
+(componente reutilizable con columnas, estado vacío y bordes) con su test, se
+fijaron bordes de tabla visibles en `theme.ts` (borde externo en el contenedor,
+separadores explícitos `#C7C1B2`, encabezado con 2px y fondo suave) con test de
+regresión en `theme.test.ts`, y se aplicó `TablaDatos` en: `ClientesListaPage`,
+`TrabajadoresPage`, `AdminVacunacionPage` (antes List), `EficienciaPage` (antes
+List) y `GalponPage` (registros del día e historial de vacunación, antes List).
+`VacunacionNotificacion` conserva su lista compacta (panel de avisos) y
+`GalponesPage` sus tarjetas.
+
 Desvíos menores respecto de lo planificado, todos registrados aquí:
 - `EstadoCarga` admite `children` opcionales para usarse en retornos tempranos
   (carga/error sin contenido); se agregó un test para ese caso.

@@ -11,6 +11,7 @@ const colores = {
   grafito: '#1D2924',
   salvia: '#5E6B64',
   borde: '#DEDCD5',
+  bordeTabla: '#C7C1B2',
   blanco: '#FFFFFF',
 } as const;
 
@@ -96,17 +97,25 @@ export const theme = createTheme({
     MuiTable: {
       styleOverrides: { root: { borderCollapse: 'separate', borderSpacing: 0 } },
     },
+    MuiTableContainer: {
+      styleOverrides: {
+        root: {
+          border: `1px solid ${colores.bordeTabla}`,
+          borderRadius: '16px',
+        },
+      },
+    },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: '1px solid', borderColor: 'divider', padding: '14px 16px' },
+        root: { borderBottom: `1px solid ${colores.bordeTabla}`, padding: '14px 16px' },
         head: {
           fontWeight: 700,
           textTransform: 'uppercase',
           fontSize: '0.75rem',
           letterSpacing: '0.08em',
           color: 'text.secondary',
-          borderBottom: '2px solid',
-          borderColor: 'divider',
+          borderBottom: `2px solid ${colores.bordeTabla}`,
+          backgroundColor: alpha(colores.pinoClaro, 0.3),
         },
       },
     },

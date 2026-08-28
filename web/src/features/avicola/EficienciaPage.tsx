@@ -1,9 +1,12 @@
-import { Container, List, ListItem, ListItemText, Paper, Stack, TextField } from '@mui/material';
+import { Chip, Container, Stack, TextField } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
+import { TablaDatos } from '../../app/ui/TablaDatos';
+import type { Columna } from '../../app/ui/TablaDatos';
+import type { EficienciaDia } from '../../lib/tipos';
 import { obtenerEficiencia } from './api';
 import { hoyIso } from './constantes';
 
@@ -12,6 +15,20 @@ function haceDias(n: number): string {
   d.setDate(d.getDate() - n);
   return d.toISOString().slice(0, 10);
 }
+
+const COLUMNAS: Columna<EficienciaDia>[] = [
+  { clave: 'fecha', encabezado: 'Fecha', render: (d) => d.fecha },
+  { clave: 'huevos', encabezado: 'Huevos vendibles', render: (d) => d.totalVendible },
+  { clave: 'eficiencia', encabezado: 'Eficiencia', render: (d) => `${d.eficiencia} %` },
+  {
+    clave: 'estado',
+    encabezado: 'Estado',
+    render: (d) =>
+      d.bajoUmbral ? (
+        <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />
+      ) : null,
+  },
+];
 
 export function EficienciaPage() {
   const { galponId = '' } = useParams();
@@ -25,7 +42,7 @@ export function EficienciaPage() {
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
       <PaginaCabecera titulo="Eficiencia" />
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <TextField
           label="Desde"
           type="date"
@@ -46,29 +63,12 @@ export function EficienciaPage() {
         error={q.isError}
         mensajeError="No se pudo cargar la eficiencia."
       >
-        {!q.data?.dias.length ? (
-          <Paper sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-            Sin registros en el rango elegido.
-          </Paper>
-        ) : (
-          <Paper>
-            <List>
-              {q.data.dias.map((d) => (
-                <ListItem
-                  key={d.fecha}
-                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
-                >
-                  <ListItemText primary={d.fecha} secondary={`${d.totalVendible} huevos`} />
-                  <ListItemText
-                    primary={`${d.eficiencia} %`}
-                    secondary={d.bajoUmbral ? 'Bajo umbral — considerar descarte' : undefined}
-                    sx={{ textAlign: 'right', color: d.bajoUmbral ? 'error.main' : undefined }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
-        )}
+        <TablaDatos
+          columnas={COLUMNAS}
+          filas={q.data?.dias ?? []}
+          claveDeFila={(d) => d.fecha}
+          mensajeVacio="Sin registros en el rango elegido."
+        />
       </EstadoCarga>
     </Container>
   );

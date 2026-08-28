@@ -1,22 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import {
-  Button,
-  Chip,
-  Container,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from '@mui/material';
+import { Button, Chip, Container } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../../app/ui/PaginaCabecera';
+import { TablaDatos } from '../../../app/ui/TablaDatos';
+import type { Columna } from '../../../app/ui/TablaDatos';
 import type { ClienteResumen } from '../../../lib/tipos';
 import { CLAVE_CLIENTES, listarClientes, reactivarCliente, suspenderCliente } from './api';
 
@@ -54,6 +45,72 @@ export function ClientesListaPage() {
     setConfirmacion({ id: cliente.id, razonSocial: cliente.razonSocial, accion });
   };
 
+  const columnas: Columna<ClienteResumen>[] = [
+    { clave: 'razonSocial', encabezado: 'Razón social', render: (c) => c.razonSocial },
+    {
+      clave: 'identificadorFiscal',
+      encabezado: 'Identificador fiscal',
+      render: (c) => c.identificadorFiscal,
+    },
+    {
+      clave: 'estado',
+      encabezado: 'Estado',
+      render: (c) => (
+        <Chip
+          label={c.estaActivo ? 'Activo' : 'Suspendido'}
+          color={c.estaActivo ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    },
+    {
+      clave: 'modulos',
+      encabezado: 'Módulos',
+      render: (c) => (
+        <>
+          {c.modulos.map((modulo) => (
+            <Chip key={modulo} label={modulo} size="small" variant="outlined" sx={{ mr: 1 }} />
+          ))}
+        </>
+      ),
+    },
+    {
+      clave: 'acciones',
+      encabezado: 'Acciones',
+      alinear: 'right',
+      render: (c) => (
+        <>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => navigate(`/admin/clientes/${c.id}`)}
+          >
+            Detalle
+          </Button>
+          {c.estaActivo ? (
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={() => cambiar(c, 'suspender')}
+            >
+              Suspender
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              variant="outlined"
+              color="success"
+              onClick={() => cambiar(c, 'reactivar')}
+            >
+              Reactivar
+            </Button>
+          )}
+        </>
+      ),
+    },
+  ];
+
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
       <PaginaCabecera
@@ -75,81 +132,12 @@ export function ClientesListaPage() {
         mensajeError="No se pudo cargar la lista de clientes."
       >
         {clientes && (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Razón social</TableCell>
-                  <TableCell>Identificador fiscal</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Módulos</TableCell>
-                  <TableCell align="right">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {clientes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                      No hay clientes registrados todavía.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  clientes.map((cliente) => (
-                    <TableRow key={cliente.id}>
-                      <TableCell>{cliente.razonSocial}</TableCell>
-                      <TableCell>{cliente.identificadorFiscal}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={cliente.estaActivo ? 'Activo' : 'Suspendido'}
-                          color={cliente.estaActivo ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {cliente.modulos.map((modulo) => (
-                          <Chip
-                            key={modulo}
-                            label={modulo}
-                            size="small"
-                            variant="outlined"
-                            sx={{ mr: 1 }}
-                          />
-                        ))}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => navigate(`/admin/clientes/${cliente.id}`)}
-                        >
-                          Detalle
-                        </Button>
-                        {cliente.estaActivo ? (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            onClick={() => cambiar(cliente, 'suspender')}
-                          >
-                            Suspender
-                          </Button>
-                        ) : (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="success"
-                            onClick={() => cambiar(cliente, 'reactivar')}
-                          >
-                            Reactivar
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <TablaDatos
+            columnas={columnas}
+            filas={clientes}
+            claveDeFila={(c) => c.id}
+            mensajeVacio="No hay clientes registrados todavía."
+          />
         )}
       </EstadoCarga>
 

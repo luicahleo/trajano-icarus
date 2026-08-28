@@ -5,9 +5,6 @@ import {
   Chip,
   CircularProgress,
   Container,
-  List,
-  ListItem,
-  ListItemText,
   TextField,
   Typography,
   Dialog,
@@ -18,6 +15,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { useState } from 'react';
+import { TablaDatos } from '../../app/ui/TablaDatos';
+import type { Columna } from '../../app/ui/TablaDatos';
 import type {
   EficienciaDia,
   MortalidadRegistro,
@@ -202,6 +201,70 @@ export function GalponPage() {
   const planVigente =
     (tareasVacunacion.data ?? []).find((t) => t.estado === 'Pendiente')?.programaNombre ?? null;
 
+  const columnasRegistros: Columna<Evento>[] = [
+    { clave: 'hora', encabezado: 'Hora', render: (e) => e.hora.slice(0, 5) },
+    {
+      clave: 'registro',
+      encabezado: 'Registro',
+      render: (e) =>
+        e.tipo === 'bajas'
+          ? `${e.datos.cantidadMuertas} bajas`
+          : formatearConteo(e.datos.cantidadMaples, e.datos.unidadesIncompletas),
+    },
+    {
+      clave: 'descarte',
+      encabezado: 'Descarte',
+      render: (e) =>
+        e.tipo === 'recogida' && e.datos.totalDescarte > 0
+          ? formatearConteo(e.datos.maplesDescarte, e.datos.unidadesDescarte)
+          : null,
+    },
+    {
+      clave: 'acciones',
+      encabezado: '',
+      alinear: 'right',
+      render: (e) =>
+        esHoy &&
+        ((e.tipo === 'recogida' && puedeProduccion) || (e.tipo === 'bajas' && puedeMortalidad)) ? (
+          <>
+            <Button
+              size="small"
+              onClick={() =>
+                e.tipo === 'recogida' ? setRecogidaEditada(e.datos) : setBajasEditadas(e.datos)
+              }
+            >
+              Editar
+            </Button>
+            <Button size="small" onClick={() => setRegistroAEliminar(e)}>
+              Eliminar
+            </Button>
+          </>
+        ) : null,
+    },
+  ];
+
+  const columnasVacunas: Columna<TareaVacunacionResumen>[] = [
+    { clave: 'vacuna', encabezado: 'Vacuna', render: (t) => t.vacuna },
+    { clave: 'dia', encabezado: 'Día', render: (t) => `Día ${t.edadDia}` },
+    { clave: 'programada', encabezado: 'Programada', render: (t) => t.fechaProgramada },
+    { clave: 'aplicada', encabezado: 'Aplicada', render: (t) => t.fechaAplicacion ?? '—' },
+    { clave: 'aves', encabezado: 'Aves', render: (t) => t.avesVacunadas ?? '—' },
+    {
+      clave: 'estado',
+      encabezado: 'Estado',
+      render: (t) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+          <Chip size="small" label={etiquetaEstado(t).etiqueta} color={etiquetaEstado(t).color} />
+          {t.motivoCancelacion && (
+            <Typography variant="caption" color="text.secondary">
+              {t.motivoCancelacion}
+            </Typography>
+          )}
+        </Box>
+      ),
+    },
+  ];
+
   return (
     <Container sx={{ py: 2 }}>
       <Box
@@ -268,47 +331,12 @@ export function GalponPage() {
         {puedeProduccion && puedeMortalidad ? ' · ' : ''}
         {puedeMortalidad ? `${mortalidad.data?.totalMuertas ?? 0} bajas` : ''}
       </Typography>
-      <List aria-label="Registros del día">
-        {eventos.map((evento) => (
-          <ListItem
-            key={`${evento.tipo}-${evento.datos.id}`}
-            secondaryAction={
-              esHoy &&
-              ((evento.tipo === 'recogida' && puedeProduccion) ||
-                (evento.tipo === 'bajas' && puedeMortalidad)) && (
-                <Box sx={{ display: 'flex', flexDirection: 'row' }}>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      evento.tipo === 'recogida'
-                        ? setRecogidaEditada(evento.datos)
-                        : setBajasEditadas(evento.datos)
-                    }
-                  >
-                    Editar
-                  </Button>
-                  <Button size="small" onClick={() => setRegistroAEliminar(evento)}>
-                    Eliminar
-                  </Button>
-                </Box>
-              )
-            }
-          >
-            <ListItemText
-              primary={
-                evento.tipo === 'bajas'
-                  ? `${evento.hora.slice(0, 5)} — ${evento.datos.cantidadMuertas} bajas`
-                  : `${evento.hora.slice(0, 5)} — ${formatearConteo(evento.datos.cantidadMaples, evento.datos.unidadesIncompletas)}`
-              }
-              secondary={
-                evento.tipo === 'recogida' && evento.datos.totalDescarte > 0
-                  ? `descarte ${formatearConteo(evento.datos.maplesDescarte, evento.datos.unidadesDescarte)}`
-                  : undefined
-              }
-            />
-          </ListItem>
-        ))}
-      </List>
+      <TablaDatos
+        columnas={columnasRegistros}
+        filas={eventos}
+        claveDeFila={(e) => `${e.tipo}-${e.datos.id}`}
+        mensajeVacio="Sin registros para la fecha seleccionada."
+      />
       <RegistrarBajasDialog
         galponId={galponId}
         abierto={registrandoBajas}
@@ -377,25 +405,12 @@ export function GalponPage() {
           {tareasVacunacion.isError && (
             <Alert severity="error">No se pudo cargar la vacunación.</Alert>
           )}
-          <List aria-label="Historial de vacunación">
-            {(tareasVacunacion.data ?? []).map((t: TareaVacunacionResumen) => (
-              <ListItem key={t.id}>
-                <ListItemText
-                  primary={
-                    <>
-                      {t.vacuna}{' '}
-                      <Chip
-                        size="small"
-                        label={etiquetaEstado(t).etiqueta}
-                        color={etiquetaEstado(t).color}
-                      />
-                    </>
-                  }
-                  secondary={`Día ${t.edadDia} · programada ${t.fechaProgramada}${t.fechaAplicacion ? ` · aplicada ${t.fechaAplicacion}` : ''}${t.avesVacunadas ? ` · ${t.avesVacunadas} aves` : ''}${t.motivoCancelacion ? ` · motivo: ${t.motivoCancelacion}` : ''}`}
-                />
-              </ListItem>
-            ))}
-          </List>
+          <TablaDatos
+            columnas={columnasVacunas}
+            filas={tareasVacunacion.data ?? []}
+            claveDeFila={(t) => t.id}
+            mensajeVacio="No hay tareas de vacunación."
+          />
           <AsignarPlanDialog
             galponId={galponId}
             abierto={asignandoPlan}

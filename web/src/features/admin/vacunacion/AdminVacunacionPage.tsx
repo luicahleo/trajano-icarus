@@ -10,9 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  List,
-  ListItem,
-  ListItemText,
   TextField,
   Typography,
 } from '@mui/material';
@@ -20,6 +17,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { EstadoCarga } from '../../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../../app/ui/PaginaCabecera';
+import { TablaDatos } from '../../../app/ui/TablaDatos';
+import type { Columna } from '../../../app/ui/TablaDatos';
 import { ApiError } from '../../../lib/http';
 import type { ProgramaVacunacionResumen } from '../../../lib/tipos';
 import {
@@ -90,6 +89,57 @@ export function AdminVacunacionPage() {
       ? Object.values(subirExcel.error.erroresValidacion ?? {}).flat()
       : [];
 
+  const columnas: Columna<ProgramaVacunacionResumen>[] = [
+    {
+      clave: 'nombre',
+      encabezado: 'Programa',
+      render: (p) => (
+        <>
+          {p.nombre} {!p.estaActivo && <Chip size="small" label="Inactivo" />}
+        </>
+      ),
+    },
+    { clave: 'emision', encabezado: 'Emitido', render: (p) => p.fechaEmision ?? '—' },
+    { clave: 'aves', encabezado: 'Aves', render: (p) => `${p.cantidadAves} aves` },
+    {
+      clave: 'acciones',
+      encabezado: 'Acciones',
+      alinear: 'right',
+      render: (p) => (
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+          <Button
+            size="small"
+            onClick={() => {
+              setEditando(p);
+              setForm({
+                nombre: p.nombre,
+                cantidadAves: String(p.cantidadAves),
+                observaciones: p.observaciones ?? '',
+              });
+              setFormAbierto(true);
+            }}
+          >
+            Editar
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              setSubiendoEn(p);
+              inputArchivo.current?.click();
+            }}
+          >
+            Subir Excel
+          </Button>
+          {p.estaActivo && (
+            <Button size="small" color="error" onClick={() => desactivar.mutate(p.id)}>
+              Desactivar
+            </Button>
+          )}
+        </Box>
+      ),
+    },
+  ];
+
   if (programas.isLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 3 }}>
@@ -135,54 +185,12 @@ export function AdminVacunacionPage() {
         }
         label="Incluir inactivos"
       />
-      <List aria-label="Programas de vacunación">
-        {(programas.data ?? []).map((p) => (
-          <ListItem
-            key={p.id}
-            secondaryAction={
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setEditando(p);
-                    setForm({
-                      nombre: p.nombre,
-                      cantidadAves: String(p.cantidadAves),
-                      observaciones: p.observaciones ?? '',
-                    });
-                    setFormAbierto(true);
-                  }}
-                >
-                  Editar
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setSubiendoEn(p);
-                    inputArchivo.current?.click();
-                  }}
-                >
-                  Subir Excel
-                </Button>
-                {p.estaActivo && (
-                  <Button size="small" color="error" onClick={() => desactivar.mutate(p.id)}>
-                    Desactivar
-                  </Button>
-                )}
-              </Box>
-            }
-          >
-            <ListItemText
-              primary={
-                <>
-                  {p.nombre} {!p.estaActivo && <Chip size="small" label="Inactivo" />}
-                </>
-              }
-              secondary={`Emitido ${p.fechaEmision ?? '—'} · para ${p.cantidadAves} aves`}
-            />
-          </ListItem>
-        ))}
-      </List>
+      <TablaDatos
+        columnas={columnas}
+        filas={programas.data ?? []}
+        claveDeFila={(p) => p.id}
+        mensajeVacio="No hay programas de vacunación."
+      />
       <input
         ref={inputArchivo}
         type="file"
