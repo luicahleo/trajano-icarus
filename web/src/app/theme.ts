@@ -1,6 +1,17 @@
-import { alpha, createTheme } from '@mui/material/styles';
+import { createTheme } from '@mui/material/styles';
 
-const colores = {
+declare module '@mui/material/styles' {
+  interface Palette {
+    marca: { fondo: string; texto: string };
+    tabla: { borde: string; cabecera: string };
+  }
+  interface PaletteOptions {
+    marca?: { fondo: string; texto: string };
+    tabla?: { borde: string; cabecera: string };
+  }
+}
+
+const claro = {
   aqua: '#007C83',
   aquaOscuro: '#005A61',
   aquaClaro: '#D9F3F4',
@@ -12,26 +23,81 @@ const colores = {
   neutro: '#54666A',
   borde: '#D5E2E3',
   bordeTabla: '#B9D0D2',
+  cabeceraTabla: '#EAF5F5',
+  marca: '#005A61',
   blanco: '#FFFFFF',
 } as const;
 
+const oscuro = {
+  aqua: '#4FC7CE',
+  aquaOscuro: '#2A9AA1',
+  aquaClaro: '#8AE0E4',
+  terracota: '#E8815A',
+  terracotaOscura: '#C2603C',
+  fondo: '#0E1A1C',
+  papel: '#152528',
+  texto: '#E4F0F0',
+  neutro: '#A3B8BA',
+  borde: '#2A4145',
+  bordeTabla: '#2F4A4E',
+  cabeceraTabla: '#1B3033',
+  marca: '#0A2226',
+  contraste: '#04262A',
+} as const;
+
+const variables = {
+  bordeTabla: 'var(--mui-palette-tabla-borde)',
+  cabeceraTabla: 'var(--mui-palette-tabla-cabecera)',
+  papel: 'var(--mui-palette-background-paper)',
+  primario: 'var(--mui-palette-primary-main)',
+  primarioTenue: 'rgba(var(--mui-palette-primary-mainChannel) / 0.5)',
+  primarioMuyTenue: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)',
+  filaResaltada: 'rgba(var(--mui-palette-primary-mainChannel) / 0.06)',
+} as const;
+
 export const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: colores.aqua,
-      dark: colores.aquaOscuro,
-      light: colores.aquaClaro,
-      contrastText: colores.blanco,
+  cssVariables: { colorSchemeSelector: 'class' },
+  colorSchemes: {
+    light: {
+      palette: {
+        primary: {
+          main: claro.aqua,
+          dark: claro.aquaOscuro,
+          light: claro.aquaClaro,
+          contrastText: claro.blanco,
+        },
+        secondary: {
+          main: claro.terracota,
+          dark: claro.terracotaOscura,
+          contrastText: claro.blanco,
+        },
+        background: { default: claro.bruma, paper: claro.papel },
+        text: { primary: claro.grafito, secondary: claro.neutro },
+        divider: claro.borde,
+        marca: { fondo: claro.marca, texto: claro.blanco },
+        tabla: { borde: claro.bordeTabla, cabecera: claro.cabeceraTabla },
+      },
     },
-    secondary: {
-      main: colores.terracota,
-      dark: colores.terracotaOscura,
-      contrastText: colores.blanco,
+    dark: {
+      palette: {
+        primary: {
+          main: oscuro.aqua,
+          dark: oscuro.aquaOscuro,
+          light: oscuro.aquaClaro,
+          contrastText: oscuro.contraste,
+        },
+        secondary: {
+          main: oscuro.terracota,
+          dark: oscuro.terracotaOscura,
+          contrastText: oscuro.contraste,
+        },
+        background: { default: oscuro.fondo, paper: oscuro.papel },
+        text: { primary: oscuro.texto, secondary: oscuro.neutro },
+        divider: oscuro.borde,
+        marca: { fondo: oscuro.marca, texto: oscuro.texto },
+        tabla: { borde: oscuro.bordeTabla, cabecera: oscuro.cabeceraTabla },
+      },
     },
-    background: { default: colores.bruma, paper: colores.papel },
-    text: { primary: colores.grafito, secondary: colores.neutro },
-    divider: colores.borde,
   },
   typography: {
     fontFamily: '"Open Sans", Arial, sans-serif',
@@ -84,10 +150,10 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: '12px',
-          backgroundColor: colores.papel,
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: colores.aqua },
+          backgroundColor: variables.papel,
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: variables.primario },
           '&:hover:not(.Mui-disabled):not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
-            borderColor: alpha(colores.aqua, 0.5),
+            borderColor: variables.primarioTenue,
           },
         },
       },
@@ -100,22 +166,21 @@ export const theme = createTheme({
     MuiTableContainer: {
       styleOverrides: {
         root: {
-          border: `1px solid ${colores.bordeTabla}`,
+          border: `1px solid ${variables.bordeTabla}`,
           borderRadius: '16px',
         },
       },
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: `1px solid ${colores.bordeTabla}`, padding: '14px 16px' },
+        root: { borderBottom: `1px solid ${variables.bordeTabla}`, padding: '14px 16px' },
         head: {
           fontWeight: 700,
           textTransform: 'uppercase',
           fontSize: '0.75rem',
           letterSpacing: '0.08em',
-          color: 'text.secondary',
-          borderBottom: `2px solid ${colores.bordeTabla}`,
-          backgroundColor: alpha(colores.aquaClaro, 0.3),
+          borderBottom: `2px solid ${variables.bordeTabla}`,
+          backgroundColor: variables.cabeceraTabla,
         },
       },
     },
@@ -123,7 +188,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiTableRow-root:hover': {
-            backgroundColor: alpha(colores.aquaClaro, 0.4),
+            backgroundColor: variables.filaResaltada,
             transition: 'background-color 150ms ease',
           },
         },
@@ -157,7 +222,7 @@ export const theme = createTheme({
         root: {
           borderRadius: '12px',
           transition: 'background-color 150ms ease',
-          '&:hover': { backgroundColor: alpha(colores.aquaClaro, 0.35) },
+          '&:hover': { backgroundColor: variables.primarioMuyTenue },
         },
       },
     },

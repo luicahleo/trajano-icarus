@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material';
+import { theme } from './theme';
 import type { Funcionalidad, Rol } from '../lib/tipos';
 import { AuthProvider } from '../features/auth/AuthContext';
 import { AppLayout } from './AppLayout';
@@ -30,17 +32,19 @@ function renderLayout(rol: Rol, rutaInicial = '/', funcionalidades: Funcionalida
       ),
   );
   return render(
-    <MemoryRouter initialEntries={[rutaInicial]}>
-      <AuthProvider>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<div>contenido del layout</div>} />
-            <Route path="/admin/clientes" element={<div>listado de clientes</div>} />
-          </Route>
-          <Route path="/login" element={<div>pantalla de login</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ThemeProvider theme={theme}>
+      <MemoryRouter initialEntries={[rutaInicial]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<div>contenido del layout</div>} />
+              <Route path="/admin/clientes" element={<div>listado de clientes</div>} />
+            </Route>
+            <Route path="/login" element={<div>pantalla de login</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 

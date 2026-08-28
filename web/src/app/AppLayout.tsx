@@ -19,6 +19,7 @@ import { CargandoRuta } from './CargandoRuta';
 import { BannerSinConexion } from './BannerSinConexion';
 import { obtenerEnlacesNavegacion, obtenerTituloRuta } from './navegacion';
 import { NavegacionPrincipal } from './NavegacionPrincipal';
+import { SelectorTema } from './SelectorTema';
 
 const ANCHO_NAVEGACION = 248;
 const ANCHO_NAVEGACION_MOVIL = 288;
@@ -55,7 +56,7 @@ export function AppLayout() {
           py: 1,
           borderRadius: '12px',
           backgroundColor: 'background.paper',
-          color: 'primary.dark',
+          color: 'primary.main',
           fontWeight: 700,
           textDecoration: 'none',
           '&:focus': { top: 8 },
@@ -63,7 +64,11 @@ export function AppLayout() {
       >
         Saltar al contenido
       </Box>
-      <AppBar position="sticky" elevation={0} sx={{ backgroundColor: 'primary.dark' }}>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{ backgroundColor: 'marca.fondo', color: 'marca.texto', backgroundImage: 'none' }}
+      >
         <Toolbar sx={{ gap: 1.5 }}>
           {esMovil && enlaces.length > 0 && (
             <IconButton
@@ -107,6 +112,7 @@ export function AppLayout() {
           >
             {titulo}
           </Typography>
+          <SelectorTema />
           <Button color="inherit" startIcon={<LogoutRoundedIcon />} onClick={salir}>
             Cerrar sesión
           </Button>
@@ -132,7 +138,7 @@ export function AppLayout() {
                 }}
               >
                 <Toolbar sx={{ px: 2 }}>
-                  <Typography variant="h6" color="primary.dark">
+                  <Typography variant="h6" color="primary.main">
                     Trajano Icarus
                   </Typography>
                 </Toolbar>

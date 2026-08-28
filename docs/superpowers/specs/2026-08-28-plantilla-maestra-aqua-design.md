@@ -14,6 +14,9 @@ Convertir `AppLayout` en la plantilla maestra de las páginas autenticadas de Tr
 - `BannerSinConexion`, `Suspense` y `Outlet` permanecerán dentro del armazón estable.
 - Las páginas conservarán sus `Container` actuales; la plantilla no añadirá una tarjeta ni padding global alrededor del contenido.
 - Se añadirá un enlace «Saltar al contenido» y se usarán los comportamientos accesibles de MUI.
+- El tema tendrá esquema claro y oscuro con tokens propios de marca y de tabla; arranca siguiendo
+  la preferencia del sistema y un botón de la barra superior permite forzar uno de los dos,
+  con la elección persistida por MUI en `localStorage`.
 
 ## Diseño visual
 
@@ -22,6 +25,8 @@ Convertir `AppLayout` en la plantilla maestra de las páginas autenticadas de Tr
 - Prompt para marca y títulos; Open Sans para navegación y contenido.
 - Iconos Material de 22 px, siempre acompañados por texto.
 - Terracota queda como acento secundario puntual.
+- En el esquema oscuro el aqua se aclara para mantener el contraste sobre superficies profundas,
+  y los componentes se pintan con variables CSS para no fijar colores de un solo esquema.
 
 ## Fuera de alcance
 

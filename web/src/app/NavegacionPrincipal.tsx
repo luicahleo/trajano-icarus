@@ -23,11 +23,11 @@ export function NavegacionPrincipal({ enlaces, alNavegar }: NavegacionPrincipalP
               px: 1.5,
               py: 1.25,
               '&.active': {
-                backgroundColor: 'primary.light',
-                color: 'primary.dark',
+                backgroundColor: 'action.selected',
+                color: 'primary.main',
                 fontWeight: 700,
               },
-              '&.active .MuiListItemIcon-root': { color: 'primary.dark' },
+              '&.active .MuiListItemIcon-root': { color: 'primary.main' },
               '&.active .MuiListItemText-primary': { fontWeight: 700 },
             }}
           >

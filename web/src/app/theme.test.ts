@@ -10,6 +10,15 @@ const componentes = theme.components as {
   };
 };
 
+const esquemas = (
+  theme as unknown as {
+    colorSchemes: {
+      light: { palette: Record<string, Record<string, string>> };
+      dark: { palette: Record<string, Record<string, string>> };
+    };
+  }
+).colorSchemes;
+
 test('las tablas tienen bordes visibles en el contenedor', () => {
   const borde = componentes.MuiTableContainer?.styleOverrides?.root?.border;
   expect(borde).toMatch(/1px solid/);
@@ -26,14 +35,34 @@ test('el encabezado de tabla se separa con un borde más marcado', () => {
 });
 
 test('la identidad principal usa azul aqua accesible', () => {
-  expect(theme.palette.primary.main).toBe('#007C83');
-  expect(theme.palette.primary.dark).toBe('#005A61');
-  expect(theme.palette.primary.light).toBe('#D9F3F4');
-  expect(theme.palette.primary.contrastText).toBe('#FFFFFF');
+  expect(esquemas.light.palette.primary.main).toBe('#007C83');
+  expect(esquemas.light.palette.primary.dark).toBe('#005A61');
+  expect(esquemas.light.palette.primary.light).toBe('#D9F3F4');
+  expect(esquemas.light.palette.primary.contrastText).toBe('#FFFFFF');
 });
 
 test('las superficies y divisores acompañan la identidad aqua', () => {
-  expect(theme.palette.background.default).toBe('#F4F8F8');
-  expect(theme.palette.background.paper).toBe('#FFFFFF');
-  expect(theme.palette.divider).toBe('#D5E2E3');
+  expect(esquemas.light.palette.background.default).toBe('#F4F8F8');
+  expect(esquemas.light.palette.background.paper).toBe('#FFFFFF');
+  expect(esquemas.light.palette.divider).toBe('#D5E2E3' as unknown as Record<string, string>);
+});
+
+test('el esquema oscuro invierte las superficies y conserva el aqua', () => {
+  expect(esquemas.dark.palette.background.default).toBe('#0E1A1C');
+  expect(esquemas.dark.palette.background.paper).toBe('#152528');
+  expect(esquemas.dark.palette.primary.main).toBe('#4FC7CE');
+  expect(esquemas.dark.palette.text.primary).toBe('#E4F0F0');
+});
+
+test('la banda de marca y las tablas tienen tokens propios en ambos esquemas', () => {
+  expect(esquemas.light.palette.marca.fondo).toBe('#005A61');
+  expect(esquemas.dark.palette.marca.fondo).toBe('#0A2226');
+  expect(esquemas.light.palette.tabla.borde).toBe('#B9D0D2');
+  expect(esquemas.dark.palette.tabla.borde).toBe('#2F4A4E');
+});
+
+test('los componentes se pintan con variables CSS, no con colores fijos', () => {
+  expect(componentes.MuiTableContainer?.styleOverrides?.root?.border).toContain(
+    'var(--mui-palette-tabla-borde)',
+  );
 });
