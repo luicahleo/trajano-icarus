@@ -1,6 +1,8 @@
-import { Box, Button, Chip, List, ListItem, ListItemText, Typography } from '@mui/material';
+import { Box, Button, Chip, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { TablaDatos } from '../../app/ui/TablaDatos';
+import type { Columna } from '../../app/ui/TablaDatos';
 import type { Galpon, TareaVacunacionResumen } from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
@@ -22,28 +24,44 @@ export function VacunacionNotificacion({ galpones }: { galpones: Galpon[] }) {
   if (!puede) return null;
 
   const numeroGalpon = (id: string) => galpones.find((g) => g.id === id)?.numero ?? '—';
-  const itemTarea = (tarea: TareaVacunacionResumen) => (
-    <ListItem
-      key={tarea.id}
-      secondaryAction={
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button size="small" variant="contained" onClick={() => setCompletando(tarea)}>
+  // La aplicación es el modo indicado en el plan; si no lo trae, sirve la
+  // observación programada del ítem.
+  const aplicacion = (tarea: TareaVacunacionResumen) =>
+    tarea.modoAplicacion ?? tarea.observacionesProgramadas ?? '—';
+
+  const columnas: Columna<TareaVacunacionResumen>[] = [
+    { clave: 'galpon', encabezado: 'Galpón', render: (t) => numeroGalpon(t.galponId) },
+    { clave: 'vacuna', encabezado: 'Vacuna', render: (t) => t.vacuna },
+    { clave: 'plan', encabezado: 'Plan', render: (t) => t.programaNombre ?? '—' },
+    { clave: 'dia', encabezado: 'Día', alinear: 'right', render: (t) => t.edadDia },
+    { clave: 'programada', encabezado: 'Programada', render: (t) => t.fechaProgramada },
+    {
+      clave: 'aplicacion',
+      encabezado: 'Aplicación',
+      render: (t) => (
+        <Typography variant="body2" sx={{ maxWidth: 320 }}>
+          {aplicacion(t)}
+        </Typography>
+      ),
+    },
+    {
+      clave: 'acciones',
+      encabezado: '',
+      alinear: 'right',
+      render: (t) => (
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+          <Button size="small" variant="contained" onClick={() => setCompletando(t)}>
             Completar
           </Button>
           {rol === 'Cliente' && (
-            <Button size="small" color="error" onClick={() => setCancelando(tarea)}>
+            <Button size="small" color="error" onClick={() => setCancelando(t)}>
               Cancelar
             </Button>
           )}
         </Box>
-      }
-    >
-      <ListItemText
-        primary={`Galpón ${numeroGalpon(tarea.galponId)} — ${tarea.vacuna}`}
-        secondary={`Plan ${tarea.programaNombre ?? '—'} · Día ${tarea.edadDia} · programada ${tarea.fechaProgramada}${tarea.modoAplicacion ? ` · ${tarea.modoAplicacion}` : ''}`}
-      />
-    </ListItem>
-  );
+      ),
+    },
+  ];
 
   const vencidasYHoy = notificacion.data?.vencidasYHoy ?? [];
   const proximas = notificacion.data?.proximas ?? [];
@@ -59,17 +77,25 @@ export function VacunacionNotificacion({ galpones }: { galpones: Galpon[] }) {
             label={`${vencidasYHoy.length} para hoy o vencidas`}
             sx={{ my: 1 }}
           />
-          <List aria-label="Tareas de vacunación de hoy y vencidas">
-            {vencidasYHoy.map(itemTarea)}
-          </List>
+          <TablaDatos
+            etiqueta="Tareas de vacunación de hoy y vencidas"
+            columnas={columnas}
+            filas={vencidasYHoy}
+            claveDeFila={(t) => t.id}
+          />
         </>
       )}
       {proximas.length > 0 && (
         <>
-          <Typography variant="h6" sx={{ mt: 2 }}>
+          <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
             Próximas (7 días)
           </Typography>
-          <List aria-label="Próximas vacunaciones">{proximas.map(itemTarea)}</List>
+          <TablaDatos
+            etiqueta="Próximas vacunaciones"
+            columnas={columnas}
+            filas={proximas}
+            claveDeFila={(t) => t.id}
+          />
         </>
       )}
       {notificacion.data && vencidasYHoy.length === 0 && proximas.length === 0 && (

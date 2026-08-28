@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../auth/AuthContext';
 import type { Galpon, Rol } from '../../lib/tipos';
@@ -113,9 +113,32 @@ describe('VacunacionNotificacion', () => {
     });
     renderNotificacion();
 
-    expect(await screen.findByText(/BIO COCCIVET R/)).toBeInTheDocument();
-    expect(screen.getByText(/HIPRAVIAR B1\/H120/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Galpón 1/).length).toBe(2);
+    const vencidas = await screen.findByRole('table', {
+      name: 'Tareas de vacunación de hoy y vencidas',
+    });
+    const proximas = screen.getByRole('table', { name: 'Próximas vacunaciones' });
+
+    expect(within(vencidas).getByText('BIO COCCIVET R')).toBeInTheDocument();
+    expect(within(proximas).getByText('HIPRAVIAR B1/H120')).toBeInTheDocument();
+
+    const encabezados = within(vencidas)
+      .getAllByRole('columnheader')
+      .map((celda) => celda.textContent);
+    expect(encabezados).toEqual([
+      'Galpón',
+      'Vacuna',
+      'Plan',
+      'Día',
+      'Programada',
+      'Aplicación',
+      '',
+    ]);
+
+    const fila = within(vencidas).getAllByRole('row')[1];
+    expect(within(fila).getByText('1')).toBeInTheDocument();
+    expect(within(fila).getByText('PLAN CAISY 1000')).toBeInTheDocument();
+    expect(within(fila).getByText('3')).toBeInTheDocument();
+    expect(within(fila).getByRole('button', { name: 'Completar' })).toBeInTheDocument();
   });
 
   test('sin la funcionalidad no consulta ni muestra nada', async () => {

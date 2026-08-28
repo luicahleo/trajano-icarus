@@ -21,6 +21,7 @@ interface TablaDatosProps<T> {
   filas: T[];
   claveDeFila: (fila: T) => string;
   mensajeVacio?: string;
+  etiqueta?: string;
 }
 
 export function TablaDatos<T>({
@@ -28,10 +29,11 @@ export function TablaDatos<T>({
   filas,
   claveDeFila,
   mensajeVacio = 'No hay datos para mostrar.',
+  etiqueta,
 }: TablaDatosProps<T>) {
   return (
     <TableContainer component={Paper}>
-      <Table>
+      <Table aria-label={etiqueta}>
         <TableHead>
           <TableRow>
             {columnas.map((columna) => (

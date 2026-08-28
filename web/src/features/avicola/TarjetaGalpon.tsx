@@ -1,4 +1,4 @@
-import { Card, CardActionArea, CardContent, Chip, Typography } from '@mui/material';
+import { Box, Card, CardActionArea, CardContent, Chip, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { Galpon } from '../../lib/tipos';
@@ -29,12 +29,19 @@ export function TarjetaGalpon({ galpon }: { galpon: Galpon }) {
             {galpon.gallinasActuales} / {galpon.capacidadMaxima} gallinas
           </Typography>
           {dia && (
-            <Typography component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {dia.eficiencia} %
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Typography component="span" sx={{ whiteSpace: 'nowrap' }}>
+                {dia.eficiencia} %
+              </Typography>
               {dia.bajoUmbral && (
-                <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />
+                <Chip
+                  size="small"
+                  color="error"
+                  label="Bajo umbral — considerar descarte"
+                  sx={{ maxWidth: '100%' }}
+                />
               )}
-            </Typography>
+            </Box>
           )}
         </CardContent>
       </CardActionArea>

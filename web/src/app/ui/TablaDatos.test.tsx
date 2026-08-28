@@ -14,6 +14,18 @@ const columnas: Columna<Fila>[] = [
 ];
 
 describe('TablaDatos', () => {
+  test('acepta una etiqueta accesible para la tabla', () => {
+    render(
+      <TablaDatos
+        columnas={columnas}
+        filas={[{ id: '1', nombre: 'Ana', valor: 5 }]}
+        claveDeFila={(f) => f.id}
+        etiqueta="Personas"
+      />,
+    );
+    expect(screen.getByRole('table', { name: 'Personas' })).toBeInTheDocument();
+  });
+
   test('muestra los encabezados y las filas', () => {
     render(
       <TablaDatos
