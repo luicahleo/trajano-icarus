@@ -7,7 +7,15 @@ export async function listarTrabajadores(clienteId: string): Promise<TrabajadorR
 
 export async function crearTrabajador(
   clienteId: string,
-  datos: { nombre: string; documentoIdentidad: string; cargo: string; fechaIngreso: string; email: string; contrasena: string; confirmacionContrasena: string },
+  datos: {
+    nombre: string;
+    documentoIdentidad: string;
+    cargo: string;
+    fechaIngreso: string;
+    email: string;
+    contrasena: string;
+    confirmacionContrasena: string;
+  },
 ): Promise<{ id: string }> {
   const cuerpo = {
     nombre: datos.nombre,
@@ -17,11 +25,19 @@ export async function crearTrabajador(
     email: datos.email,
     contrasena: datos.contrasena,
   };
-  return peticion<{ id: string }>({ ruta: `/clientes/${clienteId}/trabajadores`, metodo: 'POST', cuerpo });
+  return peticion<{ id: string }>({
+    ruta: `/clientes/${clienteId}/trabajadores`,
+    metodo: 'POST',
+    cuerpo,
+  });
 }
 
 export async function cesarTrabajador(id: string, fechaCese: string): Promise<void> {
-  return peticion<void>({ ruta: `/clientes/trabajadores/${id}/cese`, metodo: 'POST', cuerpo: { fechaCese } });
+  return peticion<void>({
+    ruta: `/clientes/trabajadores/${id}/cese`,
+    metodo: 'POST',
+    cuerpo: { fechaCese },
+  });
 }
 
 export async function desactivarTrabajador(id: string): Promise<void> {

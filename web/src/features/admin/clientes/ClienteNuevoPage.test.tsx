@@ -14,7 +14,11 @@ function respuesta(status: number, cuerpo?: unknown) {
 function fetchSimulado(reglas: Record<string, Response>) {
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
-      init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
     const clave = `${req.method} ${new URL(req.url).pathname}`;
     return reglas[clave] ?? new Response('', { status: 404 });
   });
@@ -49,7 +53,9 @@ describe('ClienteNuevoPage', () => {
     expect(await screen.findByText('La razón social es obligatoria.')).toBeInTheDocument();
     expect(screen.getByText('El NIT es obligatorio.')).toBeInTheDocument();
     expect(screen.getByText('El correo es obligatorio.')).toBeInTheDocument();
-    expect(screen.getByText('La contraseña debe tener al menos 12 caracteres.')).toBeInTheDocument();
+    expect(
+      screen.getByText('La contraseña debe tener al menos 12 caracteres.'),
+    ).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([arg]) => (arg as Request).method === 'POST')).toBe(false);
   });
 
@@ -83,7 +89,11 @@ describe('ClienteNuevoPage', () => {
 
   test('un 409 muestra el title del problema', async () => {
     const usuario = userEvent.setup();
-    fetchSimulado({ 'POST /api/clientes': respuesta(409, { title: 'Ya existe un cliente con ese identificador.' }) });
+    fetchSimulado({
+      'POST /api/clientes': respuesta(409, {
+        title: 'Ya existe un cliente con ese identificador.',
+      }),
+    });
     renderNuevo();
 
     await usuario.type(screen.getByLabelText('Razón social'), 'Granja Demo S.A.C.');
@@ -93,6 +103,8 @@ describe('ClienteNuevoPage', () => {
     await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Crear cliente' }));
 
-    expect(await screen.findByText(/Ya existe un cliente con ese identificador/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Ya existe un cliente con ese identificador/),
+    ).toBeInTheDocument();
   });
 });

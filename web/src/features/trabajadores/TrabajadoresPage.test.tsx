@@ -17,11 +17,18 @@ function respuesta(status: number, cuerpo?: unknown) {
 // permite modelar el estado antes y después de una mutación.
 function fetchSimulado(reglas: Record<string, Response | Response[]>) {
   const colas = new Map(
-    Object.entries(reglas).map(([clave, valor]) => [clave, Array.isArray(valor) ? [...valor] : [valor]]),
+    Object.entries(reglas).map(([clave, valor]) => [
+      clave,
+      Array.isArray(valor) ? [...valor] : [valor],
+    ]),
   );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
-      init !== undefined ? new Request(String(input), init) : input instanceof Request ? input : new Request(String(input));
+      init !== undefined
+        ? new Request(String(input), init)
+        : input instanceof Request
+          ? input
+          : new Request(String(input));
     const clave = `${req.method} ${new URL(req.url).pathname}`;
     const cola = colas.get(clave);
     const valor = cola?.shift();
@@ -31,10 +38,24 @@ function fetchSimulado(reglas: Record<string, Response | Response[]>) {
   return fn;
 }
 
-function baseFetch(rol: Rol, clienteId: string | null, reglas: Record<string, Response | Response[]>) {
+function baseFetch(
+  rol: Rol,
+  clienteId: string | null,
+  reglas: Record<string, Response | Response[]>,
+) {
   return fetchSimulado({
-    'POST /api/identidad/sesion/renovar': respuesta(200, { accessToken: 't', expiraEnSegundos: 900 }),
-    'GET /api/identidad/me': respuesta(200, { usuarioId: 'u1', rol, clienteId, trabajadorId: null, modulos: [], funcionalidades: [] }),
+    'POST /api/identidad/sesion/renovar': respuesta(200, {
+      accessToken: 't',
+      expiraEnSegundos: 900,
+    }),
+    'GET /api/identidad/me': respuesta(200, {
+      usuarioId: 'u1',
+      rol,
+      clienteId,
+      trabajadorId: null,
+      modulos: [],
+      funcionalidades: [],
+    }),
     ...reglas,
   });
 }
@@ -107,7 +128,9 @@ describe('TrabajadoresPage', () => {
     await usuario.type(screen.getByLabelText('Nombre completo'), 'Nuevo Colaborador');
     await usuario.type(screen.getByLabelText('Documento de identidad'), 'DNI-00000099');
     await usuario.type(screen.getByLabelText('Cargo'), 'Supervisor');
-    fireEvent.change(screen.getByLabelText('Fecha de ingreso'), { target: { value: '2026-01-01' } });
+    fireEvent.change(screen.getByLabelText('Fecha de ingreso'), {
+      target: { value: '2026-01-01' },
+    });
     await usuario.type(screen.getByLabelText('Correo electrónico'), 'nuevo@icarus.test');
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
     await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
@@ -175,7 +198,9 @@ describe('TrabajadoresPage', () => {
     const usuario = userEvent.setup();
     baseFetch('Cliente', 'cli1', {
       'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'POST /api/clientes/cli1/trabajadores': respuesta(409, { title: 'El documento de identidad ya está registrado.' }),
+      'POST /api/clientes/cli1/trabajadores': respuesta(409, {
+        title: 'El documento de identidad ya está registrado.',
+      }),
     });
     renderPagina('/trabajadores');
 
@@ -183,13 +208,17 @@ describe('TrabajadoresPage', () => {
     await usuario.type(screen.getByLabelText('Nombre completo'), 'Nuevo Colaborador');
     await usuario.type(screen.getByLabelText('Documento de identidad'), 'DNI-00000099');
     await usuario.type(screen.getByLabelText('Cargo'), 'Supervisor');
-    fireEvent.change(screen.getByLabelText('Fecha de ingreso'), { target: { value: '2026-01-01' } });
+    fireEvent.change(screen.getByLabelText('Fecha de ingreso'), {
+      target: { value: '2026-01-01' },
+    });
     await usuario.type(screen.getByLabelText('Correo electrónico'), 'nuevo@icarus.test');
     await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-Larga-123456');
     await usuario.type(screen.getByLabelText('Confirmar contraseña'), 'Clave-Larga-123456');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    expect(await screen.findByText(/El documento de identidad ya está registrado/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/El documento de identidad ya está registrado/),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/DNI-00000099/)).not.toBeInTheDocument();
   });
 
@@ -207,7 +236,9 @@ describe('TrabajadoresPage', () => {
 
     const llamada = fetchMock.mock.calls.find(([arg]) => {
       const req = arg as Request;
-      return req.method === 'PUT' && req.url.endsWith('/clientes/cli1/trabajadores/t1/funcionalidades');
+      return (
+        req.method === 'PUT' && req.url.endsWith('/clientes/cli1/trabajadores/t1/funcionalidades')
+      );
     });
     expect(llamada).toBeDefined();
     const cuerpo = JSON.parse(await (llamada![0] as Request).clone().text());

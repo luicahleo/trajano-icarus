@@ -5,14 +5,12 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
+  Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  IconButton,
-  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -22,45 +20,68 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
 } from '@mui/material';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import { CampoContrasena } from '../../app/ui/CampoContrasena';
+import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
+import { EstadoCarga } from '../../app/ui/EstadoCarga';
+import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { ApiError } from '../../lib/http';
-import type { TrabajadorResumen } from '../../lib/tipos';
+import type { FuncionalidadOperativaTrabajador, TrabajadorResumen } from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
-import { cesarTrabajador, crearTrabajador, definirFuncionalidades, desactivarTrabajador, listarTrabajadores } from './api';
-import type { FuncionalidadOperativaTrabajador } from '../../lib/tipos';
+import { hoyIso } from '../avicola/constantes';
+import {
+  cesarTrabajador,
+  crearTrabajador,
+  definirFuncionalidades,
+  desactivarTrabajador,
+  listarTrabajadores,
+} from './api';
 
-const esquemaAlta = z.object({
-  nombre: z.string().min(1, 'El nombre es obligatorio.'),
-  documentoIdentidad: z.string().min(1, 'El documento de identidad es obligatorio.'),
-  cargo: z.string().min(1, 'El cargo es obligatorio.'),
-  fechaIngreso: z.string().min(1, 'La fecha de ingreso es obligatoria.'),
-  email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
-  contrasena: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres.')
-    .regex(/[A-Z]/, 'La contraseña debe incluir una mayúscula.')
-    .regex(/[a-z]/, 'La contraseña debe incluir una minúscula.')
-    .regex(/[0-9]/, 'La contraseña debe incluir un número.')
-    .regex(/[^a-zA-Z0-9]/, 'La contraseña debe incluir un símbolo.'),
-  confirmacionContrasena: z.string().min(1, 'Confirma la contraseña.'),
-}).refine((valores) => valores.contrasena === valores.confirmacionContrasena, {
-  path: ['confirmacionContrasena'], message: 'Las contraseñas no coinciden.',
-});
+const esquemaAlta = z
+  .object({
+    nombre: z.string().min(1, 'El nombre es obligatorio.'),
+    documentoIdentidad: z.string().min(1, 'El documento de identidad es obligatorio.'),
+    cargo: z.string().min(1, 'El cargo es obligatorio.'),
+    fechaIngreso: z.string().min(1, 'La fecha de ingreso es obligatoria.'),
+    email: z.string().min(1, 'El correo es obligatorio.').email('Correo inválido.'),
+    contrasena: z
+      .string()
+      .min(12, 'La contraseña debe tener al menos 12 caracteres.')
+      .regex(/[A-Z]/, 'La contraseña debe incluir una mayúscula.')
+      .regex(/[a-z]/, 'La contraseña debe incluir una minúscula.')
+      .regex(/[0-9]/, 'La contraseña debe incluir un número.')
+      .regex(/[^a-zA-Z0-9]/, 'La contraseña debe incluir un símbolo.'),
+    confirmacionContrasena: z.string().min(1, 'Confirma la contraseña.'),
+  })
+  .refine((valores) => valores.contrasena === valores.confirmacionContrasena, {
+    path: ['confirmacionContrasena'],
+    message: 'Las contraseñas no coinciden.',
+  });
 
 type DatosAlta = z.infer<typeof esquemaAlta>;
 const camposAlta = new Set<keyof DatosAlta>([
-  'nombre', 'documentoIdentidad', 'cargo', 'fechaIngreso', 'email', 'contrasena', 'confirmacionContrasena',
+  'nombre',
+  'documentoIdentidad',
+  'cargo',
+  'fechaIngreso',
+  'email',
+  'contrasena',
+  'confirmacionContrasena',
 ]);
 
-function fechaDeHoy(): string {
-  const d = new Date();
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const dia = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mes}-${dia}`;
+const FUNCIONALIDADES_OPERATIVAS: FuncionalidadOperativaTrabajador[] = [
+  'ProduccionHuevos',
+  'Mortalidad',
+  'Vacunacion',
+];
+
+function etiquetaFuncionalidad(funcionalidad: FuncionalidadOperativaTrabajador): string {
+  if (funcionalidad === 'ProduccionHuevos') return 'Producción de huevos';
+  if (funcionalidad === 'Mortalidad') return 'Mortalidad';
+  return 'Vacunación';
 }
 
 export function TrabajadoresPage() {
@@ -72,13 +93,16 @@ export function TrabajadoresPage() {
   const [errorCese, setErrorCese] = useState<string | null>(null);
   const [desactivando, setDesactivando] = useState<TrabajadorResumen | null>(null);
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
-  const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [configurando, setConfigurando] = useState<TrabajadorResumen | null>(null);
   const [funcionalidades, setFuncionalidades] = useState<FuncionalidadOperativaTrabajador[]>([]);
 
   const claveTrabajadores = ['trabajadores', clienteId] as const;
 
-  const { data: trabajadores, isLoading, isError } = useQuery({
+  const {
+    data: trabajadores,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: claveTrabajadores,
     queryFn: () => listarTrabajadores(clienteId!),
     enabled: Boolean(clienteId),
@@ -87,7 +111,8 @@ export function TrabajadoresPage() {
   const refrescar = () => queryClient.invalidateQueries({ queryKey: ['trabajadores', clienteId] });
 
   const {
-    register, setError,
+    register,
+    setError,
     handleSubmit,
     reset,
     formState: { errors },
@@ -109,7 +134,11 @@ export function TrabajadoresPage() {
           }
         }
       }
-      setErrorAlta(error instanceof ApiError ? error.code ?? 'No se pudo crear el trabajador.' : 'No se pudo crear el trabajador.');
+      setErrorAlta(
+        error instanceof ApiError
+          ? (error.code ?? 'No se pudo crear el trabajador.')
+          : 'No se pudo crear el trabajador.',
+      );
     },
   });
 
@@ -138,7 +167,7 @@ export function TrabajadoresPage() {
   });
 
   const onEnviarCese = () => {
-    const hoy = fechaDeHoy();
+    const hoy = hoyIso();
     if (!fechaCese) {
       setErrorCese('La fecha de cese es obligatoria.');
       return;
@@ -152,60 +181,103 @@ export function TrabajadoresPage() {
   };
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Trabajadores</Typography>
-        {clienteId && (
-          <Button variant="contained" onClick={() => setAbiertaAlta(true)}>
-            Nuevo trabajador
-          </Button>
-        )}
-      </Stack>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <PaginaCabecera
+        titulo="Trabajadores"
+        acciones={
+          clienteId && (
+            <Button variant="contained" onClick={() => setAbiertaAlta(true)}>
+              Nuevo trabajador
+            </Button>
+          )
+        }
+      />
 
-      {isError && <Alert severity="error">No se pudo cargar la lista de trabajadores.</Alert>}
-      {isLoading && <CircularProgress />}
-      {trabajadores && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Documento</TableCell>
-                <TableCell>Cargo</TableCell>
-                <TableCell>Fecha de ingreso</TableCell>
-                <TableCell>Fecha de cese</TableCell>
-                <TableCell>Funcionalidades</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {trabajadores.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.nombre}</TableCell>
-                  <TableCell>{t.documentoIdentidad}</TableCell>
-                  <TableCell>{t.cargo}</TableCell>
-                  <TableCell>{t.fechaIngreso}</TableCell>
-                  <TableCell>{t.fechaCese ?? '—'}</TableCell>
-                  <TableCell>{t.funcionalidades.filter((f) => f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion').map((f) => f === 'ProduccionHuevos' ? 'Producción de huevos' : f === 'Mortalidad' ? 'Mortalidad' : 'Vacunación').join(', ') || 'Ninguna'}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                      <Button size="small" variant="outlined" onClick={() => setCesando(t)}>
-                        Cesar
-                      </Button>
-                      <Button size="small" variant="outlined" color="error" onClick={() => setDesactivando(t)}>
-                        Desactivar
-                      </Button>
-                      {!t.fechaCese && <Button size="small" variant="outlined" onClick={() => { setConfigurando(t); setFuncionalidades(t.funcionalidades.filter((f): f is FuncionalidadOperativaTrabajador => f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion')); }}>
-                        Funcionalidades
-                      </Button>}
-                    </Stack>
-                  </TableCell>
+      <EstadoCarga
+        cargando={isLoading}
+        error={isError}
+        mensajeError="No se pudo cargar la lista de trabajadores."
+      >
+        {trabajadores && (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Documento</TableCell>
+                  <TableCell>Cargo</TableCell>
+                  <TableCell>Fecha de ingreso</TableCell>
+                  <TableCell>Fecha de cese</TableCell>
+                  <TableCell>Funcionalidades</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              </TableHead>
+              <TableBody>
+                {trabajadores.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      No hay trabajadores todavía.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  trabajadores.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>{t.nombre}</TableCell>
+                      <TableCell>{t.documentoIdentidad}</TableCell>
+                      <TableCell>{t.cargo}</TableCell>
+                      <TableCell>{t.fechaIngreso}</TableCell>
+                      <TableCell>{t.fechaCese ?? '—'}</TableCell>
+                      <TableCell>
+                        {t.funcionalidades
+                          .filter(
+                            (f): f is FuncionalidadOperativaTrabajador =>
+                              f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion',
+                          )
+                          .map(etiquetaFuncionalidad)
+                          .join(', ') || 'Ninguna'}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                          <Button size="small" variant="outlined" onClick={() => setCesando(t)}>
+                            Cesar
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => setDesactivando(t)}
+                          >
+                            Desactivar
+                          </Button>
+                          {!t.fechaCese && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                setConfigurando(t);
+                                setFuncionalidades(
+                                  t.funcionalidades.filter(
+                                    (f): f is FuncionalidadOperativaTrabajador =>
+                                      f === 'ProduccionHuevos' ||
+                                      f === 'Mortalidad' ||
+                                      f === 'Vacunacion',
+                                  ),
+                                );
+                              }}
+                            >
+                              Funcionalidades
+                            </Button>
+                          )}
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </EstadoCarga>
 
       <Dialog open={abiertaAlta} onClose={() => setAbiertaAlta(false)}>
         <DialogTitle>Nuevo trabajador</DialogTitle>
@@ -259,23 +331,33 @@ export function TrabajadoresPage() {
               error={Boolean(errors.email)}
               helperText={errors.email?.message}
             />
-            <TextField
+            <CampoContrasena
               label="Contraseña"
-              type={mostrarContrasena ? 'text' : 'password'}
               autoComplete="new-password"
               fullWidth
               {...register('contrasena')}
               error={Boolean(errors.contrasena)}
               helperText={errors.contrasena?.message}
-              slotProps={{ input: { endAdornment: <InputAdornment position="end"><IconButton aria-label={mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setMostrarContrasena(!mostrarContrasena)} edge="end">{mostrarContrasena ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />}</IconButton></InputAdornment> } }}
             />
-            <TextField label="Confirmar contraseña" type={mostrarContrasena ? 'text' : 'password'} autoComplete="new-password" fullWidth {...register('confirmacionContrasena')} error={Boolean(errors.confirmacionContrasena)} helperText={errors.confirmacionContrasena?.message} />
+            <CampoContrasena
+              label="Confirmar contraseña"
+              autoComplete="new-password"
+              fullWidth
+              {...register('confirmacionContrasena')}
+              error={Boolean(errors.confirmacionContrasena)}
+              helperText={errors.confirmacionContrasena?.message}
+            />
             {errorAlta && <Alert severity="error">{errorAlta}</Alert>}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAbiertaAlta(false)}>Cancelar</Button>
-          <Button type="submit" form="form-alta-trabajador" variant="contained" disabled={crear.isPending}>
+          <Button
+            type="submit"
+            form="form-alta-trabajador"
+            variant="contained"
+            disabled={crear.isPending}
+          >
             Guardar
           </Button>
         </DialogActions>
@@ -284,13 +366,34 @@ export function TrabajadoresPage() {
       <Dialog open={configurando !== null} onClose={() => setConfigurando(null)}>
         <DialogTitle>Funcionalidades de {configurando?.nombre}</DialogTitle>
         <DialogContent>
-          <FormControlLabel control={<Checkbox checked={funcionalidades.includes('ProduccionHuevos')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'ProduccionHuevos'), 'ProduccionHuevos'] : actuales.filter((f) => f !== 'ProduccionHuevos'))} />} label="Producción de huevos" />
-          <FormControlLabel control={<Checkbox checked={funcionalidades.includes('Mortalidad')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'Mortalidad'), 'Mortalidad'] : actuales.filter((f) => f !== 'Mortalidad'))} />} label="Mortalidad" />
-          <FormControlLabel control={<Checkbox checked={funcionalidades.includes('Vacunacion')} onChange={(e) => setFuncionalidades((actuales) => e.target.checked ? [...actuales.filter((f) => f !== 'Vacunacion'), 'Vacunacion'] : actuales.filter((f) => f !== 'Vacunacion'))} />} label="Vacunación" />
+          {FUNCIONALIDADES_OPERATIVAS.map((funcionalidad) => (
+            <FormControlLabel
+              key={funcionalidad}
+              control={
+                <Checkbox
+                  checked={funcionalidades.includes(funcionalidad)}
+                  onChange={(e) =>
+                    setFuncionalidades((actuales) =>
+                      e.target.checked
+                        ? [...actuales.filter((f) => f !== funcionalidad), funcionalidad]
+                        : actuales.filter((f) => f !== funcionalidad),
+                    )
+                  }
+                />
+              }
+              label={etiquetaFuncionalidad(funcionalidad)}
+            />
+          ))}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfigurando(null)}>Cancelar</Button>
-          <Button variant="contained" onClick={() => guardarFuncionalidades.mutate()} disabled={guardarFuncionalidades.isPending}>Guardar</Button>
+          <Button
+            variant="contained"
+            onClick={() => guardarFuncionalidades.mutate()}
+            disabled={guardarFuncionalidades.isPending}
+          >
+            Guardar
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -318,16 +421,15 @@ export function TrabajadoresPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={desactivando !== null} onClose={() => setDesactivando(null)}>
-        <DialogTitle>Confirmar acción</DialogTitle>
-        <DialogContent>¿Desactivar a {desactivando?.nombre}? Esta acción elimina su acceso.</DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDesactivando(null)}>Cancelar</Button>
-          <Button variant="contained" color="error" onClick={() => desactivando && desactivar.mutate()} disabled={desactivar.isPending}>
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      <DialogoConfirmacion
+        abierto={desactivando !== null}
+        titulo="Confirmar acción"
+        mensaje={`¿Desactivar a ${desactivando?.nombre}? Esta acción elimina su acceso.`}
+        color="error"
+        pendiente={desactivar.isPending}
+        onCancelar={() => setDesactivando(null)}
+        onConfirmar={() => desactivando && desactivar.mutate()}
+      />
+    </Container>
   );
 }

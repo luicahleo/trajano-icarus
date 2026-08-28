@@ -1,6 +1,8 @@
 import { peticion } from '../../../lib/http';
 import type { ClienteResumen, Modulo } from '../../../lib/tipos';
 
+export const CLAVE_CLIENTES = ['clientes'] as const;
+
 export async function listarClientes(): Promise<ClienteResumen[]> {
   return peticion<ClienteResumen[]>({ ruta: '/clientes' });
 }

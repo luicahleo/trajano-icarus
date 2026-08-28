@@ -1,33 +1,40 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
-  Box,
   Button,
+  Checkbox,
   Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Container,
   FormControlLabel,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
-import { Checkbox } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { DialogoConfirmacion } from '../../../app/ui/DialogoConfirmacion';
+import { EstadoCarga } from '../../../app/ui/EstadoCarga';
+import { PaginaCabecera } from '../../../app/ui/PaginaCabecera';
 import type { Modulo } from '../../../lib/tipos';
-import { definirModulos, listarClientes, reactivarCliente, suspenderCliente } from './api';
+import {
+  CLAVE_CLIENTES,
+  definirModulos,
+  listarClientes,
+  reactivarCliente,
+  suspenderCliente,
+} from './api';
 
-const CLAVE_CLIENTES = ['clientes'] as const;
 const MODULOS: Modulo[] = ['GestionAvicola', 'ControlAcceso'];
 
 export function ClienteDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: clientes, isLoading, isError } = useQuery({
+  const {
+    data: clientes,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: CLAVE_CLIENTES,
     queryFn: listarClientes,
   });
@@ -52,9 +59,31 @@ export function ClienteDetallePage() {
     },
   });
 
-  if (isLoading) return <CircularProgress sx={{ m: 4 }} />;
-  if (isError) return <Alert severity="error">No se pudo cargar el cliente.</Alert>;
-  if (!cliente) return <Alert severity="info">No se encontró el cliente solicitado.</Alert>;
+  if (isLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <EstadoCarga cargando error={false}>
+          <></>
+        </EstadoCarga>
+      </Container>
+    );
+  }
+  if (isError) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <EstadoCarga cargando={false} error mensajeError="No se pudo cargar el cliente.">
+          <></>
+        </EstadoCarga>
+      </Container>
+    );
+  }
+  if (!cliente) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Alert severity="info">No se encontró el cliente solicitado.</Alert>
+      </Container>
+    );
+  }
 
   const alternarModulo = (modulo: Modulo) => {
     const nuevos = cliente.modulos.includes(modulo)
@@ -64,13 +93,11 @@ export function ClienteDetallePage() {
   };
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
       <Button sx={{ mb: 2 }} onClick={() => navigate('/admin/clientes')}>
         Volver a clientes
       </Button>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        {cliente.razonSocial}
-      </Typography>
+      <PaginaCabecera titulo={cliente.razonSocial} />
       <Paper sx={{ p: 3, maxWidth: 520 }}>
         <Stack spacing={2}>
           <Typography>
@@ -78,7 +105,11 @@ export function ClienteDetallePage() {
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Typography>Estado:</Typography>
-            <Chip label={cliente.estaActivo ? 'Activo' : 'Suspendido'} color={cliente.estaActivo ? 'success' : 'default'} size="small" />
+            <Chip
+              label={cliente.estaActivo ? 'Activo' : 'Suspendido'}
+              color={cliente.estaActivo ? 'success' : 'default'}
+              size="small"
+            />
           </Stack>
           <Typography variant="h6" sx={{ mt: 2 }}>
             Módulos habilitados
@@ -107,22 +138,19 @@ export function ClienteDetallePage() {
         </Stack>
       </Paper>
 
-      <Dialog open={confirmacion !== null} onClose={() => setConfirmacion(null)}>
-        <DialogTitle>Confirmar acción</DialogTitle>
-        <DialogContent>
-          {confirmacion === 'suspender' ? `¿Suspender a ${cliente.razonSocial}?` : `¿Reactivar a ${cliente.razonSocial}?`}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmacion(null)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            color={confirmacion === 'suspender' ? 'error' : 'success'}
-            onClick={() => confirmacion && cambiarEstado.mutate(confirmacion)}
-          >
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      <DialogoConfirmacion
+        abierto={confirmacion !== null}
+        titulo="Confirmar acción"
+        mensaje={
+          confirmacion === 'suspender'
+            ? `¿Suspender a ${cliente.razonSocial}?`
+            : `¿Reactivar a ${cliente.razonSocial}?`
+        }
+        color={confirmacion === 'suspender' ? 'error' : 'success'}
+        pendiente={cambiarEstado.isPending}
+        onCancelar={() => setConfirmacion(null)}
+        onConfirmar={() => confirmacion && cambiarEstado.mutate(confirmacion)}
+      />
+    </Container>
   );
 }
