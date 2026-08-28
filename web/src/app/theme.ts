@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material/styles';
+import { alpha, createTheme } from '@mui/material/styles';
 
 const colores = {
   pino: '#1B5E20',
@@ -34,12 +34,36 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: '"Open Sans", Arial, sans-serif',
-    h1: { fontFamily: '"Prompt", "Open Sans", sans-serif', fontWeight: 700, letterSpacing: '-0.03em' },
-    h2: { fontFamily: '"Prompt", "Open Sans", sans-serif', fontWeight: 700, letterSpacing: '-0.025em' },
-    h3: { fontFamily: '"Prompt", "Open Sans", sans-serif', fontWeight: 700, letterSpacing: '-0.02em' },
-    h4: { fontFamily: '"Prompt", "Open Sans", sans-serif', fontWeight: 600, letterSpacing: '-0.02em' },
-    h5: { fontFamily: '"Prompt", "Open Sans", sans-serif', fontWeight: 600, letterSpacing: '-0.015em' },
-    h6: { fontFamily: '"Prompt", "Open Sans", sans-serif', fontWeight: 600, letterSpacing: '-0.01em' },
+    h1: {
+      fontFamily: '"Prompt", "Open Sans", sans-serif',
+      fontWeight: 700,
+      letterSpacing: '-0.03em',
+    },
+    h2: {
+      fontFamily: '"Prompt", "Open Sans", sans-serif',
+      fontWeight: 700,
+      letterSpacing: '-0.025em',
+    },
+    h3: {
+      fontFamily: '"Prompt", "Open Sans", sans-serif',
+      fontWeight: 700,
+      letterSpacing: '-0.02em',
+    },
+    h4: {
+      fontFamily: '"Prompt", "Open Sans", sans-serif',
+      fontWeight: 600,
+      letterSpacing: '-0.02em',
+    },
+    h5: {
+      fontFamily: '"Prompt", "Open Sans", sans-serif',
+      fontWeight: 600,
+      letterSpacing: '-0.015em',
+    },
+    h6: {
+      fontFamily: '"Prompt", "Open Sans", sans-serif',
+      fontWeight: 600,
+      letterSpacing: '-0.01em',
+    },
     button: { fontWeight: 700, textTransform: 'none' },
   },
   shape: { borderRadius: 12 },
@@ -56,9 +80,77 @@ export const theme = createTheme({
       },
     },
     MuiOutlinedInput: {
-      styleOverrides: { root: { borderRadius: '12px', backgroundColor: colores.papel } },
+      styleOverrides: {
+        root: {
+          borderRadius: '12px',
+          backgroundColor: colores.papel,
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: colores.pino },
+          '&:hover:not(.Mui-disabled):not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
+            borderColor: alpha(colores.pino, 0.5),
+          },
+        },
+      },
     },
     MuiCard: { styleOverrides: { root: { borderRadius: '16px', backgroundImage: 'none' } } },
     MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+    MuiTable: {
+      styleOverrides: { root: { borderCollapse: 'separate', borderSpacing: 0 } },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: { borderBottom: '1px solid', borderColor: 'divider', padding: '14px 16px' },
+        head: {
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          fontSize: '0.75rem',
+          letterSpacing: '0.08em',
+          color: 'text.secondary',
+          borderBottom: '2px solid',
+          borderColor: 'divider',
+        },
+      },
+    },
+    MuiTableBody: {
+      styleOverrides: {
+        root: {
+          '& .MuiTableRow-root:hover': {
+            backgroundColor: alpha(colores.pinoClaro, 0.4),
+            transition: 'background-color 150ms ease',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: { paper: { borderRadius: '20px' } },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Prompt", "Open Sans", sans-serif',
+          fontWeight: 600,
+          fontSize: '1.125rem',
+          letterSpacing: '-0.01em',
+          paddingBottom: '4px',
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: { root: { padding: '8px 24px 20px', gap: 8 } },
+    },
+    MuiChip: {
+      styleOverrides: { root: { borderRadius: '8px', fontWeight: 600 } },
+    },
+    MuiAlert: {
+      styleOverrides: { root: { borderRadius: '12px' } },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: '12px',
+          transition: 'background-color 150ms ease',
+          '&:hover': { backgroundColor: alpha(colores.pinoClaro, 0.35) },
+        },
+      },
+    },
   },
 });
