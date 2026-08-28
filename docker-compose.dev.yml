@@ -33,6 +33,7 @@ services:
       - "1433:1433"
     volumes:
       - mssql-data:/var/opt/mssql
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
       interval: 15s
@@ -57,6 +58,7 @@ services:
       Seq__ApiKey: "${SEQ_API_KEY:-}"
     ports:
       - "8080:8080"
+    restart: unless-stopped
     depends_on:
       sqlserver:
         # Espera a que sqlserver pase el healthcheck antes de arrancar la API.
