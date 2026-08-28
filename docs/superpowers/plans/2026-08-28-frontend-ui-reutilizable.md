@@ -18,6 +18,20 @@ Testing Library. Sin dependencias nuevas.
 **Spec:**
 `docs/superpowers/specs/2026-08-28-frontend-ui-reutilizable-design.md`.
 
+**Estado: completado** (2026-08-28, 3 commits en `develop`, puerta verde).
+
+Desvíos menores respecto de lo planificado, todos registrados aquí:
+- `EstadoCarga` admite `children` opcionales para usarse en retornos tempranos
+  (carga/error sin contenido); se agregó un test para ese caso.
+- En `TrabajadoresPage` solo el diálogo de desactivación era una confirmación
+  pura: el de cese conserva su campo de fecha y el de funcionalidades sus
+  checkboxes. `DialogoConfirmacion` se usa una sola vez allí.
+- `web/format:check` tenía dos archivos en rojo ya en `develop`
+  (`scripts/generar-iconos.mjs`, `tsconfig.json`); se formatearon (cambio
+  puramente cosmético) para dejar el check en verde.
+- Los nombres accesibles que fijan los tests se conservaron intactos; 124 tests
+  del frontend y 346 del backend en verde.
+
 ## Restricciones globales
 
 - TDD estricto para los componentes nuevos: test en rojo por el motivo correcto,
