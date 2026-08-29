@@ -121,20 +121,65 @@ próximo login. Nada de esto persiste el token.
 reenviar la misma operación; el backend la absorbe por `IdempotencyKey`. Se
 documenta y no se resuelve (YAGNI).
 
-### 5. Caché de lectura mínima
+### 5. Caché de lectura y precalentado tras login (solo trabajadores)
 
-Sin caché, una recarga sin red deja la app vacía aunque el shell cargue desde
-el service worker. Se cachea en IndexedDB (store `cacheLectura`, clave = ruta)
-solo lo necesario para operar recogida/mortalidad sin red:
+El modo offline está orientado al rol `Trabajador`: es quien opera en el campo.
+IMGA, tras el login, descargaba y guardaba los datos del día (galpones,
+registros, mortalidad) para trabajar sin red; la PWA replica ese comportamiento
+con un **precalentado de caché tras el login del trabajador**.
 
-- `GET /granjas`, `GET /granjas/{id}/galpones`, `GET /galpones/{id}`.
+La caché vive en IndexedDB (store `cache-lectura`, clave = ruta) y cubre solo
+lo necesario para operar recogida/mortalidad sin red:
+
+- `GET /granjas`, `GET /granjas/{id}/galpones`, `GET /galpones/{id}`,
+- `GET /galpones/{id}/produccion` y `GET /galpones/{id}/mortalidad` (día actual,
+  sin parámetro `fecha`).
+
+**Precalentado**: cuando hay sesión con rol `Trabajador` y red, se descargan
+granjas → galpones de cada granja → detalle, producción del día y mortalidad
+del día de cada galpón, reutilizando las mismas funciones de `api.ts` (que ya
+escriben en la caché). Así el trabajador puede perder la conexión y seguir
+viendo los datos del día. Para otros roles no hay precalentado: la caché se
+llena de forma perezosa con la navegación normal.
 
 Cada respuesta exitosa actualiza la caché; ante fallo de red se sirve la caché.
 Los datos cacheados se muestran tal cual (el banner ya avisa de la falta de
 conexión). Eficiencia, vacunación y el resto de módulos quedan fuera: sin red
 muestran el error actual.
 
-### 6. UI
+### 6. Sesión offline del trabajador (sin persistir el token)
+
+IMGA persistía el refresh token en SecureStorage para abrir la app sin red. En
+la PWA **no se persiste ningún token ni credencial**: la regla anti-PII del
+proyecto (`AGENTS.md` raíz y `web/AGENTS.md`) es no negociable. Además no hace
+falta:
+
+- La cola y la caché no necesitan token: encolar y leer datos del día son
+  operaciones locales.
+- La sesión real la cubre la cookie HttpOnly de refresh, que ya es persistente
+  (`Expires` = días de validez, `Icarus.Host/Endpoints/IdentidadEndpoints.cs`):
+  al volver la red, `renovarSesion()` renueva el access token en memoria.
+
+Lo que sí se persiste es un **snapshot mínimo de sesión** para que el
+trabajador pueda abrir la PWA sin red y seguir trabajando:
+
+- Se guarda en la caché local (clave `sesion-offline`) al obtener
+  `/identidad/sesion/actual` con red, **solo si el rol es `Trabajador`**.
+- Contiene: `usuarioId`, `rol`, `clienteId`, `trabajadorId`, `modulos`,
+  `funcionalidades`. **Nunca** el correo (dato nominal) ni el token.
+- Si el login o la restauración devuelve otro rol, el snapshot se borra (el
+  dispositivo quedó en manos de otro perfil).
+- Al arrancar la app: si `renovarSesion()` falla **por red** (no por 401),
+  `AuthContext` restaura desde el snapshot y la app queda operativa offline. Si
+  el backend rechazó la sesión (401), no hay fallback: sesión anónima.
+- Con sesión de snapshot activa, al dispararse `online` se revalida
+  (`renovarSesion` + `/identidad/sesion/actual`) y se reemplaza el snapshot.
+- `cerrarSesion()` borra el snapshot; la cola NO se borra (podría perder datos
+  del campo).
+- La autorización real sigue siendo el backend: el snapshot solo habilita la
+  UI; al sincronizar, el backend valida tenant y permisos.
+
+### 7. UI
 
 - `BannerSinConexion`: el texto pasa a «Sin conexión: los registros se guardan
   en este dispositivo y se sincronizarán al volver la red», y muestra el
@@ -148,7 +193,7 @@ muestran el error actual.
 - Edición y eliminación de registros siguen deshabilitadas sin conexión (sin
   cambios).
 
-### 7. Pruebas
+### 8. Pruebas
 
 - Vitest + Testing Library, como el resto de `web/`.
 - El motor se prueba contra `AlmacenCola` en memoria: reintentos, backoff,
@@ -166,6 +211,9 @@ muestran el error actual.
   el alta es el caso crítico y la edición offline añade conflicto de
   versiones).
 - Vacunación offline (completar/cancelar tareas).
+- **Persistencia del token o de credenciales** (IMGA lo hacía en SecureStorage;
+  aquí se descarta por la regla anti-PII — ver decisión 6).
+- Precalentado y sesión offline para roles distintos de `Trabajador`.
 - Background Sync API del service worker (soporte incompleto fuera de Chromium).
 - Caché de lectura de eficiencia, vacunación, clientes o identidad.
 - Coordinación multi-pestaña.
@@ -183,3 +231,10 @@ muestran el error actual.
   campo); se documenta como comportamiento conocido.
 - **Crecimiento de la cola**: acotada por los 3 reintentos y el estado `error`
   con descarte manual; no hay purga automática en esta iteración.
+- **Snapshot de sesión desactualizado**: si cambian las funcionalidades del
+  trabajador mientras está offline, la UI seguirá mostrando las del snapshot
+  hasta la revalidación al reconectar; el backend sigue siendo la autoridad, así
+  que el impacto es solo de UI.
+- **Dispositivo compartido**: el snapshot se borra al cerrar sesión y al
+  entrar con otro rol; si dos trabajadores comparten dispositivo sin cerrar
+  sesión, la cola mezcla operaciones y el backend resuelve por tenant.

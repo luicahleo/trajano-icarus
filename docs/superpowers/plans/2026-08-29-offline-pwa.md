@@ -2,14 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Permitir registrar recogida y mortalidad sin conexión en la PWA, con cola
-en IndexedDB, sincronización automática con reintentos y caché de lectura mínima.
+**Goal:** Permitir que el trabajador registre recogida y mortalidad sin conexión
+en la PWA, con cola en IndexedDB, precalentado de los datos del día tras el
+login, sesión offline sin persistir el token y sincronización automática con
+reintentos.
 
 **Architecture:** Cola de operaciones en IndexedDB detrás de la interfaz
 `AlmacenCola` (implementaciones IndexedDB y memoria), motor de sincronización
 genérico en `web/src/lib/offline/`, coordinador singleton en
-`web/src/app/offline/` que cablea almacén + motor + dispatcher avícola, y
-cambios acotados en los diálogos de alta y en el banner/layout. Spec:
+`web/src/app/offline/` que cablea almacén + motor + dispatcher avícola,
+precalentado de caché para el rol Trabajador, snapshot de sesión offline sin
+token, y cambios acotados en los diálogos de alta, el banner, el layout y
+`AuthContext`. Spec:
 `docs/superpowers/specs/2026-08-29-offline-pwa-design.md`.
 
 **Tech Stack:** React 19 + TypeScript estricto, MUI 9, TanStack Query 5, Vitest +
@@ -1538,7 +1542,7 @@ git commit -m "feat(web): indicador de pendientes offline con reintento y descar
 ```
 
 ---
-### Task 8: Caché de lectura mínima (granjas, galpones, galpón)
+### Task 8: Caché de lectura (granjas, galpones, producción y mortalidad del día)
 
 **Files:**
 - Create: `web/src/lib/offline/cacheLectura.ts` (interfaz + memoria)
@@ -1548,7 +1552,7 @@ git commit -m "feat(web): indicador de pendientes offline con reintento y descar
   parámetro opcional `cache` en `iniciarCoordinadorOffline`)
 - Modify: `web/src/features/avicola/offline.ts` (añade `conCacheLectura`)
 - Modify: `web/src/features/avicola/api.ts` (envuelve `listarGranjas`,
-  `listarGalpones`, `obtenerGalpon`)
+  `listarGalpones`, `obtenerGalpon`, `listarProduccion`, `listarMortalidad`)
 - Test: `web/src/features/avicola/offline.test.ts` (añade tests de caché)
 
 **Interfaces:**
@@ -1724,8 +1728,10 @@ export async function conCacheLectura<T>(
 }
 ```
 
-En `web/src/features/avicola/api.ts` envolver las tres lecturas (importar
-`conCacheLectura` de `./offline`):
+En `web/src/features/avicola/api.ts` envolver las cinco lecturas (importar
+`conCacheLectura` de `./offline`). La clave incluye los parámetros: las
+llamadas con `fecha` explícita (consultas de otros días) usan su propia clave y
+también quedan cubiertas tras la primera visita:
 
 ```ts
 export const listarGranjas = () =>
@@ -1736,7 +1742,20 @@ export const listarGalpones = (id: string) =>
   );
 export const obtenerGalpon = (id: string) =>
   conCacheLectura(`galpones/${id}`, () => peticion<Galpon>({ ruta: `/galpones/${id}` }));
+export const listarProduccion = (id: string, fecha?: string) =>
+  conCacheLectura(`galpones/${id}/produccion/${fecha ?? 'hoy'}`, () =>
+    peticion<ProduccionDia>({ ruta: `/galpones/${id}/produccion${fecha ? `?fecha=${fecha}` : ''}` }),
+  );
+export const listarMortalidad = (id: string, fecha?: string) =>
+  conCacheLectura(`galpones/${id}/mortalidad/${fecha ?? 'hoy'}`, () =>
+    peticion<MortalidadDia>({ ruta: `/galpones/${id}/mortalidad${fecha ? `?fecha=${fecha}` : ''}` }),
+  );
 ```
+
+Ojo: «hoy» como clave asume que la app no cruza la medianoche abierta sin red;
+el precalentado (Task 9) y la navegación normal la refrescan en cada sesión con
+red. No inventar una clave con la fecha real del cliente: la ruta sin `fecha`
+ya significa «día actual» para el backend.
 
 - [ ] **Step 4: Ejecutar y verificar que pasan (nuevos y existentes)**
 
@@ -1754,7 +1773,409 @@ git commit -m "feat(web): caché de lectura offline para granjas y galpones"
 
 ---
 
-### Task 9: Cableado en providers, documentación e integración
+### Task 9: Precalentado de caché tras el login del trabajador
+
+**Files:**
+- Modify: `web/src/features/avicola/offline.ts` (añade `precalentarCacheAvicola`)
+- Create: `web/src/app/offline/PrecalentadoOffline.tsx` (efecto por rol)
+- Test: `web/src/app/offline/PrecalentadoOffline.test.tsx`
+- Modify: `web/src/app/AppLayout.tsx` (monta `<PrecalentadoOffline />`)
+
+**Interfaces:**
+- Consumes: `listarGranjas`, `listarGalpones`, `obtenerGalpon`,
+  `listarProduccion`, `listarMortalidad` ya envueltas por `conCacheLectura`
+  (Task 8); `useAuth` de `../../features/auth/AuthContext`; `useConexion`.
+- Produces: `precalentarCacheAvicola(): Promise<void>` y el componente
+  `<PrecalentadoOffline />` (sin props, no renderiza nada).
+
+- [ ] **Step 1: Escribir el test que falla**
+
+`web/src/app/offline/PrecalentadoOffline.test.tsx`:
+
+```tsx
+import { render, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
+import { crearCacheLecturaMemoria } from '../../lib/offline/cacheLectura';
+import { iniciarCoordinadorOffline } from './coordinador';
+import { PrecalentadoOffline } from './PrecalentadoOffline';
+
+// AuthContext real es pesado para este test: se mockea useAuth.
+const authMock = vi.fn();
+vi.mock('../../features/auth/AuthContext', () => ({
+  useAuth: () => authMock(),
+}));
+
+const respuesta = (cuerpo: unknown) =>
+  new Response(JSON.stringify(cuerpo), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+
+describe('PrecalentadoOffline', () => {
+  let limpiar: (() => void) | undefined;
+  afterEach(() => {
+    limpiar?.();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  test('con rol Trabajador descarga y cachea los datos del día', async () => {
+    const cache = crearCacheLecturaMemoria();
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+      cache,
+      intervaloMs: 60_000,
+    });
+    authMock.mockReturnValue({ rol: 'Trabajador', estaAutenticado: true });
+    const fetchMock = vi.fn(async (input: Request) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (url.includes('/galpones/g1/produccion')) return respuesta({ recogidas: [] });
+      if (url.includes('/galpones/g1/mortalidad')) return respuesta({ registros: [] });
+      if (url.endsWith('/galpones/g1')) return respuesta({ id: 'g1' });
+      if (url.includes('/granjas/f1/galpones')) return respuesta([{ id: 'g1' }]);
+      return respuesta([{ id: 'f1' }]); // /granjas
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PrecalentadoOffline />);
+    await waitFor(async () =>
+      expect(await cache.obtener('galpones/g1/produccion/hoy')).toBeDefined(),
+    );
+    expect(await cache.obtener('granjas')).toBeDefined();
+    expect(await cache.obtener('granjas/f1/galpones')).toBeDefined();
+    expect(await cache.obtener('galpones/g1/mortalidad/hoy')).toBeDefined();
+  });
+
+  test('con otro rol no precalienta', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+      cache: crearCacheLecturaMemoria(),
+      intervaloMs: 60_000,
+    });
+    authMock.mockReturnValue({ rol: 'Cliente', estaAutenticado: true });
+    render(<PrecalentadoOffline />);
+    await new Promise((r) => setTimeout(r, 50));
+    const llamadas = fetchMock.mock.calls.filter((c) =>
+      String(typeof c[0] === 'string' ? c[0] : (c[0] as Request).url).includes('/granjas'),
+    );
+    expect(llamadas).toEqual([]);
+  });
+});
+```
+
+- [ ] **Step 2: Ejecutar y verificar que falla**
+
+Run: `cd web && npx vitest run src/app/offline/PrecalentadoOffline.test.tsx`
+Expected: FAIL — no existe `./PrecalentadoOffline`.
+
+- [ ] **Step 3: Implementación mínima**
+
+En `web/src/features/avicola/offline.ts` añadir:
+
+```ts
+import {
+  listarGalpones,
+  listarGranjas,
+  listarMortalidad,
+  listarProduccion,
+  obtenerGalpon,
+} from './api';
+
+// Descarga los datos del día para operar sin red (spec decisión 5). Las
+// funciones de api.ts ya escriben en la caché; aquí solo se recorren.
+// Fallos individuales no abortan el precalentado.
+export async function precalentarCacheAvicola(): Promise<void> {
+  const granjas = await listarGranjas();
+  for (const granja of granjas) {
+    const galpones = await listarGalpones(granja.id);
+    for (const galpon of galpones) {
+      await Promise.all([
+        obtenerGalpon(galpon.id).catch(() => undefined),
+        listarProduccion(galpon.id).catch(() => undefined),
+        listarMortalidad(galpon.id).catch(() => undefined),
+      ]);
+    }
+  }
+}
+```
+
+`web/src/app/offline/PrecalentadoOffline.tsx`:
+
+```tsx
+import { useEffect, useRef } from 'react';
+import { useAuth } from '../../features/auth/AuthContext';
+import { precalentarCacheAvicola } from '../../features/avicola/offline';
+import { useConexion } from '../useConexion';
+
+// Efecto sin UI: precalienta la caché del día para el rol Trabajador (spec
+// decisión 5). Se reintenta en cada reconexión mientras dure la sesión.
+export function PrecalentadoOffline() {
+  const { rol, estaAutenticado } = useAuth();
+  const online = useConexion();
+  const ultimaVez = useRef<string | null>(null);
+  useEffect(() => {
+    if (!estaAutenticado || rol !== 'Trabajador' || !online) return;
+    const hoy = new Date().toDateString();
+    if (ultimaVez.current === hoy) return;
+    ultimaVez.current = hoy;
+    void precalentarCacheAvicola().catch(() => {
+      ultimaVez.current = null; // permite reintentar si falló a medias
+    });
+  }, [estaAutenticado, rol, online]);
+  return null;
+}
+```
+
+En `AppLayout.tsx`: importar y montar `<PrecalentadoOffline />` junto a
+`<BannerSinConexion />`.
+
+- [ ] **Step 4: Ejecutar y verificar que pasa**
+
+Run: `cd web && npx vitest run src/app/offline/PrecalentadoOffline.test.tsx src/app/AppLayout.test.tsx`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+./verify.ps1
+git add web/src/features/avicola/offline.ts web/src/app/offline/PrecalentadoOffline.tsx web/src/app/offline/PrecalentadoOffline.test.tsx web/src/app/AppLayout.tsx
+git commit -m "feat(web): precalentado de caché del día tras el login del trabajador"
+```
+
+---
+
+### Task 10: Sesión offline del trabajador (snapshot sin token)
+
+**Files:**
+- Create: `web/src/app/offline/sesionOffline.ts`
+- Test: `web/src/app/offline/sesionOffline.test.ts`
+- Modify: `web/src/features/auth/AuthContext.tsx` (guardar snapshot al
+  autenticar, restaurar offline, revalidar al reconectar, borrar en logout)
+- Modify: `web/src/features/auth/AuthContext.test.tsx`
+
+**Interfaces:**
+- Consumes: `crearCacheLecturaIndexedDb` (Task 8) — se usa directamente, NO
+  vía coordinador: el efecto de restauración de `AuthProvider` corre antes que
+  el arranque del coordinador. `renovarSesion` de `../../lib/http` (devuelve
+  false ante rechazo del backend, lanza ante fallo de red), `obtenerMe` de
+  `./api`.
+- Produces:
+  - `guardarSesionOffline(usuario: UsuarioActual): Promise<void>` — solo si
+    `rol === 'Trabajador'`; en caso contrario borra el snapshot.
+  - `obtenerSesionOffline(): Promise<UsuarioActual | null>`
+  - `borrarSesionOffline(): Promise<void>`
+
+- [ ] **Step 1: Escribir los tests que fallan**
+
+`web/src/app/offline/sesionOffline.test.ts`:
+
+```ts
+import 'fake-indexeddb/auto';
+import { describe, expect, test } from 'vitest';
+import type { UsuarioActual } from '../../lib/tipos';
+import {
+  borrarSesionOffline,
+  guardarSesionOffline,
+  obtenerSesionOffline,
+} from './sesionOffline';
+
+const trabajador: UsuarioActual = {
+  usuarioId: 'u1',
+  correo: 'campo@example.com',
+  rol: 'Trabajador',
+  clienteId: 'c1',
+  trabajadorId: 't1',
+  modulos: ['GestionAvicola'],
+  funcionalidades: ['ProduccionHuevos', 'Mortalidad'],
+};
+
+describe('sesión offline', () => {
+  test('guarda snapshot del trabajador sin correo ni token', async () => {
+    await guardarSesionOffline(trabajador);
+    const snap = await obtenerSesionOffline();
+    expect(snap?.rol).toBe('Trabajador');
+    expect(snap?.funcionalidades).toEqual(['ProduccionHuevos', 'Mortalidad']);
+    expect(snap?.correo).toBeNull();
+    expect(JSON.stringify(snap)).not.toContain('campo@example.com');
+  });
+
+  test('guardar con otro rol borra el snapshot', async () => {
+    await guardarSesionOffline(trabajador);
+    await guardarSesionOffline({ ...trabajador, rol: 'Cliente', clienteId: 'c1' });
+    expect(await obtenerSesionOffline()).toBeNull();
+  });
+
+  test('borrarSesionOffline lo elimina', async () => {
+    await guardarSesionOffline(trabajador);
+    await borrarSesionOffline();
+    expect(await obtenerSesionOffline()).toBeNull();
+  });
+});
+```
+
+Añadir a `web/src/features/auth/AuthContext.test.tsx` (importar
+`'fake-indexeddb/auto'` y las funciones de sesión offline):
+
+```tsx
+const snapshotTrabajador: UsuarioActual = {
+  usuarioId: 'u1',
+  correo: null,
+  rol: 'Trabajador',
+  clienteId: 'c1',
+  trabajadorId: 't1',
+  modulos: ['GestionAvicola'],
+  funcionalidades: ['ProduccionHuevos'],
+};
+
+test('sin red restaura desde el snapshot del trabajador', async () => {
+  await guardarSesionOffline(snapshotTrabajador);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new TypeError('fetch failed');
+    }),
+  );
+  // render del probe del archivo existente
+  expect(await screen.findByTestId('rol')).toHaveTextContent('Trabajador');
+});
+
+test('rechazo del backend (no red) NO usa el snapshot', async () => {
+  await guardarSesionOffline(snapshotTrabajador);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 401 })));
+  // render del probe
+  expect(await screen.findByTestId('rol')).toHaveTextContent('sin-rol');
+});
+```
+
+Nota: el snapshot se guarda sin `correo`, así que la barra no mostrará correo
+en sesión offline — comportamiento deseado (anti-PII). Ajustar los datos del
+snapshot al helper/probe que ya use el archivo de test existente.
+
+- [ ] **Step 2: Ejecutar y verificar que falla**
+
+Run: `cd web && npx vitest run src/app/offline/sesionOffline.test.ts src/features/auth/AuthContext.test.tsx`
+Expected: FAIL — no existe `./sesionOffline` y AuthContext no restaura offline.
+
+- [ ] **Step 3: Implementación mínima**
+
+`web/src/app/offline/sesionOffline.ts`:
+
+```ts
+import { crearCacheLecturaIndexedDb } from '../../lib/offline/cacheLecturaIndexedDb';
+import type { UsuarioActual } from '../../lib/tipos';
+
+// Snapshot mínimo para abrir la PWA sin red (spec decisión 6). NUNCA guarda
+// token ni correo (anti-PII). Se accede a IndexedDB directamente porque la
+// restauración de sesión corre antes que el coordinador offline.
+const CLAVE = 'sesion-offline';
+
+export async function guardarSesionOffline(usuario: UsuarioActual): Promise<void> {
+  const cache = crearCacheLecturaIndexedDb();
+  if (usuario.rol !== 'Trabajador') {
+    await cache.guardar(CLAVE, null);
+    return;
+  }
+  const snapshot: UsuarioActual = {
+    usuarioId: usuario.usuarioId,
+    correo: null,
+    rol: usuario.rol,
+    clienteId: usuario.clienteId,
+    trabajadorId: usuario.trabajadorId,
+    modulos: usuario.modulos,
+    funcionalidades: usuario.funcionalidades,
+  };
+  await cache.guardar(CLAVE, snapshot);
+}
+
+export async function obtenerSesionOffline(): Promise<UsuarioActual | null> {
+  const valor = await crearCacheLecturaIndexedDb().obtener(CLAVE);
+  return (valor as UsuarioActual | null | undefined) ?? null;
+}
+
+export async function borrarSesionOffline(): Promise<void> {
+  await crearCacheLecturaIndexedDb().guardar(CLAVE, null);
+}
+```
+
+En `AuthContext.tsx`:
+
+```tsx
+import {
+  borrarSesionOffline,
+  guardarSesionOffline,
+  obtenerSesionOffline,
+} from '../../app/offline/sesionOffline';
+
+// en el useEffect de restauración:
+void (async () => {
+  try {
+    const restaurada = await renovarSesion();
+    if (!restaurada || !activo) return; // rechazo del backend: sin fallback
+    const me = await obtenerMe();
+    if (activo) setUsuario(me);
+    await guardarSesionOffline(me); // trabajador → snapshot; otro rol → borra
+  } catch {
+    // fallo de red: intentar sesión offline del trabajador
+    const snapshot = await obtenerSesionOffline().catch(() => null);
+    if (activo && snapshot) {
+      setUsuario(snapshot);
+      setEsSnapshot(true);
+    }
+  } finally {
+    if (activo) setCargando(false);
+  }
+})();
+
+// estado nuevo: const [esSnapshot, setEsSnapshot] = useState(false);
+
+// revalidación al reconectar (efecto aparte):
+useEffect(() => {
+  if (!esSnapshot) return;
+  const revalidar = () => {
+    void (async () => {
+      try {
+        if (await renovarSesion()) {
+          const me = await obtenerMe();
+          setUsuario(me);
+          setEsSnapshot(false);
+          await guardarSesionOffline(me);
+        }
+      } catch {
+        // sigue sin red real; se reintenta en el próximo evento online
+      }
+    })();
+  };
+  window.addEventListener('online', revalidar);
+  return () => window.removeEventListener('online', revalidar);
+}, [esSnapshot]);
+
+// en iniciarSesionFn, tras setUsuario(me):
+//   await guardarSesionOffline(me);
+// en cerrarSesionFn:
+//   clearAccessToken(); setUsuario(null); setEsSnapshot(false);
+//   void borrarSesionOffline();
+```
+
+- [ ] **Step 4: Ejecutar y verificar que pasan**
+
+Run: `cd web && npx vitest run src/app/offline/sesionOffline.test.ts src/features/auth/`
+Expected: PASS (nuevos + existentes de auth).
+
+- [ ] **Step 5: Commit**
+
+```bash
+./verify.ps1
+git add web/src/app/offline/sesionOffline.ts web/src/app/offline/sesionOffline.test.ts web/src/features/auth/AuthContext.tsx web/src/features/auth/AuthContext.test.tsx
+git commit -m "feat(web): sesión offline del trabajador sin persistir el token"
+```
+
+---
+
+### Task 11: Cableado en providers, documentación e integración
 
 **Files:**
 - Modify: `web/src/app/providers.tsx` (arranque del coordinador)
@@ -1829,12 +2250,13 @@ En `web/AGENTS.md`, sección Organización, añadir:
   motor de sincronización, caché de lectura). No importa de `features/` ni de
   `app/`.
 - `src/app/offline/`: coordinador singleton que cablea almacén + motor +
-  dispatcher, hook de pendientes y UI (chip, diálogo, snackbar).
+  dispatcher, hook de pendientes, snapshot de sesión offline del trabajador
+  (sin token ni correo), precalentado de caché y UI (chip, diálogo, snackbar).
 ```
 
 En el `AGENTS.md` raíz, en la descripción del frontend, cambiar
-«online-first» por «offline-first para recogida y mortalidad (cola IndexedDB
-con sincronización automática)».
+«online-first» por «offline-first para recogida y mortalidad en el rol
+Trabajador (cola IndexedDB, precalentado del día y sincronización automática)».
 
 - [ ] **Step 4: Verificación completa**
 
@@ -1862,8 +2284,8 @@ git commit -m "feat(web): cableado del modo offline en providers y documentació
 
 ## Notas de ejecución
 
-- **Orden estricto**: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. Cada tarea depende de
-  las interfaces de las anteriores.
+- **Orden estricto**: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11. Cada tarea
+  depende de las interfaces de las anteriores.
 - **Tests dirigidos primero**: en cada tarea se corre solo el test de esa
   tarea; la suite completa (`npm run test`) en Task 9 y en cada `./verify.ps1`.
 - **Errores conocidos al ejecutar**: si `fake-indexeddb` no está disponible en
