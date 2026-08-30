@@ -13,6 +13,9 @@ services:
     environment:
       ICARUS_LAN_IP: "${ICARUS_LAN_IP}"
       ICARUS_LAN_HOST: "${ICARUS_LAN_HOST}"
+      # El upstream del Caddyfile: dev server (5173) por defecto o el build de
+      # producción (8080) cuando el script corre con -Modo prod.
+      WEB_UPSTREAM: "${WEB_UPSTREAM:-web:5173}"
     ports:
       - "80:80"
       - "443:443"

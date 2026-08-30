@@ -1,0 +1,77 @@
+# VPS en local: el artefacto de producción (API + PWA en un solo contenedor,
+# como en la VPS) con SQL y Seq locales. No se combina con docker-compose.dev.yml:
+# comparte el mismo proyecto (misma carpeta) y reutiliza los volúmenes
+# seq-data/mssql-data.
+#
+# Uso: iniciar-pc.ps1 -Perfil pc1|pc2|pc3 -Modo prod
+# Se combina con docker-compose.pcN.yml (gateway HTTPS). El contenido de web se
+# construye en .local/payload por iniciar-pc.ps1 (dotnet publish + npm build +
+# web/dist a wwwroot). Se usa ASPNETCORE_ENVIRONMENT Development para sembrar
+# las cuentas demo sobre una base nueva; el frontend es igualmente el build de
+# producción (SW + hashes).
+services:
+  seq:
+    image: datalust/seq:2026.1
+    environment:
+      ACCEPT_EULA: "Y"
+      # Seq local sin autenticación (solo localhost, ver docker-compose.dev.yml).
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    ports:
+      - "127.0.0.1:5341:80"
+    volumes:
+      - seq-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD}"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: ./.local/payload
+      dockerfile: Dockerfile.web
+    image: trajano-icarus-local
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_HTTP_PORTS: "8080"
+      TZ: "America/La_Paz"
+      Migraciones__EjecutarAlArranque: "true"
+      ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
+      Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Semilla-Dev-1234}"
+      Seq__Url: "http://seq:80"
+      Seq__ApiKey: "${SEQ_API_KEY:-}"
+    ports:
+      # Acceso directo desde la PC a la API + PWA sin pasar por el gateway.
+      - "127.0.0.1:8085:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  seq-data:
+  mssql-data:

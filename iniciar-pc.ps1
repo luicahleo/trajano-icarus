@@ -1,6 +1,8 @@
 ﻿param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
+    [ValidateSet('dev', 'prod')]
+    [string]$Modo = 'dev',
     [string]$Ip,
     [string]$SsidMobil,
     [switch]$SoloLocal,
@@ -83,6 +85,34 @@ function Obtener-IpLan([string]$IpSolicitada) {
     return $direccion.IPAddress
 }
 
+# Modo prod: arma el artefacto de producción en .local/payload (API publicada
+# en Release + PWA compilada en wwwroot + Dockerfile de producción), igual que
+# el pipeline de despliegue. Requiere el SDK de .NET y Node en el host.
+function Construir-ContenidoProduccion {
+    $payload = Join-Path $PSScriptRoot '.local/payload'
+    if (Test-Path $payload) { Remove-Item -Recurse -Force $payload }
+    New-Item -ItemType Directory -Force (Join-Path $payload 'web/wwwroot') | Out-Null
+
+    & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Host/Icarus.Host/Icarus.Host.csproj') -c Release -o (Join-Path $payload 'web') --nologo
+    if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la API (modo producción).' }
+
+    Push-Location (Join-Path $PSScriptRoot 'web')
+    try {
+        & npm ci --no-audit --no-fund
+        if ($LASTEXITCODE -ne 0) { throw 'No se pudieron instalar las dependencias web (modo producción).' }
+        & npm run build
+        if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar la PWA (modo producción).' }
+    }
+    finally {
+        Pop-Location
+    }
+
+    Copy-Item -Recurse -Force (Join-Path $PSScriptRoot 'web/dist/*') (Join-Path $payload 'web/wwwroot')
+    Copy-Item -Force (Join-Path $PSScriptRoot 'Dockerfile.web') (Join-Path $payload 'Dockerfile.web')
+    Copy-Item -Force (Join-Path $PSScriptRoot 'deploy/.dockerignore') (Join-Path $payload '.dockerignore')
+    Write-Host "Contenido de producción listo en $payload" -ForegroundColor Cyan
+}
+
 $preferenciaErrores = $ErrorActionPreference
 try {
     # Windows PowerShell convierte las advertencias de stderr de Docker en
@@ -108,6 +138,15 @@ $archivosCompose = @(
     '-f', 'docker-compose.dev.yml',
     '-f', "docker-compose.$Perfil.yml"
 )
+if ($Modo -eq 'prod') {
+    # VPS en local: el build de producción (API + PWA) con SQL y Seq locales.
+    $env:WEB_UPSTREAM = 'web:8080'
+    $archivosCompose = @(
+        '-f', 'docker-compose.prodlocal.yml',
+        '-f', "docker-compose.$Perfil.yml"
+    )
+    Construir-ContenidoProduccion
+}
 
 if ($RecrearDatos) {
     try {
@@ -125,19 +164,20 @@ if ($RecrearDatos) {
 # En PC1/PC2/PC3 la API no tiene bind mount: sin esta reconstrucción Docker
 # puede reutilizar una imagen previa aunque el usuario haya cambiado C#.
 # Se prioriza ejecutar el código actual sobre el tiempo de arranque.
+$serviciosBuild = if ($Modo -eq 'prod') { @('web') } else { @('api', 'web') }
 try {
     $ErrorActionPreference = 'Continue'
-    & docker compose @archivosCompose build --no-cache api web
+    & docker compose @archivosCompose build --no-cache @serviciosBuild
     $codigoBuild = $LASTEXITCODE
 }
 finally {
     $ErrorActionPreference = $preferenciaErrores
 }
-if ($codigoBuild -ne 0) { throw "No se pudieron reconstruir api y web para $nombreEquipo." }
+if ($codigoBuild -ne 0) { throw "No se pudieron reconstruir las imágenes para $nombreEquipo." }
 
 try {
     $ErrorActionPreference = 'Continue'
-    & docker compose @archivosCompose up -d --build --force-recreate --renew-anon-volumes
+    & docker compose @archivosCompose up -d --build --force-recreate --renew-anon-volumes --remove-orphans
     $codigoUp = $LASTEXITCODE
 }
 finally {
@@ -169,7 +209,8 @@ for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
 if (-not $saludable) {
     try {
         $ErrorActionPreference = 'Continue'
-        & docker compose @archivosCompose logs --tail 50 gateway web api
+        $serviciosLogs = if ($Modo -eq 'prod') { @('gateway', 'web') } else { @('gateway', 'web', 'api') }
+        & docker compose @archivosCompose logs --tail 50 @serviciosLogs
     }
     finally {
         $ErrorActionPreference = $preferenciaErrores
@@ -178,7 +219,7 @@ if (-not $saludable) {
 }
 
 Write-Host ''
-Write-Host "Icarus ${nombreEquipo}: https://$hostLan" -ForegroundColor Green
+Write-Host "Icarus ${nombreEquipo} (modo $Modo): https://$hostLan" -ForegroundColor Green
 Write-Host "Seq local (solo desarrollo): http://localhost:5341" -ForegroundColor Green
 if (Test-Path $certificado) {
     Write-Host "CA pública para instalar en el móvil: $certificado" -ForegroundColor Yellow

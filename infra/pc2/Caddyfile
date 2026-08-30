@@ -1,7 +1,8 @@
 https://{$ICARUS_LAN_HOST} {
 	tls internal
 	encode zstd gzip
-	reverse_proxy web:5173
+	# Upstream definido por el script: web:5173 (dev server) o web:8080 (build de producción).
+	reverse_proxy {$WEB_UPSTREAM}
 }
 
 http://{$ICARUS_LAN_HOST} {
