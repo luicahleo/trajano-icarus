@@ -18,6 +18,12 @@ archivo define el estándar local de `web/`.
 - `src/lib/`: transporte HTTP (`http.ts`), token en memoria (`session.ts`),
   correlation ID (`correlation.ts`) y contratos (`tipos.ts`). No importa de
   `features/` ni de `app/`.
+- `src/lib/offline/`: cola y caché offline en IndexedDB (tipos, almacenes,
+  motor de sincronización, caché de lectura). No importa de `features/` ni de
+  `app/`.
+- `src/app/offline/`: coordinador singleton que cablea almacén + motor +
+  dispatcher, hook de pendientes, snapshot de sesión offline del trabajador
+  (sin token ni correo), precalentado de caché y UI (chip, diálogo, snackbar).
 - `src/features/<modulo>/`: páginas y APIs de negocio por feature. Una feature
   no monta páginas de otra; las rutas se declaran en `src/app/router.tsx`.
 - `src/app/`: orquesta — router, `AppLayout`, providers, tema. Sin lógica de

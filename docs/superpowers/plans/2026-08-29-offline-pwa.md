@@ -54,7 +54,7 @@ Testing Library, IndexedDB nativo (sin dependencias de runtime nuevas),
   - `AlmacenCola` con `agregar`, `listarPendientes(ahoraIso: string, limite: number)`, `listarTodas()`, `eliminar(id)`, `actualizar(id, cambios)`, `contar()`
   - `crearAlmacenColaMemoria(): AlmacenCola`
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `web/src/lib/offline/almacenCola.test.ts`:
 
@@ -118,12 +118,12 @@ describe('AlmacenCola en memoria', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/lib/offline/almacenCola.test.ts`
 Expected: FAIL — no existe `./almacenCola`.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `web/src/lib/offline/tipos.ts`:
 
@@ -194,12 +194,12 @@ export function crearAlmacenColaMemoria(): AlmacenCola {
 }
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasa**
+- [x] **Step 4: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/lib/offline/almacenCola.test.ts`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1   # desde la raíz del repo, puerta completa
@@ -225,13 +225,13 @@ git commit -m "feat(web): tipos y almacén en memoria de la cola offline"
     versión 1, para no migrar después.
   - `crearAlmacenColaIndexedDb(): AlmacenCola`
 
-- [ ] **Step 1: Instalar la devDependency**
+- [x] **Step 1: Instalar la devDependency**
 
 ```bash
 cd web && npm install -D fake-indexeddb
 ```
 
-- [ ] **Step 2: Escribir el test que falla**
+- [x] **Step 2: Escribir el test que falla**
 
 `web/src/lib/offline/almacenIndexedDb.test.ts`:
 
@@ -270,12 +270,12 @@ describe('AlmacenCola IndexedDB', () => {
 });
 ```
 
-- [ ] **Step 3: Ejecutar y verificar que falla**
+- [x] **Step 3: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/lib/offline/almacenIndexedDb.test.ts`
 Expected: FAIL — no existe `./almacenIndexedDb`.
 
-- [ ] **Step 4: Implementación mínima**
+- [x] **Step 4: Implementación mínima**
 
 `web/src/lib/offline/baseDatosOffline.ts`:
 
@@ -358,12 +358,12 @@ export function crearAlmacenColaIndexedDb(): AlmacenCola {
 }
 ```
 
-- [ ] **Step 5: Ejecutar y verificar que pasa**
+- [x] **Step 5: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/lib/offline/almacenIndexedDb.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 ./verify.ps1
@@ -389,7 +389,7 @@ conectividad; 401 → pausa el ciclo sin consumir intento; 4xx → `error`
 terminal; fallo de red o 5xx → intento+1 con backoff 2^intentos minutos;
 3 intentos → `error`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `web/src/lib/offline/motorSincronizacion.test.ts`:
 
@@ -516,12 +516,12 @@ describe('motor de sincronización', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/lib/offline/motorSincronizacion.test.ts`
 Expected: FAIL — no existe `./motorSincronizacion`.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `web/src/lib/offline/motorSincronizacion.ts`:
 
@@ -590,12 +590,12 @@ export function crearMotorSincronizacion(deps: DependenciasMotor): {
 }
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasa**
+- [x] **Step 4: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/lib/offline/motorSincronizacion.test.ts`
 Expected: PASS (8 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -638,7 +638,7 @@ git commit -m "feat(web): motor de sincronización offline con reintentos y back
       — true si quedó encolada.
     - `guardarBajas(galponId: string, d: DatosBajas): Promise<boolean>`
 
-- [ ] **Step 1: Escribir el test del coordinador (falla)**
+- [x] **Step 1: Escribir el test del coordinador (falla)**
 
 `web/src/app/offline/coordinador.test.ts`:
 
@@ -713,12 +713,12 @@ Nota para el implementador: el test usa `vi.waitFor` porque el sync tras
 encolar es fire-and-forget. `navigator.onLine` es true en jsdom, así que el
 motor se dispara al encolar.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/app/offline/coordinador.test.ts`
 Expected: FAIL — no existe `./coordinador`.
 
-- [ ] **Step 3: Implementación del coordinador**
+- [x] **Step 3: Implementación del coordinador**
 
 `web/src/app/offline/coordinador.ts`:
 
@@ -828,12 +828,12 @@ export async function descartarOperacion(id: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasa el test del coordinador**
+- [x] **Step 4: Ejecutar y verificar que pasa el test del coordinador**
 
 Run: `cd web && npx vitest run src/app/offline/coordinador.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Escribir el test del dispatcher avícola (falla)**
+- [x] **Step 5: Escribir el test del dispatcher avícola (falla)**
 
 `web/src/features/avicola/offline.test.ts`:
 
@@ -946,12 +946,12 @@ describe('offline avícola', () => {
 });
 ```
 
-- [ ] **Step 6: Ejecutar y verificar que falla**
+- [x] **Step 6: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/features/avicola/offline.test.ts`
 Expected: FAIL — no existe `./offline`.
 
-- [ ] **Step 7: Implementación del dispatcher y helpers**
+- [x] **Step 7: Implementación del dispatcher y helpers**
 
 `web/src/features/avicola/offline.ts`:
 
@@ -1008,12 +1008,12 @@ export const guardarBajas = (galponId: string, d: DatosBajas): Promise<boolean> 
   conCola('mortalidad.crear', galponId, d, () => registrarMortalidad(galponId, d));
 ```
 
-- [ ] **Step 8: Ejecutar y verificar que pasa**
+- [x] **Step 8: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/features/avicola/offline.test.ts`
 Expected: PASS (4 tests).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 ./verify.ps1
@@ -1036,7 +1036,7 @@ git commit -m "feat(web): coordinador offline y dispatcher avícola con cola ant
   (Task 1).
 - Produces: ninguna nueva; los diálogos quedan como consumidores finales.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 Nuevo `web/src/features/avicola/RegistrarRecogidaDialog.test.tsx`:
 
@@ -1153,12 +1153,12 @@ Nota: si el archivo de test existente ya envuelve con `QueryClientProvider` y
 usa `userEvent`, reutilizar sus imports y helpers; lo que se añade es el test
 de arriba.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/features/avicola/RegistrarRecogidaDialog.test.tsx`
 Expected: FAIL — Guardar está deshabilitado offline (`disabled={!online || ...}`).
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 En `RegistrarRecogidaDialog.tsx`:
 
@@ -1208,12 +1208,12 @@ const guardar = useMutation({
 // Botón: disabled={guardar.isPending}
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasan**
+- [x] **Step 4: Ejecutar y verificar que pasan**
 
 Run: `cd web && npx vitest run src/features/avicola/RegistrarRecogidaDialog.test.tsx src/features/avicola/RegistrarBajasDialog.test.tsx`
 Expected: PASS (nuevos + existentes).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -1235,7 +1235,7 @@ git commit -m "feat(web): alta de recogida y bajas encola sin conexión"
   `useConexion` (existente), `iniciarCoordinadorOffline` (tests).
 - Produces (usado por Task 7): `usePendientesOffline(): number`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Añadir a `web/src/app/BannerSinConexion.test.tsx` (los dos tests existentes se
 mantienen: el nuevo texto sigue conteniendo «Sin conexión»):
@@ -1268,12 +1268,12 @@ test('offline muestra el nuevo texto y el contador de pendientes', async () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/app/BannerSinConexion.test.tsx`
 Expected: FAIL — el texto nuevo no existe.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `web/src/app/offline/usePendientesOffline.ts`:
 
@@ -1313,12 +1313,12 @@ export function BannerSinConexion() {
 }
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasa**
+- [x] **Step 4: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/app/BannerSinConexion.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -1344,7 +1344,7 @@ git commit -m "feat(web): banner sin conexión informa guardado local y pendient
   `onCancelar`, `onConfirmar`).
 - Produces: componente `<PendientesOffline />` sin props.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `web/src/app/offline/PendientesOffline.test.tsx`:
 
@@ -1409,12 +1409,12 @@ describe('PendientesOffline', () => {
 Nota: con `despachar` que rechaza, la operación queda en la cola (backoff de
 2 min), así que el chip sigue visible para el segundo test.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/app/offline/PendientesOffline.test.tsx`
 Expected: FAIL — no existe `./PendientesOffline`.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `web/src/app/offline/PendientesOffline.tsx`:
 
@@ -1539,12 +1539,12 @@ En `AppLayout.tsx`: importar `PendientesOffline` de
 `./offline/PendientesOffline` y renderizar `<PendientesOffline />` en el
 `Toolbar` justo después de `<SelectorTema />`.
 
-- [ ] **Step 4: Ejecutar y verificar que pasa**
+- [x] **Step 4: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/app/offline/PendientesOffline.test.tsx src/app/AppLayout.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -1583,7 +1583,7 @@ git commit -m "feat(web): indicador de pendientes offline con reintento y descar
     inició — así los tests existentes de `api.ts` no cambian).
   - `conCacheLectura<T>(clave: string, obtenerDatos: () => Promise<T>): Promise<T>`
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 `web/src/lib/offline/cacheLectura.test.ts`:
 
@@ -1637,12 +1637,12 @@ test('listarGranjas sirve desde caché cuando falla la red', async () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/lib/offline/cacheLectura.test.ts src/features/avicola/offline.test.ts`
 Expected: FAIL — no existen `cacheLectura` ni `conCacheLectura`.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `web/src/lib/offline/cacheLectura.ts`:
 
@@ -1776,13 +1776,13 @@ el precalentado (Task 9) y la navegación normal la refrescan en cada sesión co
 red. No inventar una clave con la fecha real del cliente: la ruta sin `fecha`
 ya significa «día actual» para el backend.
 
-- [ ] **Step 4: Ejecutar y verificar que pasan (nuevos y existentes)**
+- [x] **Step 4: Ejecutar y verificar que pasan (nuevos y existentes)**
 
 Run: `cd web && npx vitest run src/lib/offline/cacheLectura.test.ts src/features/avicola/offline.test.ts src/features/avicola/api.test.ts`
 Expected: PASS — los tests existentes de `api.test.ts` siguen verdes porque sin
 coordinador iniciado la caché es null (passthrough).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -1807,7 +1807,7 @@ git commit -m "feat(web): caché de lectura offline para granjas y galpones"
 - Produces: `precalentarCacheAvicola(): Promise<void>` y el componente
   `<PrecalentadoOffline />` (sin props, no renderiza nada).
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 `web/src/app/offline/PrecalentadoOffline.test.tsx`:
 
@@ -1886,12 +1886,12 @@ describe('PrecalentadoOffline', () => {
 });
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/app/offline/PrecalentadoOffline.test.tsx`
 Expected: FAIL — no existe `./PrecalentadoOffline`.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 En `web/src/features/avicola/offline.ts` añadir:
 
@@ -1952,12 +1952,12 @@ export function PrecalentadoOffline() {
 En `AppLayout.tsx`: importar y montar `<PrecalentadoOffline />` junto a
 `<BannerSinConexion />`.
 
-- [ ] **Step 4: Ejecutar y verificar que pasa**
+- [x] **Step 4: Ejecutar y verificar que pasa**
 
 Run: `cd web && npx vitest run src/app/offline/PrecalentadoOffline.test.tsx src/app/AppLayout.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -1988,7 +1988,7 @@ git commit -m "feat(web): precalentado de caché del día tras el login del trab
   - `obtenerSesionOffline(): Promise<UsuarioActual | null>`
   - `borrarSesionOffline(): Promise<void>`
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [x] **Step 1: Escribir los tests que fallan**
 
 `web/src/app/offline/sesionOffline.test.ts`:
 
@@ -2092,12 +2092,12 @@ Nota: el snapshot se guarda sin `correo`, así que la barra no mostrará correo
 en sesión offline — comportamiento deseado (anti-PII). Ajustar los datos del
 snapshot al helper/probe que ya use el archivo de test existente.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [x] **Step 2: Ejecutar y verificar que falla**
 
 Run: `cd web && npx vitest run src/app/offline/sesionOffline.test.ts src/features/auth/AuthContext.test.tsx`
 Expected: FAIL — no existe `./sesionOffline` y AuthContext no restaura offline.
 
-- [ ] **Step 3: Implementación mínima**
+- [x] **Step 3: Implementación mínima**
 
 `web/src/app/offline/sesionOffline.ts`:
 
@@ -2212,12 +2212,12 @@ useEffect(() => {
 //   void borrarSesionOffline();
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasan**
+- [x] **Step 4: Ejecutar y verificar que pasan**
 
 Run: `cd web && npx vitest run src/app/offline/sesionOffline.test.ts src/features/auth/`
 Expected: PASS (nuevos + existentes de auth).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 ./verify.ps1
@@ -2242,7 +2242,7 @@ git commit -m "feat(web): sesión offline del trabajador sin persistir el token"
   `crearDespachadorAvicola` (Task 4), `queryClient` de `providers.tsx`.
 - Produces: aplicación completa cableada.
 
-- [ ] **Step 1: Test de humo del arranque**
+- [x] **Step 1: Test de humo del arranque**
 
 Añadir a `web/src/app/offline/coordinador.test.ts`:
 
@@ -2270,7 +2270,7 @@ Run: `cd web && npx vitest run src/app/offline/coordinador.test.ts`
 Expected: PASS ya (el ciclo inicial se implementó en Task 4). Si falla,
 corregir el coordinador — no el test.
 
-- [ ] **Step 2: Cablear en providers**
+- [x] **Step 2: Cablear en providers**
 
 `web/src/app/providers.tsx`:
 
@@ -2293,7 +2293,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 3: Actualizar la documentación de agentes**
+- [x] **Step 3: Actualizar la documentación de agentes**
 
 En `web/AGENTS.md`, sección Organización, añadir:
 
@@ -2310,7 +2310,7 @@ En el `AGENTS.md` raíz, en la descripción del frontend, cambiar
 «online-first» por «offline-first para recogida y mortalidad en el rol
 Trabajador (cola IndexedDB, precalentado del día y sincronización automática)».
 
-- [ ] **Step 4: Verificación completa**
+- [x] **Step 4: Verificación completa**
 
 ```bash
 cd web && npm run lint && npm run format:check && npm run test && npm run build
@@ -2320,7 +2320,7 @@ cd .. && ./verify.ps1
 Expected: todo en verde. La puerta exige Docker corriendo (tests de
 integración del backend con Testcontainers).
 
-- [ ] **Step 5: Cierre del ciclo**
+- [x] **Step 5: Cierre del ciclo**
 
 - Marcar `- [x]` todos los checkboxes de este plan.
 - Si la feature queda completa y verificada: borrar `docs/ai/HANDOFF.md`

@@ -71,9 +71,11 @@ no contexto obligatorio. No cargarlos en bloque.
   (catálogo global de programas de CAISY subido por el Administrador, asignación
   por galpón con día 0 = fecha de poblado, notificación de tareas al trabajador)),
   con puerta de calidad con gates de backend. El frontend React
-  (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola online-first
-  (granjas, galpones, recogida, mortalidad, eficiencia y vacunación) y la
-  administración del catálogo de vacunación.
+  (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola offline-first para
+  recogida y mortalidad en el rol Trabajador (cola IndexedDB con idempotencia,
+  precalentado del día, sesión offline sin persistir el token y sincronización
+  automática), además de eficiencia, vacunación y la administración del catálogo
+  de vacunación.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
 
