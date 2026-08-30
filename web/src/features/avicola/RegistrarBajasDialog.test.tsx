@@ -1,6 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
+import { iniciarCoordinadorOffline, listarOperaciones } from '../../app/offline/coordinador';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
 
 function respuesta(status: number, cuerpo?: unknown) {
@@ -81,12 +83,34 @@ describe('RegistrarBajasDialog', () => {
     expect(llamadaCon(fetchMock, 'POST', '/mortalidad')).toBe(false);
   });
 
-  test('sin conexión el botón de guardar queda deshabilitado', async () => {
-    baseFetchAvicola({});
-    renderDialog();
-
-    act(() => window.dispatchEvent(new Event('offline')));
-    expect(await screen.findByRole('button', { name: 'Guardar' })).toBeDisabled();
-    act(() => window.dispatchEvent(new Event('online')));
+  test('guardar habilitado sin conexión y encola la baja', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+    });
+    try {
+      const alCerrar = vi.fn();
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <RegistrarBajasDialog galponId="ga1" abierto alCerrar={alCerrar} />
+        </QueryClientProvider>,
+      );
+      const usuario = userEvent.setup();
+      await usuario.type(screen.getByLabelText('Gallinas muertas'), '2');
+      await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+      await waitFor(() => expect(alCerrar).toHaveBeenCalled());
+      expect(fetchMock).not.toHaveBeenCalled();
+      const ops = await listarOperaciones();
+      expect(ops.length).toBe(1);
+      expect(ops[0].tipo).toBe('mortalidad.crear');
+    } finally {
+      limpiar();
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
   });
 });

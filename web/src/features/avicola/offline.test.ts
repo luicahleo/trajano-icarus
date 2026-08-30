@@ -82,9 +82,9 @@ describe('offline avícola', () => {
   });
 
   test('despachador llama al endpoint correcto e invalida queries', async () => {
-    const fetchMock = vi.fn<
-      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-    >(async () => new Response(JSON.stringify({ id: 'p' }), { status: 201 }));
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => new Response(JSON.stringify({ id: 'p' }), { status: 201 }),
+    );
     vi.stubGlobal('fetch', fetchMock);
     const qc = new QueryClient();
     const invalidar = vi.spyOn(qc, 'invalidateQueries');

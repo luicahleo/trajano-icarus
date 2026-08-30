@@ -35,7 +35,9 @@ export function crearAlmacenColaIndexedDb(): AlmacenCola {
     eliminar: (id) => conStore('readwrite', (s) => promesaDePedido(s.delete(id)).then(() => {})),
     actualizar: async (id, cambios) => {
       await conStore('readwrite', async (s) => {
-        const actual = await promesaDePedido(s.get(id) as IDBRequest<OperacionPendiente | undefined>);
+        const actual = await promesaDePedido(
+          s.get(id) as IDBRequest<OperacionPendiente | undefined>,
+        );
         if (actual) await promesaDePedido(s.put({ ...actual, ...cambios }));
       });
     },

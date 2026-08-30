@@ -9,9 +9,9 @@ import {
 } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { registrarProduccion, type DatosRecogida } from './api';
+import { guardarRecogida } from './offline';
+import { type DatosRecogida } from './api';
 import { totalHuevos } from './formatos';
-import { useConexion } from '../../app/useConexion';
 
 export function RegistrarRecogidaDialog({
   galponId,
@@ -27,7 +27,6 @@ export function RegistrarRecogidaDialog({
   const [sueltos, setSueltos] = useState('');
   const [descarteMaples, setDescarteMaples] = useState('');
   const [descarteSueltos, setDescarteSueltos] = useState('');
-  const online = useConexion();
   const qc = useQueryClient();
   const guardar = useMutation({
     mutationFn: () => {
@@ -39,11 +38,11 @@ export function RegistrarRecogidaDialog({
         unidadesDescarte: Number(descarteSueltos) || 0,
         idempotencyKey: crypto.randomUUID(),
       };
-      return registrarProduccion(galponId, d);
+      return guardarRecogida(galponId, d); // true si quedó encolada
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['avicola'] });
-      alCerrar();
+    onSuccess: (encolada) => {
+      if (!encolada) void qc.invalidateQueries({ queryKey: ['avicola'] });
+      alCerrar(); // si encoló, el coordinador muestra el aviso «Guardado sin conexión»
     },
   });
   return (
@@ -92,7 +91,7 @@ export function RegistrarRecogidaDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={alCerrar}>Cancelar</Button>
-        <Button onClick={() => guardar.mutate()} disabled={!online || guardar.isPending}>
+        <Button onClick={() => guardar.mutate()} disabled={guardar.isPending}>
           Guardar
         </Button>
       </DialogActions>

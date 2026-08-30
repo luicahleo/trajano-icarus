@@ -12,8 +12,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { ApiError } from '../../lib/http';
-import { useConexion } from '../../app/useConexion';
-import { registrarMortalidad } from './api';
+import { guardarBajas } from './offline';
 
 const esquema = z.object({
   hora: z.string().min(1, 'La hora es obligatoria.'),
@@ -30,7 +29,6 @@ export function RegistrarBajasDialog({
   abierto: boolean;
   alCerrar: () => void;
 }) {
-  const online = useConexion();
   const queryClient = useQueryClient();
   const {
     register,
@@ -42,11 +40,13 @@ export function RegistrarBajasDialog({
   });
   const guardar = useMutation({
     mutationFn: (datos: DatosFormulario) =>
-      registrarMortalidad(galponId, { ...datos, idempotencyKey: crypto.randomUUID() }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] });
-      void queryClient.invalidateQueries({ queryKey: ['avicola', 'galpon'] });
-      void queryClient.invalidateQueries({ queryKey: ['avicola', 'eficiencia'] });
+      guardarBajas(galponId, { ...datos, idempotencyKey: crypto.randomUUID() }),
+    onSuccess: (encolada) => {
+      if (!encolada) {
+        void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] });
+        void queryClient.invalidateQueries({ queryKey: ['avicola', 'galpon'] });
+        void queryClient.invalidateQueries({ queryKey: ['avicola', 'eficiencia'] });
+      }
       alCerrar();
     },
   });
@@ -84,7 +84,7 @@ export function RegistrarBajasDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={alCerrar}>Cancelar</Button>
-        <Button onClick={() => void handleSubmit(enviar)()} disabled={!online || guardar.isPending}>
+        <Button onClick={() => void handleSubmit(enviar)()} disabled={guardar.isPending}>
           Guardar
         </Button>
       </DialogActions>

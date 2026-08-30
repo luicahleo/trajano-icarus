@@ -1110,7 +1110,9 @@ describe('RegistrarRecogidaDialog offline', () => {
 ```
 
 Añadir a `web/src/features/avicola/RegistrarBajasDialog.test.tsx` (mantener
-intactos los tests existentes del archivo):
+los dos tests online existentes del archivo) y **reemplazar** el test existente
+«sin conexión el botón de guardar queda deshabilitado»: contradice el nuevo
+comportamiento (el botón ahora queda habilitado sin conexión y encola).
 
 ```tsx
 import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
