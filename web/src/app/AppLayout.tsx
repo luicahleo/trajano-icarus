@@ -19,6 +19,7 @@ import { CargandoRuta } from './CargandoRuta';
 import { BannerSinConexion } from './BannerSinConexion';
 import { obtenerEnlacesNavegacion, obtenerTituloRuta } from './navegacion';
 import { NavegacionPrincipal } from './NavegacionPrincipal';
+import { PendientesOffline } from './offline/PendientesOffline';
 import { SelectorTema } from './SelectorTema';
 
 const ANCHO_NAVEGACION = 248;
@@ -129,6 +130,7 @@ export function AppLayout() {
             </Typography>
           )}
           <SelectorTema />
+          <PendientesOffline />
           <Button color="inherit" startIcon={<LogoutRoundedIcon />} onClick={salir}>
             Cerrar sesión
           </Button>
