@@ -64,11 +64,14 @@ function reportarFalloDeRed(ruta: string): void {
 // a un error de transporte, no a un ApiError.
 const TIEMPO_ESPERA_FETCH_MS = 15_000;
 
-async function fetchConTiempo(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+async function fetchConTiempo(input: RequestInfo | URL): Promise<Response> {
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), TIEMPO_ESPERA_FETCH_MS);
   try {
-    return await fetch(input, { ...init, signal: controlador.signal });
+    // Copia con la señal embebida: no se pasa init a fetch para no alterar la
+    // forma en que los consumidores (y los tests) inspeccionan la petición.
+    const conSeñal = new Request(input, { signal: controlador.signal });
+    return await fetch(conSeñal);
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new TypeError('Tiempo de espera agotado.', { cause: error });

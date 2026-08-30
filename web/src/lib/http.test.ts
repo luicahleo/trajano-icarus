@@ -188,9 +188,10 @@ describe('peticion', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(
-          (_input: RequestInfo | URL, init?: RequestInit) =>
+          (input: RequestInfo | URL, init?: RequestInit) =>
             new Promise<Response>((_resolve, reject) => {
-              init?.signal?.addEventListener('abort', () => {
+              const señal = input instanceof Request ? input.signal : init?.signal;
+              señal?.addEventListener('abort', () => {
                 reject(new DOMException('Aborted', 'AbortError'));
               });
             }),
