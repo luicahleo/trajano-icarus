@@ -883,8 +883,12 @@ describe('offline avícola', () => {
         throw new TypeError('fetch failed');
       }),
     );
+    // El despachador rechaza (sin red): el sync automático tras encolar falla y
+    // la operación permanece en la cola, que es lo que verifica la aserción.
     limpiar = iniciarCoordinadorOffline({
-      despachar: vi.fn(async () => {}),
+      despachar: vi.fn(async () => {
+        throw new TypeError('sin red');
+      }),
       almacen: crearAlmacenColaMemoria(),
     });
     expect(await guardarBajas('g1', bajas)).toBe(true);

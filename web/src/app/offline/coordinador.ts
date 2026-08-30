@@ -1,0 +1,103 @@
+import type { AlmacenCola } from '../../lib/offline/almacenCola';
+import { crearAlmacenColaIndexedDb } from '../../lib/offline/almacenIndexedDb';
+import { crearMotorSincronizacion } from '../../lib/offline/motorSincronizacion';
+import type { OperacionPendiente, TipoOperacionOffline } from '../../lib/offline/tipos';
+
+// Singleton: una cola y un motor por pestaña. Los datos son solo de negocio
+// (anti-PII); el token nunca pasa por aquí.
+let almacen: AlmacenCola | null = null;
+let sincronizar: (() => Promise<void>) | null = null;
+let conteo = 0;
+const avisosPendientes = new Set<() => void>();
+const avisosSnackbar = new Set<(mensaje: string) => void>();
+
+function notificar(): void {
+  avisosPendientes.forEach((a) => a());
+}
+
+async function refrescarConteo(): Promise<void> {
+  if (!almacen) return;
+  conteo = await almacen.contar();
+  notificar();
+}
+
+export function iniciarCoordinadorOffline(deps: {
+  despachar: (op: OperacionPendiente) => Promise<void>;
+  almacen?: AlmacenCola;
+  intervaloMs?: number;
+}): () => void {
+  almacen = deps.almacen ?? crearAlmacenColaIndexedDb();
+  const motor = crearMotorSincronizacion({
+    almacen,
+    despachar: async (op) => {
+      await deps.despachar(op);
+    },
+    conectado: () => navigator.onLine,
+  });
+  sincronizar = async () => {
+    await motor.sincronizar();
+    await refrescarConteo();
+  };
+  const alConectar = () => void sincronizar?.();
+  window.addEventListener('online', alConectar);
+  const timer = window.setInterval(alConectar, deps.intervaloMs ?? 5 * 60_000);
+  void refrescarConteo();
+  void sincronizar(); // ciclo inicial: vacía la cola si quedó de otra sesión
+  return () => {
+    window.removeEventListener('online', alConectar);
+    window.clearInterval(timer);
+    almacen = null;
+    sincronizar = null;
+    conteo = 0;
+  };
+}
+
+export async function encolarOperacion(
+  tipo: TipoOperacionOffline,
+  galponId: string,
+  cuerpo: unknown,
+): Promise<void> {
+  if (!almacen) throw new Error('Coordinador offline no iniciado.');
+  await almacen.agregar({
+    id: crypto.randomUUID(),
+    tipo,
+    galponId,
+    cuerpo,
+    estado: 'pendiente',
+    intentos: 0,
+    creadoEn: new Date().toISOString(),
+    proximoIntentoEn: null,
+  });
+  await refrescarConteo();
+  avisosSnackbar.forEach((a) => a('Guardado sin conexión: se sincronizará al volver la red.'));
+  if (navigator.onLine) void sincronizar?.(); // fire-and-forget
+}
+
+export function suscribirPendientes(aviso: () => void): () => void {
+  avisosPendientes.add(aviso);
+  return () => avisosPendientes.delete(aviso);
+}
+
+export function obtenerConteoPendientes(): number {
+  return conteo;
+}
+
+export function suscribirAvisos(aviso: (mensaje: string) => void): () => void {
+  avisosSnackbar.add(aviso);
+  return () => avisosSnackbar.delete(aviso);
+}
+
+export async function listarOperaciones(): Promise<OperacionPendiente[]> {
+  return almacen ? almacen.listarTodas() : [];
+}
+
+export async function reintentarOperacion(id: string): Promise<void> {
+  await almacen?.actualizar(id, { estado: 'pendiente', intentos: 0, proximoIntentoEn: null });
+  await refrescarConteo();
+  if (navigator.onLine) void sincronizar?.();
+}
+
+export async function descartarOperacion(id: string): Promise<void> {
+  await almacen?.eliminar(id);
+  await refrescarConteo();
+}
