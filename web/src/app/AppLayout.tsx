@@ -20,6 +20,7 @@ import { BannerSinConexion } from './BannerSinConexion';
 import { obtenerEnlacesNavegacion, obtenerTituloRuta } from './navegacion';
 import { NavegacionPrincipal } from './NavegacionPrincipal';
 import { PendientesOffline } from './offline/PendientesOffline';
+import { PrecalentadoOffline } from './offline/PrecalentadoOffline';
 import { SelectorTema } from './SelectorTema';
 
 const ANCHO_NAVEGACION = 248;
@@ -137,6 +138,7 @@ export function AppLayout() {
         </Toolbar>
       </AppBar>
       <BannerSinConexion />
+      <PrecalentadoOffline />
       <Box sx={{ display: 'flex', flexGrow: 1, minHeight: 0 }}>
         {enlaces.length > 0 && (
           <Box
