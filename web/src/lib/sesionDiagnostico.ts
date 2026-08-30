@@ -3,7 +3,14 @@
 export interface EventoFlujo {
   seq: number;
   timestamp: string;
-  eventName: 'flow.navigation' | 'flow.api_call';
+  eventName:
+    | 'flow.navigation'
+    | 'flow.api_call'
+    | 'flow.offline'
+    | 'flow.online'
+    | 'flow.offline_queue'
+    | 'flow.offline_sync'
+    | 'flow.offline_cache';
   detail: string;
   correlationId?: string;
   traceId?: string;

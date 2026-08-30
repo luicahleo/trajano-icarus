@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -9,6 +10,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ApiError } from '../../lib/http';
 import { guardarRecogida } from './offline';
 import { type DatosRecogida } from './api';
 import { totalHuevos } from './formatos';
@@ -88,6 +90,13 @@ export function RegistrarRecogidaDialog({
           fullWidth
           margin="dense"
         />
+        {guardar.isError && (
+          <Alert severity="error" sx={{ mt: 1 }}>
+            {guardar.error instanceof ApiError
+              ? guardar.error.message
+              : 'No se pudo registrar la recogida.'}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={alCerrar}>Cancelar</Button>

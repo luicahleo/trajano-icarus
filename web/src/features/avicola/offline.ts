@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { encolarOperacion } from '../../app/offline/coordinador';
-import { ApiError } from '../../lib/http';
+import { ApiError, esFalloDeConectividad } from '../../lib/http';
 import type { OperacionPendiente } from '../../lib/offline/tipos';
 import {
   listarGalpones,
@@ -29,7 +29,9 @@ export function crearDespachadorAvicola(
 }
 
 // Criterio del spec: encolar solo ante fallo de transporte. Un ApiError
-// (4xx/5xx) es un rechazo del backend y se propaga al diálogo.
+// (4xx/5xx) es un rechazo del backend y se propaga al diálogo; la excepción
+// son los códigos de gateway (502/503/504) y el timeout, que significan que la
+// API no está alcanzable y sí deben encolarse.
 async function conCola(
   tipo: 'produccion.crear' | 'mortalidad.crear',
   galponId: string,
@@ -41,7 +43,7 @@ async function conCola(
       await enviar();
       return false;
     } catch (error) {
-      if (error instanceof ApiError) throw error;
+      if (error instanceof ApiError && !esFalloDeConectividad(error)) throw error;
     }
   }
   await encolarOperacion(tipo, galponId, cuerpo);

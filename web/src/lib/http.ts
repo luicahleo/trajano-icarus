@@ -59,6 +59,34 @@ function reportarFalloDeRed(ruta: string): void {
   });
 }
 
+// Sin timeout, un backend inalcanzable deja la petición colgada (p. ej. WiFi
+// arriba sin internet) y el modo offline no puede encolar. El abort se traduce
+// a un error de transporte, no a un ApiError.
+const TIEMPO_ESPERA_FETCH_MS = 15_000;
+
+async function fetchConTiempo(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), TIEMPO_ESPERA_FETCH_MS);
+  try {
+    return await fetch(input, { ...init, signal: controlador.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new TypeError('Tiempo de espera agotado.', { cause: error });
+    }
+    throw error;
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
+// Códigos de gateway sin backend: no son un rechazo de negocio, sino falta de
+// conectividad con la API (el modo offline debe encolar, no propagar).
+export function esFalloDeConectividad(error: ApiError): boolean {
+  return (
+    error.status === 408 || error.status === 502 || error.status === 503 || error.status === 504
+  );
+}
+
 function conHeaders(init: RequestInit, cuerpo?: unknown): RequestInit {
   const cabeceras = new Headers(init.headers);
   cabeceras.set('X-Correlation-ID', crearCorrelationId());
@@ -164,7 +192,7 @@ export async function peticion<T>(o: {
   const inicio = performance.now();
   let respuesta: Response;
   try {
-    respuesta = await fetch(original);
+    respuesta = await fetchConTiempo(original);
   } catch (error) {
     registrarLlamadaApi(original, inicio);
     reportarFalloDeRed(ruta);
@@ -176,7 +204,7 @@ export async function peticion<T>(o: {
     const reintento = crearRequest();
     const inicioReintento = performance.now();
     try {
-      respuesta = await fetch(reintento);
+      respuesta = await fetchConTiempo(reintento);
     } catch (error) {
       registrarLlamadaApi(reintento, inicioReintento);
       reportarFalloDeRed(ruta);

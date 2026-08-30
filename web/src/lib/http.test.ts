@@ -182,6 +182,29 @@ describe('peticion', () => {
     expect(reportes).toHaveLength(0);
   });
 
+  test('el timeout abandona una petición colgada como fallo de red', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          (_input: RequestInfo | URL, init?: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init?.signal?.addEventListener('abort', () => {
+                reject(new DOMException('Aborted', 'AbortError'));
+              });
+            }),
+        ),
+      );
+      const promesa = peticion({ ruta: '/clientes' });
+      const rechazo = expect(promesa).rejects.toThrow('Tiempo de espera agotado');
+      await vi.advanceTimersByTimeAsync(60_000);
+      await rechazo;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('el endpoint de diagnóstico nunca se reporta a sí mismo', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     vi.stubGlobal('fetch', fetchMock);

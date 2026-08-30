@@ -4,6 +4,7 @@ import type { CacheLectura } from '../../lib/offline/cacheLectura';
 import { crearCacheLecturaIndexedDb } from '../../lib/offline/cacheLecturaIndexedDb';
 import { crearMotorSincronizacion } from '../../lib/offline/motorSincronizacion';
 import type { OperacionPendiente, TipoOperacionOffline } from '../../lib/offline/tipos';
+import { registrarEventoFlujo } from '../../lib/sesionDiagnostico';
 
 // Singleton: una cola y un motor por pestaña. Los datos son solo de negocio
 // (anti-PII); el token nunca pasa por aquí.
@@ -40,16 +41,29 @@ export function iniciarCoordinadorOffline(deps: {
     conectado: () => navigator.onLine,
   });
   sincronizar = async () => {
+    registrarEventoFlujo({ eventName: 'flow.offline_sync', detail: 'Sincronización iniciada' });
     await motor.sincronizar();
     await refrescarConteo();
+    registrarEventoFlujo({
+      eventName: 'flow.offline_sync',
+      detail: `Sincronización completada (${conteo} pendientes)`,
+    });
   };
-  const alConectar = () => void sincronizar?.();
+  const alConectar = () => {
+    registrarEventoFlujo({ eventName: 'flow.online', detail: 'Conexión restablecida' });
+    void sincronizar?.();
+  };
+  const alDesconectar = () => {
+    registrarEventoFlujo({ eventName: 'flow.offline', detail: 'Sin conexión de red' });
+  };
   window.addEventListener('online', alConectar);
+  window.addEventListener('offline', alDesconectar);
   const timer = window.setInterval(alConectar, deps.intervaloMs ?? 5 * 60_000);
   void refrescarConteo();
   void sincronizar(); // ciclo inicial: vacía la cola si quedó de otra sesión
   return () => {
     window.removeEventListener('online', alConectar);
+    window.removeEventListener('offline', alDesconectar);
     window.clearInterval(timer);
     almacen = null;
     cache = null;
@@ -79,6 +93,7 @@ export async function encolarOperacion(
     proximoIntentoEn: null,
   });
   await refrescarConteo();
+  registrarEventoFlujo({ eventName: 'flow.offline_queue', detail: `Operación encolada: ${tipo}` });
   avisosSnackbar.forEach((a) => a('Guardado sin conexión: se sincronizará al volver la red.'));
   if (navigator.onLine) void sincronizar?.(); // fire-and-forget
 }

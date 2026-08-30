@@ -59,4 +59,28 @@ describe('RegistrarRecogidaDialog offline', () => {
     await waitFor(() => expect(alCerrar).toHaveBeenCalled());
     expect((await listarOperaciones()).length).toBe(1);
   });
+
+  test('el rechazo de negocio muestra el error y mantiene el formulario abierto', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ title: 'Solicitud inválida' }), {
+            status: 400,
+            headers: { 'content-type': 'application/json' },
+          }),
+      ),
+    );
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+    });
+    const alCerrar = vi.fn();
+    render(envolver(<RegistrarRecogidaDialog galponId="g1" abierto alCerrar={alCerrar} />));
+    await userEvent.type(screen.getByLabelText('Maples'), '3');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByText('Solicitud inválida')).toBeInTheDocument();
+    expect(alCerrar).not.toHaveBeenCalled();
+  });
 });

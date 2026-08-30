@@ -4,6 +4,7 @@ import { ApiError } from '../../lib/http';
 import { iniciarCoordinadorOffline, listarOperaciones } from '../../app/offline/coordinador';
 import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
 import { crearCacheLecturaMemoria } from '../../lib/offline/cacheLectura';
+import { obtenerEventosRecientes } from '../../lib/sesionDiagnostico';
 import { listarGranjas } from './api';
 import { crearDespachadorAvicola, guardarBajas, guardarRecogida } from './offline';
 
@@ -70,6 +71,30 @@ describe('offline avícola', () => {
     expect((await listarOperaciones()).length).toBe(1); // no encoló el 4xx
   });
 
+  test('502/503/504 del gateway encolan sin propagar', async () => {
+    for (const status of [502, 503, 504]) {
+      limpiar = iniciarCoordinadorOffline({
+        despachar: vi.fn(async () => {
+          throw new TypeError('sin red');
+        }),
+        almacen: crearAlmacenColaMemoria(),
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response(JSON.stringify({ title: 'Bad Gateway' }), {
+              status,
+              headers: { 'content-type': 'application/json' },
+            }),
+        ),
+      );
+      expect(await guardarRecogida('g1', recogida)).toBe(true);
+      expect((await listarOperaciones()).length).toBe(1);
+      limpiar?.();
+    }
+  });
+
   test('offline encola sin llamar a la API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
@@ -125,5 +150,25 @@ describe('offline avícola', () => {
       }),
     );
     expect(await listarGranjas()).toEqual([{ id: 'g1' }]); // sirve la caché
+  });
+
+  test('actualizar datos en línea registra breadcrumb de caché', async () => {
+    const cache = crearCacheLecturaMemoria();
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+      cache,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify([{ id: 'g1' }]), { status: 200 })),
+    );
+    await listarGranjas();
+    const eventos = obtenerEventosRecientes(20);
+    expect(
+      eventos.some(
+        (e) => e.eventName === 'flow.offline_cache' && e.detail.includes('granjas'),
+      ),
+    ).toBe(true);
   });
 });
