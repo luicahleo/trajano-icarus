@@ -72,6 +72,16 @@ test('los tres wrappers delegan al core con su perfil', () => {
   }
 });
 
+test('el core y los wrappers aceptan el modo dev|prod', () => {
+  assert.match(core, /\[ValidateSet\('dev', 'prod'\)\]/);
+  assert.match(core, /docker-compose\.prodlocal\.yml/);
+  assert.match(core, /Construir-ContenidoProduccion/);
+  assert.match(core, /WEB_UPSTREAM/);
+  for (const script of [pc1, pc2, pc3, pc1SinWifi]) {
+    assert.match(script, /Modo = \$Modo/);
+  }
+});
+
 test('el wrapper de PC1 sin WiFi inicia el entorno solo en localhost', () => {
   assert.match(core, /\[switch\]\$SoloLocal/);
   assert.match(core, /if \(\$SoloLocal\)[\s\S]*'127\.0\.0\.1'/);

@@ -1,6 +1,8 @@
 param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
+    [ValidateSet('dev', 'prod')]
+    [string]$Modo = 'dev',
     [switch]$BorrarDatos,
     [switch]$ConfirmarBorradoDatos
 )
@@ -10,7 +12,17 @@ $rutaIp = Join-Path $PSScriptRoot ".local/$Perfil/ip.txt"
 $ipLan = if (Test-Path $rutaIp) { (Get-Content $rutaIp -Raw).Trim() } else { '127.0.0.1' }
 $env:ICARUS_LAN_IP = $ipLan
 $env:ICARUS_LAN_HOST = "$ipLan.sslip.io"
-$archivosCompose = @('-f', 'docker-compose.dev.yml', '-f', "docker-compose.$Perfil.yml")
+$archivosCompose = @(
+    '-f', 'docker-compose.dev.yml',
+    '-f', "docker-compose.$Perfil.yml"
+)
+if ($Modo -eq 'prod') {
+    $env:WEB_UPSTREAM = 'web:8080'
+    $archivosCompose = @(
+        '-f', 'docker-compose.prodlocal.yml',
+        '-f', "docker-compose.$Perfil.yml"
+    )
+}
 
 if ($BorrarDatos -and -not $ConfirmarBorradoDatos) {
     throw 'El borrado elimina la base y volúmenes locales. Repite con -BorrarDatos -ConfirmarBorradoDatos.'

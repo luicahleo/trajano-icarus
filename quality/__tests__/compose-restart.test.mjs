@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const dev = readFileSync(new URL('../../docker-compose.dev.yml', import.meta.url), 'utf8');
+const prodlocal = readFileSync(new URL('../../docker-compose.prodlocal.yml', import.meta.url), 'utf8');
 const perfiles = new Map(
   ['pc1', 'pc2', 'pc3'].map((perfil) => [
     perfil,
@@ -43,4 +44,17 @@ test('ningún perfil de PC redefine api ni sqlserver sin la política de reinici
     assert.doesNotMatch(contenido, /^\s{2}api:/m, `perfil ${perfil}`);
     assert.doesNotMatch(contenido, /^\s{2}sqlserver:/m, `perfil ${perfil}`);
   }
+});
+
+test('el modo prod-local arma el stack completo sin el api dev', () => {
+  const serviciosProd = servicios(prodlocal);
+  assert.ok(serviciosProd.get('seq'), 'seq debe existir');
+  assert.ok(serviciosProd.get('sqlserver'), 'sqlserver debe existir');
+  assert.ok(serviciosProd.get('web'), 'web debe existir');
+  assert.doesNotMatch(prodlocal, /^\s{2}api:/m, 'api no debe estar en prod-local');
+  assert.match(serviciosProd.get('sqlserver'), /^\s{4}restart: unless-stopped$/m);
+  assert.match(serviciosProd.get('web'), /^\s{4}restart: unless-stopped$/m);
+  assert.match(serviciosProd.get('web'), /Dockerfile\.web/);
+  assert.match(serviciosProd.get('web'), /ASPNETCORE_HTTP_PORTS: "8080"/);
+  assert.match(serviciosProd.get('web'), /Seq__Url: "http:\/\/seq:80"/);
 });
