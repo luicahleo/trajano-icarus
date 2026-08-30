@@ -134,7 +134,9 @@ if (ejecutarMigraciones)
         // Los ids fijos vienen de SemillaIdentidad: el claim clienteId de las
         // cuentas semilla debe coincidir con el cliente sembrado.
         await SemillaClientes.SembrarAsync(
-            alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId);
+            alcance.ServiceProvider,
+            SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId,
+            SemillaIdentidad.ClienteC1Id, SemillaIdentidad.TrabajadorT1Id);
         await SemillaGestionAvicola.SembrarAsync(alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId);
     }
     else

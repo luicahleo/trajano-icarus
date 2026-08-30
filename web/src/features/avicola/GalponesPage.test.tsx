@@ -143,6 +143,34 @@ describe('GalponesPage', () => {
     expect(llamadaCon(fetchMock, 'POST', '/granjas/gr1/galpones')).toBe(true);
     expect(await screen.findByText('Galpón 1')).toBeInTheDocument();
   });
+  test('muestra los errores de validación del backend al crear', async () => {
+    const usuario = userEvent.setup();
+    baseFetchAvicola({
+      'GET /api/granjas': respuesta(200, [granja]),
+      'GET /api/granjas/gr1/galpones': respuesta(200, []),
+      'POST /api/granjas/gr1/galpones': respuesta(400, {
+        title: 'Solicitud inválida',
+        status: 400,
+        errors: {
+          FechaNacimientoLote: ['La fecha de nacimiento del lote no puede ser futura.'],
+        },
+      }),
+    });
+    renderPagina('/avicola/galpones');
+    await usuario.click(
+      await screen.findByRole('button', { name: /nuevo galpón|crear el primero/i }),
+    );
+    await usuario.type(screen.getByLabelText('Número'), '1');
+    await usuario.type(screen.getByLabelText('Capacidad máxima'), '5000');
+    await usuario.type(screen.getByLabelText('Gallinas actuales'), '4800');
+    fireEvent.change(screen.getByLabelText('Fecha de poblado del lote'), {
+      target: { value: '2026-09-01' },
+    });
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(
+      await screen.findByText('La fecha de nacimiento del lote no puede ser futura.'),
+    ).toBeInTheDocument();
+  });
   test('renombra la granja', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetchAvicola({

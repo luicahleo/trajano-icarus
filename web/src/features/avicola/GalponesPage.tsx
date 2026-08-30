@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -11,6 +12,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ApiError } from '../../lib/http';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
@@ -31,6 +33,12 @@ function etiquetaCampo(campo: (typeof CAMPOS_GALPON)[number]): string {
   if (campo === 'capacidadMaxima') return 'Capacidad máxima';
   if (campo === 'gallinasActuales') return 'Gallinas actuales';
   return 'Fecha de poblado del lote';
+}
+
+function mensajeAltaGalpon(error: unknown): string {
+  if (!(error instanceof ApiError)) return 'No se pudo crear el galpón.';
+  if (error.erroresValidacion) return Object.values(error.erroresValidacion).flat().join('\n');
+  return error.message;
 }
 
 export function GalponesPage() {
@@ -154,10 +162,20 @@ export function GalponesPage() {
               type={campo === 'fechaNacimientoLote' ? 'date' : 'text'}
               value={form[campo]}
               onChange={(e) => setForm({ ...form, [campo]: e.target.value })}
+              slotProps={
+                campo === 'fechaNacimientoLote'
+                  ? { htmlInput: { max: new Date().toISOString().slice(0, 10) } }
+                  : undefined
+              }
               fullWidth
               margin="dense"
             />
           ))}
+          {crear.isError && (
+            <Alert severity="error" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
+              {mensajeAltaGalpon(crear.error)}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAlta(false)}>Cancelar</Button>

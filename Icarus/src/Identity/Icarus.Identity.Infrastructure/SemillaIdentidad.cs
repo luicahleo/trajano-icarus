@@ -12,10 +12,14 @@ public static class SemillaIdentidad
 {
     public static readonly Guid ClienteDemoId = new("11111111-1111-1111-1111-111111111111");
     public static readonly Guid TrabajadorDemoId = new("22222222-2222-2222-2222-222222222222");
+cual es l    public static readonly Guid ClienteC1Id = new("33333333-3333-3333-3333-333333333333");
+    public static readonly Guid TrabajadorT1Id = new("44444444-4444-4444-4444-444444444444");
 
     public const string EmailAdmin = "admin@icarus.test";
     public const string EmailCliente = "cliente@icarus.test";
     public const string EmailTrabajador = "trabajador@icarus.test";
+    public const string EmailClienteC1 = "c1@icarus.test";
+    public const string EmailTrabajadorT1 = "t1@icarus.test";
 
     public static async Task SembrarAsync(IServiceProvider servicios, string contrasenaPrueba)
     {
@@ -23,6 +27,8 @@ public static class SemillaIdentidad
         await CrearSiNoExiste(usuarios, EmailAdmin, Rol.Administrador, null, null, contrasenaPrueba);
         await CrearSiNoExiste(usuarios, EmailCliente, Rol.Cliente, ClienteDemoId, null, contrasenaPrueba);
         await CrearSiNoExiste(usuarios, EmailTrabajador, Rol.Trabajador, ClienteDemoId, TrabajadorDemoId, contrasenaPrueba);
+        await CrearSiNoExiste(usuarios, EmailClienteC1, Rol.Cliente, ClienteC1Id, null, contrasenaPrueba);
+        await CrearSiNoExiste(usuarios, EmailTrabajadorT1, Rol.Trabajador, ClienteC1Id, TrabajadorT1Id, contrasenaPrueba);
     }
 
     private static async Task CrearSiNoExiste(
