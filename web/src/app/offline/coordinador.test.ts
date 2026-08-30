@@ -61,4 +61,22 @@ describe('coordinador offline', () => {
     expect(obtenerConteoPendientes()).toBe(0);
     onlineSpy.mockRestore();
   });
+
+  test('al iniciar con cola previa y red, vacía la cola (ciclo inicial)', async () => {
+    const almacen = crearAlmacenColaMemoria();
+    await almacen.agregar({
+      id: 'previa',
+      tipo: 'produccion.crear',
+      galponId: 'g1',
+      cuerpo: {},
+      estado: 'pendiente',
+      intentos: 0,
+      creadoEn: '2026-08-29T09:00:00.000Z',
+      proximoIntentoEn: null,
+    });
+    const despachar = vi.fn(async () => {});
+    limpiar = iniciarCoordinadorOffline({ despachar, almacen, intervaloMs: 60_000 });
+    await vi.waitFor(() => expect(despachar).toHaveBeenCalledTimes(1));
+    expect(await almacen.contar()).toBe(0);
+  });
 });
