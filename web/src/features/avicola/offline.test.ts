@@ -3,6 +3,8 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { ApiError } from '../../lib/http';
 import { iniciarCoordinadorOffline, listarOperaciones } from '../../app/offline/coordinador';
 import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
+import { crearCacheLecturaMemoria } from '../../lib/offline/cacheLectura';
+import { listarGranjas } from './api';
 import { crearDespachadorAvicola, guardarBajas, guardarRecogida } from './offline';
 
 const recogida = {
@@ -102,5 +104,26 @@ describe('offline avícola', () => {
     const req = fetchMock.mock.calls.at(0)?.[0] as unknown as Request;
     expect(req.url).toContain('/api/galpones/g1/produccion');
     expect(invalidar).toHaveBeenCalledWith({ queryKey: ['avicola'] });
+  });
+
+  test('listarGranjas sirve desde caché cuando falla la red', async () => {
+    const cache = crearCacheLecturaMemoria();
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+      cache,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify([{ id: 'g1' }]), { status: 200 })),
+    );
+    expect(await listarGranjas()).toEqual([{ id: 'g1' }]); // llena la caché
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      }),
+    );
+    expect(await listarGranjas()).toEqual([{ id: 'g1' }]); // sirve la caché
   });
 });

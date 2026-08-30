@@ -1,11 +1,14 @@
 import type { AlmacenCola } from '../../lib/offline/almacenCola';
 import { crearAlmacenColaIndexedDb } from '../../lib/offline/almacenIndexedDb';
+import type { CacheLectura } from '../../lib/offline/cacheLectura';
+import { crearCacheLecturaIndexedDb } from '../../lib/offline/cacheLecturaIndexedDb';
 import { crearMotorSincronizacion } from '../../lib/offline/motorSincronizacion';
 import type { OperacionPendiente, TipoOperacionOffline } from '../../lib/offline/tipos';
 
 // Singleton: una cola y un motor por pestaña. Los datos son solo de negocio
 // (anti-PII); el token nunca pasa por aquí.
 let almacen: AlmacenCola | null = null;
+let cache: CacheLectura | null = null;
 let sincronizar: (() => Promise<void>) | null = null;
 let conteo = 0;
 const avisosPendientes = new Set<() => void>();
@@ -24,9 +27,11 @@ async function refrescarConteo(): Promise<void> {
 export function iniciarCoordinadorOffline(deps: {
   despachar: (op: OperacionPendiente) => Promise<void>;
   almacen?: AlmacenCola;
+  cache?: CacheLectura;
   intervaloMs?: number;
 }): () => void {
   almacen = deps.almacen ?? crearAlmacenColaIndexedDb();
+  cache = deps.cache ?? crearCacheLecturaIndexedDb();
   const motor = crearMotorSincronizacion({
     almacen,
     despachar: async (op) => {
@@ -47,9 +52,14 @@ export function iniciarCoordinadorOffline(deps: {
     window.removeEventListener('online', alConectar);
     window.clearInterval(timer);
     almacen = null;
+    cache = null;
     sincronizar = null;
     conteo = 0;
   };
+}
+
+export function obtenerCacheLectura(): CacheLectura | null {
+  return cache;
 }
 
 export async function encolarOperacion(

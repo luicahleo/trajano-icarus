@@ -1,4 +1,5 @@
 import { peticion } from '../../lib/http';
+import { conCacheLectura } from './cacheAvicola';
 import type {
   EficienciaGalpon,
   Galpon,
@@ -30,16 +31,20 @@ export interface DatosBajas {
   cantidadMuertas: number;
   idempotencyKey: string;
 }
-export const listarGranjas = () => peticion<Granja[]>({ ruta: '/granjas' });
+export const listarGranjas = () =>
+  conCacheLectura('granjas', () => peticion<Granja[]>({ ruta: '/granjas' }));
 export const crearGranja = (nombre: string) =>
   peticion<{ id: string }>({ ruta: '/granjas', metodo: 'POST', cuerpo: { nombre } });
 export const renombrarGranja = (id: string, nombre: string) =>
   peticion<void>({ ruta: `/granjas/${id}`, metodo: 'PUT', cuerpo: { nombre } });
 export const listarGalpones = (id: string) =>
-  peticion<Galpon[]>({ ruta: `/granjas/${id}/galpones` });
+  conCacheLectura(`granjas/${id}/galpones`, () =>
+    peticion<Galpon[]>({ ruta: `/granjas/${id}/galpones` }),
+  );
 export const crearGalpon = (id: string, d: DatosGalpon) =>
   peticion<{ id: string }>({ ruta: `/granjas/${id}/galpones`, metodo: 'POST', cuerpo: d });
-export const obtenerGalpon = (id: string) => peticion<Galpon>({ ruta: `/galpones/${id}` });
+export const obtenerGalpon = (id: string) =>
+  conCacheLectura(`galpones/${id}`, () => peticion<Galpon>({ ruta: `/galpones/${id}` }));
 export const actualizarGalpon = (
   id: string,
   d: { numero: string; descripcion: string | null; capacidadMaxima: number },
@@ -53,7 +58,9 @@ export const ajustarInventarioGalpon = (id: string, gallinasActuales: number) =>
 export const desactivarGalpon = (id: string) =>
   peticion<void>({ ruta: `/galpones/${id}`, metodo: 'DELETE' });
 export const listarProduccion = (id: string, fecha?: string) =>
-  peticion<ProduccionDia>({ ruta: `/galpones/${id}/produccion${fecha ? `?fecha=${fecha}` : ''}` });
+  conCacheLectura(`galpones/${id}/produccion/${fecha ?? 'hoy'}`, () =>
+    peticion<ProduccionDia>({ ruta: `/galpones/${id}/produccion${fecha ? `?fecha=${fecha}` : ''}` }),
+  );
 export const registrarProduccion = (id: string, d: DatosRecogida) =>
   peticion<{ id: string }>({ ruta: `/galpones/${id}/produccion`, metodo: 'POST', cuerpo: d });
 export const editarProduccion = (
@@ -69,7 +76,9 @@ export const editarProduccion = (
 export const desactivarProduccion = (id: string) =>
   peticion<void>({ ruta: `/produccion/${id}`, metodo: 'DELETE' });
 export const listarMortalidad = (id: string, fecha?: string) =>
-  peticion<MortalidadDia>({ ruta: `/galpones/${id}/mortalidad${fecha ? `?fecha=${fecha}` : ''}` });
+  conCacheLectura(`galpones/${id}/mortalidad/${fecha ?? 'hoy'}`, () =>
+    peticion<MortalidadDia>({ ruta: `/galpones/${id}/mortalidad${fecha ? `?fecha=${fecha}` : ''}` }),
+  );
 export const registrarMortalidad = (id: string, d: DatosBajas) =>
   peticion<{ id: string }>({ ruta: `/galpones/${id}/mortalidad`, metodo: 'POST', cuerpo: d });
 export const editarMortalidad = (id: string, d: { hora: string; cantidadMuertas: number }) =>
