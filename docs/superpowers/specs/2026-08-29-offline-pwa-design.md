@@ -167,6 +167,10 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
   `/identidad/sesion/actual` con red, **solo si el rol es `Trabajador`**.
 - Contiene: `usuarioId`, `rol`, `clienteId`, `trabajadorId`, `modulos`,
   `funcionalidades`. **Nunca** el correo (dato nominal) ni el token.
+- **Caduca a las 12 horas** desde su guardado: el snapshot expirado se borra y
+  no restaura. Así el trabajador se ve obligado a hacer login cada día, y ese
+  login diario es también el que garantiza la sincronización diaria de la cola
+  (al entrar con red, el ciclo inicial del motor la vacía).
 - Si el login o la restauración devuelve otro rol, el snapshot se borra (el
   dispositivo quedó en manos de otro perfil).
 - Al arrancar la app: si `renovarSesion()` falla **por red** (no por 401),

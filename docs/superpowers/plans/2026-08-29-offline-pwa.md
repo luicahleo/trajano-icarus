@@ -1080,8 +1080,13 @@ describe('RegistrarRecogidaDialog offline', () => {
   });
 
   test('fallo de red durante el guardado encola y cierra', async () => {
+    // El despachador rechaza: con navigator.onLine=true (default en jsdom) el
+    // sync automático disparado por encolarOperacion falla y la operación
+    // permanece en la cola, que es justo lo que el test verifica.
     limpiar = iniciarCoordinadorOffline({
-      despachar: vi.fn(async () => {}),
+      despachar: vi.fn(async () => {
+        throw new TypeError('sin red');
+      }),
       almacen: crearAlmacenColaMemoria(),
     });
     vi.stubGlobal(
@@ -1548,12 +1553,18 @@ git commit -m "feat(web): indicador de pendientes offline con reintento y descar
 - Create: `web/src/lib/offline/cacheLectura.ts` (interfaz + memoria)
 - Create: `web/src/lib/offline/cacheLecturaIndexedDb.ts`
 - Test: `web/src/lib/offline/cacheLectura.test.ts`
+- Create: `web/src/features/avicola/cacheAvicola.ts` (contiene `conCacheLectura`)
 - Modify: `web/src/app/offline/coordinador.ts` (añade `obtenerCacheLectura` y el
   parámetro opcional `cache` en `iniciarCoordinadorOffline`)
-- Modify: `web/src/features/avicola/offline.ts` (añade `conCacheLectura`)
 - Modify: `web/src/features/avicola/api.ts` (envuelve `listarGranjas`,
   `listarGalpones`, `obtenerGalpon`, `listarProduccion`, `listarMortalidad`)
 - Test: `web/src/features/avicola/offline.test.ts` (añade tests de caché)
+
+> `conCacheLectura` vive en `cacheAvicola.ts`, NO en `offline.ts`: como
+> `api.ts` llama al wrapper y `offline.ts` ya importa funciones de `api.ts`,
+> meterlo en `offline.ts` crearía un ciclo de módulos (api → offline → api).
+> Con `cacheAvicola.ts` el grafo es acíclico: `api → cacheAvicola → coordinador`,
+> y `offline → api, coordinador`.
 
 **Interfaces:**
 - Consumes: `abrirBaseDatosOffline`, `promesaDePedido` (Task 2), coordinador
@@ -1702,10 +1713,12 @@ export function obtenerCacheLectura(): CacheLectura | null {
 }
 ```
 
-En `web/src/features/avicola/offline.ts` añadir:
+`web/src/features/avicola/cacheAvicola.ts` (nuevo; importa del coordinador y de
+lib/http, no de `api.ts`, para evitar el ciclo):
 
 ```ts
 import { obtenerCacheLectura } from '../../app/offline/coordinador';
+import { ApiError } from '../../lib/http';
 
 // Lectura con respaldo offline: éxito → actualiza la caché; fallo de red →
 // sirve la caché si existe. ApiError (4xx/5xx) siempre se propaga.
@@ -1729,7 +1742,7 @@ export async function conCacheLectura<T>(
 ```
 
 En `web/src/features/avicola/api.ts` envolver las cinco lecturas (importar
-`conCacheLectura` de `./offline`). La clave incluye los parámetros: las
+`conCacheLectura` de `./cacheAvicola`). La clave incluye los parámetros: las
 llamadas con `fecha` explícita (consultas de otros días) usan su propia clave y
 también quedan cubiertas tras la primera visita:
 
@@ -1767,7 +1780,7 @@ coordinador iniciado la caché es null (passthrough).
 
 ```bash
 ./verify.ps1
-git add web/src/lib/offline/cacheLectura.ts web/src/lib/offline/cacheLecturaIndexedDb.ts web/src/lib/offline/cacheLectura.test.ts web/src/app/offline/coordinador.ts web/src/features/avicola/offline.ts web/src/features/avicola/api.ts web/src/features/avicola/offline.test.ts
+git add web/src/lib/offline/cacheLectura.ts web/src/lib/offline/cacheLecturaIndexedDb.ts web/src/lib/offline/cacheLectura.test.ts web/src/app/offline/coordinador.ts web/src/features/avicola/cacheAvicola.ts web/src/features/avicola/api.ts web/src/features/avicola/offline.test.ts
 git commit -m "feat(web): caché de lectura offline para granjas y galpones"
 ```
 
@@ -1976,6 +1989,7 @@ git commit -m "feat(web): precalentado de caché del día tras el login del trab
 ```ts
 import 'fake-indexeddb/auto';
 import { describe, expect, test } from 'vitest';
+import { crearCacheLecturaIndexedDb } from '../../lib/offline/cacheLecturaIndexedDb';
 import type { UsuarioActual } from '../../lib/tipos';
 import {
   borrarSesionOffline,
@@ -2013,6 +2027,23 @@ describe('sesión offline', () => {
     await guardarSesionOffline(trabajador);
     await borrarSesionOffline();
     expect(await obtenerSesionOffline()).toBeNull();
+  });
+
+  test('snapshot con más de 12 horas no se restaura y se borra', async () => {
+    // Sembrar un snapshot expirado escribiendo el wrapper crudo directamente.
+    await crearCacheLecturaIndexedDb().guardar('sesion-offline', {
+      guardadoEn: new Date('2026-08-28T20:00:00.000Z').toISOString(),
+      usuario: { ...trabajador, correo: null },
+    });
+    const ahora = new Date('2026-08-29T10:00:00.000Z');
+    expect(await obtenerSesionOffline(ahora)).toBeNull();
+    expect(await crearCacheLecturaIndexedDb().obtener('sesion-offline')).toBeNull();
+  });
+
+  test('snapshot fresco se restaura', async () => {
+    await guardarSesionOffline(trabajador);
+    const snap = await obtenerSesionOffline(new Date('2026-08-29T10:00:00.000Z'));
+    expect(snap?.rol).toBe('Trabajador');
   });
 });
 ```
@@ -2072,11 +2103,19 @@ import type { UsuarioActual } from '../../lib/tipos';
 // token ni correo (anti-PII). Se accede a IndexedDB directamente porque la
 // restauración de sesión corre antes que el coordinador offline.
 const CLAVE = 'sesion-offline';
+// Caducidad de 12 h (spec decisión 6): obliga a login diario, y ese login con
+// red es lo que vacía la cola (ciclo inicial del motor).
+const VALIDEZ_MS = 12 * 60 * 60 * 1000;
+
+interface SnapshotGuardado {
+  guardadoEn: string; // ISO
+  usuario: UsuarioActual;
+}
 
 export async function guardarSesionOffline(usuario: UsuarioActual): Promise<void> {
   const cache = crearCacheLecturaIndexedDb();
   if (usuario.rol !== 'Trabajador') {
-    await cache.guardar(CLAVE, null);
+    await cache.guardar(CLAVE, null); // otro rol → borra (dispositivo compartido)
     return;
   }
   const snapshot: UsuarioActual = {
@@ -2088,12 +2127,19 @@ export async function guardarSesionOffline(usuario: UsuarioActual): Promise<void
     modulos: usuario.modulos,
     funcionalidades: usuario.funcionalidades,
   };
-  await cache.guardar(CLAVE, snapshot);
+  const guardado: SnapshotGuardado = { guardadoEn: new Date().toISOString(), usuario: snapshot };
+  await cache.guardar(CLAVE, guardado);
 }
 
-export async function obtenerSesionOffline(): Promise<UsuarioActual | null> {
+export async function obtenerSesionOffline(ahora: Date = new Date()): Promise<UsuarioActual | null> {
   const valor = await crearCacheLecturaIndexedDb().obtener(CLAVE);
-  return (valor as UsuarioActual | null | undefined) ?? null;
+  if (!valor || typeof valor !== 'object') return null;
+  const { guardadoEn, usuario } = valor as SnapshotGuardado;
+  if (ahora.getTime() - new Date(guardadoEn).getTime() > VALIDEZ_MS) {
+    await crearCacheLecturaIndexedDb().guardar(CLAVE, null); // expirado: se borra
+    return null;
+  }
+  return usuario;
 }
 
 export async function borrarSesionOffline(): Promise<void> {
