@@ -1,4 +1,7 @@
+import 'fake-indexeddb/auto';
 import { render, screen, waitFor } from '@testing-library/react';
+import { guardarSesionOffline } from '../../app/offline/sesionOffline';
+import type { UsuarioActual } from '../../lib/tipos';
 import { AuthProvider, useAuth } from './AuthContext';
 
 function respuesta(status: number, cuerpo?: unknown) {
@@ -60,7 +63,7 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('cargando').textContent).toBe('true');
 
     expect(await screen.findByTestId('autenticado')).toHaveTextContent('true');
-    expect(screen.getByTestId('cargando').textContent).toBe('false');
+    await waitFor(() => expect(screen.getByTestId('cargando').textContent).toBe('false'));
     expect(screen.getByTestId('rol').textContent).toBe('Cliente');
     expect(screen.getByTestId('usuario').textContent).toBe('u1');
   });
@@ -110,7 +113,56 @@ describe('AuthProvider', () => {
     );
 
     expect(await screen.findByTestId('autenticado')).toHaveTextContent('false');
-    expect(screen.getByTestId('cargando').textContent).toBe('false');
+    await waitFor(() => expect(screen.getByTestId('cargando').textContent).toBe('false'));
     expect(screen.getByTestId('rol').textContent).toBe('sin-rol');
+  });
+
+  test('sin red restaura desde el snapshot del trabajador', async () => {
+    const snapshotTrabajador: UsuarioActual = {
+      usuarioId: 'u1',
+      correo: null,
+      rol: 'Trabajador',
+      clienteId: 'c1',
+      trabajadorId: 't1',
+      modulos: ['GestionAvicola'],
+      funcionalidades: ['ProduccionHuevos'],
+    };
+    await guardarSesionOffline(snapshotTrabajador);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      }),
+    );
+
+    render(
+      <AuthProvider>
+        <Consumidor />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('rol')).toHaveTextContent('Trabajador'));
+  });
+
+  test('rechazo del backend (no red) NO usa el snapshot', async () => {
+    const snapshotTrabajador: UsuarioActual = {
+      usuarioId: 'u1',
+      correo: null,
+      rol: 'Trabajador',
+      clienteId: 'c1',
+      trabajadorId: 't1',
+      modulos: ['GestionAvicola'],
+      funcionalidades: ['ProduccionHuevos'],
+    };
+    await guardarSesionOffline(snapshotTrabajador);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(respuesta(401)));
+
+    render(
+      <AuthProvider>
+        <Consumidor />
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByTestId('rol')).toHaveTextContent('sin-rol');
   });
 });
