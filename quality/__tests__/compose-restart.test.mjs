@@ -46,12 +46,12 @@ test('ningún perfil de PC redefine api ni sqlserver sin la política de reinici
   }
 });
 
-test('el modo prod-local arma el stack completo sin el api dev', () => {
+test('el stack PC arma la web de producción sin el api dev', () => {
   const serviciosProd = servicios(prodlocal);
   assert.ok(serviciosProd.get('seq'), 'seq debe existir');
   assert.ok(serviciosProd.get('sqlserver'), 'sqlserver debe existir');
   assert.ok(serviciosProd.get('web'), 'web debe existir');
-  assert.doesNotMatch(prodlocal, /^\s{2}api:/m, 'api no debe estar en prod-local');
+  assert.doesNotMatch(prodlocal, /^\s{2}api:/m, 'api no debe estar en el stack PC');
   assert.match(serviciosProd.get('sqlserver'), /^\s{4}restart: unless-stopped$/m);
   assert.match(serviciosProd.get('web'), /^\s{4}restart: unless-stopped$/m);
   assert.match(serviciosProd.get('web'), /Dockerfile\.web/);

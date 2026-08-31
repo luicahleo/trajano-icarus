@@ -1,8 +1,6 @@
 ﻿param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
-    [ValidateSet('dev', 'prod')]
-    [string]$Modo = 'dev',
     [string]$Ip,
     [string]$SsidMobil,
     [switch]$SoloLocal,
@@ -93,19 +91,31 @@ function Construir-ContenidoProduccion {
     if (Test-Path $payload) { Remove-Item -Recurse -Force $payload }
     New-Item -ItemType Directory -Force (Join-Path $payload 'web/wwwroot') | Out-Null
 
-    & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Host/Icarus.Host/Icarus.Host.csproj') -c Release -o (Join-Path $payload 'web') --nologo
-    if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la API (modo producción).' }
-
-    Push-Location (Join-Path $PSScriptRoot 'web')
+    # npm (y a veces dotnet) escribe avisos por stderr; PowerShell 5.1 los
+    # convierte en NativeCommandError cuando la preferencia global es Stop.
+    $preferenciaErrores = $ErrorActionPreference
     try {
-        & npm ci --no-audit --no-fund
-        if ($LASTEXITCODE -ne 0) { throw 'No se pudieron instalar las dependencias web (modo producción).' }
-        & npm run build
-        if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar la PWA (modo producción).' }
+        $ErrorActionPreference = 'Continue'
+        & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Host/Icarus.Host/Icarus.Host.csproj') -c Release -o (Join-Path $payload 'web') --nologo
+        $codigoPublish = $LASTEXITCODE
+
+        Push-Location (Join-Path $PSScriptRoot 'web')
+        try {
+            & npm ci --no-audit --no-fund
+            $codigoNpmCi = $LASTEXITCODE
+            & npm run build
+            $codigoBuild = $LASTEXITCODE
+        }
+        finally {
+            Pop-Location
+        }
     }
     finally {
-        Pop-Location
+        $ErrorActionPreference = $preferenciaErrores
     }
+    if ($codigoPublish -ne 0) { throw 'No se pudo publicar la API (modo producción).' }
+    if ($codigoNpmCi -ne 0) { throw 'No se pudieron instalar las dependencias web (modo producción).' }
+    if ($codigoBuild -ne 0) { throw 'No se pudo compilar la PWA (modo producción).' }
 
     Copy-Item -Recurse -Force (Join-Path $PSScriptRoot 'web/dist/*') (Join-Path $payload 'web/wwwroot')
     Copy-Item -Force (Join-Path $PSScriptRoot 'Dockerfile.web') (Join-Path $payload 'Dockerfile.web')
@@ -134,19 +144,14 @@ New-Item -ItemType Directory -Force (Join-Path $raiz ".local/$Perfil/caddy-data"
 New-Item -ItemType Directory -Force (Join-Path $raiz ".local/$Perfil/caddy-config") | Out-Null
 Set-Content -Path (Join-Path $raiz ".local/$Perfil/ip.txt") -Value $ipLan -Encoding ascii
 
+# Un solo entorno local: el artefacto de producción (API + PWA en un contenedor,
+# como en la VPS) con SQL y Seq locales. No hay modo dev para el stack PC: los
+# cambios se prueban como se desplegarían, sin esperar el deploy.
 $archivosCompose = @(
-    '-f', 'docker-compose.dev.yml',
+    '-f', 'docker-compose.prodlocal.yml',
     '-f', "docker-compose.$Perfil.yml"
 )
-if ($Modo -eq 'prod') {
-    # VPS en local: el build de producción (API + PWA) con SQL y Seq locales.
-    $env:WEB_UPSTREAM = 'web:8080'
-    $archivosCompose = @(
-        '-f', 'docker-compose.prodlocal.yml',
-        '-f', "docker-compose.$Perfil.yml"
-    )
-    Construir-ContenidoProduccion
-}
+Construir-ContenidoProduccion
 
 if ($RecrearDatos) {
     try {
@@ -164,7 +169,7 @@ if ($RecrearDatos) {
 # En PC1/PC2/PC3 la API no tiene bind mount: sin esta reconstrucción Docker
 # puede reutilizar una imagen previa aunque el usuario haya cambiado C#.
 # Se prioriza ejecutar el código actual sobre el tiempo de arranque.
-$serviciosBuild = if ($Modo -eq 'prod') { @('web') } else { @('api', 'web') }
+$serviciosBuild = @('web')
 try {
     $ErrorActionPreference = 'Continue'
     & docker compose @archivosCompose build --no-cache @serviciosBuild
@@ -209,7 +214,7 @@ for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
 if (-not $saludable) {
     try {
         $ErrorActionPreference = 'Continue'
-        $serviciosLogs = if ($Modo -eq 'prod') { @('gateway', 'web') } else { @('gateway', 'web', 'api') }
+        $serviciosLogs = @('gateway', 'web')
         & docker compose @archivosCompose logs --tail 50 @serviciosLogs
     }
     finally {
@@ -219,7 +224,7 @@ if (-not $saludable) {
 }
 
 Write-Host ''
-Write-Host "Icarus ${nombreEquipo} (modo $Modo): https://$hostLan" -ForegroundColor Green
+Write-Host "Icarus ${nombreEquipo}: https://$hostLan" -ForegroundColor Green
 Write-Host "Seq local (solo desarrollo): http://localhost:5341" -ForegroundColor Green
 if (Test-Path $certificado) {
     Write-Host "CA pública para instalar en el móvil: $certificado" -ForegroundColor Yellow

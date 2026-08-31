@@ -1,8 +1,6 @@
 param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
-    [ValidateSet('dev', 'prod')]
-    [string]$Modo = 'dev',
     [switch]$Logs
 )
 
@@ -12,16 +10,9 @@ $ipLan = if (Test-Path $rutaIp) { (Get-Content $rutaIp -Raw).Trim() } else { '12
 $env:ICARUS_LAN_IP = $ipLan
 $env:ICARUS_LAN_HOST = "$ipLan.sslip.io"
 $archivosCompose = @(
-    '-f', 'docker-compose.dev.yml',
+    '-f', 'docker-compose.prodlocal.yml',
     '-f', "docker-compose.$Perfil.yml"
 )
-if ($Modo -eq 'prod') {
-    $env:WEB_UPSTREAM = 'web:8080'
-    $archivosCompose = @(
-        '-f', 'docker-compose.prodlocal.yml',
-        '-f', "docker-compose.$Perfil.yml"
-    )
-}
 
 $preferenciaErrores = $ErrorActionPreference
 try {

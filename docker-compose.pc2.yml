@@ -1,21 +1,14 @@
 # Extensión para probar Icarus desde un móvil en la red de PC2.
 # Usar mediante iniciar-pc2.ps1; ICARUS_LAN_IP e ICARUS_LAN_HOST son
-# obligatorias (las pone el script).
+# obligatorias (las pone el script). La web es el build de producción
+# (docker-compose.prodlocal.yml): sin dev server de Vite en el stack PC.
 services:
-  web:
-    environment:
-      # El host LAN (sslip.io) debe estar permitido por el dev server de Vite.
-      VITE_ALLOWED_HOST: "${ICARUS_LAN_HOST}"
-
   gateway:
     image: caddy:2.10.2-alpine
     container_name: icarus-gateway
     environment:
       ICARUS_LAN_IP: "${ICARUS_LAN_IP}"
       ICARUS_LAN_HOST: "${ICARUS_LAN_HOST}"
-      # El upstream del Caddyfile: dev server (5173) por defecto o el build de
-      # producción (8080) cuando el script corre con -Modo prod.
-      WEB_UPSTREAM: "${WEB_UPSTREAM:-web:5173}"
     ports:
       - "80:80"
       - "443:443"

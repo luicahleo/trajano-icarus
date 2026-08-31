@@ -1,6 +1,4 @@
 ﻿param(
-    [ValidateSet('dev', 'prod')]
-    [string]$Modo = 'dev',
     [string]$Ip,
     [switch]$Logs,
     [switch]$RecrearDatos,
@@ -9,7 +7,6 @@
 
 $argumentos = @{
     Perfil = 'pc1'
-    Modo = $Modo
     SsidMobil = 'aseproda'
 }
 if ($Ip) { $argumentos.Ip = $Ip }
