@@ -21,12 +21,10 @@ function fetchSimulado(reglas: Record<string, Response | Response[]>) {
     ]),
   );
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req =
-      init !== undefined
-        ? new Request(String(input), init)
-        : input instanceof Request
-          ? input
-          : new Request(String(input));
+    // Si input ya es un Request, usarlo tal cual: fetch(input, init) lo
+    // consume sin alterar method/body. Reconstruirlo desde String(input)
+    // perdería el POST; re-armarlo con body exigiría duplex.
+    const req = input instanceof Request ? input : new Request(String(input), init);
     const valor = colas.get(`${req.method} ${new URL(req.url).pathname}`)?.shift();
     return valor ?? new Response('', { status: 404 });
   });

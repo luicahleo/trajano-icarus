@@ -12,12 +12,10 @@ function respuesta(status: number, cuerpo?: unknown) {
 
 function fetchConSesion(funcionalidades: string[]) {
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req =
-      init !== undefined
-        ? new Request(String(input), init)
-        : input instanceof Request
-          ? input
-          : new Request(String(input));
+    // Si input ya es un Request, usarlo tal cual: fetch(input, init) lo
+    // consume sin alterar method/body. Reconstruirlo desde String(input)
+    // perdería el POST; re-armarlo con body exigiría duplex.
+    const req = input instanceof Request ? input : new Request(String(input), init);
     const ruta = new URL(req.url).pathname;
     if (ruta === '/api/identidad/sesion/renovar') {
       return respuesta(200, { accessToken: 't', expiraEnSegundos: 900 });
