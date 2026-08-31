@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
 import type { OperacionPendiente } from '../../lib/offline/tipos';
+import { obtenerEventosRecientes } from '../../lib/sesionDiagnostico';
 import {
+  actualizarContenidoOperacion,
   descartarOperacion,
   encolarOperacion,
   iniciarCoordinadorOffline,
@@ -59,6 +61,51 @@ describe('coordinador offline', () => {
     expect(op.estado).toBe('pendiente');
     await descartarOperacion(op.id);
     expect(obtenerConteoPendientes()).toBe(0);
+    onlineSpy.mockRestore();
+  });
+
+  test('si el almacén falla al encolar, registra el fallo en el diagnóstico y propaga', async () => {
+    const almacen = {
+      ...crearAlmacenColaMemoria(),
+      agregar: () => Promise.reject(new Error('IndexedDB no disponible')),
+    };
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen,
+      intervaloMs: 60_000,
+    });
+
+    await expect(encolarOperacion('produccion.crear', 'g1', {})).rejects.toThrow(
+      'IndexedDB no disponible',
+    );
+    const eventos = obtenerEventosRecientes(10);
+    expect(
+      eventos.some(
+        (e) => e.eventName === 'flow.offline_queue' && e.detail.includes('Fallo al encolar'),
+      ),
+    ).toBe(true);
+  });
+
+  test('actualizarContenidoOperacion cambia el cuerpo y registra el evento', async () => {
+    const almacen = crearAlmacenColaMemoria();
+    const onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen,
+      intervaloMs: 60_000,
+    });
+    await encolarOperacion('produccion.crear', 'g1', { cantidadMaples: 1 });
+    const [op] = await listarOperaciones();
+
+    await actualizarContenidoOperacion(op.id, { cantidadMaples: 5 });
+
+    const [actualizada] = await listarOperaciones();
+    expect((actualizada.cuerpo as { cantidadMaples: number }).cantidadMaples).toBe(5);
+    expect(
+      obtenerEventosRecientes(10).some(
+        (e) => e.eventName === 'flow.offline_queue' && e.detail.includes('actualizada'),
+      ),
+    ).toBe(true);
     onlineSpy.mockRestore();
   });
 

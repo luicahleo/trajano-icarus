@@ -194,8 +194,13 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
 - `RegistrarRecogidaDialog` y `RegistrarBajasDialog`: el botón Guardar deja de
   depender de `!online`; al encolar, cierra con snackbar «Guardado sin
   conexión».
-- Edición y eliminación de registros siguen deshabilitadas sin conexión (sin
-  cambios).
+- Los registros aún en cola se muestran en la tabla del día con un chip
+  «Pendiente», sin sumar a los totales hasta sincronizarse. Al ser datos
+  locales (nunca llegaron al servidor) se pueden **editar** (actualiza el
+  cuerpo encolado conservando su `idempotencyKey`) y **eliminar** (descarta la
+  operación de la cola, con confirmación) estén online u offline. La edición y
+  eliminación de registros **ya sincronizados** siguen deshabilitadas sin
+  conexión (conflicto de versiones, ver Fuera de alcance).
 
 ### 8. Pruebas
 
@@ -211,9 +216,10 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
 
 ## Fuera de alcance
 
-- Edición offline de registros (IMGA tiene `PendienteEdicion`; aquí se difiere:
-  el alta es el caso crítico y la edición offline añade conflicto de
-  versiones).
+- Edición offline de registros **ya sincronizados** (IMGA tiene
+  `PendienteEdicion`; aquí se difiere: el alta es el caso crítico y la edición
+  offline de registros del servidor añade conflicto de versiones). Los
+  pendientes en cola sí se editan y descartan localmente (decisión 7).
 - Vacunación offline (completar/cancelar tareas).
 - **Persistencia del token o de credenciales** (IMGA lo hacía en SecureStorage;
   aquí se descarta por la regla anti-PII — ver decisión 6).

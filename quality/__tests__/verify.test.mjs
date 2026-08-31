@@ -14,14 +14,20 @@ test('están declarados los gates de mojibake y de enlaces', () => {
 
 test('cada gate se invoca con el comando que le corresponde', () => {
   for (const gate of GATES) {
-    const esperado = gate.nombre.startsWith('Backend')
-      ? 'dotnet'
-      : gate.nombre.startsWith('Frontend')
-        ? process.platform === 'win32'
-          ? 'npm.cmd'
-          : 'npm'
-        : 'node';
-    assert.equal(gate.comando, esperado);
+    if (gate.nombre.startsWith('Backend')) {
+      assert.equal(gate.comando, 'dotnet');
+    } else if (gate.nombre.startsWith('Frontend')) {
+      // En Windows se invoca el CLI de npm con node directamente (sin shell,
+      // para no disparar el aviso DEP0190); en POSIX, el binario npm.
+      if (process.platform === 'win32' && gate.comando === process.execPath) {
+        assert.match(gate.args[0], /npm-cli\.js$/);
+      } else {
+        assert.equal(gate.comando, 'npm');
+      }
+      assert.ok(gate.args.includes('run'));
+    } else {
+      assert.equal(gate.comando, 'node');
+    }
     assert.ok(Array.isArray(gate.args) && gate.args.length > 0);
   }
 });

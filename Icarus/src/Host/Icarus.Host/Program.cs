@@ -97,7 +97,20 @@ api.MapClientes();
 api.MapGestionAvicola();
 api.MapDiagnosticos();
 
-app.UseStaticFiles();
+// sw.js, el manifiesto e index.html gobiernan qué build ejecuta la PWA: si el
+// navegador los cachea, el service worker viejo sigue sirviendo un bundle
+// obsoleto (el update check del SW respeta la caché HTTP). Los assets con hash
+// sí son cacheables de forma segura.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        if (ctx.File.Name is "sw.js" or "manifest.webmanifest" or "index.html")
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+});
 app.MapFallbackToFile("index.html");
 
 var esDesarrollo = app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing");

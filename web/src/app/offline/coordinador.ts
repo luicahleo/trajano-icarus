@@ -82,16 +82,23 @@ export async function encolarOperacion(
   cuerpo: unknown,
 ): Promise<void> {
   if (!almacen) throw new Error('Coordinador offline no iniciado.');
-  await almacen.agregar({
-    id: crypto.randomUUID(),
-    tipo,
-    galponId,
-    cuerpo,
-    estado: 'pendiente',
-    intentos: 0,
-    creadoEn: new Date().toISOString(),
-    proximoIntentoEn: null,
-  });
+  try {
+    await almacen.agregar({
+      id: crypto.randomUUID(),
+      tipo,
+      galponId,
+      cuerpo,
+      estado: 'pendiente',
+      intentos: 0,
+      creadoEn: new Date().toISOString(),
+      proximoIntentoEn: null,
+    });
+  } catch (error) {
+    // Sin este evento, un IndexedDB inaccesible dejaba el guardado colgado o
+    // con error genérico y el diagnóstico no mostraba ningún rastro.
+    registrarEventoFlujo({ eventName: 'flow.offline_queue', detail: `Fallo al encolar: ${tipo}` });
+    throw error;
+  }
   await refrescarConteo();
   registrarEventoFlujo({ eventName: 'flow.offline_queue', detail: `Operación encolada: ${tipo}` });
   avisosSnackbar.forEach((a) => a('Guardado sin conexión: se sincronizará al volver la red.'));
@@ -114,6 +121,17 @@ export function suscribirAvisos(aviso: (mensaje: string) => void): () => void {
 
 export async function listarOperaciones(): Promise<OperacionPendiente[]> {
   return almacen ? almacen.listarTodas() : [];
+}
+
+// Edición offline de una operación aún no sincronizada: solo cambia el cuerpo
+// (misma idempotencyKey dentro de él); el estado y los reintentos no se tocan.
+export async function actualizarContenidoOperacion(id: string, cuerpo: unknown): Promise<void> {
+  await almacen?.actualizar(id, { cuerpo });
+  await refrescarConteo();
+  registrarEventoFlujo({
+    eventName: 'flow.offline_queue',
+    detail: 'Operación pendiente actualizada',
+  });
 }
 
 export async function reintentarOperacion(id: string): Promise<void> {

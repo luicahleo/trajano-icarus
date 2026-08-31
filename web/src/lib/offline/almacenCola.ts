@@ -8,7 +8,9 @@ export interface AlmacenCola {
   eliminar(id: string): Promise<void>;
   actualizar(
     id: string,
-    cambios: Partial<Pick<OperacionPendiente, 'estado' | 'intentos' | 'proximoIntentoEn'>>,
+    cambios: Partial<
+      Pick<OperacionPendiente, 'estado' | 'intentos' | 'proximoIntentoEn' | 'cuerpo'>
+    >,
   ): Promise<void>;
   contar(): Promise<number>;
 }

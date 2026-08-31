@@ -5,6 +5,7 @@ export interface EventoFlujo {
   timestamp: string;
   eventName:
     | 'flow.navigation'
+    | 'flow.app'
     | 'flow.api_call'
     | 'flow.offline'
     | 'flow.online'
@@ -20,13 +21,27 @@ export interface EventoFlujo {
 
 const SESION_CLAVE = 'icarus.sesion';
 const DEBUG_CLAVE = 'icarus.debug';
+const EVENTOS_CLAVE = 'icarus.diagnostico.eventos';
 const MAX_EVENTOS = 100;
 const MAX_DETALLE = 120;
 const PATRON_SESION = /^SES-[0-9A-F]{12}$/;
 const PATRON_UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-const eventos: EventoFlujo[] = [];
-let siguienteSeq = 1;
+// El buffer se conserva en sessionStorage: sin esto, recargar la pestaña a mitad
+// de una prueba offline borraba la traza justo antes de exportarla. Es por
+// pestaña y se pierde al cerrarla, igual que la sesión de diagnóstico.
+function cargarEventos(): EventoFlujo[] {
+  try {
+    const crudo = sessionStorage.getItem(EVENTOS_CLAVE);
+    const datos: unknown = crudo ? JSON.parse(crudo) : [];
+    return Array.isArray(datos) ? (datos as EventoFlujo[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+const eventos: EventoFlujo[] = cargarEventos();
+let siguienteSeq = (eventos.at(-1)?.seq ?? 0) + 1;
 
 interface EntornoDiagnostico {
   DEV: boolean;
@@ -76,6 +91,11 @@ export function registrarEventoFlujo(evento: Omit<EventoFlujo, 'seq' | 'timestam
   });
   siguienteSeq += 1;
   if (eventos.length > MAX_EVENTOS) eventos.splice(0, eventos.length - MAX_EVENTOS);
+  try {
+    sessionStorage.setItem(EVENTOS_CLAVE, JSON.stringify(eventos));
+  } catch {
+    // Cuota llena o almacenamiento bloqueado: se pierde la persistencia, no el evento.
+  }
 }
 
 export function obtenerEventosRecientes(n: number): EventoFlujo[] {
@@ -86,7 +106,12 @@ export function exportarDiagnostico(permitido = diagnosticoManualPermitido()): v
   if (!permitido) return;
 
   const carga = JSON.stringify(
-    { sessionId: obtenerSesionId(), generadoEn: new Date().toISOString(), eventos },
+    {
+      sessionId: obtenerSesionId(),
+      build: __APP_BUILD__,
+      generadoEn: new Date().toISOString(),
+      eventos,
+    },
     null,
     2,
   );
