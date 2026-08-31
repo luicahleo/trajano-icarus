@@ -71,6 +71,31 @@ describe('offline avícola', () => {
     expect((await listarOperaciones()).length).toBe(1); // no encoló el 4xx
   });
 
+  test('un envío sin respuesta dentro del plazo encola y no bloquea la UI', async () => {
+    vi.useFakeTimers();
+    try {
+      const colgado = new Promise<Response>(() => {});
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => colgado),
+      );
+      // El despachador rechaza: la operación encolada no se elimina tras el sync
+      // automático disparado por encolarOperacion.
+      limpiar = iniciarCoordinadorOffline({
+        despachar: vi.fn(async () => {
+          throw new TypeError('sin red');
+        }),
+        almacen: crearAlmacenColaMemoria(),
+      });
+      const promesa = guardarRecogida('g1', recogida);
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(await promesa).toBe(true);
+      expect((await listarOperaciones()).length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('502/503/504 del gateway encolan sin propagar', async () => {
     for (const status of [502, 503, 504]) {
       limpiar = iniciarCoordinadorOffline({
@@ -166,9 +191,7 @@ describe('offline avícola', () => {
     await listarGranjas();
     const eventos = obtenerEventosRecientes(20);
     expect(
-      eventos.some(
-        (e) => e.eventName === 'flow.offline_cache' && e.detail.includes('granjas'),
-      ),
+      eventos.some((e) => e.eventName === 'flow.offline_cache' && e.detail.includes('granjas')),
     ).toBe(true);
   });
 });
