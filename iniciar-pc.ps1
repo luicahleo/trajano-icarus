@@ -103,6 +103,11 @@ function Construir-ContenidoProduccion {
         try {
             & npm ci --no-audit --no-fund
             $codigoNpmCi = $LASTEXITCODE
+            # El entorno local es el lugar donde se diagnostican los fallos
+            # (vista ?debug=1 descarga el JSON de eventos), así que el build de
+            # producción local siempre lleva el diagnóstico manual habilitado.
+            # El pipeline de despliegue no lo define: en la VPS sigue apagado.
+            $env:VITE_HABILITAR_DIAGNOSTICO_MANUAL = 'true'
             & npm run build
             $codigoBuild = $LASTEXITCODE
         }

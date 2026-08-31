@@ -83,6 +83,10 @@ test('un solo entorno: el core y los wrappers siempre usan el build de producci�
   }
 });
 
+test('el build local de producción habilita el diagnóstico manual (?debug=1)', () => {
+  assert.match(core, /VITE_HABILITAR_DIAGNOSTICO_MANUAL = 'true'/);
+});
+
 test('el wrapper de PC1 sin WiFi inicia el entorno solo en localhost', () => {
   assert.match(core, /\[switch\]\$SoloLocal/);
   assert.match(core, /if \(\$SoloLocal\)[\s\S]*'127\.0\.0\.1'/);
