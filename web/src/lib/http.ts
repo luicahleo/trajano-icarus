@@ -1,5 +1,6 @@
 import { crearCorrelationId } from './correlation';
 import { crearErrorId, reportarDiagnostico } from './diagnosticos';
+import { avisarActividadApi } from './offline/actividadApi';
 import { clearAccessToken, getAccessToken, setAccessToken } from './session';
 import { obtenerSesionId, registrarEventoFlujo, sanitizarRuta } from './sesionDiagnostico';
 import type { SesionInfo } from './tipos';
@@ -199,6 +200,9 @@ export async function peticion<T>(o: {
     throw error;
   }
   registrarLlamadaApi(original, inicio, respuesta);
+  // Cualquier respuesta (aun un 401 o 500) prueba que el API responde: el
+  // coordinador offline adelanta una sincronización pospuesta si la hay.
+  avisarActividadApi();
 
   if (respuesta.status === 401 && reintentable && (await renovarSesionInterna())) {
     const reintento = crearRequest();
@@ -211,6 +215,7 @@ export async function peticion<T>(o: {
       throw error;
     }
     registrarLlamadaApi(reintento, inicioReintento, respuesta);
+    avisarActividadApi();
   } else if (respuesta.status === 401 && reintentable) {
     clearAccessToken();
   }

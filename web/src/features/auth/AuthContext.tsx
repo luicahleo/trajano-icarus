@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { renovarSesion } from '../../lib/http';
 import { clearAccessToken } from '../../lib/session';
+import { registrarEventoFlujo } from '../../lib/sesionDiagnostico';
 import type { Funcionalidad, Modulo, Rol, UsuarioActual } from '../../lib/tipos';
 import {
   borrarSesionOffline,
@@ -29,6 +30,9 @@ export interface EstadoAuth {
   tieneRol: (...roles: Rol[]) => boolean;
   tieneFuncionalidad: (...funcionalidades: Funcionalidad[]) => boolean;
   iniciarSesion: (cred: Credenciales) => Promise<void>;
+  // Entrada offline explícita desde el login: restaura el snapshot del
+  // trabajador (sin token ni correo) si sigue vigente. Devuelve null si no hay.
+  entrarSinConexion: () => Promise<UsuarioActual | null>;
   cerrarSesion: () => void;
 }
 
@@ -95,11 +99,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await guardarSesionOffline(me).catch(() => undefined);
   }, []);
 
+  const entrarSinConexionFn = useCallback(async (): Promise<UsuarioActual | null> => {
+    const snapshot = await obtenerSesionOffline().catch(() => null);
+    if (!snapshot) return null;
+    setUsuario(snapshot);
+    setEsSnapshot(true);
+    registrarEventoFlujo({
+      eventName: 'flow.app',
+      detail: 'Sesión restaurada sin conexión desde el login',
+    });
+    return snapshot;
+  }, []);
+
   const cerrarSesionFn = useCallback(() => {
     clearAccessToken();
     setUsuario(null);
     setEsSnapshot(false);
-    void borrarSesionOffline();
+    // Con red se borra el snapshot (dispositivo compartido, spec decisión 6).
+    // Sin red se conserva: permite reincorporarse offline desde el login y
+    // caduca a las 12 h igualmente.
+    if (navigator.onLine) void borrarSesionOffline();
   }, []);
 
   const tieneRol = useCallback(
@@ -126,9 +145,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tieneRol,
       tieneFuncionalidad,
       iniciarSesion: iniciarSesionFn,
+      entrarSinConexion: entrarSinConexionFn,
       cerrarSesion: cerrarSesionFn,
     }),
-    [usuario, cargando, tieneRol, tieneFuncionalidad, iniciarSesionFn, cerrarSesionFn],
+    [
+      usuario,
+      cargando,
+      tieneRol,
+      tieneFuncionalidad,
+      iniciarSesionFn,
+      entrarSinConexionFn,
+      cerrarSesionFn,
+    ],
   );
 
   return <AuthContext.Provider value={estado}>{children}</AuthContext.Provider>;

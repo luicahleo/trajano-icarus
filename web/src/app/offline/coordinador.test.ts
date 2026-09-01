@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { avisarActividadApi } from '../../lib/offline/actividadApi';
 import { crearAlmacenColaMemoria } from '../../lib/offline/almacenCola';
 import type { OperacionPendiente } from '../../lib/offline/tipos';
 import { obtenerEventosRecientes } from '../../lib/sesionDiagnostico';
@@ -265,5 +266,65 @@ describe('coordinador offline', () => {
 
     await new Promise((r) => setTimeout(r, 200)); // ~4 ventanas de reintento
     expect(sonda).toHaveBeenCalledTimes(1); // solo la del ciclo inicial
+  });
+
+  test('una respuesta real del API adelanta la sync pospuesta sin esperar al reintento', async () => {
+    const almacen = crearAlmacenColaMemoria();
+    await almacen.agregar({
+      id: 'adelantar-sync',
+      tipo: 'produccion.crear',
+      galponId: 'g1',
+      cuerpo: {},
+      estado: 'pendiente',
+      intentos: 0,
+      creadoEn: '2026-08-29T09:00:00.000Z',
+      proximoIntentoEn: null,
+    });
+    let apiVivo = false;
+    const despachar = vi.fn(async () => {});
+    limpiar = iniciarCoordinadorOffline({
+      despachar,
+      almacen,
+      intervaloMs: 60_000,
+      sonda: async () => apiVivo,
+      reintentoSondaMs: 60_000, // largo: solo el aviso puede adelantar la sync
+    });
+    await vi.waitFor(() => {
+      expect(
+        // «reintento en 60 s» distingue la pospuesta de ESTE ciclo: el buffer
+        // de eventos es compartido entre tests y una pospuesta vieja resolvería
+        // la espera antes de que el reintento de este ciclo quede armado.
+        obtenerEventosRecientes(10).some(
+          (e) =>
+            e.eventName === 'flow.offline_sync' &&
+            e.detail.includes('pospuesta') &&
+            e.detail.includes('60 s'),
+        ),
+      ).toBe(true);
+    });
+    expect(despachar).not.toHaveBeenCalled();
+
+    // Diagnóstico SES-C54A1A220B07: el API volvió entre sondas (la UI ya hacía
+    // GET 200) y la cola esperó al timer ciego de 15 s. Una respuesta real es
+    // prueba de conectividad: la sync se adelanta sin esperar al reintento.
+    apiVivo = true;
+    avisarActividadApi();
+    await vi.waitFor(() => expect(despachar).toHaveBeenCalledTimes(1));
+    expect(await almacen.contar()).toBe(0);
+  });
+
+  test('sin sync pospuesta, el aviso de actividad del API no dispara sondas extra', async () => {
+    const sonda = vi.fn(async () => true);
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+      intervaloMs: 60_000,
+      sonda,
+    });
+    await vi.waitFor(() => expect(sonda).toHaveBeenCalledTimes(1)); // ciclo inicial
+
+    avisarActividadApi();
+    await new Promise((r) => setTimeout(r, 100));
+    expect(sonda).toHaveBeenCalledTimes(1);
   });
 });

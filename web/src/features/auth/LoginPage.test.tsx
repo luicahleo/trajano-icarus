@@ -1,8 +1,21 @@
-import { render, screen } from '@testing-library/react';
+import 'fake-indexeddb/auto';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { guardarSesionOffline } from '../../app/offline/sesionOffline';
+import type { UsuarioActual } from '../../lib/tipos';
 import { AuthProvider } from './AuthContext';
 import { LoginPage } from './LoginPage';
+
+const snapshotTrabajador: UsuarioActual = {
+  usuarioId: 'u1',
+  correo: null,
+  rol: 'Trabajador',
+  clienteId: 'c1',
+  trabajadorId: 't1',
+  modulos: ['GestionAvicola'],
+  funcionalidades: ['ProduccionHuevos'],
+};
 
 function respuesta(status: number, cuerpo?: unknown, headers: Record<string, string> = {}) {
   return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
@@ -17,6 +30,7 @@ function renderLogin() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/avicola" element={<div>inicio avícola</div>} />
           <Route path="/admin/clientes" element={<div>clientes de administrador</div>} />
         </Routes>
       </AuthProvider>
@@ -109,5 +123,34 @@ describe('LoginPage', () => {
     expect(await screen.findByText(/No autorizado/)).toBeInTheDocument();
     expect(screen.getByText(/abc-123/)).toBeInTheDocument();
     expect(screen.queryByText(/admin@icarus\.test/)).not.toBeInTheDocument();
+  });
+
+  test('sin red y con snapshot permite continuar sin conexión sin llamar a la API', async () => {
+    await guardarSesionOffline(snapshotTrabajador);
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    // Restauración al montar rechazada por el backend: sesión anónima aunque
+    // haya snapshot (decisión 6). El login offline es una acción explícita.
+    const fetchMock = vi.fn().mockResolvedValue(respuesta(401));
+    vi.stubGlobal('fetch', fetchMock);
+    const usuario = userEvent.setup();
+
+    renderLogin();
+    act(() => window.dispatchEvent(new Event('offline')));
+
+    const boton = await screen.findByRole('button', { name: /continuar sin conexión/i });
+    await usuario.click(boton);
+
+    expect(await screen.findByText('inicio avícola')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([arg]) => esLlamadaA('/api/identidad/sesion')(arg))).toBe(
+      false,
+    );
+  });
+
+  test('con red no muestra la entrada sin conexión', async () => {
+    await guardarSesionOffline(snapshotTrabajador);
+    renderLogin();
+    // Espera a que la restauración termine para que el efecto offline haya corrido.
+    await screen.findByRole('button', { name: 'Iniciar sesión' });
+    expect(screen.queryByRole('button', { name: /continuar sin conexión/i })).toBeNull();
   });
 });

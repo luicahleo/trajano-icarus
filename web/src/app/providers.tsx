@@ -1,11 +1,12 @@
 import { useEffect, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../features/auth/AuthContext';
 import { crearDespachadorAvicola } from '../features/avicola/offline';
 import { apiAccesible } from '../lib/offline/sondaApi';
 import { iniciarCoordinadorOffline } from './offline/coordinador';
+import { crearQueryClient } from './queryClient';
 
-const queryClient = new QueryClient();
+const queryClient = crearQueryClient();
 
 export function AppProviders({ children }: { children: ReactNode }) {
   // El arranque del coordinador crea la cola IndexedDB, suscribe el evento

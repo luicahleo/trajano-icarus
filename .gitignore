@@ -40,4 +40,4 @@ sourcemaps/
 .DS_Store
 Thumbs.db
 
-.log
+*.log

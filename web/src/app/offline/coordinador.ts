@@ -1,4 +1,5 @@
 import type { AlmacenCola } from '../../lib/offline/almacenCola';
+import { suscribirActividadApi } from '../../lib/offline/actividadApi';
 import { crearAlmacenColaIndexedDb } from '../../lib/offline/almacenIndexedDb';
 import type { CacheLectura } from '../../lib/offline/cacheLectura';
 import { crearCacheLecturaIndexedDb } from '../../lib/offline/cacheLecturaIndexedDb';
@@ -109,12 +110,22 @@ export function iniciarCoordinadorOffline(deps: {
   };
   window.addEventListener('online', alConectar);
   window.addEventListener('offline', alDesconectar);
+  // Una respuesta real del API (cualquiera, aun un 401) prueba conectividad:
+  // si había una sync pospuesta con pendientes, se adelanta sin esperar al
+  // reintento programado de la sonda.
+  const desuscribirActividad = suscribirActividadApi(() => {
+    if (reintentoSonda === null) return;
+    window.clearTimeout(reintentoSonda);
+    reintentoSonda = null;
+    void cicloConSonda();
+  });
   const timer = window.setInterval(alConectar, deps.intervaloMs ?? 5 * 60_000);
   void refrescarConteo();
   void cicloConSonda(); // ciclo inicial: vacía la cola si quedó de otra sesión
   return () => {
     window.removeEventListener('online', alConectar);
     window.removeEventListener('offline', alDesconectar);
+    desuscribirActividad();
     window.clearInterval(timer);
     if (reintentoSonda !== null) window.clearTimeout(reintentoSonda);
     almacen = null;
