@@ -39,6 +39,22 @@ describe('AlmacenCola en memoria', () => {
     expect((await a.listarPendientes('2026-08-29T11:00:00.000Z', 2)).length).toBe(2);
   });
 
+  test('rearmarPendientes quita el backoff conservando intentos y estado', async () => {
+    const a = crearAlmacenColaMemoria();
+    await a.agregar(op('backoff', { intentos: 1, proximoIntentoEn: '2026-08-29T12:00:00.000Z' }));
+    await a.agregar(op('lista'));
+    await a.agregar(op('err', { estado: 'error', proximoIntentoEn: '2026-08-29T12:00:00.000Z' }));
+
+    expect(await a.rearmarPendientes()).toBe(1);
+
+    const todas = await a.listarTodas();
+    expect(todas.find((x) => x.id === 'backoff')?.proximoIntentoEn).toBeNull();
+    expect(todas.find((x) => x.id === 'backoff')?.intentos).toBe(1); // historial intacto
+    expect(todas.find((x) => x.id === 'lista')?.proximoIntentoEn).toBeNull();
+    // Las de estado 'error' (rechazo del backend o intentos agotados) no se tocan.
+    expect(todas.find((x) => x.id === 'err')?.proximoIntentoEn).toBe('2026-08-29T12:00:00.000Z');
+  });
+
   test('actualizar cambia estado, intentos y proximoIntentoEn', async () => {
     const a = crearAlmacenColaMemoria();
     await a.agregar(op('1'));

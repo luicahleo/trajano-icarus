@@ -13,6 +13,11 @@ export interface AlmacenCola {
     >,
   ): Promise<void>;
   contar(): Promise<number>;
+  // Quita el backoff (proximoIntentoEn) de las pendientes conservando intentos
+  // y estado: al recuperar la red, esperar el backoff no aporta nada. Las de
+  // estado 'error' no se tocan (rechazo del backend o intentos agotados: piden
+  // decisión manual). Devuelve cuántas se rearmaron.
+  rearmarPendientes(): Promise<number>;
 }
 
 export function crearAlmacenColaMemoria(): AlmacenCola {
@@ -42,6 +47,16 @@ export function crearAlmacenColaMemoria(): AlmacenCola {
     },
     async contar() {
       return ops.size;
+    },
+    async rearmarPendientes() {
+      let rearmadas = 0;
+      for (const o of ops.values()) {
+        if (o.estado === 'pendiente' && o.proximoIntentoEn !== null) {
+          ops.set(o.id, { ...o, proximoIntentoEn: null });
+          rearmadas++;
+        }
+      }
+      return rearmadas;
     },
   };
 }

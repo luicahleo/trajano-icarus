@@ -42,5 +42,19 @@ export function crearAlmacenColaIndexedDb(): AlmacenCola {
       });
     },
     contar: () => conStore('readonly', (s) => promesaDePedido(s.count())),
+    rearmarPendientes: async () => {
+      const todas = await conStore('readonly', (s) =>
+        promesaDePedido(s.getAll() as IDBRequest<OperacionPendiente[]>),
+      );
+      const conBackoff = todas.filter(
+        (o) => o.estado === 'pendiente' && o.proximoIntentoEn !== null,
+      );
+      for (const o of conBackoff) {
+        await conStore('readwrite', (s) =>
+          promesaDePedido(s.put({ ...o, proximoIntentoEn: null })).then(() => {}),
+        );
+      }
+      return conBackoff.length;
+    },
   };
 }

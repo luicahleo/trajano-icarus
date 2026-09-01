@@ -30,9 +30,17 @@ export function iniciarCoordinadorOffline(deps: {
   almacen?: AlmacenCola;
   cache?: CacheLectura;
   intervaloMs?: number;
+  // Sonda de conectividad real con el API (navigator.onLine miente: solo dice
+  // que hay interfaz de red). Sin sonda inyectada se asume alcanzable.
+  sonda?: () => Promise<boolean>;
+  // Reintento corto tras una sonda fallida habiendo pendientes: sin él, una
+  // recuperación del API sin evento online (WiFi viva, backend caído un rato)
+  // dejaba la cola esperando hasta el timer de respaldo de 5 minutos.
+  reintentoSondaMs?: number;
 }): () => void {
   almacen = deps.almacen ?? crearAlmacenColaIndexedDb();
   cache = deps.cache ?? crearCacheLecturaIndexedDb();
+  const sonda = deps.sonda ?? (() => Promise.resolve(true));
   const motor = crearMotorSincronizacion({
     almacen,
     despachar: async (op) => {
@@ -44,14 +52,57 @@ export function iniciarCoordinadorOffline(deps: {
     registrarEventoFlujo({ eventName: 'flow.offline_sync', detail: 'Sincronización iniciada' });
     await motor.sincronizar();
     await refrescarConteo();
+    // Visibilidad del backoff: sin este detalle, una operación en espera por
+    // reintentos aparecía como "completada (1 pendientes)" sin explicación.
+    const ahoraIso = new Date().toISOString();
+    const enEspera = ((await almacen?.listarTodas()) ?? []).filter(
+      (o) =>
+        o.estado === 'pendiente' && o.proximoIntentoEn !== null && o.proximoIntentoEn > ahoraIso,
+    ).length;
     registrarEventoFlujo({
       eventName: 'flow.offline_sync',
-      detail: `Sincronización completada (${conteo} pendientes)`,
+      detail: `Sincronización completada (${conteo} pendientes${
+        enEspera > 0 ? `, ${enEspera} en espera por reintentos` : ''
+      })`,
     });
+  };
+  // Ciclo protegido por sonda: si el API no responde, pospone sin quemar
+  // intentos contra una red caída. Si responde, rearma el backoff (al volver
+  // la red, esperar el backoff no aporta) y sincroniza.
+  let reintentoSonda: number | null = null;
+  const cicloConSonda = async (): Promise<void> => {
+    if (!(await sonda())) {
+      const pendientes = (await almacen?.contar()) ?? 0;
+      if (pendientes > 0 && reintentoSonda === null) {
+        const esperaMs = deps.reintentoSondaMs ?? 15_000;
+        registrarEventoFlujo({
+          eventName: 'flow.offline_sync',
+          detail: `Sincronización pospuesta: el API no responde (reintento en ${Math.round(esperaMs / 1000)} s)`,
+        });
+        reintentoSonda = window.setTimeout(() => {
+          reintentoSonda = null;
+          void cicloConSonda();
+        }, esperaMs);
+      } else {
+        registrarEventoFlujo({
+          eventName: 'flow.offline_sync',
+          detail: 'Sincronización pospuesta: el API no responde',
+        });
+      }
+      return;
+    }
+    const rearmadas = (await almacen?.rearmarPendientes()) ?? 0;
+    if (rearmadas > 0) {
+      registrarEventoFlujo({
+        eventName: 'flow.offline_sync',
+        detail: `Reactivadas ${rearmadas} operaciones en espera`,
+      });
+    }
+    await sincronizar?.();
   };
   const alConectar = () => {
     registrarEventoFlujo({ eventName: 'flow.online', detail: 'Conexión restablecida' });
-    void sincronizar?.();
+    void cicloConSonda();
   };
   const alDesconectar = () => {
     registrarEventoFlujo({ eventName: 'flow.offline', detail: 'Sin conexión de red' });
@@ -60,11 +111,12 @@ export function iniciarCoordinadorOffline(deps: {
   window.addEventListener('offline', alDesconectar);
   const timer = window.setInterval(alConectar, deps.intervaloMs ?? 5 * 60_000);
   void refrescarConteo();
-  void sincronizar(); // ciclo inicial: vacía la cola si quedó de otra sesión
+  void cicloConSonda(); // ciclo inicial: vacía la cola si quedó de otra sesión
   return () => {
     window.removeEventListener('online', alConectar);
     window.removeEventListener('offline', alDesconectar);
     window.clearInterval(timer);
+    if (reintentoSonda !== null) window.clearTimeout(reintentoSonda);
     almacen = null;
     cache = null;
     sincronizar = null;

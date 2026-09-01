@@ -103,6 +103,25 @@ Reglas (paridad con `OfflineSyncEngine` de IMGA, verificadas en su código):
   (terminal, requiere acción del usuario).
 - **Backoff exponencial** 2^intentos minutos desde el último intento
   (`proximoIntentoEn`).
+- **Rearme al recuperar la red** (2026-09-01, diagnóstico SES-F83DFD4FD0ED):
+  los disparadores 1 y 2 reariman el backoff antes de sincronizar
+  (`rearmarPendientes` quita `proximoIntentoEn` conservando `intentos` y
+  `estado`; las de estado `error` no se tocan). Sin rearme, una operación en
+  backoff quedaba invisible hasta 2-5 min tras volver la red.
+- **Sonda de conectividad real** (2026-09-01, mismo diagnóstico): los
+  disparadores 1, 2 y el ciclo inicial primero sondean el API
+  (`apiAccesible`, GET `/api/identidad/me` con timeout de 4 s; cualquier
+  respuesta salvo 408/502/503/504 cuenta). `navigator.onLine` solo garantiza
+  interfaz de red levantada, no backend vivo: sin sonda, el evento `online`
+  quemaba reintentos en timeouts de 15 s contra una red caída. Si la sonda
+  falla, el ciclo se pospone sin tocar la cola.
+- **Reintento de sonda con pendientes** (2026-09-01, diagnóstico
+  SES-3C45D68DB78A): si la sonda pospone habiendo operaciones en cola, se
+  programa un reintento a los 15 s (un solo temporizador a la vez, cancelado
+  al desmontar). Sin él, una recuperación del API sin evento `online` (WiFi
+  viva, backend caído unos segundos) dejaba la cola esperando hasta el timer
+  de respaldo y el usuario tenía que refrescar la página a mano. Sin
+  pendientes no se reintentan sondas.
 - Al sincronizar una operación se invalida el prefijo `['avicola']` de
   TanStack Query para refrescar la UI.
 

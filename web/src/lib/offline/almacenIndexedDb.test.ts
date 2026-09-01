@@ -29,4 +29,26 @@ describe('AlmacenCola IndexedDB', () => {
     await a.eliminar('lista');
     expect(await a.contar()).toBe(2);
   });
+
+  test('rearmarPendientes quita el backoff conservando intentos y estado', async () => {
+    const a = crearAlmacenColaIndexedDb();
+    await a.agregar(
+      op('rearmar-backoff', { intentos: 1, proximoIntentoEn: '2026-08-29T12:00:00.000Z' }),
+    );
+    await a.agregar(op('rearmar-error', { estado: 'error' }));
+    // La base se comparte entre tests del archivo: contar solo lo rearmable ahora.
+    const rearmables = (await a.listarTodas()).filter(
+      (o) => o.estado === 'pendiente' && o.proximoIntentoEn !== null,
+    ).length;
+
+    expect(await a.rearmarPendientes()).toBe(rearmables);
+
+    const todas = await a.listarTodas();
+    const rearmada = todas.find((x) => x.id === 'rearmar-backoff');
+    expect(rearmada?.proximoIntentoEn).toBeNull();
+    expect(rearmada?.intentos).toBe(1);
+    expect(todas.find((x) => x.id === 'rearmar-error')?.estado).toBe('error');
+    await a.eliminar('rearmar-backoff');
+    await a.eliminar('rearmar-error');
+  });
 });

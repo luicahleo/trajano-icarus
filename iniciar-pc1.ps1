@@ -1,4 +1,6 @@
-﻿param(
+﻿#.\iniciar-pc.ps1 -Perfil pc1 -SsidMobil aseproda
+
+param(
     [string]$Ip,
     [switch]$Logs,
     [switch]$RecrearDatos,

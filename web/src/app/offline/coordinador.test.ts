@@ -126,4 +126,144 @@ describe('coordinador offline', () => {
     await vi.waitFor(() => expect(despachar).toHaveBeenCalledTimes(1));
     expect(await almacen.contar()).toBe(0);
   });
+
+  test('si la sonda no alcanza el API, el ciclo inicial no quema intentos', async () => {
+    const almacen = crearAlmacenColaMemoria();
+    await almacen.agregar({
+      id: 'sin-api',
+      tipo: 'produccion.crear',
+      galponId: 'g1',
+      cuerpo: {},
+      estado: 'pendiente',
+      intentos: 0,
+      creadoEn: '2026-08-29T09:00:00.000Z',
+      proximoIntentoEn: null,
+    });
+    const despachar = vi.fn(async () => {});
+    limpiar = iniciarCoordinadorOffline({
+      despachar,
+      almacen,
+      intervaloMs: 60_000,
+      sonda: async () => false,
+    });
+
+    await vi.waitFor(() => {
+      expect(
+        obtenerEventosRecientes(10).some(
+          (e) => e.eventName === 'flow.offline_sync' && e.detail.includes('pospuesta'),
+        ),
+      ).toBe(true);
+    });
+    expect(despachar).not.toHaveBeenCalled();
+    const [op] = await almacen.listarTodas();
+    expect(op.intentos).toBe(0); // sin intento quemado contra una red caída
+  });
+
+  test('al volver la red (evento online) reactiva operaciones en backoff', async () => {
+    const almacen = crearAlmacenColaMemoria();
+    await almacen.agregar({
+      id: 'en-backoff',
+      tipo: 'produccion.crear',
+      galponId: 'g1',
+      cuerpo: {},
+      estado: 'pendiente',
+      intentos: 1,
+      creadoEn: '2026-08-29T09:00:00.000Z',
+      proximoIntentoEn: '2999-01-01T00:00:00.000Z', // backoff lejano
+    });
+    let apiAccesible = false; // arranca con el API caído: el ciclo inicial no debe tocarla
+    const despachar = vi.fn(async () => {});
+    limpiar = iniciarCoordinadorOffline({
+      despachar,
+      almacen,
+      intervaloMs: 60_000,
+      sonda: async () => apiAccesible,
+    });
+    await vi.waitFor(() => {
+      expect(
+        obtenerEventosRecientes(10).some(
+          (e) => e.eventName === 'flow.offline_sync' && e.detail.includes('pospuesta'),
+        ),
+      ).toBe(true);
+    });
+    expect(despachar).not.toHaveBeenCalled();
+
+    apiAccesible = true;
+    window.dispatchEvent(new Event('online'));
+
+    await vi.waitFor(() => expect(despachar).toHaveBeenCalledTimes(1));
+    expect(await almacen.contar()).toBe(0);
+    expect(
+      obtenerEventosRecientes(20).some(
+        (e) => e.eventName === 'flow.offline_sync' && e.detail.includes('Reactivada'),
+      ),
+    ).toBe(true);
+  });
+
+  test('si el despacho falla, el cierre de la sync informa de la espera por reintentos', async () => {
+    const despachar = vi.fn(async () => {
+      throw new TypeError('sin red');
+    });
+    arrancar(despachar);
+    await encolarOperacion('produccion.crear', 'g1', { cantidadMaples: 1 });
+
+    await vi.waitFor(() => {
+      expect(
+        obtenerEventosRecientes(20).some(
+          (e) => e.eventName === 'flow.offline_sync' && e.detail.includes('en espera por reintentos'),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  test('con pendientes y sonda caída, reintenta la sonda solo hasta recuperar el API', async () => {
+    const almacen = crearAlmacenColaMemoria();
+    await almacen.agregar({
+      id: 'reintento-sonda',
+      tipo: 'produccion.crear',
+      galponId: 'g1',
+      cuerpo: {},
+      estado: 'pendiente',
+      intentos: 0,
+      creadoEn: '2026-08-29T09:00:00.000Z',
+      proximoIntentoEn: null,
+    });
+    let apiVivo = false;
+    const despachar = vi.fn(async () => {});
+    limpiar = iniciarCoordinadorOffline({
+      despachar,
+      almacen,
+      intervaloMs: 60_000,
+      sonda: async () => apiVivo,
+      reintentoSondaMs: 50,
+    });
+    await vi.waitFor(() => {
+      expect(
+        obtenerEventosRecientes(10).some(
+          (e) => e.eventName === 'flow.offline_sync' && e.detail.includes('pospuesta'),
+        ),
+      ).toBe(true);
+    });
+    expect(despachar).not.toHaveBeenCalled();
+
+    // El API se recupera sin evento online (WiFi viva, backend caído): el
+    // reintento programado de la sonda lo descubre y vacía la cola.
+    apiVivo = true;
+    await vi.waitFor(() => expect(despachar).toHaveBeenCalledTimes(1));
+    expect(await almacen.contar()).toBe(0);
+  });
+
+  test('sin pendientes, una sonda caída no programa reintentos', async () => {
+    const sonda = vi.fn(async () => false);
+    limpiar = iniciarCoordinadorOffline({
+      despachar: vi.fn(async () => {}),
+      almacen: crearAlmacenColaMemoria(),
+      intervaloMs: 60_000,
+      sonda,
+      reintentoSondaMs: 50,
+    });
+
+    await new Promise((r) => setTimeout(r, 200)); // ~4 ventanas de reintento
+    expect(sonda).toHaveBeenCalledTimes(1); // solo la del ciclo inicial
+  });
 });
