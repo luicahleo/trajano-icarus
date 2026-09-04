@@ -1,3 +1,4 @@
+using Icarus.Identity.Domain;
 using Microsoft.AspNetCore.Identity;
 
 namespace Icarus.Identity.Infrastructure.Persistencia;
@@ -11,4 +12,8 @@ public sealed class Usuario : IdentityUser<Guid>
     public Guid? ClienteId { get; set; }
     public Guid? TrabajadorId { get; set; }
     public bool Activo { get; set; } = true;
+
+    // Cuentas de CAISY (spec SP8): bitmask de funcionalidades globales; para
+    // el resto de roles queda en Ninguno.
+    public FuncionalidadesCaisy FuncionalidadesCaisy { get; set; } = FuncionalidadesCaisy.Ninguno;
 }

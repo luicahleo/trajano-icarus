@@ -3,6 +3,7 @@ using Icarus.Clientes.Application.Trabajadores;
 using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
 using Icarus.Host.Servicios;
+using Icarus.Identity.Domain;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using MediatR;
 
@@ -99,6 +100,13 @@ public static class ClientesEndpoints
             .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.ProduccionHuevos));
         grupo.MapGet("/funcionalidad/mortalidad", () => Results.Ok(new { estado = "ok" }))
             .RequireAuthorization(PoliticasClientes.Para(Funcionalidades.Mortalidad));
+
+        // Sondeo de la política global de CAISY (spec SP8): el mecanismo de
+        // autorización se prueba aunque los endpoints de precios lleguen en la
+        // Tarea 4. Cualquier cuenta sin la función recibe 403.
+        grupo.MapGet("/funcionalidad-caisy/gestorpedidoalimento", () => Results.Ok(new { estado = "ok" }))
+            .RequireAuthorization(PoliticasAutorizacion.FuncionalidadCaisy(
+                FuncionalidadesCaisy.GestorPedidoAlimento));
 
         return app;
     }

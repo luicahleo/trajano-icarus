@@ -8,4 +8,8 @@ public static class ClaimsIdentidad
     public const string Rol = "rol";
     public const string ClienteId = "clienteId";
     public const string TrabajadorId = "trabajadorId";
+
+    // Bitmask de FuncionalidadesCaisy (spec SP8). Solo va en el token de las
+    // cuentas de CAISY con alguna función asignada.
+    public const string FuncionalidadesCaisy = "funcCaisy";
 }

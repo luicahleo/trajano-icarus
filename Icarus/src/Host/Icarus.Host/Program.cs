@@ -94,6 +94,7 @@ var api = app.MapGroup("/api");
 api.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 api.MapIdentidad();
 api.MapClientes();
+api.MapUsuariosCaisy();
 api.MapGestionAvicola();
 api.MapDiagnosticos();
 

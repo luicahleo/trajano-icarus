@@ -26,7 +26,7 @@ public sealed class IniciarSesionHandler : IRequestHandler<IniciarSesionCommand,
 
         var accessToken = _emisor.Emitir(
             credencial.UsuarioId, credencial.Rol, credencial.ClienteId, credencial.TrabajadorId,
-            out var expiraEnSegundos);
+            credencial.FuncionalidadesCaisy, out var expiraEnSegundos);
         var refreshToken = await _refresh.EmitirAsync(credencial.UsuarioId, cancellationToken);
         return new ResultadoSesion(accessToken, refreshToken, expiraEnSegundos);
     }
