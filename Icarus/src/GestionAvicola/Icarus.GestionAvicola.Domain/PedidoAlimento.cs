@@ -13,6 +13,7 @@ public sealed class PedidoAlimento : AggregateRoot
     private readonly List<DetallePedidoAlimento> _detalles = [];
     private readonly List<TransicionPedidoAlimento> _historial = [];
     private EntregaPedidoAlimento? _entrega;
+    private RecepcionPedidoAlimento? _recepcion;
 
     private PedidoAlimento()
     {
@@ -61,6 +62,10 @@ public sealed class PedidoAlimento : AggregateRoot
 
     // Entrega única registrada por CAISY (spec SP8C); null hasta el despacho.
     public EntregaPedidoAlimento? Entrega => _entrega;
+
+    // Recepción única registrada por el tenant (spec SP8C); null hasta la
+    // confirmación. Ambos estados recibidos son terminales.
+    public RecepcionPedidoAlimento? Recepcion => _recepcion;
 
     // Suma de subtotales congelados; null mientras el pedido no se haya
     // enviado (el borrador puede construirse sin precios).
@@ -224,6 +229,49 @@ public sealed class PedidoAlimento : AggregateRoot
         return operacion(_entrega);
     }
 
+    // Recepción (spec SP8C "Despacho, nota y recepción"): el tenant confirma
+    // desde Despachado la cantidad realmente recibida por cada línea. La
+    // coincidencia completa contra lo entregado termina RecibidoConforme; con
+    // diferencias termina RecibidoConDiferencias y el snapshot queda calculado
+    // y persistido. Ambos estados son terminales: un reintento choca con el
+    // estado y no duplica la transición ni la notificación.
+    public void ConfirmarRecepcion(
+        IReadOnlyList<DatosLineaRecepcion> lineasRecibidas, Guid actorId)
+    {
+        AsegurarEstado(EstadoPedidoAlimento.Despachado, "Solo un pedido despachado se puede recibir.");
+        var recibidas = lineasRecibidas
+            .GroupBy(l => l.Tipo)
+            .ToDictionary(g => g.Key, g => g.Sum(l => l.CantidadRecibida));
+        var despachadas = _entrega!.Lineas.ToDictionary(l => l.TipoAlimento);
+        if (recibidas.Count != despachadas.Count
+            || despachadas.Keys.Any(t => !recibidas.ContainsKey(t)))
+            throw new ReglaNegocioException(
+                despachadas.Keys.Any(t => !recibidas.ContainsKey(t))
+                    ? "La recepción debe cubrir todas las líneas del pedido."
+                    : "La recepción incluye una línea que no pertenece al pedido.");
+
+        var lineas = recibidas.Select(par => new DetalleRecepcionPedidoAlimento(
+            par.Key, Presentacion(), par.Value)).ToList();
+        var diferencias = lineas
+            .Join(despachadas.Values, r => r.TipoAlimento, e => e.TipoAlimento,
+                (r, e) => new DiferenciaRecepcion(
+                    r.TipoAlimento, r.CantidadRecibida, e.CantidadEntregada,
+                    r.CantidadRecibida - e.CantidadEntregada))
+            .Where(d => d.Diferencia != 0)
+            .ToList();
+        var totalRecibido = lineas
+            .Join(_detalles, r => r.TipoAlimento, d => d.TipoAlimento,
+                (r, d) => r.Equivalentes40Kg * (d.PrecioFinalPor40Kg ?? 0m))
+            .Sum();
+        _recepcion = new RecepcionPedidoAlimento(FechaDespacho(), totalRecibido, lineas, diferencias);
+        Estado = diferencias.Count == 0
+            ? EstadoPedidoAlimento.RecibidoConforme
+            : EstadoPedidoAlimento.RecibidoConDiferencias;
+        RegistrarTransicion(EstadoPedidoAlimento.Despachado, Estado, actorId);
+    }
+
+    private DateOnly FechaDespacho() => _entrega!.FechaDespacho;
+
     private void AsegurarEstado(EstadoPedidoAlimento esperado, string mensaje)
     {
         if (Estado != esperado)
@@ -307,6 +355,10 @@ public sealed record DatosDetallePedido(
 // Línea manual del despacho (spec SP8C): cantidad entera entregada en la
 // unidad natural de la presentación, referida al tipo solicitado.
 public sealed record DatosLineaEntrega(TipoAlimento Tipo, int CantidadEntregada);
+
+// Línea de la recepción del tenant (spec SP8C): cantidad entera realmente
+// recibida en la unidad natural de la presentación.
+public sealed record DatosLineaRecepcion(TipoAlimento Tipo, int CantidadRecibida);
 
 // Precio vigente resuelto por la Application al enviar: se congela en las
 // líneas como snapshot (spec SP8). La identidad del precio es

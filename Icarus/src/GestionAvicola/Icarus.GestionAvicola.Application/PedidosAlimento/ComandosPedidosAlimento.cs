@@ -504,6 +504,19 @@ public sealed record AgregarDocumentoNotaCommand(
         { ["Sustituye"] = DatoRegistroVuelo.Entero });
 }
 
+// Recepción (spec SP8C): el tenant confirma desde Despachado la cantidad
+// realmente recibida por línea; el resultado (conforme o con diferencias) se
+// notifica a la bandeja de CAISY en la misma transacción. Los reintentos
+// chocan con el estado y responden 409 sin duplicar nada.
+public sealed record ConfirmarRecepcionPedidoCommand(
+    Guid PedidoId, IReadOnlyList<DatosLineaRecepcion> LineasRecibidas)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.recibir", new Dictionary<string, DatoRegistroVuelo>
+        { ["Lineas"] = DatoRegistroVuelo.Entero });
+}
+
 public sealed class AgregarDocumentoNotaValidator : AbstractValidator<AgregarDocumentoNotaCommand>
 {
     public AgregarDocumentoNotaValidator()
@@ -511,6 +524,19 @@ public sealed class AgregarDocumentoNotaValidator : AbstractValidator<AgregarDoc
         RuleFor(c => c.PedidoId).NotEmpty();
         RuleFor(c => c.Contenido).NotNull();
         RuleFor(c => c.NombreArchivo).MaximumLength(260);
+    }
+}
+
+public sealed class ConfirmarRecepcionPedidoValidator
+    : AbstractValidator<ConfirmarRecepcionPedidoCommand>
+{
+    public ConfirmarRecepcionPedidoValidator()
+    {
+        RuleFor(c => c.PedidoId).NotEmpty();
+        RuleFor(c => c.LineasRecibidas).NotNull().NotEmpty();
+        RuleForEach(c => c.LineasRecibidas)
+            .Must(l => l.CantidadRecibida >= 0)
+            .WithMessage("La cantidad recibida no puede ser negativa.");
     }
 }
 
@@ -573,6 +599,45 @@ public sealed class AgregarDocumentoNotaHandler(
         if (sano.Length > 200)
             sano = sano[^200..];
         return sano.Length == 0 ? "nota.jpg" : sano;
+    }
+}
+
+// Recepción (spec SP8C "Despacho, nota y recepción"): la confirma el tenant
+// (Cliente o Trabajador con la función PedidoAlimento) sobre un pedido
+// despachado. El filtro del DbContext aísla el tenant: un id ajeno responde
+// 404 genérico. El agregado termina el pedido como RecibidoConforme o
+// RecibidoConDiferencias, persiste el snapshot de diferencias y el total
+// recibido, y la notificación para CAISY se crea en la misma transacción
+// local. Los reintentos chocan con el estado y responden 409.
+public sealed class ConfirmarRecepcionPedidoHandler(
+    IRepositorioPedidosAlimento repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
+    : IRequestHandler<ConfirmarRecepcionPedidoCommand>
+{
+    public async Task Handle(ConfirmarRecepcionPedidoCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Despachado)
+            throw new ConflictException("Solo un pedido despachado se puede recibir.");
+        pedido.ConfirmarRecepcion(request.LineasRecibidas, actorId);
+        notificaciones.Agregar(NotificacionInterna.ParaCaisy(
+            pedido.Estado == EstadoPedidoAlimento.RecibidoConforme
+                ? TipoNotificacionPedido.RecepcionConforme
+                : TipoNotificacionPedido.RecepcionConDiferencias,
+            pedido.Id));
+        registroVuelo.Decidir("avicola.pedidos.recibir", "recepcion", "aplicada",
+            new Dictionary<string, object?>
+            {
+                ["Lineas"] = request.LineasRecibidas.Count,
+                ["Diferencias"] = pedido.Recepcion!.Diferencias.Count,
+            });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
 

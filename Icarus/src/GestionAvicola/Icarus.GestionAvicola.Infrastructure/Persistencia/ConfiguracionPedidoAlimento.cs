@@ -27,5 +27,8 @@ public sealed class ConfiguracionPedidoAlimento : IEntityTypeConfiguration<Pedid
         builder.HasOne(p => p.Entrega).WithOne()
             .HasForeignKey<EntregaPedidoAlimento>("PedidoAlimentoId").IsRequired();
         builder.Navigation(p => p.Entrega).HasField("_entrega");
+        builder.HasOne(p => p.Recepcion).WithOne()
+            .HasForeignKey<RecepcionPedidoAlimento>("PedidoAlimentoId").IsRequired();
+        builder.Navigation(p => p.Recepcion).HasField("_recepcion");
     }
 }

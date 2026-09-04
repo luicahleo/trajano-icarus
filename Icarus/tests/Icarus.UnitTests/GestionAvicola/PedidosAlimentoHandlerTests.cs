@@ -545,6 +545,81 @@ public class PedidosAlimentoHandlerTests
         Assert.DoesNotContain("<", nombre, StringComparison.Ordinal);
     }
 
+    // SP8C Tarea 3 (spec: "Despacho, nota y recepción"): el tenant confirma la
+    // recepción por línea desde Despachado; CAISY recibe la notificación en la
+    // misma transacción y los reintentos chocan con el estado (409).
+    private static DatosLineaRecepcion LineaRecibida(int cantidad = 95) =>
+        new(TipoAlimento.PosturaUno, cantidad);
+
+    private ConfirmarRecepcionPedidoHandler CrearReceptor() =>
+        new(_repositorio, _usuarioActual, _registroVuelo, _unidadTrabajo, _notificaciones);
+
+    [Fact]
+    public async Task RecibirDesdeDespachadoNotificaACaisyEnLaMismaTransaccion()
+    {
+        var pedido = PedidoAceptado();
+        pedido.RegistrarDespacho("NOTA-1", FechasNegocio.Hoy(), null,
+            [LineaEntregada(95)], FechasNegocio.Hoy(), UsuarioId);
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        await CrearReceptor().Handle(
+            new ConfirmarRecepcionPedidoCommand(pedido.Id, [LineaRecibida(95)]),
+            CancellationToken.None);
+
+        Assert.Equal(EstadoPedidoAlimento.RecibidoConforme, pedido.Estado);
+        _notificaciones.Received(1).Agregar(Arg.Is<NotificacionInterna>(n =>
+            n.Tipo == TipoNotificacionPedido.RecepcionConforme &&
+            n.PedidoId == pedido.Id &&
+            n.ClienteId == null));
+        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecibirConDiferenciasNotificaElTipoCorrespondiente()
+    {
+        var pedido = PedidoAceptado();
+        pedido.RegistrarDespacho("NOTA-1", FechasNegocio.Hoy(), null,
+            [LineaEntregada(95)], FechasNegocio.Hoy(), UsuarioId);
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        await CrearReceptor().Handle(
+            new ConfirmarRecepcionPedidoCommand(pedido.Id, [LineaRecibida(92)]),
+            CancellationToken.None);
+
+        Assert.Equal(EstadoPedidoAlimento.RecibidoConDiferencias, pedido.Estado);
+        Assert.Single(pedido.Recepcion!.Diferencias);
+        _notificaciones.Received(1).Agregar(Arg.Is<NotificacionInterna>(n =>
+            n.Tipo == TipoNotificacionPedido.RecepcionConDiferencias));
+    }
+
+    [Fact]
+    public async Task RecibirUnPedidoNoDespachadoDevuelveConflicto()
+    {
+        var pedido = PedidoAceptado();
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            CrearReceptor().Handle(
+                new ConfirmarRecepcionPedidoCommand(pedido.Id, [LineaRecibida()]),
+                CancellationToken.None));
+
+        Assert.Equal(EstadoPedidoAlimento.Aceptado, pedido.Estado);
+        Assert.Null(pedido.Recepcion);
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecibirUnIdAjenoDevuelveNoEncontrado()
+    {
+        _repositorio.ObtenerPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((PedidoAlimento?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CrearReceptor().Handle(
+                new ConfirmarRecepcionPedidoCommand(Guid.NewGuid(), [LineaRecibida()]),
+                CancellationToken.None));
+    }
+
     [Fact]
     public async Task DespacharSinNumeroDeNotaFallaLaValidacion()
     {

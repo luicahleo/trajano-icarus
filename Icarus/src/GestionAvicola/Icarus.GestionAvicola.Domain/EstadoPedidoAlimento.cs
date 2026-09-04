@@ -9,7 +9,9 @@ public enum EstadoPedidoAlimento
     Solicitado = 1,
     Rechazado = 2,
     Aceptado = 3,
-    // SP8C: estado de despacho agregado al final, sin renumerar los
-    // persistidos. La recepción agrega sus estados en su tarea.
+    // SP8C: estados de despacho y recepción agregados al final, sin renumerar
+    // los persistidos. Ambos estados recibidos son terminales.
     Despachado = 4,
+    RecibidoConforme = 5,
+    RecibidoConDiferencias = 6,
 }

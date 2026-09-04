@@ -62,15 +62,15 @@ recepción por línea y reconocimiento correcto del gasto.
 
 **Crear/modificar:** dominio, commands/queries y tests de `PedidosAlimento`.
 
-- [ ] Rojo: Cliente o Trabajador con `PedidoAlimento` confirma desde
+- [x] Rojo: Cliente o Trabajador con `PedidoAlimento` confirma desde
   `Despachado` y registra cantidad realmente recibida por cada línea.
-- [ ] Rojo: coincidencia completa termina `RecibidoConforme`; cualquier
+- [x] Rojo: coincidencia completa termina `RecibidoConforme`; cualquier
   diferencia termina `RecibidoConDiferencias`; ambos son terminales.
-- [ ] Rojo: no se omiten líneas, no hay cantidades negativas/fraccionarias ni
+- [x] Rojo: no se omiten líneas, no hay cantidades negativas/fraccionarias ni
   acceso de otro tenant; reintento no duplica transición/notificación.
-- [ ] Calcular y persistir snapshot de diferencias y total recibido.
-- [ ] Notificar resultado a CAISY dentro de la misma transacción.
-- [ ] Commit previsto: `feat(avicola): confirmar recepcion de alimento`.
+- [x] Calcular y persistir snapshot de diferencias y total recibido.
+- [x] Notificar resultado a CAISY dentro de la misma transacción.
+- [x] Commit previsto: `feat(avicola): confirmar recepcion de alimento`.
 
 ## Tarea 4 — API e interfaces de despacho/recepción
 
