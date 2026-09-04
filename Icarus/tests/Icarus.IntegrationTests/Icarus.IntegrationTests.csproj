@@ -21,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Fixtures\NotificacionPreciosMuestra.pdf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Host\Icarus.Host\Icarus.Host.csproj" />
   </ItemGroup>
 

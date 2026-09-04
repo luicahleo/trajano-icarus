@@ -10,6 +10,11 @@ public interface IRepositorioNotificacionesPrecios
 {
     void Agregar(NotificacionPreciosAlimentos notificacion);
 
+    // Los detalles recreados por ActualizarBorrador llevan clave Guid generada
+    // en el dominio: se registran como Added explícitamente (el DetectChanges
+    // de EF Core los marcaría Modified por asumir que ya existen).
+    void AgregarDetalle(DetallePrecioAlimento detalle);
+
     Task<NotificacionPreciosAlimentos?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default);
 

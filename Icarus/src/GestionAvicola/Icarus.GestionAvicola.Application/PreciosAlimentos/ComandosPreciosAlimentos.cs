@@ -162,6 +162,10 @@ public sealed class ActualizarBorradorPreciosHandler(
         notificacion.ActualizarBorrador(
             request.FechaDocumento, request.VigenteDesde,
             request.AporteCaisy, request.Fondo, request.Servicios, request.Detalles);
+        // Los detalles recreados llevan clave Guid generada en el dominio:
+        // se registran como Added explícitamente (ver IRepositorioNotificacionesPrecios).
+        foreach (var detalle in notificacion.Detalles)
+            repositorio.AgregarDetalle(detalle);
         registroVuelo.Decidir("avicola.precios.actualizar-borrador", "edicion", "aplicada",
             new Dictionary<string, object?> { ["CantidadDetalles"] = notificacion.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);

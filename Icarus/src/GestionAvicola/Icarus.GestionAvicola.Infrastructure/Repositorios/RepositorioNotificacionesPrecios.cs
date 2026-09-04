@@ -13,6 +13,9 @@ public sealed class RepositorioNotificacionesPrecios(GestionAvicolaDbContext db)
     public void Agregar(NotificacionPreciosAlimentos notificacion) =>
         db.NotificacionesPreciosAlimentos.Add(notificacion);
 
+    public void AgregarDetalle(DetallePrecioAlimento detalle) =>
+        db.Set<DetallePrecioAlimento>().Add(detalle);
+
     public async Task<NotificacionPreciosAlimentos?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default) =>
         await db.NotificacionesPreciosAlimentos.Include(n => n.Detalles)
