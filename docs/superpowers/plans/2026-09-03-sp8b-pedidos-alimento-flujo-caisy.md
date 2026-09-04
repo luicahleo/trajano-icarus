@@ -147,16 +147,24 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 - `web/src/features/trabajadores/TrabajadoresPage.tsx`.
 - tests colocados junto a cada página/componente.
 
-- [ ] Rojo: Cliente/Trabajador autorizado ve la bandeja tenant compartida;
+- [x] Rojo: Cliente/Trabajador autorizado ve la bandeja tenant compartida;
   crea y edita cantidades enteras, borra borrador y envía con resumen de precio.
-- [ ] Mostrar publicación vigente, recomendación por edades de galpones sin
+  (20/20 tests de la feature tras corregir mocks con cuerpo en 204, textos
+  partidos de MUI y binding de la presentación en el formulario)
+- [x] Mostrar publicación vigente, recomendación por edades de galpones sin
   obligar galpón/cantidad, cupo semanal y estados/historial.
-- [ ] Devolución reabre el mismo borrador y muestra el motivo; rechazo queda
+  (se añadieron los endpoints tenant `precios-vigentes` y `cupo` con su prueba
+  de integración, porque el catálogo de precios solo estaba expuesto a CAISY)
+- [x] Devolución reabre el mismo borrador y muestra el motivo; rechazo queda
   terminal; aceptación/ETA aparecen en detalle y notificaciones.
-- [ ] Asegurar que la feature falla de forma explícita sin red y no entra en
+  (el detalle muestra el motivo del historial y la bandeja compone el mensaje
+  de cada notificación; la marca de lectura es idempotente)
+- [x] Asegurar que la feature falla de forma explícita sin red y no entra en
   `offline.ts`, IndexedDB ni precalentado.
-- [ ] Comandos: `npm test -- --run pedidos-alimento` y `npm run typecheck` desde `web/`.
-- [ ] Commit previsto: `feat(web): gestionar pedidos de alimento`.
+  (api.ts usa solo `peticion` de `lib/http`, sin `conCacheLectura`)
+- [x] Comandos: `npm test -- --run pedidos-alimento` (20/20) y
+  `npm run typecheck` desde `web/`, más lint, build y suite completa (244).
+- [x] Commit previsto: `feat(web): gestionar pedidos de alimento`.
 
 ## Tarea 6 — Bandeja CAISY MVC
 

@@ -6,6 +6,7 @@ using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
+using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
 using Icarus.Identity.Domain;
 using Icarus.Identity.Infrastructure.Autenticacion;
@@ -36,6 +37,17 @@ public static class PedidosAlimentoEndpoints
         });
         tenant.MapGet("/", async (ISender mediator, CancellationToken cancellationToken) =>
             Results.Ok(await mediator.Send(new ListarPedidosAlimentoQuery(), cancellationToken)));
+        // Publicación vigente y cupo semanal para la bandeja del tenant
+        // (spec SP8): la publicación es global pero su lectura para pedidos
+        // queda autorizada por la función del tenant.
+        tenant.MapGet("/precios-vigentes", async Task<IResult> (
+            ISender mediator, CancellationToken cancellationToken) =>
+        {
+            var vigente = await mediator.Send(new ObtenerPrecioVigenteQuery(null), cancellationToken);
+            return vigente is null ? Results.NotFound() : Results.Ok(vigente);
+        });
+        tenant.MapGet("/cupo", async (ISender mediator, CancellationToken cancellationToken) =>
+            Results.Ok(await mediator.Send(new ObtenerCupoPedidosQuery(), cancellationToken)));
         tenant.MapGet("/{id:guid}", async (Guid id, ISender mediator,
             CancellationToken cancellationToken) =>
             Results.Ok(await mediator.Send(new ObtenerPedidoAlimentoQuery(id), cancellationToken)));

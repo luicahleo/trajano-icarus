@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
 import EggRoundedIcon from '@mui/icons-material/EggRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded';
 import VaccinesRoundedIcon from '@mui/icons-material/VaccinesRounded';
 import type { Rol } from '../lib/tipos';
 
@@ -25,16 +26,25 @@ const ENLACE_AVICOLA: EnlaceNavegacion = {
   icono: <EggRoundedIcon />,
 };
 
+const ENLACE_PEDIDOS: EnlaceNavegacion = {
+  etiqueta: 'Pedidos de alimento',
+  ruta: '/pedidos',
+  icono: <LocalShippingRoundedIcon />,
+};
+
 export function obtenerEnlacesNavegacion(
   rol: Rol | null,
   tieneFuncionalidadAvicola: boolean,
+  tienePedidoAlimento = false,
 ): EnlaceNavegacion[] {
   const propios = rol ? (ENLACES_POR_ROL[rol] ?? []) : [];
   const avicola =
     rol === 'Cliente' || (rol === 'Trabajador' && tieneFuncionalidadAvicola)
       ? [ENLACE_AVICOLA]
       : [];
-  return [...propios, ...avicola];
+  const pedidos =
+    rol === 'Cliente' || (rol === 'Trabajador' && tienePedidoAlimento) ? [ENLACE_PEDIDOS] : [];
+  return [...propios, ...pedidos, ...avicola];
 }
 
 export function obtenerTituloRuta(ruta: string, enlaces: EnlaceNavegacion[]): string {

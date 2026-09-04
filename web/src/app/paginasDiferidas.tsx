@@ -45,6 +45,21 @@ export const EficienciaPage = lazy(() =>
     default: modulo.EficienciaPage,
   })),
 );
+export const PedidosAlimentoPage = lazy(() =>
+  import('../features/pedidos-alimento/PedidosAlimentoPage').then((modulo) => ({
+    default: modulo.PedidosAlimentoPage,
+  })),
+);
+export const PedidoAlimentoDetallePage = lazy(() =>
+  import('../features/pedidos-alimento/PedidoAlimentoDetallePage').then((modulo) => ({
+    default: modulo.PedidoAlimentoDetallePage,
+  })),
+);
+export const PedidoFormularioPage = lazy(() =>
+  import('../features/pedidos-alimento/PedidoFormularioPage').then((modulo) => ({
+    default: modulo.PedidoFormularioPage,
+  })),
+);
 export const AdminVacunacionPage = lazy(() =>
   import('../features/admin/vacunacion/AdminVacunacionPage').then((modulo) => ({
     default: modulo.AdminVacunacionPage,

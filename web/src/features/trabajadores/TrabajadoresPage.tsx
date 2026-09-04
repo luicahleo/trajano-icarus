@@ -24,7 +24,11 @@ import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { TablaDatos } from '../../app/ui/TablaDatos';
 import type { Columna } from '../../app/ui/TablaDatos';
 import { ApiError } from '../../lib/http';
-import type { FuncionalidadOperativaTrabajador, TrabajadorResumen } from '../../lib/tipos';
+import type {
+  Funcionalidad,
+  FuncionalidadOperativaTrabajador,
+  TrabajadorResumen,
+} from '../../lib/tipos';
 import { useAuth } from '../auth/AuthContext';
 import { hoyIso } from '../avicola/constantes';
 import {
@@ -71,11 +75,22 @@ const FUNCIONALIDADES_OPERATIVAS: FuncionalidadOperativaTrabajador[] = [
   'ProduccionHuevos',
   'Mortalidad',
   'Vacunacion',
+  'PedidoAlimento',
 ];
+
+function esOperativa(f: Funcionalidad): f is FuncionalidadOperativaTrabajador {
+  return (
+    f === 'ProduccionHuevos' ||
+    f === 'Mortalidad' ||
+    f === 'Vacunacion' ||
+    f === 'PedidoAlimento'
+  );
+}
 
 function etiquetaFuncionalidad(funcionalidad: FuncionalidadOperativaTrabajador): string {
   if (funcionalidad === 'ProduccionHuevos') return 'Producción de huevos';
   if (funcionalidad === 'Mortalidad') return 'Mortalidad';
+  if (funcionalidad === 'PedidoAlimento') return 'Pedidos de alimento';
   return 'Vacunación';
 }
 
@@ -185,12 +200,7 @@ export function TrabajadoresPage() {
       clave: 'funcionalidades',
       encabezado: 'Funcionalidades',
       render: (t) =>
-        t.funcionalidades
-          .filter(
-            (f): f is FuncionalidadOperativaTrabajador =>
-              f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion',
-          )
-          .map(etiquetaFuncionalidad)
+        t.funcionalidades.filter(esOperativa).map(etiquetaFuncionalidad)
           .join(', ') || 'Ninguna',
     },
     {
@@ -211,12 +221,7 @@ export function TrabajadoresPage() {
               variant="outlined"
               onClick={() => {
                 setConfigurando(t);
-                setFuncionalidades(
-                  t.funcionalidades.filter(
-                    (f): f is FuncionalidadOperativaTrabajador =>
-                      f === 'ProduccionHuevos' || f === 'Mortalidad' || f === 'Vacunacion',
-                  ),
-                );
+                setFuncionalidades(t.funcionalidades.filter(esOperativa));
               }}
             >
               Funcionalidades

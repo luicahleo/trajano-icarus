@@ -20,6 +20,9 @@ import {
   GalponesPage,
   GalponPage,
   EficienciaPage,
+  PedidosAlimentoPage,
+  PedidoAlimentoDetallePage,
+  PedidoFormularioPage,
 } from './paginasDiferidas';
 import { RedirigirSegunRol } from './RedirigirSegunRol';
 import { RaizAplicacion } from './RaizAplicacion';
@@ -157,6 +160,54 @@ export const router = createBrowserRouter([
                 <RequiereFuncionalidad funcionalidades={['ProduccionHuevos']}>
                   <Suspense fallback={<CargandoRuta />}>
                     <EficienciaPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/pedidos',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['PedidoAlimento']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <PedidosAlimentoPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/pedidos/nuevo',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['PedidoAlimento']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <PedidoFormularioPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/pedidos/:id',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['PedidoAlimento']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <PedidoAlimentoDetallePage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/pedidos/:id/editar',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['PedidoAlimento']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <PedidoFormularioPage />
                   </Suspense>
                 </RequiereFuncionalidad>
               </ProtectedRoute>

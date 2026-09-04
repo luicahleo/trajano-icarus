@@ -265,6 +265,37 @@ public class PedidosAlimentoEndpointsTests
     }
 
     [Fact]
+    public async Task LaBandejaDelTenantExponeCupoYPreciosVigentes()
+    {
+        var cliente = _factory.CreateClient();
+        var tokenCliente = await LoginComo(cliente, SemillaIdentidad.EmailCliente);
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        await ImportarYPublicarAsync(caisy, tokenCaisy);
+
+        var cupo = await cliente.SendAsync(Pedido(HttpMethod.Get, "/api/pedidos-alimento/cupo", tokenCliente));
+        Assert.Equal(HttpStatusCode.OK, cupo.StatusCode);
+        var cuerpoCupo = await cupo.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(3, cuerpoCupo.GetProperty("maximo").GetInt32());
+        // El cupo compartido con otras pruebas no hace determinista el conteo:
+        // se valida el rango, no el valor exacto.
+        var enviados = cuerpoCupo.GetProperty("enviados").GetInt32();
+        Assert.InRange(enviados, 0, 3);
+
+        var vigente = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento/precios-vigentes", tokenCliente));
+        Assert.Equal(HttpStatusCode.OK, vigente.StatusCode);
+        var cuerpoVigente = await vigente.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Publicada", cuerpoVigente.GetProperty("estado").GetString());
+        Assert.True(cuerpoVigente.GetProperty("detalles").GetArrayLength() > 0);
+
+        // El trabajador sin la función no consulta el cupo.
+        var tokenTrabajador = await LoginComo(cliente, SemillaIdentidad.EmailTrabajador);
+        var prohibido = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento/cupo", tokenTrabajador));
+        Assert.Equal(HttpStatusCode.Forbidden, prohibido.StatusCode);
+    }
+
+    [Fact]
     public async Task FlujoCompletoConTransicionesRechazoYNotificaciones()
     {
         var cliente = _factory.CreateClient();

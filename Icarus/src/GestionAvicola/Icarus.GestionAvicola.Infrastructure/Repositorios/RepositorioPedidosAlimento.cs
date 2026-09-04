@@ -54,18 +54,29 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
         return (items, total);
     }
 
-    public async Task<int> ContarEnviadosEnSemanaBloqueandoAsync(
+    public Task<int> ContarEnviadosEnSemanaBloqueandoAsync(
         Guid clienteId, DateOnly desde, DateOnly hasta,
         CancellationToken cancellationToken = default) =>
         // Cuentan los pedidos que hayan salido del borrador y no estén
         // borrados (spec SP8): Estado 0 es Borrador, así la devolución libera
         // el cupo temporalmente y el reenvío del mismo pedido no lo consume
-        // otra vez (cuenta una sola vez por pedido y semana).
-        await db.PedidosAlimento
+        // otra vez (cuenta una sola vez por pedido y semana). UPDLOCK con
+        // semántica serializable bloquea el rango hasta el fin de la
+        // transacción del envío.
+        db.PedidosAlimento
             .FromSqlInterpolated(
                 $@"SELECT * FROM gestion_avicola.pedidos_alimentos WITH (UPDLOCK, HOLDLOCK)
                    WHERE ClienteId = {clienteId} AND EstaActivo = 1 AND Estado <> 0
                      AND FechaPedido BETWEEN {desde} AND {hasta}")
+            .CountAsync(cancellationToken);
+
+    public Task<int> ContarEnviadosEnSemanaAsync(
+        Guid clienteId, DateOnly desde, DateOnly hasta,
+        CancellationToken cancellationToken = default) =>
+        db.PedidosAlimento
+            .Where(p => p.ClienteId == clienteId && p.EstaActivo
+                && p.Estado != EstadoPedidoAlimento.Borrador
+                && p.FechaPedido >= desde && p.FechaPedido <= hasta)
             .CountAsync(cancellationToken);
 
     public async Task<ITransaccionPedidos> IniciarTransaccionAsync(

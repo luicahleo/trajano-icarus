@@ -36,6 +36,7 @@ export function AppLayout() {
   const enlaces = obtenerEnlacesNavegacion(
     rol,
     tieneFuncionalidad('ProduccionHuevos', 'Mortalidad', 'Vacunacion'),
+    tieneFuncionalidad('PedidoAlimento'),
   );
   const titulo = obtenerTituloRuta(pathname, enlaces);
 

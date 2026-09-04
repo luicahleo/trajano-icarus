@@ -76,10 +76,15 @@ public sealed record ListarPedidosAlimentoQuery
 public sealed record ObtenerPedidoAlimentoQuery(Guid PedidoId)
     : IRequest<PedidoAlimentoDetalle>;
 
+// Cupo semanal visible en la bandeja del tenant (spec SP8): pedidos enviados
+// en la semana ISO actual contra el máximo configurado.
+public sealed record ObtenerCupoPedidosQuery : IRequest<CupoPedidosResumen>;
+
+public sealed record CupoPedidosResumen(int Enviados, int Maximo, DateOnly Desde, DateOnly Hasta);
+
 public sealed record ListarPedidosCaisyQuery(
     string? Estado, string? Presentacion, int Pagina, int TamanoPagina)
     : IRequest<PaginaPedidosCaisy>;
-
 public sealed record PedidoCaisyResumen(
     Guid Id, Guid ClienteId, string Estado, string Presentacion, DateOnly? FechaPedido,
     DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
@@ -259,7 +264,7 @@ public sealed class EnviarPedidoAlimentoHandler(
 
         var hoy = FechasNegocio.Hoy();
         await using var transaccion = await repositorio.IniciarTransaccionAsync(cancellationToken);
-        var inicioSemana = InicioSemanaIso(hoy);
+        var inicioSemana = SemanasIso.Inicio(hoy);
         var enviados = await repositorio.ContarEnviadosEnSemanaBloqueandoAsync(
             pedido.ClienteId, inicioSemana, inicioSemana.AddDays(6), cancellationToken);
         var maximo = opciones.MaximoPorSemana;
@@ -289,9 +294,12 @@ public sealed class EnviarPedidoAlimentoHandler(
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         await transaccion.ConfirmarAsync(cancellationToken);
     }
+}
 
-    // Semana ISO: la semana empieza el lunes.
-    internal static DateOnly InicioSemanaIso(DateOnly fecha) =>
+// Semana ISO: la semana empieza el lunes (spec SP8, límite semanal).
+internal static class SemanasIso
+{
+    public static DateOnly Inicio(DateOnly fecha) =>
         fecha.AddDays(-(((int)fecha.DayOfWeek + 6) % 7));
 }
 
@@ -429,6 +437,26 @@ public sealed class ObtenerPedidoAlimentoHandler(IRepositorioPedidosAlimento rep
         var pedido = await repositorio.ObtenerConHistorialAsync(request.PedidoId, cancellationToken)
             ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
         return MapeadorPedidos.MapearDetalle(pedido);
+    }
+}
+
+public sealed class ObtenerCupoPedidosHandler(
+    IRepositorioPedidosAlimento repositorio,
+    OpcionesPedidosAlimento opciones,
+    ICurrentUser usuarioActual)
+    : IRequestHandler<ObtenerCupoPedidosQuery, CupoPedidosResumen>
+{
+    public async Task<CupoPedidosResumen> Handle(
+        ObtenerCupoPedidosQuery request, CancellationToken cancellationToken)
+    {
+        var clienteId = usuarioActual.ClienteId
+            ?? throw new UnauthorizedAccessException("Solo una cuenta de tenant consulta el cupo.");
+        var hoy = FechasNegocio.Hoy();
+        var inicioSemana = SemanasIso.Inicio(hoy);
+        var enviados = await repositorio.ContarEnviadosEnSemanaAsync(
+            clienteId, inicioSemana, inicioSemana.AddDays(6), cancellationToken);
+        return new CupoPedidosResumen(
+            enviados, opciones.MaximoPorSemana, inicioSemana, inicioSemana.AddDays(6));
     }
 }
 

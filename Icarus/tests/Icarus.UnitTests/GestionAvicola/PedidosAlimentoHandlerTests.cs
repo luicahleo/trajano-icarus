@@ -288,6 +288,33 @@ public class PedidosAlimentoHandlerTests
     }
 
     [Fact]
+    public async Task ElCupoVisibleConsultaLaSemanaIsoActual()
+    {
+        var hoy = FechasNegocio.Hoy();
+        var inicioSemana = hoy.AddDays(-(((int)hoy.DayOfWeek + 6) % 7));
+
+        var cupo = await new ObtenerCupoPedidosHandler(
+            _repositorio, _opciones, _usuarioActual).Handle(
+            new ObtenerCupoPedidosQuery(), CancellationToken.None);
+
+        Assert.Equal(3, cupo.Maximo);
+        Assert.Equal(inicioSemana, cupo.Desde);
+        Assert.Equal(inicioSemana.AddDays(6), cupo.Hasta);
+        await _repositorio.Received(1).ContarEnviadosEnSemanaAsync(
+            ClienteId, inicioSemana, inicioSemana.AddDays(6), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ElCupoSinCuentaDeTenantFalla()
+    {
+        _usuarioActual.ClienteId.Returns((Guid?)null);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            new ObtenerCupoPedidosHandler(_repositorio, _opciones, _usuarioActual).Handle(
+                new ObtenerCupoPedidosQuery(), CancellationToken.None));
+    }
+
+    [Fact]
     public async Task ListarDevuelveResumenesDelTenant()
     {
         var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());

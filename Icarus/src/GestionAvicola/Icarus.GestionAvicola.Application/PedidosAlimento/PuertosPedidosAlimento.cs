@@ -40,6 +40,11 @@ public interface IRepositorioPedidosAlimento
         Guid clienteId, DateOnly desde, DateOnly hasta,
         CancellationToken cancellationToken = default);
 
+    // Mismo conteo sin bloqueo para mostrar el cupo en la bandeja.
+    Task<int> ContarEnviadosEnSemanaAsync(
+        Guid clienteId, DateOnly desde, DateOnly hasta,
+        CancellationToken cancellationToken = default);
+
     // Transacción del envío: se confirma al final o se descarta al liberar.
     Task<ITransaccionPedidos> IniciarTransaccionAsync(
         CancellationToken cancellationToken = default);
