@@ -73,23 +73,29 @@ no contexto obligatorio. No cargarlos en bloque.
   el catálogo global de Notificaciones de Precios de Alimentos de CAISY
   (cuentas globales GestorCaisy con funcionalidades componibles, importación
   del PDF original a borrador editable, publicación versionada con vigencia) y
-  los pedidos de alimento compartidos del tenant (máquina de estados explícita
-  hasta aceptación, precios congelados al envío, límite semanal configurable,
-  notificaciones internas persistentes; despacho y recepción llegan en SP8C),
+  los pedidos de alimento compartidos del tenant (máquina de estados explícita:
+  envío, devolución, rechazo, aceptación, cambio de entrega estimada, despacho
+  con una nota única por pedido y respaldos privados en volumen con sustitución
+  trazable, recepción por línea conforme o con diferencias y consulta de
+  balance solo por recepción real con precio congelado; precios congelados al
+  envío, límite semanal configurable, notificaciones internas persistentes),
   con puerta de calidad con gates de backend. El frontend React
   (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola offline-first para
   recogida y mortalidad en el rol Trabajador (cola IndexedDB con idempotencia,
   precalentado del día, sesión offline sin persistir el token y sincronización
   automática), además de eficiencia, vacunación, la administración del catálogo
   de vacunación y la bandeja de pedidos de alimento (deliberadamente online,
-  sin cola offline ni IndexedDB). La aplicación de oficina MVC
-  Trajano.GestorCaisy vive bajo `Icarus/src/Apps/Trajano.GestorCaisy/`:
+  sin cola offline ni IndexedDB; incluye la vista histórica de la entrega con
+  sus respaldos y la confirmación de recepción por línea). La aplicación de
+  oficina MVC Trajano.GestorCaisy vive bajo
+  `Icarus/src/Apps/Trajano.GestorCaisy/`:
   server-rendered, consume EXCLUSIVAMENTE la API de Trajano-Icarus por HTTP (sin
   DbContext ni acceso SQL, regla blindada en pruebas de arquitectura), guarda
   access y refresh token como claims de una cookie protegida HttpOnly (nunca
   localStorage), exige rol `GestorCaisy` más la funcionalidad
   `GestorPedidoAlimento` y cubre precios de alimento y la bandeja de pedidos
-  entrantes (devolver, rechazar, aceptar y cambiar la entrega estimada; sin
+  entrantes (devolver, rechazar, aceptar, cambiar la entrega estimada y
+  registrar el despacho con su nota y sus respaldos privados; sin
   service worker, caché offline ni IndexedDB). Sus pruebas viven en
   `Icarus/tests/Trajano.GestorCaisy.Tests/`.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al

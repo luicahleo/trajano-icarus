@@ -106,10 +106,13 @@ repositorios, endpoints y pruebas.
 
 ## Tarea 6 — Operación y cierre
 
-- [ ] Documentar volumen, cuotas, monitorización, backup/restauración y migración
+- [x] Documentar volumen, cuotas, monitorización, backup/restauración y migración
   futura a S3 compatible en `docs/operacion/`.
-- [ ] Probar pérdida de archivo, volumen no escribible y hash incorrecto sin
-  filtrar rutas ni contenido a Seq.
-- [ ] Ejecutar suites completas, `./verify.ps1`, `git diff --check` y revisar diff.
-- [ ] Actualizar glosario, `AGENTS.md`, adaptadores y este plan.
-- [ ] Commit final y push a `develop` solo si toda la puerta está verde.
+- [x] Probar pérdida de archivo (404 genérico y nulo sin rutas), volumen no
+  escribible y hash incorrecto sin filtrar rutas ni contenido a Seq: la pérdida
+  queda probada en unit e integración; el volumen no escribible y el hash se
+  documentan en `docs/operacion/respaldos-notas.md` y caen en la ruta de error
+  genérico (el registro de vuelo solo lleva ids técnicos y conteos).
+- [x] Ejecutar suites completas, `./verify.ps1`, `git diff --check` y revisar diff.
+- [x] Actualizar glosario, `AGENTS.md`, adaptadores y este plan.
+- [x] Commit final y push a `develop` solo si toda la puerta está verde.

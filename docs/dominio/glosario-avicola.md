@@ -64,6 +64,7 @@ Definidos en
 | Cupo semanal | Límite configurable de pedidos enviados por cliente y semana ISO (3 inicial). Cuentan los pedidos salidos del borrador y no borrados; los borradores no consumen cupo y la devolución más reenvío del mismo pedido no lo vuelve a consumir. |
 | Nota de entrega de alimento | Documento que deja el distribuidor. SP8 admite una nota y una entrega por pedido, con datos manuales y varias imágenes privadas de respaldo. |
 | Recepción de alimento | Confirmación por línea del tenant después del despacho. Termina como `RecibidoConforme` o `RecibidoConDiferencias`; ambos estados reconocen el gasto real. |
+| Balance de alimento | Consulta del tenant por rango de fechas que suma el gasto real reconocido: equivalentes realmente recibidos × `PrecioFinalPor40Kg` congelado al envío, solo de pedidos en `RecibidoConforme` o `RecibidoConDiferencias`. El precio vigente posterior y el total manual de la nota no alteran un pedido recibido. |
 
 ## Unidades
 

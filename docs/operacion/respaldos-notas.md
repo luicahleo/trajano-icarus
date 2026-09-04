@@ -62,6 +62,59 @@ La prueba de restauración se considera válida solo si al menos una descarga
 de original y una de vista funcionan contra la base restaurada y el hash
 coincide. Documentar la fecha y el resultado de cada corrida mensual.
 
+## Cuotas y límites
+
+Los límites se configuran en `AlmacenDocumentosPedido` (appsettings o
+variables de entorno `AlmacenDocumentosPedido__*`) y se validan al arrancar:
+
+| Opción | Valor inicial | Efecto |
+|---|---|---|
+| `Ruta` | (vacío → `/app/documentos-pedidos`) | Directorio del volumen privado |
+| `MaxTamanoBytes` | 5 MiB | Tamaño máximo por archivo subido |
+| `MaxDimensionesPixeles` | 8000 | Lado máximo de la imagen (por lado) |
+| `MaxDocumentosPorNota` | 8 | Cantidad máxima de respaldos activos por nota |
+
+Además, el endpoint rechaza de forma temprana (413) cualquier cuerpo mayor a
+5 MiB antes de leerlo. Las cuotas se comparten con el tope de pedidos por
+semana (`PedidosAlimento__MaximoPorSemana`): subir respaldos solo es posible
+sobre pedidos despachados, que ya consumieron cupo de envío.
+
+## Monitorización
+
+- **Seq**: en la operación de registro de un respaldo solo aparecen el id del
+  pedido, la bandeja (CAISY) y el indicador de sustitución. Nunca se registran
+  rutas físicas, nombres de archivo originales, número de nota ni contenido de
+  la imagen. La descarga no genera eventos con contenido.
+- **Volumen**: vigilar el uso de disco del punto de montaje
+  `/app/documentos-pedidos` (alertar por encima del 80 %) y el estado del
+  volumen (`docker volume ls`, tamaño con `du -sh` sobre el punto de montaje).
+  Los archivos son inmutables y de tamaño acotado: el crecimiento es lineal
+  con el número de notas y sus respaldos.
+- **Errores esperables**: una pérdida de archivo produce un 404 genérico en la
+  descarga (sin revelar datos) y un error de permisos o disco lleno produce un
+  error genérico en la subida; el pedido despachado queda intacto y el respaldo
+  puede reintentarse.
+
+## Migración futura a un almacenamiento S3 compatible
+
+El contrato `IAlmacenDocumentosPedido` (claves UUID opacas para original y
+vista, con apertura por clave) es la única puerta que usa el dominio: SQL no
+conoce rutas ni URLs. Para migrar:
+
+1. Subir los archivos del volumen a un bucket privado con los nombres UUID
+   actuales (carpetas `original/` y `vista/`, o un prefijo por clave).
+2. Implementar `IAlmacenDocumentosPedido` contra el bucket (escritura atómica
+   simulada con un objeto temporal + copia final, hash calculado antes de
+   subir) y cambiarlo en el registro de DI.
+3. Validar que las descargas (vista inline y original adjunto) funcionan y que
+   el bucket es privado, con firmas para la descarga.
+4. Migrar los pendientes en caliente: sin cambios de SQL porque las claves no
+   cambian.
+
+La validación de firma/MIME/dimensiones y la generación de la vista segura
+viven en la implementación local actual; al migrar, ese preprocesamiento debe
+mantenerse antes de la subida para no guardar contenido inválido en el bucket.
+
 ## Fallos esperables
 
 - **Archivo perdido del volumen**: la descarga responde 404 genérico (no
