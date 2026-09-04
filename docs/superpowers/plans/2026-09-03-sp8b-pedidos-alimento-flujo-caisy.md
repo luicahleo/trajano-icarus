@@ -26,17 +26,23 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/TransicionPedidoAlimento.cs`
 - `Icarus/tests/Icarus.UnitTests/GestionAvicola/PedidoAlimentoTests.cs`
 
-- [ ] Rojo: un pedido nace `Borrador`, pertenece al tenant y acepta solo una
+- [x] Rojo: un pedido nace `Borrador`, pertenece al tenant y acepta solo una
   presentación; líneas duplicadas/tipos incompatibles fallan.
-- [ ] Rojo: bolsa entera; granel entero, mínimo 2 t por línea y 6 t total al
+  (CS0246 con los tipos por crear; luego 8 fallos por transición sin asignar
+  estado, corregida en el agregado)
+- [x] Rojo: bolsa entera; granel entero, mínimo 2 t por línea y 6 t total al
   enviar; equivalencias 1 bolsa = 40 kg y 1 t = 25 equivalentes.
-- [ ] Rojo: editar/desactivar solo en borrador; CAISY no altera líneas.
-- [ ] Rojo: transiciones válidas e inválidas de `EnviarACaisy`,
+- [x] Rojo: editar/desactivar solo en borrador; CAISY no altera líneas.
+- [x] Rojo: transiciones válidas e inválidas de `EnviarACaisy`,
   `DevolverParaCorreccion`, `Rechazar`, `Aceptar` y
   `ActualizarEntregaEstimada`, con motivo/fecha obligatorios.
-- [ ] Verde: métodos explícitos, sin setter/goto genérico, y `rowversion`.
-- [ ] Comando: `dotnet test Icarus/tests/Icarus.UnitTests --filter PedidoAlimento`.
-- [ ] Commit previsto: `feat(avicola): modelar pedidos de alimento`.
+- [x] Verde: métodos explícitos, sin setter/goto genérico, y `rowversion`.
+  18/18 con `dotnet test --filter PedidoAlimento` y puerta completa verde.
+  Decisión registrada: «tipos compatibles» significa que un pedido no mezcla
+  fases de levante (Preiniciador a Finalizador) con postura (PosturaUno,
+  PosturaDos); el spec no define otra matriz.
+- [x] Comando: `dotnet test Icarus/tests/Icarus.UnitTests --filter PedidoAlimento`.
+- [x] Commit previsto: `feat(avicola): modelar pedidos de alimento`.
 
 ## Tarea 2 — Persistencia, precios congelados y límite semanal
 
