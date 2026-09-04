@@ -13,7 +13,8 @@ public sealed class DetallePrecioAlimento : Entity
 
     public DetallePrecioAlimento(
         TipoAlimento tipoAlimento, PresentacionAlimento presentacion,
-        decimal precioFinalPor40Kg, int? edadDesdeDias, int? edadHastaDias)
+        decimal precioFinalPor40Kg, int? edadDesdeDias, int? edadHastaDias,
+        decimal? precioActualDocumento = null)
     {
         if (precioFinalPor40Kg <= 0)
             throw new ReglaNegocioException("El precio final por 40 kg debe ser mayor que cero.");
@@ -26,6 +27,7 @@ public sealed class DetallePrecioAlimento : Entity
         PrecioFinalPor40Kg = precioFinalPor40Kg;
         EdadDesdeDias = edadDesdeDias;
         EdadHastaDias = edadHastaDias;
+        PrecioActualDocumento = precioActualDocumento;
     }
 
     public TipoAlimento TipoAlimento { get; private set; }
@@ -38,4 +40,8 @@ public sealed class DetallePrecioAlimento : Entity
     public int? EdadDesdeDias { get; private set; }
 
     public int? EdadHastaDias { get; private set; }
+
+    // Columna «Precio actual» del documento (spec SP8): control de publicación
+    // contra la publicación vigente; nunca sustituye al precio final.
+    public decimal? PrecioActualDocumento { get; private set; }
 }

@@ -19,6 +19,7 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     public DbSet<ProgramaVacunacion> ProgramasVacunacion => Set<ProgramaVacunacion>();
     public DbSet<ItemPlanVacunacion> ItemsPlanVacunacion => Set<ItemPlanVacunacion>();
     public DbSet<TareaVacunacion> TareasVacunacion => Set<TareaVacunacion>();
+    public DbSet<NotificacionPreciosAlimentos> NotificacionesPreciosAlimentos => Set<NotificacionPreciosAlimentos>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,5 +35,8 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         modelBuilder.Entity<ItemPlanVacunacion>().HasQueryFilter(i => i.EstaActivo);
         modelBuilder.Entity<TareaVacunacion>().HasQueryFilter(t =>
             t.EstaActivo && (_clienteIdActual == null || t.ClienteId == _clienteIdActual));
+        // Catálogo global de precios (spec SP8): sin filtro de tenant, solo
+        // EstaActivo; el acceso se autoriza con la política de CAISY.
+        modelBuilder.Entity<NotificacionPreciosAlimentos>().HasQueryFilter(n => n.EstaActivo);
     }
 }

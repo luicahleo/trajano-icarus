@@ -15,8 +15,8 @@ public class NotificacionPreciosAlimentosTests
     private static readonly DateOnly VigenteDesde = new(2025, 11, 10);
 
     private static DatosDetallePrecio Datos(TipoAlimento tipo, PresentacionAlimento presentacion,
-        decimal precio = 180m, int? edadDesde = null, int? edadHasta = null) =>
-        new(tipo, presentacion, precio, edadDesde, edadHasta);
+        decimal precio = 180m, int? edadDesde = null, int? edadHasta = null, decimal? precioActualDocumento = null) =>
+        new(tipo, presentacion, precio, edadDesde, edadHasta, precioActualDocumento);
 
     private static NotificacionPreciosAlimentos BorradorConDoceDetalles()
     {
@@ -138,6 +138,21 @@ public class NotificacionPreciosAlimentosTests
         Assert.Equal(EstadoNotificacionPreciosAlimentos.Anulada, futura.Estado);
         Assert.Throws<ReglaNegocioException>(() => efectiva.AnularFutura(hoyDeLaEfectiva));
         Assert.Equal(EstadoNotificacionPreciosAlimentos.Publicada, efectiva.Estado);
+    }
+
+    [Fact]
+    public void ElPrecioActualDelDocumentoSeConservaComoControl()
+    {
+        var notificacion = new NotificacionPreciosAlimentos(
+            FechaDocumento, VigenteDesde, 1.20m, 0.60m, 0.75m,
+            [Datos(TipoAlimento.Iniciador, PresentacionAlimento.Bolsa, 185m, 22, 35, 180m)]);
+
+        var detalle = notificacion.Detalles.Single();
+
+        // La columna «Precio actual» del PDF es un control de publicación
+        // (spec SP8): se conserva en el detalle, no sustituye al precio final.
+        Assert.Equal(180m, detalle.PrecioActualDocumento);
+        Assert.Equal(185m, detalle.PrecioFinalPor40Kg);
     }
 
     [Fact]

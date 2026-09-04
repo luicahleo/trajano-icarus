@@ -47,6 +47,18 @@ public sealed class NotificacionPreciosAlimentos : AggregateRoot
     public EstadoNotificacionPreciosAlimentos Estado { get; private set; }
         = EstadoNotificacionPreciosAlimentos.Borrador;
 
+    // Regla transversal del glosario: soft delete; los borradores descartados
+    // quedan inactivos y las publicaciones conservan el historial.
+    public bool EstaActivo { get; private set; } = true;
+
+    // Concurrency token técnico (rowversion): la edición y la publicación son
+    // comandos mutables y no deben perderse ante escrituras concurrentes.
+    // El setter privado es requerido por el rowversion de EF; no se usa en el
+    // dominio.
+#pragma warning disable S1144 // Setter técnico para EF rowversion
+    public byte[]? Version { get; private set; }
+#pragma warning restore S1144
+
     // Referencia técnica al PDF original almacenado de forma privada; SQL solo
     // conserva la clave lógica.
     public Guid? DocumentoOriginalId { get; private set; }
@@ -132,10 +144,12 @@ public sealed class NotificacionPreciosAlimentos : AggregateRoot
         foreach (var datos in detalles)
             _detalles.Add(new DetallePrecioAlimento(
                 datos.TipoAlimento, datos.Presentacion,
-                datos.PrecioFinalPor40Kg, datos.EdadDesdeDias, datos.EdadHastaDias));
+                datos.PrecioFinalPor40Kg, datos.EdadDesdeDias, datos.EdadHastaDias,
+                datos.PrecioActualDocumento));
     }
 }
 
 public sealed record DatosDetallePrecio(
     TipoAlimento TipoAlimento, PresentacionAlimento Presentacion,
-    decimal PrecioFinalPor40Kg, int? EdadDesdeDias, int? EdadHastaDias);
+    decimal PrecioFinalPor40Kg, int? EdadDesdeDias, int? EdadHastaDias,
+    decimal? PrecioActualDocumento = null);

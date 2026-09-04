@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="GestionAvicola\Fixtures\NotificacionPreciosMuestra.pdf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\Icarus.BuildingBlocks.Domain\Icarus.BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Icarus.BuildingBlocks.Application\Icarus.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Icarus.BuildingBlocks.Observability\Icarus.BuildingBlocks.Observability.csproj" />
