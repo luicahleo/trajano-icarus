@@ -18,6 +18,10 @@ public sealed class ConfiguracionPedidoAlimento : IEntityTypeConfiguration<Pedid
         // (spec SP8): el índice respalda la consulta bloqueable del envío.
         builder.HasIndex(p => new { p.ClienteId, p.FechaPedido });
 
+        // La consulta canónica del balance (spec SP8C) filtra por estado
+        // recibido, cliente y fecha de pedido.
+        builder.HasIndex(p => new { p.Estado, p.ClienteId, p.FechaPedido });
+
         builder.HasMany(p => p.Detalles).WithOne()
             .HasForeignKey("PedidoAlimentoId").IsRequired();
         builder.Navigation(p => p.Detalles).HasField("_detalles");

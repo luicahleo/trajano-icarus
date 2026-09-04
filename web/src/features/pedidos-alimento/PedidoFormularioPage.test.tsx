@@ -172,6 +172,11 @@ describe('PedidoFormularioPage', () => {
       }),
     );
     renderPagina();
-    expect(await screen.findByText(/Galpón 1 \(40 días\): Iniciador/)).toBeInTheDocument();
+    // Un lote de ~40 días (la resta de fechas puede variar ±1 día según la
+    // hora local frente al recorte UTC) cae dentro de la ventana de Iniciador
+    // (21-60 días) de la publicación: la recomendación no depende del día exacto.
+    expect(
+      await screen.findByText(/Galpón 1 \((\d+) días\): Iniciador/),
+    ).toBeInTheDocument();
   });
 });

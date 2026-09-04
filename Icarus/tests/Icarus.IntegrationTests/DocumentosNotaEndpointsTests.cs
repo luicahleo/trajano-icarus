@@ -103,6 +103,36 @@ public class DocumentosNotaEndpointsTests
         return cuerpo;
     }
 
+    private async Task<Guid> CrearPedidoDespachadoAsync(
+        HttpClient cliente, string tokenTenant, string tokenCaisy, int entregado = 95)
+    {
+        var crear = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/pedidos-alimento", tokenTenant,
+            JsonContent.Create(new
+            {
+                detalles = new[] { new { tipoAlimento = "PosturaUno", presentacion = "Bolsa", cantidad = 100 } },
+            })));
+        Assert.Equal(HttpStatusCode.Created, crear.StatusCode);
+        var idPedido = Guid.Parse((await crear.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!);
+        var enviar = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/enviar", tokenTenant));
+        Assert.Equal(HttpStatusCode.NoContent, enviar.StatusCode);
+        var aceptar = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/aceptar", tokenCaisy,
+            JsonContent.Create(new { fechaEntregaEstimada = HoyBolivia().AddDays(3).ToString("yyyy-MM-dd") })));
+        Assert.Equal(HttpStatusCode.NoContent, aceptar.StatusCode);
+        var despachar = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/despachar", tokenCaisy,
+            JsonContent.Create(new
+            {
+                numeroNota = $"NOTA-{Guid.NewGuid():N}"[..20],
+                fechaNota = HoyBolivia().ToString("yyyy-MM-dd"),
+                totalInformado = (decimal?)18000m,
+                lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadEntregada = entregado } },
+            })));
+        Assert.Equal(HttpStatusCode.NoContent, despachar.StatusCode);
+        return idPedido;
+    }
+
     // Tenant nuevo con el módulo GestionAvicola (cupo semanal propio), cuenta
     // CAISY con la función del flujo, publicación vigente propia y un pedido
     // despachado con su nota registrada.
@@ -146,30 +176,7 @@ public class DocumentosNotaEndpointsTests
         await AsegurarPublicacionDeClaseAsync(cliente, tokenCaisy);
 
         // Borrador, envío, aceptación y despacho del pedido de la prueba.
-        var crear = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/pedidos-alimento", tokenTenant,
-            JsonContent.Create(new
-            {
-                detalles = new[] { new { tipoAlimento = "PosturaUno", presentacion = "Bolsa", cantidad = 100 } },
-            })));
-        Assert.Equal(HttpStatusCode.Created, crear.StatusCode);
-        var idPedido = Guid.Parse((await crear.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!);
-        var enviar = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/enviar", tokenTenant));
-        Assert.Equal(HttpStatusCode.NoContent, enviar.StatusCode);
-        var aceptar = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/aceptar", tokenCaisy,
-            JsonContent.Create(new { fechaEntregaEstimada = HoyBolivia().AddDays(3).ToString("yyyy-MM-dd") })));
-        Assert.Equal(HttpStatusCode.NoContent, aceptar.StatusCode);
-        var despachar = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/despachar", tokenCaisy,
-            JsonContent.Create(new
-            {
-                numeroNota = $"NOTA-{Guid.NewGuid():N}"[..20],
-                fechaNota = HoyBolivia().ToString("yyyy-MM-dd"),
-                totalInformado = (decimal?)18000m,
-                lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadEntregada = 95 } },
-            })));
-        Assert.Equal(HttpStatusCode.NoContent, despachar.StatusCode);
+        var idPedido = await CrearPedidoDespachadoAsync(cliente, tokenTenant, tokenCaisy);
 
         return (cliente, tokenTenant, tokenCaisy, idPedido);
     }
@@ -293,6 +300,80 @@ public class DocumentosNotaEndpointsTests
             })));
 
         Assert.Equal(HttpStatusCode.Conflict, segundo.StatusCode);
+    }
+
+    // SP8C Tarea 5 (spec "Balance"): solo los estados recibidos generan gasto,
+    // con la cantidad realmente recibida y el precio congelado al envío. Un
+    // pedido despachado sin recibir aporta cero y los rangos y tenants ajenos
+    // no ven el balance.
+    [Fact]
+    public async Task ElBalanceSoloSumaLosPedidosRecibidosDelRangoDelTenant()
+    {
+        var (cliente, tokenTenant, tokenCaisy, _) = await PrepararFlujoCompletoAsync();
+        await CrearPedidoDespachadoAsync(cliente, tokenTenant, tokenCaisy, entregado: 95);
+        await CrearPedidoDespachadoAsync(cliente, tokenTenant, tokenCaisy, entregado: 95);
+        var precio = await PrecioPosturaUnoBolsaAsync(cliente, tokenCaisy);
+
+        var pedidos = await ListarIdsAsync(cliente, tokenTenant);
+        Assert.Equal(3, pedidos.Count);
+        // El primero queda despachado sin recibir; los otros dos se reciben
+        // (95 conforme y 93 con diferencias).
+        var recibir95 = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{pedidos[1]}/recibir", tokenTenant,
+            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+        Assert.Equal(HttpStatusCode.NoContent, recibir95.StatusCode);
+        var recibir93 = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{pedidos[2]}/recibir", tokenTenant,
+            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 93 } } })));
+        Assert.Equal(HttpStatusCode.NoContent, recibir93.StatusCode);
+
+        var hoy = HoyBolivia().ToString("yyyy-MM-dd");
+        var balance = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/balance-alimentos?desde={hoy}&hasta={hoy}", tokenTenant));
+        Assert.Equal(HttpStatusCode.OK, balance.StatusCode);
+        var cuerpo = await balance.Content.ReadFromJsonAsync<JsonElement>();
+        var linea = Assert.Single(cuerpo.GetProperty("lineas").EnumerateArray());
+        Assert.Equal("PosturaUno", linea.GetProperty("tipoAlimento").GetString());
+        Assert.Equal(95 + 93, linea.GetProperty("equivalentesRecibidos").GetInt32());
+        Assert.Equal(2, linea.GetProperty("pedidosRecibidos").GetInt32());
+        Assert.Equal(188m * precio, linea.GetProperty("gasto").GetDecimal());
+        Assert.Equal(188m * precio, cuerpo.GetProperty("total").GetDecimal());
+
+        // Rango sin pedidos en esas fechas: aporta cero.
+        var vacio = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/balance-alimentos?desde=2025-01-01&hasta=2025-01-31", tokenTenant));
+        Assert.Equal(HttpStatusCode.OK, vacio.StatusCode);
+        var cuerpoVacio = await vacio.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, cuerpoVacio.GetProperty("lineas").GetArrayLength());
+        Assert.Equal(0, cuerpoVacio.GetProperty("total").GetDecimal());
+
+        // Otro tenant consulta su propio balance: cero, sin ver el ajeno.
+        var tokenAjeno = await LoginComo(cliente, SemillaIdentidad.EmailClienteC1);
+        var balanceAjeno = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/balance-alimentos?desde={hoy}&hasta={hoy}", tokenAjeno));
+        var cuerpoAjeno = await balanceAjeno.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, cuerpoAjeno.GetProperty("lineas").GetArrayLength());
+    }
+
+    private static async Task<decimal> PrecioPosturaUnoBolsaAsync(HttpClient cliente, string tokenCaisy)
+    {
+        var vigente = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/precios-alimentos/vigente", tokenCaisy));
+        var cuerpo = await vigente.Content.ReadFromJsonAsync<JsonElement>();
+        return cuerpo.GetProperty("detalles").EnumerateArray()
+            .Single(d => d.GetProperty("tipoAlimento").GetString() == "PosturaUno"
+                && d.GetProperty("presentacion").GetString() == "Bolsa")
+            .GetProperty("precioFinalPor40Kg").GetDecimal();
+    }
+
+    private static async Task<List<Guid>> ListarIdsAsync(HttpClient cliente, string tokenTenant)
+    {
+        var lista = await cliente.SendAsync(Pedido(HttpMethod.Get, "/api/pedidos-alimento", tokenTenant));
+        var cuerpo = await lista.Content.ReadFromJsonAsync<JsonElement>();
+        return cuerpo.EnumerateArray()
+            .Select(p => Guid.Parse(p.GetProperty("id").GetString()!))
+            .OrderBy(i => i)
+            .ToList();
     }
 
     // SP8C Tarea 4 (spec: "Despacho, nota y recepción" y "Balance"): el tenant

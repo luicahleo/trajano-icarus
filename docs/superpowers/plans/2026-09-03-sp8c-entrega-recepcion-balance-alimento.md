@@ -94,15 +94,15 @@ recepción por línea y reconocimiento correcto del gasto.
 `Icarus.GestionAvicola.Application/BalanceAlimentos/` si aún no existe, con sus
 repositorios, endpoints y pruebas.
 
-- [ ] Rojo: `Borrador`, `Solicitado`, `Aceptado`, `Rechazado` y `Despachado`
+- [x] Rojo: `Borrador`, `Solicitado`, `Aceptado`, `Rechazado` y `Despachado`
   aportan cero.
-- [ ] Rojo: ambos estados recibidos suman
+- [x] Rojo: ambos estados recibidos suman
   `equivalentes realmente recibidos × PrecioFinalPor40Kg` por línea.
-- [ ] Rojo: precio vigente posterior y total manual de nota no cambian un
+- [x] Rojo: precio vigente posterior y total manual de nota no cambian un
   pedido recibido; filtros de rango/tenant son correctos.
-- [ ] Añadir índices de consulta y decidir cálculo agregado frente a proyección
+- [x] Añadir índices de consulta y decidir cálculo agregado frente a proyección
   solo con medición; empezar con consulta SQL canónica para evitar doble fuente.
-- [ ] Commit previsto: `feat(avicola): calcular balance de alimento recibido`.
+- [x] Commit previsto: `feat(avicola): calcular balance de alimento recibido`.
 
 ## Tarea 6 — Operación y cierre
 

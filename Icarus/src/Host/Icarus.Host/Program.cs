@@ -105,6 +105,7 @@ api.MapUsuariosCaisy();
 api.MapGestionAvicola();
 api.MapPreciosAlimentos();
 api.MapPedidosAlimento();
+api.MapBalanceAlimentos();
 api.MapDiagnosticos();
 
 // sw.js, el manifiesto e index.html gobiernan qué build ejecuta la PWA: si el
