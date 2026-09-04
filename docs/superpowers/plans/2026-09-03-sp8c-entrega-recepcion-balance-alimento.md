@@ -44,19 +44,19 @@ recepción por línea y reconocimiento correcto del gasto.
 - opciones de Host y manifiestos Docker/despliegue.
 - tests `AlmacenDocumentosPedidoTests.cs` y pruebas de integración de descarga.
 
-- [ ] Rojo: validar firma real, MIME permitido, tamaño, dimensiones y límite de
+- [x] Rojo: validar firma real, MIME permitido, tamaño, dimensiones y límite de
   páginas; rechazar polyglots/extensión falsa.
-- [ ] Implementar `IAlmacenDocumentosPedido` con claves UUID y escritura
+- [x] Implementar `IAlmacenDocumentosPedido` con claves UUID y escritura
   atómica: conservar original inmutable con hash SHA-256 y generar una copia
   segura para pantalla con orientación normalizada, metadatos eliminados y
   compresión legible.
-- [ ] SQL guarda clave lógica/metadata; volumen queda fuera del web root. Definir
+- [x] SQL guarda clave lógica/metadata; volumen queda fuera del web root. Definir
   backup externo y prueba de restauración en documentación operativa.
-- [ ] Endpoint autenticado autoriza tenant propietario o CAISY funcional; nunca
+- [x] Endpoint autenticado autoriza tenant propietario o CAISY funcional; nunca
   revela existencia a terceros. Servir la vista derivada inline y el original
   solo como adjunto, con cabeceras seguras.
-- [ ] Reemplazar antes de recepción desactiva la versión previa y conserva auditoría.
-- [ ] Commit previsto: `feat(avicola): guardar respaldos privados de notas`.
+- [x] Reemplazar antes de recepción desactiva la versión previa y conserva auditoría.
+- [x] Commit previsto: `feat(avicola): guardar respaldos privados de notas`.
 
 ## Tarea 3 — Confirmación de recepción
 

@@ -22,6 +22,7 @@ public sealed class ConfiguracionEntregaPedidoAlimento
         builder.HasIndex("PedidoAlimentoId").IsUnique();
 
         builder.Navigation(e => e.Lineas).HasField("_lineas");
+        builder.Navigation(e => e.Documentos).HasField("_documentos");
     }
 }
 

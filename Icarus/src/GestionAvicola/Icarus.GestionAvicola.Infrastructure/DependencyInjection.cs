@@ -2,6 +2,7 @@ using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
+using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Galpones;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Mortalidad;
@@ -52,6 +53,17 @@ public static class DependencyInjection
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesPedidosAlimento>>().Value);
         servicios.AddScoped<IImportadorNotificacionPreciosPdf, ImportadorNotificacionPreciosPdf>();
         servicios.AddScoped<IAlmacenDocumentosPrecios, AlmacenDocumentosLocal>();
+        // Volumen privado de respaldos de notas (spec SP8C): límites
+        // configurables validados al arrancar; se entregan ya resueltos.
+        servicios.AddOptions<OpcionesAlmacenDocumentosPedido>()
+            .Bind(configuracion.GetSection(OpcionesAlmacenDocumentosPedido.Seccion))
+            .Validate(o => o.MaxTamanoBytes > 0, "El tamaño máximo debe ser mayor que cero.")
+            .Validate(o => o.MaxDimensionesPixeles > 0, "Las dimensiones máximas deben ser mayores que cero.")
+            .Validate(o => o.MaxDocumentosPorNota > 0, "La cantidad máxima de imágenes por nota debe ser mayor que cero.")
+            .ValidateOnStart();
+        servicios.AddSingleton(sp =>
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesAlmacenDocumentosPedido>>().Value);
+        servicios.AddScoped<IAlmacenDocumentosPedido, AlmacenDocumentosPedidoLocal>();
         servicios.AddScoped<IUnidadTrabajoGestionAvicola>(sp =>
             new UnidadTrabajoConConcurrencia(sp.GetRequiredService<GestionAvicolaDbContext>()));
         return servicios;

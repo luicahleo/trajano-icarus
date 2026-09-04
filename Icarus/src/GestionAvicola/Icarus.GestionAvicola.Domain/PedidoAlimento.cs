@@ -198,6 +198,32 @@ public sealed class PedidoAlimento : AggregateRoot
         RegistrarTransicion(EstadoPedidoAlimento.Aceptado, EstadoPedidoAlimento.Despachado, actorId);
     }
 
+    // Alta de un respaldo privado de la nota (spec SP8C): solo sobre un pedido
+    // despachado, antes de la recepción. Los datos llegan validados desde el
+    // almacén privado; el contenido nunca pasa por el agregado.
+    public DocumentoNotaEntrega AgregarDocumentoNota(DatosDocumentoNota datos) =>
+        AplicarSobreDespachado(e => e.AgregarDocumento(new DocumentoNotaEntrega(
+            datos.ClaveOriginal, datos.ClaveVista, datos.Mime, datos.TamanoBytes,
+            datos.TamanoVistaBytes, datos.HashSha256, datos.NombreSeguro)));
+
+    // Sustitución con trazabilidad: el documento previo se desactiva y queda
+    // referenciado por el nuevo (spec SP8C, documentos inmutables).
+    public DocumentoNotaEntrega ReemplazarDocumentoNota(Guid documentoId, DatosDocumentoNota datos) =>
+        AplicarSobreDespachado(e => e.ReemplazarDocumento(documentoId, new DocumentoNotaEntrega(
+            datos.ClaveOriginal, datos.ClaveVista, datos.Mime, datos.TamanoBytes,
+            datos.TamanoVistaBytes, datos.HashSha256, datos.NombreSeguro)));
+
+    private DocumentoNotaEntrega AplicarSobreDespachado(
+        Func<EntregaPedidoAlimento, DocumentoNotaEntrega> operacion)
+    {
+        AsegurarEstado(
+            EstadoPedidoAlimento.Despachado,
+            "Los respaldos de la nota se registran sobre un pedido despachado.");
+        if (_entrega is null)
+            throw new ReglaNegocioException("El pedido no tiene una nota registrada.");
+        return operacion(_entrega);
+    }
+
     private void AsegurarEstado(EstadoPedidoAlimento esperado, string mensaje)
     {
         if (Estado != esperado)

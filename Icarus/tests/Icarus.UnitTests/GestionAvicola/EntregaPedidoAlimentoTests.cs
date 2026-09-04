@@ -205,4 +205,81 @@ public class EntregaPedidoAlimentoTests
         Assert.Single(pedido.Entrega.Lineas);
         Assert.Equal(3, pedido.Historial.Count);
     }
+
+    // SP8C Tarea 2 (spec: "Documentos privados"): los respaldos de la nota son
+    // imágenes privadas; en SQL solo van clave lógica, MIME, tamaño, hash y
+    // nombre seguro. Los documentos publicados son inmutables: sustituir
+    // desactiva la versión previa y conserva la trazabilidad.
+    private static DatosDocumentoNota Documento(string nombreSeguro = "nota-frente.jpg") =>
+        new(Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 1200, 900,
+            "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90", nombreSeguro);
+
+    private static PedidoAlimento PedidoDespachado() =>
+        Despachado(PedidoAceptadoDeBolsas((TipoAlimento.PosturaUno, 100)));
+
+    private static PedidoAlimento Despachado(PedidoAlimento pedido)
+    {
+        pedido.RegistrarDespacho("NOTA-1", FechaNota, null,
+            [new DatosLineaEntrega(TipoAlimento.PosturaUno, 100)], Hoy, ActorId);
+        return pedido;
+    }
+
+    [Fact]
+    public void LosDocumentosDeLaNotaSeAgreganSobreUnPedidoDespachado()
+    {
+        var pedido = PedidoDespachado();
+
+        var documento = pedido.AgregarDocumentoNota(Documento());
+
+        Assert.NotEqual(Guid.Empty, documento.Id);
+        Assert.True(documento.Activo);
+        Assert.Equal("nota-frente.jpg", documento.NombreSeguro);
+        Assert.Equal("image/jpeg", documento.Mime);
+        Assert.Equal(1200, documento.TamanoBytes);
+        Assert.Single(pedido.Entrega!.Documentos);
+    }
+
+    [Fact]
+    public void LosDocumentosNoSeAceptanFueraDelDespachado()
+    {
+        var pedido = PedidoAceptadoDeBolsas((TipoAlimento.PosturaUno, 100));
+
+        var excepcion = Assert.Throws<ReglaNegocioException>(() =>
+            pedido.AgregarDocumentoNota(Documento()));
+
+        Assert.Equal("Los respaldos de la nota se registran sobre un pedido despachado.", excepcion.Message);
+    }
+
+    [Fact]
+    public void ReemplazarUnDocumentoDesactivaElPrevioYConservaTrazabilidad()
+    {
+        var pedido = PedidoDespachado();
+        var previo = pedido.AgregarDocumentoNota(Documento("nota-borrosa.jpg"));
+
+        var nuevo = pedido.ReemplazarDocumentoNota(previo.Id, Documento("nota-neta.jpg"));
+
+        Assert.False(previo.Activo);
+        Assert.Equal(nuevo.Id, previo.ReemplazadoPorId);
+        Assert.NotNull(previo.FechaDesactivacionUtc);
+        Assert.True(nuevo.Activo);
+        Assert.Equal(2, pedido.Entrega!.Documentos.Count);
+        Assert.Single(pedido.Entrega.Documentos, d => d.Activo);
+    }
+
+    [Fact]
+    public void ReemplazarUnDocumentoInexistenteOYaReemplazadoFalla()
+    {
+        var pedido = PedidoDespachado();
+        var previo = pedido.AgregarDocumentoNota(Documento());
+
+        var inexistente = Assert.Throws<ReglaNegocioException>(() =>
+            pedido.ReemplazarDocumentoNota(Guid.NewGuid(), Documento()));
+        Assert.Equal("El documento a reemplazar no existe o ya fue reemplazado.", inexistente.Message);
+
+        pedido.ReemplazarDocumentoNota(previo.Id, Documento());
+        var segundo = Assert.Throws<ReglaNegocioException>(() =>
+            pedido.ReemplazarDocumentoNota(previo.Id, Documento()));
+        Assert.Equal("El documento a reemplazar no existe o ya fue reemplazado.", segundo.Message);
+        Assert.Equal(2, pedido.Entrega!.Documentos.Count);
+    }
 }

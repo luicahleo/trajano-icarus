@@ -58,9 +58,15 @@ services:
       Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Semilla-Dev-1234}"
       Seq__Url: "http://seq:80"
       Seq__ApiKey: "${SEQ_API_KEY:-}"
+      # Volumen privado de respaldos de notas (spec SP8C): fuera del web root
+      # y persistente; forma parte del backup externo de la VPS (ver
+      # docs/operacion/respaldos-notas.md).
+      AlmacenDocumentosPedido__Ruta: "/app/documentos-pedidos"
     ports:
       # Acceso directo desde la PC a la API + PWA sin pasar por el gateway.
       - "127.0.0.1:8085:8080"
+    volumes:
+      - documentos-pedidos:/app/documentos-pedidos
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -75,3 +81,4 @@ services:
 volumes:
   seq-data:
   mssql-data:
+  documentos-pedidos:

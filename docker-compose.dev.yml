@@ -58,8 +58,13 @@ services:
       # de compose; la API key es opcional (el Seq local no exige auth).
       Seq__Url: "http://seq:80"
       Seq__ApiKey: "${SEQ_API_KEY:-}"
+      # Volumen privado de respaldos de notas (spec SP8C): fuera del web root,
+      # persistente entre recreaciones del contenedor (no es backup por sí solo).
+      AlmacenDocumentosPedido__Ruta: "/app/documentos-pedidos"
     ports:
       - "8080:8080"
+    volumes:
+      - documentos-pedidos:/app/documentos-pedidos
     restart: unless-stopped
     depends_on:
       sqlserver:
@@ -69,3 +74,4 @@ services:
 volumes:
   seq-data:
   mssql-data:
+  documentos-pedidos:

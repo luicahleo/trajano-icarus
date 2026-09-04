@@ -4,6 +4,7 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
+using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
@@ -419,6 +420,130 @@ public class PedidosAlimentoHandlerTests
 
     private RegistrarDespachoPedidoHandler CrearDespachador() =>
         new(_repositorio, _usuarioActual, _registroVuelo, _unidadTrabajo, _notificaciones);
+
+    // SP8C Tarea 2 (spec: "Documentos privados"): los respaldos de la nota los
+    // registra CAISY sobre el pedido despachado; el contenido pasa por el
+    // almacén privado (firma, MIME, tamaño, hash) y a SQL solo llegan clave
+    // lógica y metadatos. Nunca se registran nombres de archivo (anti-PII).
+    private readonly IAlmacenDocumentosPedido _almacen = Substitute.For<IAlmacenDocumentosPedido>();
+    private readonly OpcionesAlmacenDocumentosPedido _opcionesDocumentos = new() { MaxDocumentosPorNota = 2 };
+
+    private AgregarDocumentoNotaHandler CrearRegistradorDocumentos() =>
+        new(_repositorio, _almacen, _opcionesDocumentos, _usuarioActual, _registroVuelo, _unidadTrabajo);
+
+    private static DocumentoAlmacenado DocumentoAlmacenadoFalso() =>
+        new(Guid.NewGuid(), Guid.NewGuid(),
+            "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+            "image/jpeg", 1200, 900);
+
+    [Fact]
+    public async Task AgregarDocumentoNotaGuardaEnElAlmacenYRegistraEnElPedido()
+    {
+        var pedido = PedidoAceptado();
+        pedido.RegistrarDespacho("NOTA-1", FechasNegocio.Hoy(), null,
+            [LineaEntregada()], FechasNegocio.Hoy(), UsuarioId);
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+        _almacen.GuardarAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
+            .Returns(DocumentoAlmacenadoFalso());
+
+        var id = await CrearRegistradorDocumentos().Handle(
+            new AgregarDocumentoNotaCommand(
+                pedido.Id, new MemoryStream([1, 2, 3]), "nota frente.jpg", null),
+            CancellationToken.None);
+
+        Assert.NotEqual(Guid.Empty, id);
+        var documento = pedido.Entrega!.Documentos.Single();
+        Assert.Equal(id, documento.Id);
+        Assert.Equal("nota frente.jpg", documento.NombreSeguro);
+        Assert.Equal("image/jpeg", documento.Mime);
+        Assert.True(documento.Activo);
+        _repositorio.Received(1).AgregarDocumentoNota(documento);
+        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReemplazarDocumentoNotaDesactivaElPrevioConTrazabilidad()
+    {
+        var pedido = PedidoAceptado();
+        pedido.RegistrarDespacho("NOTA-1", FechasNegocio.Hoy(), null,
+            [LineaEntregada()], FechasNegocio.Hoy(), UsuarioId);
+        var previo = pedido.AgregarDocumentoNota(new DatosDocumentoNota(
+            Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 100, 80,
+            "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90", "borrosa.jpg"));
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+        _almacen.GuardarAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
+            .Returns(DocumentoAlmacenadoFalso());
+
+        var idNuevo = await CrearRegistradorDocumentos().Handle(
+            new AgregarDocumentoNotaCommand(
+                pedido.Id, new MemoryStream([1]), "neta.jpg", previo.Id),
+            CancellationToken.None);
+
+        Assert.False(previo.Activo);
+        Assert.Equal(idNuevo, previo.ReemplazadoPorId);
+        Assert.Equal(2, pedido.Entrega!.Documentos.Count);
+    }
+
+    [Fact]
+    public async Task AgregarDocumentoNotaFueraDeDespachadoDevuelveConflictoSinGuardar()
+    {
+        var pedido = PedidoAceptado();
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            CrearRegistradorDocumentos().Handle(
+                new AgregarDocumentoNotaCommand(
+                    pedido.Id, new MemoryStream([1]), "nota.jpg", null),
+                CancellationToken.None));
+
+        await _almacen.DidNotReceiveWithAnyArgs().GuardarAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AgregarDocumentoNotaSuperaElMaximoDevuelveConflicto()
+    {
+        var pedido = PedidoAceptado();
+        pedido.RegistrarDespacho("NOTA-1", FechasNegocio.Hoy(), null,
+            [LineaEntregada()], FechasNegocio.Hoy(), UsuarioId);
+        pedido.AgregarDocumentoNota(new DatosDocumentoNota(
+            Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 100, 80,
+            "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90", "a.jpg"));
+        pedido.AgregarDocumentoNota(new DatosDocumentoNota(
+            Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 100, 80,
+            "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90", "b.jpg"));
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        var excepcion = await Assert.ThrowsAsync<ConflictException>(() =>
+            CrearRegistradorDocumentos().Handle(
+                new AgregarDocumentoNotaCommand(
+                    pedido.Id, new MemoryStream([1]), "c.jpg", null),
+                CancellationToken.None));
+
+        Assert.Contains("La nota admite hasta 2 imágenes", excepcion.Message, StringComparison.Ordinal);
+        await _almacen.DidNotReceiveWithAnyArgs().GuardarAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AgregarDocumentoNotaSanitizaElNombreSeguro()
+    {
+        var pedido = PedidoAceptado();
+        pedido.RegistrarDespacho("NOTA-1", FechasNegocio.Hoy(), null,
+            [LineaEntregada()], FechasNegocio.Hoy(), UsuarioId);
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+        _almacen.GuardarAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
+            .Returns(DocumentoAlmacenadoFalso());
+
+        await CrearRegistradorDocumentos().Handle(
+            new AgregarDocumentoNotaCommand(
+                pedido.Id, new MemoryStream([1]), "../../nota<1>.jpg", null),
+            CancellationToken.None);
+
+        var nombre = pedido.Entrega!.Documentos.Single().NombreSeguro;
+        Assert.DoesNotContain("..", nombre, StringComparison.Ordinal);
+        Assert.DoesNotContain("/", nombre, StringComparison.Ordinal);
+        Assert.DoesNotContain("<", nombre, StringComparison.Ordinal);
+    }
 
     [Fact]
     public async Task DespacharSinNumeroDeNotaFallaLaValidacion()

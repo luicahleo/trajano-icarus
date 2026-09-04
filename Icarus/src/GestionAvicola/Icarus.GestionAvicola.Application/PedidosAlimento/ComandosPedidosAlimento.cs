@@ -3,6 +3,7 @@ using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
+using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
@@ -486,6 +487,127 @@ public sealed class RegistrarDespachoPedidoHandler(
         pedido.Entrega!.Lineas
             .Zip(pedido.Detalles, (e, d) => (e, d))
             .Count(par => par.e.CantidadEntregada != par.d.CantidadSolicitada);
+}
+
+// Alta o sustitución de un respaldo privado de la nota (spec SP8C
+// "Documentos privados"): lo registra CAISY sobre un pedido despachado y antes
+// de la recepción. El contenido pasa por el almacén privado, que valida firma,
+// MIME, tamaño y dimensiones, y devuelve clave lógica y metadatos; SQL nunca
+// conoce rutas ni contenido. El nombre de archivo se sanea para el campo
+// nombre seguro y no llega al registro de vuelo (anti-PII).
+public sealed record AgregarDocumentoNotaCommand(
+    Guid PedidoId, Stream Contenido, string? NombreArchivo, Guid? ReemplazaDocumentoId)
+    : IRequest<Guid>, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.nota-documento", new Dictionary<string, DatoRegistroVuelo>
+        { ["Sustituye"] = DatoRegistroVuelo.Entero });
+}
+
+public sealed class AgregarDocumentoNotaValidator : AbstractValidator<AgregarDocumentoNotaCommand>
+{
+    public AgregarDocumentoNotaValidator()
+    {
+        RuleFor(c => c.PedidoId).NotEmpty();
+        RuleFor(c => c.Contenido).NotNull();
+        RuleFor(c => c.NombreArchivo).MaximumLength(260);
+    }
+}
+
+public sealed class AgregarDocumentoNotaHandler(
+    IRepositorioPedidosAlimento repositorio,
+    IAlmacenDocumentosPedido almacen,
+    OpcionesAlmacenDocumentosPedido opciones,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    : IRequestHandler<AgregarDocumentoNotaCommand, Guid>
+{
+    public async Task<Guid> Handle(AgregarDocumentoNotaCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Despachado)
+            throw new ConflictException("Los respaldos de la nota se registran sobre un pedido despachado.");
+        if (request.ReemplazaDocumentoId is { } previo
+            && !pedido.Entrega!.Documentos.Any(d => d.Id == previo && d.Activo))
+            throw new ConflictException("El documento a reemplazar no existe o ya fue reemplazado.");
+        if (request.ReemplazaDocumentoId is null
+            && pedido.Entrega!.Documentos.Count(d => d.Activo) >= opciones.MaxDocumentosPorNota)
+            throw new ConflictException(
+                $"La nota admite hasta {opciones.MaxDocumentosPorNota.ToString(CultureInfo.InvariantCulture)} imágenes.");
+
+        var guardado = await almacen.GuardarAsync(request.Contenido, cancellationToken);
+        var datos = new DatosDocumentoNota(
+            guardado.ClaveOriginal, guardado.ClaveVista, guardado.Mime,
+            guardado.TamanoOriginalBytes, guardado.TamanoVistaBytes,
+            guardado.HashSha256, SanearNombre(request.NombreArchivo));
+        var documento = request.ReemplazaDocumentoId is null
+            ? pedido.AgregarDocumentoNota(datos)
+            : pedido.ReemplazarDocumentoNota(request.ReemplazaDocumentoId.Value, datos);
+        repositorio.AgregarDocumentoNota(documento);
+        registroVuelo.Decidir("avicola.pedidos.nota-documento", "registro", "aplicada",
+            new Dictionary<string, object?>
+            {
+                ["Sustituye"] = request.ReemplazaDocumentoId is null ? 0 : 1,
+                ["Actor"] = actorId != Guid.Empty ? 1 : 0,
+            });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+        return documento.Id;
+    }
+
+    // Nombre seguro (spec SP8C): sin rutas ni caracteres problemáticos; si el
+    // archivo llega sin nombre útil se usa uno genérico. No se guarda el nombre
+    // original completo del cliente.
+    private static string SanearNombre(string? nombreArchivo)
+    {
+        var nombre = Path.GetFileName(nombreArchivo?.Trim() ?? string.Empty);
+        var caracteresInvalidos = Path.GetInvalidFileNameChars();
+        var sano = new string(nombre
+            .Select(c => Array.IndexOf(caracteresInvalidos, c) >= 0 ? '-' : c)
+            .ToArray())
+            .Replace("..", "-", StringComparison.Ordinal)
+            .Trim('.', ' ');
+        if (sano.Length > 200)
+            sano = sano[^200..];
+        return sano.Length == 0 ? "nota.jpg" : sano;
+    }
+}
+
+// Descarga autorizada de un respaldo (spec SP8C): la vista derivada se sirve
+// inline y el original solo como adjunto. El alcance lo impone el filtro del
+// DbContext (el tenant solo encuentra los suyos; CAISY los ve todos) y un
+// documento ajeno responde 404 genérico, sin revelar existencia.
+public sealed record DescargarDocumentoNotaQuery(
+    Guid PedidoId, Guid DocumentoId, bool EsOriginal) : IRequest<ArchivoDocumentoNota>;
+
+public sealed record ArchivoDocumentoNota(
+    Stream Contenido, string Mime, string NombreSeguro);
+
+public sealed class DescargarDocumentoNotaHandler(
+    IRepositorioPedidosAlimento repositorio,
+    IAlmacenDocumentosPedido almacen)
+    : IRequestHandler<DescargarDocumentoNotaQuery, ArchivoDocumentoNota>
+{
+    public async Task<ArchivoDocumentoNota> Handle(
+        DescargarDocumentoNotaQuery request, CancellationToken cancellationToken)
+    {
+        var pedido = await repositorio.ObtenerConHistorialAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        var documento = pedido.Entrega?.Documentos.SingleOrDefault(d => d.Id == request.DocumentoId)
+            ?? throw new NotFoundException("Documento de nota", request.DocumentoId);
+        var contenido = request.EsOriginal
+            ? await almacen.AbrirOriginalAsync(documento.ClaveOriginal, cancellationToken)
+            : await almacen.AbrirVistaAsync(documento.ClaveVista, cancellationToken);
+        if (contenido is null)
+            throw new NotFoundException("Documento de nota", request.DocumentoId);
+        return new ArchivoDocumentoNota(
+            contenido,
+            request.EsOriginal ? documento.Mime : "image/jpeg",
+            documento.NombreSeguro);
+    }
 }
 
 public sealed class ListarPedidosAlimentoHandler(IRepositorioPedidosAlimento repositorio)
