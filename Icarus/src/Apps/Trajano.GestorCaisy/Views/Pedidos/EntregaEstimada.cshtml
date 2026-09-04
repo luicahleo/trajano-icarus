@@ -1,0 +1,34 @@
+@model FormularioEntregaVista
+@{
+    ViewData["Titulo"] = "Cambiar entrega estimada";
+    ViewData["Seccion"] = "pedidos";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Cambiar entrega estimada</h1>
+        <p class="pagina-cabecera__detalle">
+            La nueva fecha debe ser hoy o posterior; cada cambio notifica al
+            tenant y queda registrado en el historial del pedido.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <form asp-action="EntregaEstimada" asp-route-id="@Model.Id" method="post">
+        <div class="campos">
+            <div class="campo">
+                <label for="FechaEntregaEstimada">Nueva fecha de entrega estimada</label>
+                <input id="FechaEntregaEstimada" name="FechaEntregaEstimada" type="date"
+                       value="@Model.FechaEntregaEstimada.ToString("yyyy-MM-dd")" required />
+                <span asp-validation-for="FechaEntregaEstimada" class="campo__ayuda"></span>
+            </div>
+        </div>
+        <div class="acciones">
+            <button type="submit" class="boton"
+                    data-confirmar="El tenant recibirá una notificación con el cambio de fecha. ¿Confirma la actualización?">
+                Confirmar cambio
+            </button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@Model.Id">Cancelar</a>
+        </div>
+    </form>
+</section>

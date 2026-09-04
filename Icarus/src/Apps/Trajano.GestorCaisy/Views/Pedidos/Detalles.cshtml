@@ -1,0 +1,112 @@
+@model VistaPedidoDetalle
+@{
+    var pedido = Model.Pedido;
+    ViewData["Titulo"] = "Pedido de alimento";
+    ViewData["Seccion"] = "pedidos";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Pedido de alimento</h1>
+        <p class="pagina-cabecera__detalle">
+            Enviado el @(pedido.FechaPedido?.ToString("dd/MM/yyyy") ?? "—").
+            Los precios congelados son el snapshot del envío y nunca se recalculan.
+        </p>
+    </div>
+    <span class="chip chip--@pedido.Estado.ToLowerInvariant()">@pedido.Estado</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Resumen</h2>
+    <dl class="ficha">
+        <div>
+            <dt>Tenant</dt>
+            <dd>@pedido.ClienteId.ToString()[..8]</dd>
+        </div>
+        <div>
+            <dt>Fecha de pedido</dt>
+            <dd>@(pedido.FechaPedido?.ToString("dd/MM/yyyy") ?? "—")</dd>
+        </div>
+        <div>
+            <dt>Entrega estimada</dt>
+            <dd>@(pedido.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "—")</dd>
+        </div>
+        <div>
+            <dt>Total solicitado</dt>
+            <dd>@(pedido.TotalSolicitado?.ToString("0.00") ?? "—")</dd>
+        </div>
+    </dl>
+    <div class="acciones">
+        @if (Model.PuedeProcesarse)
+        {
+            <a class="boton" asp-action="Devolver" asp-route-id="@pedido.Id">Devolver para corrección</a>
+            <a class="boton boton--secundario" asp-action="Rechazar" asp-route-id="@pedido.Id">Rechazar</a>
+            <a class="boton boton--primario" asp-action="Aceptar" asp-route-id="@pedido.Id">Aceptar</a>
+        }
+        @if (Model.PuedeActualizarEntrega)
+        {
+            <a class="boton" asp-action="EntregaEstimada" asp-route-id="@pedido.Id">Cambiar entrega estimada</a>
+        }
+        <a class="enlace" asp-action="Index">Volver a la bandeja</a>
+    </div>
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Líneas congeladas al envío</h2>
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Tipo de alimento</th>
+                <th scope="col">Presentación</th>
+                <th scope="col">Cantidad solicitada</th>
+                <th scope="col">Equivalentes de 40 kg</th>
+                <th scope="col">Precio por 40 kg</th>
+                <th scope="col">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var linea in pedido.Lineas)
+            {
+                <tr>
+                    <td>@linea.TipoAlimento</td>
+                    <td>@linea.Presentacion</td>
+                    <td>@linea.CantidadSolicitada @(linea.Presentacion == "Bolsa" ? "bolsas" : "t")</td>
+                    <td>@linea.Equivalentes40Kg</td>
+                    <td>@(linea.PrecioFinalPor40Kg?.ToString("0.00") ?? "—")</td>
+                    <td>@(linea.SubtotalSolicitado?.ToString("0.00") ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Historial de transiciones</h2>
+    @if (pedido.Historial.Count == 0)
+    {
+        <p class="vacio__texto">Sin movimientos todavía.</p>
+    }
+    else
+    {
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Fecha (local)</th>
+                    <th scope="col">Transición</th>
+                    <th scope="col">Motivo</th>
+                    <th scope="col">Entrega estimada</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transicion in pedido.Historial)
+                {
+                    <tr>
+                        <td>@transicion.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            @transicion.EstadoOrigen → @transicion.EstadoDestino
+                        </td>
+                        <td>@(transicion.Motivo ?? "—")</td>
+                        <td>@(transicion.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>

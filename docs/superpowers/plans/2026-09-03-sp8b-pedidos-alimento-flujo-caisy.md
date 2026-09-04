@@ -172,12 +172,19 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 `Icarus/src/Apps/Trajano.GestorCaisy/` y
 `Icarus/tests/Trajano.GestorCaisy.Tests/`.
 
-- [ ] Tras aprobación visual, probar y construir bandeja paginada, filtros,
+- [x] Tras aprobación visual, probar y construir bandeja paginada, filtros,
   detalle congelado e historial.
-- [ ] Implementar devolver para corrección, rechazar, aceptar y cambiar ETA con
+  (sin Superdesign, decisión del usuario registrada en SP8A; la bandeja sigue
+  el lenguaje visual existente de Precios: tarjeta, tabla, chips y formularios)
+- [x] Implementar devolver para corrección, rechazar, aceptar y cambiar ETA con
   confirmaciones, validación y protección contra doble envío.
-- [ ] Añadir campana/contador y marcado de notificaciones.
-- [ ] Commit previsto: `feat(gestor-caisy): procesar pedidos entrantes`.
+  (confirmaciones GET + POST con antiforgery, motivo obligatorio de 500,
+  fecha desde hoy validada en el controlador y en la API, 409 mostrado como
+  mensaje)
+- [x] Añadir campana/contador y marcado de notificaciones.
+  (panel de novedades con contador en la bandeja y marcado idempotente)
+- [x] Commit previsto: `feat(gestor-caisy): procesar pedidos entrantes`.
+  (90/90 en Trajano.GestorCaisy.Tests y puerta completa verde)
 
 ## Cierre SP8B
 

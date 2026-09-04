@@ -19,4 +19,22 @@ public interface IApiIcarusClient
     Task AnularFuturaAsync(Guid id, CancellationToken token = default);
 
     Task<Stream> DescargarDocumentoOriginalAsync(Guid id, CancellationToken token = default);
+
+    Task<PaginaPedidosApi> ListarPedidosAsync(
+        FiltrosPedidosApi filtros, CancellationToken token = default);
+
+    Task<PedidoDetalleApi> ObtenerPedidoAsync(Guid id, CancellationToken token = default);
+
+    Task DevolverPedidoAsync(Guid id, string motivo, CancellationToken token = default);
+
+    Task RechazarPedidoAsync(Guid id, string motivo, CancellationToken token = default);
+
+    Task AceptarPedidoAsync(Guid id, DateOnly fechaEntregaEstimada, CancellationToken token = default);
+
+    Task ActualizarEntregaEstimadaAsync(
+        Guid id, DateOnly nuevaFecha, CancellationToken token = default);
+
+    Task<BandejaNotificacionesApi> ListarNotificacionesPedidoAsync(CancellationToken token = default);
+
+    Task MarcarNotificacionPedidoLeidaAsync(Guid id, CancellationToken token = default);
 }

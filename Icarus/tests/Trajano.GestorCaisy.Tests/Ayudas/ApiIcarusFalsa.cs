@@ -109,6 +109,112 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         return Task.FromResult<Stream>(new MemoryStream(ContenidoPdf, writable: false));
     }
 
+    public Exception? ErrorDeListarPedidos { get; set; }
+    public Exception? ErrorDeObtenerPedido { get; set; }
+    public Exception? ErrorDeDecision { get; set; }
+    public Exception? ErrorDeNotificaciones { get; set; }
+    public Exception? ErrorDeMarcarLeida { get; set; }
+
+    public PaginaPedidosApi PaginaDePedidos { get; set; } = new([], 0, 1, 20);
+    public PedidoDetalleApi? PedidoActual { get; set; }
+    public BandejaNotificacionesApi NotificacionesDePedidos { get; set; } = new([], 0);
+
+    public int VecesListarPedidos { get; private set; }
+    public int VecesObtenerPedido { get; private set; }
+    public int VecesDevolver { get; private set; }
+    public int VecesRechazar { get; private set; }
+    public int VecesAceptar { get; private set; }
+    public int VecesActualizarEntrega { get; private set; }
+    public int VecesListarNotificaciones { get; private set; }
+    public int VecesMarcarLeida { get; private set; }
+
+    public FiltrosPedidosApi? UltimosFiltros { get; private set; }
+    public Guid? UltimoPedidoObtenido { get; private set; }
+    public (Guid Id, string Motivo)? UltimaDecisionConMotivo { get; private set; }
+    public (Guid Id, DateOnly Fecha)? UltimaFechaEntrega { get; private set; }
+    public Guid? UltimaNotificacionMarcada { get; private set; }
+
+    public Task<PaginaPedidosApi> ListarPedidosAsync(
+        FiltrosPedidosApi filtros, CancellationToken token = default)
+    {
+        VecesListarPedidos++;
+        UltimosFiltros = filtros;
+        if (ErrorDeListarPedidos is not null) throw ErrorDeListarPedidos;
+        return Task.FromResult(PaginaDePedidos);
+    }
+
+    public Task<PedidoDetalleApi> ObtenerPedidoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        VecesObtenerPedido++;
+        UltimoPedidoObtenido = id;
+        if (ErrorDeObtenerPedido is not null) throw ErrorDeObtenerPedido;
+        return Task.FromResult(PedidoActual ?? CrearPedido(id, "Solicitado"));
+    }
+
+    public Task DevolverPedidoAsync(Guid id, string motivo, CancellationToken token = default)
+    {
+        VecesDevolver++;
+        UltimaDecisionConMotivo = (id, motivo);
+        if (ErrorDeDecision is not null) throw ErrorDeDecision;
+        return Task.CompletedTask;
+    }
+
+    public Task RechazarPedidoAsync(Guid id, string motivo, CancellationToken token = default)
+    {
+        VecesRechazar++;
+        UltimaDecisionConMotivo = (id, motivo);
+        if (ErrorDeDecision is not null) throw ErrorDeDecision;
+        return Task.CompletedTask;
+    }
+
+    public Task AceptarPedidoAsync(
+        Guid id, DateOnly fechaEntregaEstimada, CancellationToken token = default)
+    {
+        VecesAceptar++;
+        UltimaFechaEntrega = (id, fechaEntregaEstimada);
+        if (ErrorDeDecision is not null) throw ErrorDeDecision;
+        return Task.CompletedTask;
+    }
+
+    public Task ActualizarEntregaEstimadaAsync(
+        Guid id, DateOnly nuevaFecha, CancellationToken token = default)
+    {
+        VecesActualizarEntrega++;
+        UltimaFechaEntrega = (id, nuevaFecha);
+        if (ErrorDeDecision is not null) throw ErrorDeDecision;
+        return Task.CompletedTask;
+    }
+
+    public Task<BandejaNotificacionesApi> ListarNotificacionesPedidoAsync(
+        CancellationToken token = default)
+    {
+        VecesListarNotificaciones++;
+        if (ErrorDeNotificaciones is not null) throw ErrorDeNotificaciones;
+        return Task.FromResult(NotificacionesDePedidos);
+    }
+
+    public Task MarcarNotificacionPedidoLeidaAsync(Guid id, CancellationToken token = default)
+    {
+        VecesMarcarLeida++;
+        UltimaNotificacionMarcada = id;
+        if (ErrorDeMarcarLeida is not null) throw ErrorDeMarcarLeida;
+        return Task.CompletedTask;
+    }
+
+    public static PedidoDetalleApi CrearPedido(
+        Guid id, string estado = "Solicitado", DateOnly? fechaEntregaEstimada = null) =>
+        new(
+            id, Guid.NewGuid(), estado, new(2025, 11, 2), fechaEntregaEstimada, 14162.5m,
+            [
+                new LineaPedidoApi(
+                    Guid.NewGuid(), "PosturaUno", "Bolsa", 80, 80, 176.5m, 14120m, Guid.NewGuid()),
+            ],
+            [
+                new TransicionPedidoApi(
+                    "Borrador", "Solicitado", new(2025, 11, 2, 15, 0, 0, DateTimeKind.Utc), null, null),
+            ]);
+
     public static NotificacionPreciosDetalleApi CrearDetalle(
         Guid id, string estado = "Borrador", string vigenteDesde = "2025-12-01") =>
         new(

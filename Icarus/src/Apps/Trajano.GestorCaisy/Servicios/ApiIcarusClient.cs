@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -123,6 +124,89 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         await respuesta.Content.CopyToAsync(memoria, token);
         memoria.Position = 0;
         return memoria;
+    }
+
+    public async Task<PaginaPedidosApi> ListarPedidosAsync(
+        FiltrosPedidosApi filtros, CancellationToken token = default)
+    {
+        var consulta = new StringBuilder("pedidos-alimento-caisy?").AppendFormat(
+            CultureInfo.InvariantCulture, "pagina={0}&tamanoPagina={1}", filtros.Pagina, filtros.TamanoPagina);
+        if (!string.IsNullOrEmpty(filtros.Estado))
+            consulta.Append("&estado=").Append(Uri.EscapeDataString(filtros.Estado));
+        if (!string.IsNullOrEmpty(filtros.Presentacion))
+            consulta.Append("&presentacion=").Append(Uri.EscapeDataString(filtros.Presentacion));
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(), accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<PaginaPedidosApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public async Task<PedidoDetalleApi> ObtenerPedidoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, $"pedidos-alimento-caisy/{id}", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<PedidoDetalleApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public Task DevolverPedidoAsync(
+        Guid id, string motivo, CancellationToken token = default) =>
+        EnviarDecisionPedidoAsync(id, "devolver", motivo, token);
+
+    public Task RechazarPedidoAsync(
+        Guid id, string motivo, CancellationToken token = default) =>
+        EnviarDecisionPedidoAsync(id, "rechazar", motivo, token);
+
+    private async Task EnviarDecisionPedidoAsync(
+        Guid id, string accion, string motivo, CancellationToken token)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"pedidos-alimento-caisy/{id}/{accion}", accessToken, new { motivo }), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task AceptarPedidoAsync(
+        Guid id, DateOnly fechaEntregaEstimada, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"pedidos-alimento-caisy/{id}/aceptar", accessToken,
+                new { fechaEntregaEstimada }), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task ActualizarEntregaEstimadaAsync(
+        Guid id, DateOnly nuevaFecha, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"pedidos-alimento-caisy/{id}/entrega-estimada", accessToken,
+                new { fechaEntregaEstimada = nuevaFecha }), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task<BandejaNotificacionesApi> ListarNotificacionesPedidoAsync(
+        CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Get, "pedidos-alimento-caisy/notificaciones", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<BandejaNotificacionesApi>(Json, token)
+            ?? new BandejaNotificacionesApi([], 0);
+    }
+
+    public async Task MarcarNotificacionPedidoLeidaAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"pedidos-alimento-caisy/notificaciones/{id}/marcar-leida", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
     }
 
     // Núcleo: envía con el access token actual; ante un 401 renueva la sesión

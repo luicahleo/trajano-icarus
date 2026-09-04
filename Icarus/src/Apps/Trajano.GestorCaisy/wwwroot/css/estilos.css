@@ -242,6 +242,32 @@ a { color: var(--aqua-oscuro); }
 .chip--publicada { background-color: var(--aqua-claro); color: var(--aqua-oscuro); }
 .chip--anulada { background-color: #F8E3DA; color: var(--terracota-oscura); }
 
+/* Estados de los pedidos de alimento (SP8B) */
+.chip--solicitado { background-color: var(--aqua-claro); color: var(--aqua-oscuro); }
+.chip--aceptado { background-color: #DDEBDC; color: #2C5E3F; }
+.chip--rechazado { background-color: #F8E3DA; color: var(--terracota-oscura); }
+
+/* Novedades de la bandeja de pedidos (SP8B) */
+.novedades { list-style: none; margin: 0; padding: 0; }
+
+.novedades li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--borde);
+}
+
+.novedades li:last-child { border-bottom: none; }
+
+.novedades__acciones { display: flex; gap: 12px; align-items: center; }
+
+.novedades__acciones form { display: inline; }
+
+.novedades__leida { color: var(--neutro); font-size: 0.875rem; }
+
 /* Botones */
 .boton {
     display: inline-block;

@@ -32,3 +32,35 @@ public sealed record ComandoActualizarBorradorApi(
 
 // El importador responde con el identificador del borrador creado.
 public sealed record BorradorImportadoApi([property: JsonPropertyName("id")] Guid Id);
+
+// Pedidos de alimento (SP8B): espejo de los DTO de la API para la bandeja
+// global del tenant-caisy con filtros y paginación.
+public sealed record FiltrosPedidosApi(
+    string? Estado, string? Presentacion, int Pagina, int TamanoPagina);
+
+public sealed record PedidoResumenApi(
+    Guid Id, Guid ClienteId, string Estado, string Presentacion, DateOnly? FechaPedido,
+    DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
+
+public sealed record PaginaPedidosApi(
+    IReadOnlyList<PedidoResumenApi> Items, int Total, int Pagina, int TamanoPagina);
+
+public sealed record LineaPedidoApi(
+    Guid Id, string TipoAlimento, string Presentacion, int CantidadSolicitada,
+    int Equivalentes40Kg, decimal? PrecioFinalPor40Kg, decimal? SubtotalSolicitado,
+    Guid? NotificacionPreciosAlimentosId);
+
+public sealed record TransicionPedidoApi(
+    string EstadoOrigen, string EstadoDestino, DateTime FechaUtc,
+    string? Motivo, DateOnly? FechaEntregaEstimada);
+
+public sealed record PedidoDetalleApi(
+    Guid Id, Guid ClienteId, string Estado, DateOnly? FechaPedido,
+    DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado,
+    IReadOnlyList<LineaPedidoApi> Lineas, IReadOnlyList<TransicionPedidoApi> Historial);
+
+public sealed record NotificacionPedidoApi(
+    Guid Id, string Tipo, Guid PedidoId, DateTime FechaUtc, bool Leida, string? Meta);
+
+public sealed record BandejaNotificacionesApi(
+    IReadOnlyList<NotificacionPedidoApi> Items, int Contador);
