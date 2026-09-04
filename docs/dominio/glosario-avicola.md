@@ -61,6 +61,7 @@ Definidos en
 | Bolsa de alimento | Presentación cerrada de 40 kg. Se solicita en número entero de bolsas. |
 | Alimento a granel | Presentación solicitada en toneladas enteras. Un pedido exige al menos 2 t por tipo y 6 t en total; una tonelada equivale a 25 unidades de 40 kg. |
 | Devolución para corrección | Decisión no terminal de CAISY que devuelve el mismo pedido a `Borrador`, con motivo obligatorio, para que el tenant lo corrija y reenvíe. |
+| Cupo semanal | Límite configurable de pedidos enviados por cliente y semana ISO (3 inicial). Cuentan los pedidos salidos del borrador y no borrados; los borradores no consumen cupo y la devolución más reenvío del mismo pedido no lo vuelve a consumir. |
 | Nota de entrega de alimento | Documento que deja el distribuidor. SP8 admite una nota y una entrega por pedido, con datos manuales y varias imágenes privadas de respaldo. |
 | Recepción de alimento | Confirmación por línea del tenant después del despacho. Termina como `RecibidoConforme` o `RecibidoConDiferencias`; ambos estados reconocen el gasto real. |
 

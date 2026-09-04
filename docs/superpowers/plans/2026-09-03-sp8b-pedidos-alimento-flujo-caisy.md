@@ -188,6 +188,9 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 
 ## Cierre SP8B
 
-- [ ] Suites dirigidas y completas, `./verify.ps1`, `git diff --check` y lectura del diff.
-- [ ] Actualizar glosario, `AGENTS.md`, adaptadores y este plan.
-- [ ] Commit final del bloque y push a `develop` solo con la puerta verde.
+- [x] Suites dirigidas y completas, `./verify.ps1`, `git diff --check` y lectura del diff.
+- [x] Actualizar glosario, `AGENTS.md`, adaptadores y este plan.
+  (glosario: nueva fila «Cupo semanal»; adaptadores regenerados sin cambios)
+- [x] Commit final del bloque y push a `develop` solo con la puerta verde.
+  (seis commits de tarea más el commit del cierre; SP8B completo, sin
+  impedimentos: despacho, documentos, recepción y balance quedan para SP8C)
