@@ -25,14 +25,14 @@ recepción por línea y reconocimiento correcto del gasto.
 - Application/Infrastructure de `PedidosAlimento`.
 - `Icarus/tests/Icarus.UnitTests/GestionAvicola/EntregaPedidoAlimentoTests.cs`
 
-- [ ] Rojo: `RegistrarDespacho` solo desde `Aceptado`, crea exactamente una
+- [x] Rojo: `RegistrarDespacho` solo desde `Aceptado`, crea exactamente una
   entrega/nota y pasa a `Despachado`.
-- [ ] Rojo: número/fecha de nota y líneas manuales obligatorios; cantidades
+- [x] Rojo: número/fecha de nota y líneas manuales obligatorios; cantidades
   enteras en unidad de presentación; admite diferencias contra lo solicitado.
-- [ ] Rojo: total informado se conserva para contraste, sin reemplazar el total
+- [x] Rojo: total informado se conserva para contraste, sin reemplazar el total
   calculado; un segundo despacho o nota devuelve conflicto.
-- [ ] Verde mínimo y persistencia con índices/constraints.
-- [ ] Commit previsto: `feat(avicola): registrar despacho de alimento`.
+- [x] Verde mínimo y persistencia con índices/constraints.
+- [x] Commit previsto: `feat(avicola): registrar despacho de alimento`.
 
 ## Tarea 2 — Almacén privado de respaldos
 

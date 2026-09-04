@@ -70,6 +70,19 @@ public sealed record ActualizarEntregaEstimadaPedidoCommand(Guid PedidoId, DateO
         "avicola.pedidos.actualizar-entrega", new Dictionary<string, DatoRegistroVuelo>());
 }
 
+// Despacho (spec SP8C): una única entrega y una única nota por pedido,
+// registrada por CAISY con datos manuales. El número de nota y las líneas no
+// se registran en el vuelo (anti-PII): solo ids técnicos, estado y conteos.
+public sealed record RegistrarDespachoPedidoCommand(
+    Guid PedidoId, string NumeroNota, DateOnly FechaNota,
+    decimal? TotalInformado, IReadOnlyList<DatosLineaEntrega> LineasEntregadas)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.despachar", new Dictionary<string, DatoRegistroVuelo>
+        { ["Lineas"] = DatoRegistroVuelo.Entero });
+}
+
 public sealed record ListarPedidosAlimentoQuery
     : IRequest<IReadOnlyList<PedidoAlimentoResumen>>;
 
@@ -168,6 +181,21 @@ public sealed class ActualizarEntregaEstimadaPedidoValidator
     {
         RuleFor(c => c.PedidoId).NotEmpty();
         RuleFor(c => c.NuevaFecha).NotEmpty();
+    }
+}
+
+public sealed class RegistrarDespachoPedidoValidator
+    : AbstractValidator<RegistrarDespachoPedidoCommand>
+{
+    public RegistrarDespachoPedidoValidator()
+    {
+        RuleFor(c => c.PedidoId).NotEmpty();
+        RuleFor(c => c.NumeroNota).NotEmpty().MaximumLength(100);
+        RuleFor(c => c.FechaNota).NotEmpty();
+        RuleFor(c => c.LineasEntregadas).NotNull().NotEmpty();
+        RuleForEach(c => c.LineasEntregadas)
+            .Must(l => l.CantidadEntregada >= 0)
+            .WithMessage("La cantidad entregada no puede ser negativa.");
     }
 }
 
@@ -414,6 +442,50 @@ public sealed class ActualizarEntregaEstimadaPedidoHandler(
     private static string Meta(DateOnly nuevaFecha) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"{{\"fechaEntregaEstimada\":\"{nuevaFecha}\"}}");
+}
+
+// Despacho (spec SP8C "Despacho, nota y recepción"): lo registra CAISY sobre
+// un pedido aceptado, con una única entrega y una única nota. La fecha de
+// despacho es la fecha de negocio del servidor; el agregado valida nota y
+// líneas. La notificación de despachado llega a la bandeja del tenant en la
+// misma transacción local. Los reintentos chocan con el estado y responden
+// 409 sin repetir la transición ni la notificación.
+public sealed class RegistrarDespachoPedidoHandler(
+    IRepositorioPedidosAlimento repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
+    : IRequestHandler<RegistrarDespachoPedidoCommand>
+{
+    public async Task Handle(RegistrarDespachoPedidoCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Aceptado)
+            throw new ConflictException("Solo un pedido aceptado se puede despachar.");
+        pedido.RegistrarDespacho(
+            request.NumeroNota, request.FechaNota, request.TotalInformado,
+            request.LineasEntregadas, FechasNegocio.Hoy(), actorId);
+        notificaciones.Agregar(NotificacionInterna.ParaTenant(
+            TipoNotificacionPedido.PedidoDespachado, pedido.Id, pedido.ClienteId));
+        registroVuelo.Decidir("avicola.pedidos.despachar", "despacho", "aplicada",
+            new Dictionary<string, object?>
+            {
+                ["Lineas"] = request.LineasEntregadas.Count,
+                ["Diferencias"] = ContarDiferencias(pedido),
+            });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+
+    // Conteo técnico de líneas con diferencia contra lo solicitado: sin
+    // números de nota ni nombres de archivo (anti-PII).
+    private static int ContarDiferencias(PedidoAlimento pedido) =>
+        pedido.Entrega!.Lineas
+            .Zip(pedido.Detalles, (e, d) => (e, d))
+            .Count(par => par.e.CantidadEntregada != par.d.CantidadSolicitada);
 }
 
 public sealed class ListarPedidosAlimentoHandler(IRepositorioPedidosAlimento repositorio)

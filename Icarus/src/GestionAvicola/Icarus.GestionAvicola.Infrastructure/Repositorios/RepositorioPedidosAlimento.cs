@@ -21,6 +21,7 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
     public async Task<PedidoAlimento?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default) =>
         await db.PedidosAlimento.Include(p => p.Detalles)
+            .Include(p => p.Entrega)
             .SingleOrDefaultAsync(p => p.Id == id, cancellationToken);
 
     public async Task<PedidoAlimento?> ObtenerConHistorialAsync(
@@ -28,6 +29,8 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
         await db.PedidosAlimento
             .Include(p => p.Detalles)
             .Include(p => p.Historial)
+            .Include(p => p.Entrega)
+            .ThenInclude(e => e!.Lineas)
             .SingleOrDefaultAsync(p => p.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<PedidoAlimento>> ListarAsync(

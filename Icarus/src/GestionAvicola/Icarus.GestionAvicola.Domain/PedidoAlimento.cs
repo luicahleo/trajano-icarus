@@ -12,6 +12,7 @@ public sealed class PedidoAlimento : AggregateRoot
 {
     private readonly List<DetallePedidoAlimento> _detalles = [];
     private readonly List<TransicionPedidoAlimento> _historial = [];
+    private EntregaPedidoAlimento? _entrega;
 
     private PedidoAlimento()
     {
@@ -58,12 +59,26 @@ public sealed class PedidoAlimento : AggregateRoot
     // Lista ordenada por ocurrencia: el historial se lee en orden cronológico.
     public IReadOnlyList<TransicionPedidoAlimento> Historial => _historial.AsReadOnly();
 
+    // Entrega única registrada por CAISY (spec SP8C); null hasta el despacho.
+    public EntregaPedidoAlimento? Entrega => _entrega;
+
     // Suma de subtotales congelados; null mientras el pedido no se haya
     // enviado (el borrador puede construirse sin precios).
     public decimal? TotalSolicitado =>
         _detalles.Count > 0 && _detalles.All(d => d.SubtotalSolicitado is not null)
             ? _detalles.Sum(d => d.SubtotalSolicitado!.Value)
             : null;
+
+    // Cálculo canónico del despacho (spec SP8C): equivalentes realmente
+    // entregados por línea × precio congelado al envío. El total informado de
+    // la nota se conserva para contraste y nunca lo sustituye.
+    public decimal? TotalDespachado =>
+        _entrega is null
+            ? null
+            : _detalles
+                .Join(_entrega.Lineas, d => d.TipoAlimento, e => e.TipoAlimento,
+                    (d, e) => e.Equivalentes40Kg * (d.PrecioFinalPor40Kg ?? 0m))
+                .Sum();
 
     // Solo el borrador se edita: reemplaza todas las líneas con la misma
     // validación de la creación (una presentación, tipos únicos y compatibles).
@@ -148,6 +163,41 @@ public sealed class PedidoAlimento : AggregateRoot
             null, nuevaFecha);
     }
 
+    // Despacho (spec SP8C "Despacho, nota y recepción"): CAISY registra una
+    // única entrega con una única nota, solo desde Aceptado. La fecha de
+    // despacho la fija el servidor con la fecha de negocio; el número y la
+    // fecha de nota son manuales; cada línea solicitada exige su cantidad
+    // entregada, entera en la unidad de presentación y sin negativos, con
+    // diferencias permitidas contra lo solicitado. Un segundo despacho choca
+    // con el estado: los reintentos no duplican la transición ni la nota.
+    public void RegistrarDespacho(
+        string numeroNota, DateOnly fechaNota, decimal? totalNetoInformado,
+        IReadOnlyList<DatosLineaEntrega> lineasEntregadas, DateOnly hoy, Guid actorId)
+    {
+        AsegurarEstado(EstadoPedidoAlimento.Aceptado, "Solo un pedido aceptado se puede despachar.");
+        if (string.IsNullOrWhiteSpace(numeroNota))
+            throw new ReglaNegocioException("El número de nota es obligatorio.");
+        if (fechaNota == default)
+            throw new ReglaNegocioException("La fecha de la nota es obligatoria.");
+        var pedidos = lineasEntregadas
+            .GroupBy(l => l.Tipo)
+            .ToDictionary(g => g.Key, g => g.Sum(l => l.CantidadEntregada));
+        var solicitados = _detalles.ToDictionary(d => d.TipoAlimento);
+        if (pedidos.Count != solicitados.Count
+            || pedidos.Keys.Any(t => !solicitados.ContainsKey(t)))
+            throw new ReglaNegocioException(
+                solicitados.Keys.Any(t => !pedidos.ContainsKey(t))
+                    ? "La entrega debe cubrir todas las líneas del pedido."
+                    : "La entrega incluye una línea que no pertenece al pedido.");
+
+        _entrega = new EntregaPedidoAlimento(
+            numeroNota.Trim(), fechaNota, hoy, totalNetoInformado,
+            pedidos.Select(par => new DetalleEntregaPedidoAlimento(
+                par.Key, Presentacion(), par.Value)).ToList());
+        Estado = EstadoPedidoAlimento.Despachado;
+        RegistrarTransicion(EstadoPedidoAlimento.Aceptado, EstadoPedidoAlimento.Despachado, actorId);
+    }
+
     private void AsegurarEstado(EstadoPedidoAlimento esperado, string mensaje)
     {
         if (Estado != esperado)
@@ -227,6 +277,10 @@ public sealed class PedidoAlimento : AggregateRoot
 // toneladas según la presentación del pedido).
 public sealed record DatosDetallePedido(
     TipoAlimento Tipo, PresentacionAlimento Presentacion, int Cantidad);
+
+// Línea manual del despacho (spec SP8C): cantidad entera entregada en la
+// unidad natural de la presentación, referida al tipo solicitado.
+public sealed record DatosLineaEntrega(TipoAlimento Tipo, int CantidadEntregada);
 
 // Precio vigente resuelto por la Application al enviar: se congela en las
 // líneas como snapshot (spec SP8). La identidad del precio es

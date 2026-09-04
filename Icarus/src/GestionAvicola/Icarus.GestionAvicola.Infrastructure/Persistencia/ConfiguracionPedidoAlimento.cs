@@ -24,5 +24,8 @@ public sealed class ConfiguracionPedidoAlimento : IEntityTypeConfiguration<Pedid
         builder.HasMany(p => p.Historial).WithOne()
             .HasForeignKey("PedidoAlimentoId").IsRequired();
         builder.Navigation(p => p.Historial).HasField("_historial");
+        builder.HasOne(p => p.Entrega).WithOne()
+            .HasForeignKey<EntregaPedidoAlimento>("PedidoAlimentoId").IsRequired();
+        builder.Navigation(p => p.Entrega).HasField("_entrega");
     }
 }

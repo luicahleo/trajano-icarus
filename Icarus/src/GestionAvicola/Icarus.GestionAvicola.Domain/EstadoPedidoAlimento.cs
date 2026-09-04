@@ -9,4 +9,7 @@ public enum EstadoPedidoAlimento
     Solicitado = 1,
     Rechazado = 2,
     Aceptado = 3,
+    // SP8C: estado de despacho agregado al final, sin renumerar los
+    // persistidos. La recepción agrega sus estados en su tarea.
+    Despachado = 4,
 }

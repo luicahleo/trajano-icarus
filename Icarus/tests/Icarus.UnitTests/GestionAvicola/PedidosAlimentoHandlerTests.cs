@@ -346,4 +346,92 @@ public class PedidosAlimentoHandlerTests
         Assert.Equal("Revise la cantidad", detalle.Historial[1].Motivo);
         Assert.Equal(180m, detalle.Lineas.Single().PrecioFinalPor40Kg);
     }
+
+    // SP8C Tarea 1 (spec: "Despacho, nota y recepción"): CAISY registra el
+    // despacho con su nota; la notificación va a la bandeja del tenant y los
+    // datos de la nota no salen hacia el registro de vuelo (anti-PII).
+    private static PedidoAlimento PedidoAceptado() =>
+        Aceptado(new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa()));
+
+    private static PedidoAlimento Aceptado(PedidoAlimento pedido)
+    {
+        pedido.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
+            [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
+        pedido.Aceptar(FechasNegocio.Hoy().AddDays(3), FechasNegocio.Hoy(), UsuarioId);
+        return pedido;
+    }
+
+    private static DatosLineaEntrega LineaEntregada(int cantidad = 100) =>
+        new(TipoAlimento.PosturaUno, cantidad);
+
+    [Fact]
+    public async Task DespacharDesdeAceptadoRegistraLaEntregaYNotificaAlTenant()
+    {
+        var pedido = PedidoAceptado();
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        await CrearDespachador().Handle(
+            new RegistrarDespachoPedidoCommand(
+                pedido.Id, "NOTA-77", FechasNegocio.Hoy().AddDays(-1), 18000m,
+                [LineaEntregada()]), CancellationToken.None);
+
+        Assert.Equal(EstadoPedidoAlimento.Despachado, pedido.Estado);
+        Assert.Equal("NOTA-77", pedido.Entrega!.NumeroNota);
+        Assert.Equal(FechasNegocio.Hoy(), pedido.Entrega.FechaDespacho);
+        _notificaciones.Received(1).Agregar(Arg.Is<NotificacionInterna>(n =>
+            n.Tipo == TipoNotificacionPedido.PedidoDespachado &&
+            n.PedidoId == pedido.Id &&
+            n.ClienteId == ClienteId));
+        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DespacharUnPedidoNoAceptadoDevuelveConflicto()
+    {
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        pedido.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
+            [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            CrearDespachador().Handle(
+                new RegistrarDespachoPedidoCommand(
+                    pedido.Id, "NOTA-77", FechasNegocio.Hoy(), null,
+                    [LineaEntregada()]), CancellationToken.None));
+
+        Assert.Equal(EstadoPedidoAlimento.Solicitado, pedido.Estado);
+        Assert.Null(pedido.Entrega);
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DespacharUnIdAjenoDevuelveNoEncontrado()
+    {
+        _repositorio.ObtenerPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((PedidoAlimento?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CrearDespachador().Handle(
+                new RegistrarDespachoPedidoCommand(
+                    Guid.NewGuid(), "NOTA-77", FechasNegocio.Hoy(), null,
+                    [LineaEntregada()]), CancellationToken.None));
+    }
+
+    private RegistrarDespachoPedidoHandler CrearDespachador() =>
+        new(_repositorio, _usuarioActual, _registroVuelo, _unidadTrabajo, _notificaciones);
+
+    [Fact]
+    public async Task DespacharSinNumeroDeNotaFallaLaValidacion()
+    {
+        var pedido = PedidoAceptado();
+        var validator = new RegistrarDespachoPedidoValidator();
+
+        var resultado = await validator.ValidateAsync(
+            new RegistrarDespachoPedidoCommand(
+                pedido.Id, " ", FechasNegocio.Hoy(), null,
+                [LineaEntregada()]), CancellationToken.None);
+
+        Assert.False(resultado.IsValid);
+        Assert.Equal(EstadoPedidoAlimento.Aceptado, pedido.Estado);
+    }
 }

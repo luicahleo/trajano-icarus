@@ -13,4 +13,7 @@ public enum TipoNotificacionPedido
     PedidoRechazado = 3,
     PedidoAceptado = 4,
     EntregaEstimadaActualizada = 5,
+    // SP8C: despacho agregado al final, sin renumerar. La recepción agrega
+    // sus tipos en su tarea.
+    PedidoDespachado = 6,
 }
