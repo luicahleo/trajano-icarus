@@ -86,14 +86,21 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 - configuración, repositorio y migración en Infrastructure.
 - `Icarus/tests/Icarus.UnitTests/GestionAvicola/NotificacionesInternasTests.cs`
 
-- [ ] Rojo: enviar/reenviar crea una notificación CAISY una sola vez; devolver,
+- [x] Rojo: enviar/reenviar crea una notificación CAISY una sola vez; devolver,
   rechazar, aceptar o cambiar fecha crea una por destinatario tenant.
-- [ ] Rojo: listar no leídas, marcar propia como leída e impedir acceso cruzado.
-- [ ] Persistir tipo, pedido, destinatario técnico y metadatos estructurados; el
+  (CS0234/CS0246 por los tipos por crear; luego CS4008 por await sobre un
+  método void en la verificación, corregido en el test)
+- [x] Rojo: listar no leídas, marcar propia como leída e impedir acceso cruzado.
+- [x] Persistir tipo, pedido, destinatario técnico y metadatos estructurados; el
   texto se compone en UI y los motivos no se duplican ni se registran en Seq.
+  (tabla `notificaciones_internas`, alcance explícito en el repositorio sin
+  filtro de tenant porque la bandeja global usa ClienteId nulo)
 - [ ] Incluir un endpoint de sondeo con ETag/`since`; SignalR queda opcional si
   no reduce complejidad, sin convertirlo en fuente de verdad.
-- [ ] Commit previsto: `feat(avicola): notificar cambios de pedidos`.
+  (se implementa en la Tarea 4 junto con los endpoints y sus políticas, que
+  son su dependencia)
+- [x] Commit previsto: `feat(avicola): notificar cambios de pedidos`.
+  (10/10 dirigidos, puerta completa verde: 344 unit + 89 integración)
 
 ## Tarea 4 — API de pedidos y procesamiento CAISY
 

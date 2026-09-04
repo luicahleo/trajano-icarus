@@ -3,6 +3,7 @@ using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
+using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
 using MediatR;
@@ -41,6 +42,34 @@ public sealed record EnviarPedidoAlimentoCommand(Guid PedidoId)
         new Dictionary<string, DatoRegistroVuelo> { ["Lineas"] = DatoRegistroVuelo.Entero });
 }
 
+public sealed record DevolverPedidoAlimentoCommand(Guid PedidoId, string Motivo)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.devolver", new Dictionary<string, DatoRegistroVuelo>());
+}
+
+public sealed record RechazarPedidoAlimentoCommand(Guid PedidoId, string Motivo)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.rechazar", new Dictionary<string, DatoRegistroVuelo>());
+}
+
+public sealed record AceptarPedidoAlimentoCommand(Guid PedidoId, DateOnly FechaEntregaEstimada)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.aceptar", new Dictionary<string, DatoRegistroVuelo>());
+}
+
+public sealed record ActualizarEntregaEstimadaPedidoCommand(Guid PedidoId, DateOnly NuevaFecha)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.pedidos.actualizar-entrega", new Dictionary<string, DatoRegistroVuelo>());
+}
+
 public sealed record ListarPedidosAlimentoQuery
     : IRequest<IReadOnlyList<PedidoAlimentoResumen>>;
 
@@ -76,6 +105,37 @@ public sealed class EditarPedidoAlimentoValidator : AbstractValidator<EditarPedi
     {
         RuleFor(c => c.PedidoId).NotEmpty();
         RuleFor(c => c.Detalles).NotNull().NotEmpty();
+    }
+}
+
+public sealed class DevolverPedidoAlimentoValidator : AbstractValidator<DevolverPedidoAlimentoCommand>
+{
+    public DevolverPedidoAlimentoValidator() =>
+        RuleFor(c => c.Motivo).NotEmpty().MaximumLength(500);
+}
+
+public sealed class RechazarPedidoAlimentoValidator : AbstractValidator<RechazarPedidoAlimentoCommand>
+{
+    public RechazarPedidoAlimentoValidator() =>
+        RuleFor(c => c.Motivo).NotEmpty().MaximumLength(500);
+}
+
+public sealed class AceptarPedidoAlimentoValidator : AbstractValidator<AceptarPedidoAlimentoCommand>
+{
+    public AceptarPedidoAlimentoValidator()
+    {
+        RuleFor(c => c.PedidoId).NotEmpty();
+        RuleFor(c => c.FechaEntregaEstimada).NotEmpty();
+    }
+}
+
+public sealed class ActualizarEntregaEstimadaPedidoValidator
+    : AbstractValidator<ActualizarEntregaEstimadaPedidoCommand>
+{
+    public ActualizarEntregaEstimadaPedidoValidator()
+    {
+        RuleFor(c => c.PedidoId).NotEmpty();
+        RuleFor(c => c.NuevaFecha).NotEmpty();
     }
 }
 
@@ -146,17 +206,19 @@ public sealed class DesactivarPedidoAlimentoHandler(
 
 // Envío a CAISY (spec SP8): en una única transacción se comprueba el cupo con
 // una consulta bloqueable, se congela la publicación vigente resuelta por la
-// fecha de negocio de Bolivia y se registra la transición. Si falta precio
-// para una línea o no hay publicación vigente, el envío falla completo y el
-// borrador queda intacto. Los dobles clics y reintentos chocan con el estado
-// y responden 409 sin gastar cupo ni repetir la transición.
+// fecha de negocio de Bolivia y se registra la transición junto con la
+// notificación para la bandeja CAISY. Si falta precio para una línea o no hay
+// publicación vigente, el envío falla completo y el borrador queda intacto.
+// Los dobles clics y reintentos chocan con el estado y responden 409 sin
+// gastar cupo ni repetir la transición ni la notificación.
 public sealed class EnviarPedidoAlimentoHandler(
     IRepositorioPedidosAlimento repositorio,
     IRepositorioNotificacionesPrecios repositorioPrecios,
     OpcionesPedidosAlimento opciones,
     ICurrentUser usuarioActual,
     IRegistroVuelo registroVuelo,
-    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
     : IRequestHandler<EnviarPedidoAlimentoCommand>
 {
     public async Task Handle(EnviarPedidoAlimentoCommand request, CancellationToken cancellationToken)
@@ -184,6 +246,12 @@ public sealed class EnviarPedidoAlimentoHandler(
             .Select(d => new DatosPrecioEnvio(d.TipoAlimento, d.Presentacion, d.PrecioFinalPor40Kg, vigente.Id))
             .ToList();
         pedido.EnviarACaisy(hoy, actorId, precios);
+        // El reenvío tras una devolución avisa a CAISY con su propio tipo; el
+        // primer envío crea la de solicitado. Una sola notificación por envío.
+        var envios = pedido.Historial.Count(t => t.EstadoDestino == EstadoPedidoAlimento.Solicitado);
+        notificaciones.Agregar(NotificacionInterna.ParaCaisy(
+            envios > 1 ? TipoNotificacionPedido.PedidoReenviado : TipoNotificacionPedido.PedidoSolicitado,
+            pedido.Id));
         registroVuelo.Decidir("avicola.pedidos.enviar", "envio", "aplicada",
             new Dictionary<string, object?>
             {
@@ -197,6 +265,119 @@ public sealed class EnviarPedidoAlimentoHandler(
     // Semana ISO: la semana empieza el lunes.
     internal static DateOnly InicioSemanaIso(DateOnly fecha) =>
         fecha.AddDays(-(((int)fecha.DayOfWeek + 6) % 7));
+}
+
+// Procesamiento CAISY (spec SP8): devolver con motivo, rechazar con motivo,
+// aceptar con fecha de entrega estimada y actualizar la fecha sobre un pedido
+// aceptado. CAISY nunca altera tipos ni cantidades; cada decisión registra la
+// transición y crea exactamente una notificación para la bandeja del tenant
+// en la misma transacción local. Los motivos viven solo en el historial.
+public sealed class DevolverPedidoAlimentoHandler(
+    IRepositorioPedidosAlimento repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
+    : IRequestHandler<DevolverPedidoAlimentoCommand>
+{
+    public async Task Handle(DevolverPedidoAlimentoCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Solicitado)
+            throw new ConflictException("Solo un pedido solicitado se puede devolver.");
+        pedido.DevolverParaCorreccion(request.Motivo.Trim(), actorId);
+        notificaciones.Agregar(NotificacionInterna.ParaTenant(
+            TipoNotificacionPedido.PedidoDevuelto, pedido.Id, pedido.ClienteId));
+        registroVuelo.Decidir("avicola.pedidos.devolver", "devolucion", "aplicada",
+            new Dictionary<string, object?>());
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class RechazarPedidoAlimentoHandler(
+    IRepositorioPedidosAlimento repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
+    : IRequestHandler<RechazarPedidoAlimentoCommand>
+{
+    public async Task Handle(RechazarPedidoAlimentoCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Solicitado)
+            throw new ConflictException("Solo un pedido solicitado se puede rechazar.");
+        pedido.Rechazar(request.Motivo.Trim(), actorId);
+        notificaciones.Agregar(NotificacionInterna.ParaTenant(
+            TipoNotificacionPedido.PedidoRechazado, pedido.Id, pedido.ClienteId));
+        registroVuelo.Decidir("avicola.pedidos.rechazar", "rechazo", "aplicada",
+            new Dictionary<string, object?>());
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class AceptarPedidoAlimentoHandler(
+    IRepositorioPedidosAlimento repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
+    : IRequestHandler<AceptarPedidoAlimentoCommand>
+{
+    public async Task Handle(AceptarPedidoAlimentoCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Solicitado)
+            throw new ConflictException("Solo un pedido solicitado se puede aceptar.");
+        pedido.Aceptar(request.FechaEntregaEstimada, FechasNegocio.Hoy(), actorId);
+        notificaciones.Agregar(NotificacionInterna.ParaTenant(
+            TipoNotificacionPedido.PedidoAceptado, pedido.Id, pedido.ClienteId));
+        registroVuelo.Decidir("avicola.pedidos.aceptar", "aceptacion", "aplicada",
+            new Dictionary<string, object?>());
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class ActualizarEntregaEstimadaPedidoHandler(
+    IRepositorioPedidosAlimento repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternas notificaciones)
+    : IRequestHandler<ActualizarEntregaEstimadaPedidoCommand>
+{
+    public async Task Handle(
+        ActualizarEntregaEstimadaPedidoCommand request, CancellationToken cancellationToken)
+    {
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
+            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        if (pedido.Estado != EstadoPedidoAlimento.Aceptado)
+            throw new ConflictException("Solo un pedido aceptado permite actualizar la entrega estimada.");
+        pedido.ActualizarEntregaEstimada(request.NuevaFecha, FechasNegocio.Hoy(), actorId);
+        notificaciones.Agregar(NotificacionInterna.ParaTenant(
+            TipoNotificacionPedido.EntregaEstimadaActualizada, pedido.Id, pedido.ClienteId,
+            Meta(request.NuevaFecha)));
+        registroVuelo.Decidir("avicola.pedidos.actualizar-entrega", "actualizacion", "aplicada",
+            new Dictionary<string, object?>());
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+
+    // Metadatos técnicos (spec SP8): la fecha nueva en texto invariante; el
+    // mensaje visible lo compone la UI.
+    private static string Meta(DateOnly nuevaFecha) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"{{\"fechaEntregaEstimada\":\"{nuevaFecha}\"}}");
 }
 
 public sealed class ListarPedidosAlimentoHandler(IRepositorioPedidosAlimento repositorio)

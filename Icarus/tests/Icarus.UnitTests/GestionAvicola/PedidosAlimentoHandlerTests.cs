@@ -4,6 +4,7 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
+using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
@@ -33,6 +34,8 @@ public class PedidosAlimentoHandlerTests
     private readonly IUnidadTrabajoGestionAvicola _unidadTrabajo =
         Substitute.For<IUnidadTrabajoGestionAvicola>();
     private readonly ITransaccionPedidos _transaccion = Substitute.For<ITransaccionPedidos>();
+    private readonly INotificacionesInternas _notificaciones =
+        Substitute.For<INotificacionesInternas>();
 
     private readonly OpcionesPedidosAlimento _opciones = new() { MaximoPorSemana = 3 };
 
@@ -46,7 +49,8 @@ public class PedidosAlimentoHandlerTests
         new(_repositorio, _registroVuelo, _unidadTrabajo);
 
     private EnviarPedidoAlimentoHandler CrearEnviador() =>
-        new(_repositorio, _repositorioPrecios, _opciones, _usuarioActual, _registroVuelo, _unidadTrabajo);
+        new(_repositorio, _repositorioPrecios, _opciones, _usuarioActual, _registroVuelo,
+            _unidadTrabajo, _notificaciones);
 
     public PedidosAlimentoHandlerTests()
     {

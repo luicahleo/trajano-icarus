@@ -21,6 +21,10 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     public DbSet<TareaVacunacion> TareasVacunacion => Set<TareaVacunacion>();
     public DbSet<NotificacionPreciosAlimentos> NotificacionesPreciosAlimentos => Set<NotificacionPreciosAlimentos>();
     public DbSet<PedidoAlimento> PedidosAlimento => Set<PedidoAlimento>();
+    // Sin filtro de tenant (spec SP8): el alcance incluye la bandeja global
+    // de CAISY (ClienteId nulo) y cada consulta del repositorio pasa el
+    // alcance explícito.
+    public DbSet<NotificacionInterna> NotificacionesInternas => Set<NotificacionInterna>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
