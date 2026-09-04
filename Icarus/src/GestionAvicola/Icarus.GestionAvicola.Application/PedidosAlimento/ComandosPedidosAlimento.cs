@@ -76,13 +76,40 @@ public sealed record ListarPedidosAlimentoQuery
 public sealed record ObtenerPedidoAlimentoQuery(Guid PedidoId)
     : IRequest<PedidoAlimentoDetalle>;
 
+public sealed record ListarPedidosCaisyQuery(
+    string? Estado, string? Presentacion, int Pagina, int TamanoPagina)
+    : IRequest<PaginaPedidosCaisy>;
+
+public sealed record PedidoCaisyResumen(
+    Guid Id, Guid ClienteId, string Estado, string Presentacion, DateOnly? FechaPedido,
+    DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
+
+public sealed record PaginaPedidosCaisy(
+    IReadOnlyList<PedidoCaisyResumen> Items, int Total, int Pagina, int TamanoPagina);
+
+public sealed class ListarPedidosCaisyValidator : AbstractValidator<ListarPedidosCaisyQuery>
+{
+    public ListarPedidosCaisyValidator()
+    {
+        RuleFor(c => c.Pagina).GreaterThanOrEqualTo(1);
+        RuleFor(c => c.TamanoPagina).InclusiveBetween(1, 100);
+        RuleFor(c => c.Estado)
+            .Must(e => e is null || Enum.TryParse<EstadoPedidoAlimento>(e, true, out _))
+            .WithMessage("El estado indicado no existe.");
+        RuleFor(c => c.Presentacion)
+            .Must(p => p is null || Enum.TryParse<PresentacionAlimento>(p, true, out _))
+            .WithMessage("La presentación indicada no existe.");
+    }
+}
+
 public sealed record PedidoAlimentoResumen(
     Guid Id, string Estado, string Presentacion, DateOnly? FechaPedido,
     DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
 
 public sealed record LineaPedidoAlimentoResumen(
     Guid Id, string TipoAlimento, string Presentacion, int CantidadSolicitada,
-    int Equivalentes40Kg, decimal? PrecioFinalPor40Kg, decimal? SubtotalSolicitado);
+    int Equivalentes40Kg, decimal? PrecioFinalPor40Kg, decimal? SubtotalSolicitado,
+    Guid? NotificacionPreciosAlimentosId);
 
 public sealed record TransicionPedidoAlimentoResumen(
     string EstadoOrigen, string EstadoDestino, DateTime FechaUtc,
@@ -245,12 +272,13 @@ public sealed class EnviarPedidoAlimentoHandler(
         var precios = vigente.Detalles
             .Select(d => new DatosPrecioEnvio(d.TipoAlimento, d.Presentacion, d.PrecioFinalPor40Kg, vigente.Id))
             .ToList();
+        // El reenvío tras una devolución avisa a CAISY con su propio tipo: la
+        // primera salida del borrador fija FechaPedido y la devolución la
+        // conserva (el historial no se carga en este comando).
+        var esReenvio = pedido.FechaPedido is not null;
         pedido.EnviarACaisy(hoy, actorId, precios);
-        // El reenvío tras una devolución avisa a CAISY con su propio tipo; el
-        // primer envío crea la de solicitado. Una sola notificación por envío.
-        var envios = pedido.Historial.Count(t => t.EstadoDestino == EstadoPedidoAlimento.Solicitado);
         notificaciones.Agregar(NotificacionInterna.ParaCaisy(
-            envios > 1 ? TipoNotificacionPedido.PedidoReenviado : TipoNotificacionPedido.PedidoSolicitado,
+            esReenvio ? TipoNotificacionPedido.PedidoReenviado : TipoNotificacionPedido.PedidoSolicitado,
             pedido.Id));
         registroVuelo.Decidir("avicola.pedidos.enviar", "envio", "aplicada",
             new Dictionary<string, object?>
@@ -404,10 +432,37 @@ public sealed class ObtenerPedidoAlimentoHandler(IRepositorioPedidosAlimento rep
     }
 }
 
+// Bandeja global de CAISY (spec SP8): filtros por estado y presentación con
+// paginación, ordenada por envío más reciente.
+public sealed class ListarPedidosCaisyHandler(IRepositorioPedidosAlimento repositorio)
+    : IRequestHandler<ListarPedidosCaisyQuery, PaginaPedidosCaisy>
+{
+    public async Task<PaginaPedidosCaisy> Handle(
+        ListarPedidosCaisyQuery request, CancellationToken cancellationToken)
+    {
+        var estado = request.Estado is null
+            ? (EstadoPedidoAlimento?)null : Enum.Parse<EstadoPedidoAlimento>(request.Estado, true);
+        var presentacion = request.Presentacion is null
+            ? (PresentacionAlimento?)null : Enum.Parse<PresentacionAlimento>(request.Presentacion, true);
+        var saltar = (request.Pagina - 1) * request.TamanoPagina;
+        var (items, total) = await repositorio.ListarPaginadoCaisyAsync(
+            estado, presentacion, saltar, request.TamanoPagina, cancellationToken);
+        return new PaginaPedidosCaisy(
+            items.Select(MapeadorPedidos.MapearResumenCaisy).ToList(),
+            total, request.Pagina, request.TamanoPagina);
+    }
+}
+
 internal static class MapeadorPedidos
 {
     public static PedidoAlimentoResumen MapearResumen(PedidoAlimento pedido) =>
         new(pedido.Id, pedido.Estado.ToString(), pedido.Detalles.First().Presentacion.ToString(),
+            pedido.FechaPedido, pedido.FechaEntregaEstimada, pedido.TotalSolicitado,
+            pedido.Detalles.Count);
+
+    public static PedidoCaisyResumen MapearResumenCaisy(PedidoAlimento pedido) =>
+        new(pedido.Id, pedido.ClienteId, pedido.Estado.ToString(),
+            pedido.Detalles.First().Presentacion.ToString(),
             pedido.FechaPedido, pedido.FechaEntregaEstimada, pedido.TotalSolicitado,
             pedido.Detalles.Count);
 
@@ -418,7 +473,8 @@ internal static class MapeadorPedidos
                 .Select(d => new LineaPedidoAlimentoResumen(
                     d.Id, d.TipoAlimento.ToString(), d.Presentacion.ToString(),
                     d.CantidadSolicitada, d.Equivalentes40Kg,
-                    d.PrecioFinalPor40Kg, d.SubtotalSolicitado))
+                    d.PrecioFinalPor40Kg, d.SubtotalSolicitado,
+                    d.NotificacionPreciosAlimentosId))
                 .ToList(),
             pedido.Historial
                 .Select(t => new TransicionPedidoAlimentoResumen(

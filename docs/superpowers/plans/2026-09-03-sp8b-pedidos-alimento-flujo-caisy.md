@@ -113,14 +113,29 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 - autorización de Clientes/Identity correspondiente.
 - `Icarus/tests/Icarus.IntegrationTests/PedidosAlimentoEndpointsTests.cs`
 
-- [ ] Rojo: CRUD borrador, envío, detalle/historial, listado tenant y bandeja
+- [x] Rojo: CRUD borrador, envío, detalle/historial, listado tenant y bandeja
   global CAISY con filtros/paginación.
-- [ ] Rojo: devolver/rechazar exige motivo; aceptar exige fecha válida;
+  (varios: el binding exigía pagina/tamanoPagina y faltaba exponer
+  notificacionPreciosAlimentosId en la línea del detalle)
+- [x] Rojo: devolver/rechazar exige motivo; aceptar exige fecha válida;
   actualización ETA solo en `Aceptado`; segunda transición devuelve 409.
-- [ ] Rojo: 403 sin función y 404 genérico para ids de otro tenant.
-- [ ] Añadir `PedidoAlimento` con un bit nuevo sin renumerar flags existentes.
-- [ ] Comando: `dotnet test Icarus/tests/Icarus.IntegrationTests --filter PedidosAlimento`.
-- [ ] Commit previsto: `feat(api): exponer flujo inicial de pedidos de alimento`.
+  Corrección hallada: las transiciones nuevas descubiertas por DetectChanges
+  con Guid ya asignado se marcaban Modified y explotaba el rowversion
+  (DbUpdateConcurrency en el primer envío). Arreglado haciendo nacer la
+  transición con Id vacío para que EF la registre Added, mismo patrón que
+  AgregarDetalle del catálogo de precios. También: el reenvío se distingue por
+  FechaPedido ya fijado, porque el historial no se carga en el comando de
+  envío.
+- [x] Rojo: 403 sin función y 404 genérico para ids de otro tenant.
+- [x] Añadir `PedidoAlimento` con un bit nuevo sin renumerar flags existentes.
+  (FuncionalidadesTests actualizado al catálogo ampliado; asignable a
+  trabajadores)
+- [x] Endpoint de sondeo de notificaciones con ETag e If-None-Match (304) y
+  corte `since`, en el grupo del tenant y en el de CAISY (pendiente de la
+  Tarea 3).
+- [x] Comando: `dotnet test Icarus/tests/Icarus.IntegrationTests --filter
+  PedidosAlimento` (6/6; puerta completa verde: 346 unit + 95 integración).
+- [x] Commit previsto: `feat(api): exponer flujo inicial de pedidos de alimento`.
 
 ## Tarea 5 — PWA Trajano-Icarus
 

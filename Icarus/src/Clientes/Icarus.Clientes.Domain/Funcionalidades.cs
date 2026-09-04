@@ -18,5 +18,8 @@ public enum Funcionalidades
     Alimentacion = 32,
     Despachos = 64,
     Precios = 128,
+    // SP8: pedidos de alimento hacia CAISY. Bit nuevo sin renumerar los
+    // existentes (se persisten como entero en trabajadores.Funcionalidades).
+    PedidoAlimento = 256,
 }
 #pragma warning restore S2346

@@ -15,6 +15,7 @@ public static class FuncionalidadesModulos
         Funcionalidades.Alimentacion => Modulos.GestionAvicola,
         Funcionalidades.Despachos => Modulos.GestionAvicola,
         Funcionalidades.Precios => Modulos.GestionAvicola,
+        Funcionalidades.PedidoAlimento => Modulos.GestionAvicola,
         _ => Modulos.Ninguno,
     };
 
@@ -23,7 +24,8 @@ public static class FuncionalidadesModulos
         Modulos.GestionAvicola => Funcionalidades.Granjas | Funcionalidades.Galpones
             | Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad
             | Funcionalidades.Vacunacion | Funcionalidades.Alimentacion
-            | Funcionalidades.Despachos | Funcionalidades.Precios,
+            | Funcionalidades.Despachos | Funcionalidades.Precios
+            | Funcionalidades.PedidoAlimento,
         _ => Funcionalidades.Ninguno,
     };
 }

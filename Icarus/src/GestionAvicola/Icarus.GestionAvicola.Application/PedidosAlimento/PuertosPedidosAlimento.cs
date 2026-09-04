@@ -25,6 +25,14 @@ public interface IRepositorioPedidosAlimento
     Task<IReadOnlyList<PedidoAlimento>> ListarAsync(
         CancellationToken cancellationToken = default);
 
+    // Bandeja global de CAISY (spec SP8): filtros por estado y presentación
+    // con paginación; el filtro de tenant del DbContext deja ver los pedidos
+    // de todos los tenants a las cuentas sin tenant y la política de CAISY
+    // autoriza el acceso.
+    Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoCaisyAsync(
+        EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,
+        int saltar, int tomar, CancellationToken cancellationToken = default);
+
     // Cuenta los pedidos del cliente con envío dentro de la semana indicada
     // y bloquea el rango leído (UPDLOCK con semántica serializable) hasta el
     // fin de la transacción: dos envíos concurrentes no superan el límite.

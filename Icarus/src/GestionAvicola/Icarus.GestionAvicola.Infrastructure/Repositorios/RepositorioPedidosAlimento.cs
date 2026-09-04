@@ -35,13 +35,36 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
         await db.PedidosAlimento.Include(p => p.Detalles)
             .ToListAsync(cancellationToken);
 
+    public async Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoCaisyAsync(
+        EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,
+        int saltar, int tomar, CancellationToken cancellationToken = default)
+    {
+        var consulta = db.PedidosAlimento.Include(p => p.Detalles).AsNoTracking();
+        if (estado is { } e)
+            consulta = consulta.Where(p => p.Estado == e);
+        if (presentacion is { } pr)
+            consulta = consulta.Where(p => p.Detalles.Any(d => d.Presentacion == pr));
+        var total = await consulta.CountAsync(cancellationToken);
+        var items = await consulta
+            .OrderByDescending(p => p.FechaPedido)
+            .ThenByDescending(p => p.Id)
+            .Skip(saltar)
+            .Take(tomar)
+            .ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
     public async Task<int> ContarEnviadosEnSemanaBloqueandoAsync(
         Guid clienteId, DateOnly desde, DateOnly hasta,
         CancellationToken cancellationToken = default) =>
+        // Cuentan los pedidos que hayan salido del borrador y no estén
+        // borrados (spec SP8): Estado 0 es Borrador, así la devolución libera
+        // el cupo temporalmente y el reenvío del mismo pedido no lo consume
+        // otra vez (cuenta una sola vez por pedido y semana).
         await db.PedidosAlimento
             .FromSqlInterpolated(
                 $@"SELECT * FROM gestion_avicola.pedidos_alimentos WITH (UPDLOCK, HOLDLOCK)
-                   WHERE ClienteId = {clienteId} AND EstaActivo = 1
+                   WHERE ClienteId = {clienteId} AND EstaActivo = 1 AND Estado <> 0
                      AND FechaPedido BETWEEN {desde} AND {hasta}")
             .CountAsync(cancellationToken);
 
