@@ -202,8 +202,52 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         return Task.CompletedTask;
     }
 
+    // SP8C: despacho, respaldos de la nota y su descarga para el detalle.
+    public Exception? ErrorDeDespachar { get; set; }
+    public Exception? ErrorDeDocumentoNota { get; set; }
+
+    public byte[] ContenidoNota { get; set; } = [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3];
+
+    public int VecesDespachar { get; private set; }
+    public int VecesSubirDocumentoNota { get; private set; }
+    public int VecesDescargarNota { get; private set; }
+
+    public ComandoDespachoApi? UltimoDespacho { get; private set; }
+    public (Guid Id, string Nombre, Guid? Reemplaza)? UltimoDocumentoNota { get; private set; }
+    public (Guid Id, Guid Documento)? UltimaDescargaNota { get; private set; }
+    public Guid IdDocumentoNota { get; set; } = Guid.NewGuid();
+
+    public Task DespacharPedidoAsync(ComandoDespachoApi comando, CancellationToken token = default)
+    {
+        VecesDespachar++;
+        UltimoDespacho = comando;
+        if (ErrorDeDespachar is not null) throw ErrorDeDespachar;
+        return Task.CompletedTask;
+    }
+
+    public Task<Guid> SubirDocumentoNotaAsync(
+        Guid id, Stream contenido, string nombreArchivo,
+        Guid? reemplazaDocumentoId, CancellationToken token = default)
+    {
+        VecesSubirDocumentoNota++;
+        UltimoDocumentoNota = (id, nombreArchivo, reemplazaDocumentoId);
+        if (ErrorDeDocumentoNota is not null) throw ErrorDeDocumentoNota;
+        return Task.FromResult(IdDocumentoNota);
+    }
+
+    public Task<(Stream Contenido, string TipoContenido)> DescargarDocumentoNotaAsync(
+        Guid id, Guid documentoId, CancellationToken token = default)
+    {
+        VecesDescargarNota++;
+        UltimaDescargaNota = (id, documentoId);
+        if (ErrorDeDocumentoNota is not null) throw ErrorDeDocumentoNota;
+        return Task.FromResult(
+            (new MemoryStream(ContenidoNota, writable: false) as Stream, "image/jpeg"));
+    }
+
     public static PedidoDetalleApi CrearPedido(
-        Guid id, string estado = "Solicitado", DateOnly? fechaEntregaEstimada = null) =>
+        Guid id, string estado = "Solicitado", DateOnly? fechaEntregaEstimada = null,
+        EntregaPedidoApi? entrega = null, RecepcionPedidoApi? recepcion = null) =>
         new(
             id, Guid.NewGuid(), estado, new(2025, 11, 2), fechaEntregaEstimada, 14162.5m,
             [
@@ -213,7 +257,18 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
             [
                 new TransicionPedidoApi(
                     "Borrador", "Solicitado", new(2025, 11, 2, 15, 0, 0, DateTimeKind.Utc), null, null),
-            ]);
+            ],
+            entrega, recepcion);
+
+    public static EntregaPedidoApi CrearEntrega(Guid pedidoId) => new(
+        "NOTA-77", new(2025, 11, 1), new(2025, 11, 2), 14100m, 14120m,
+        [new LineaEntregaApi("PosturaUno", 80, 80)],
+        [new DocumentoNotaApi(Guid.NewGuid(), "nota-frente.jpg", "image/jpeg", 1024, true)]);
+
+    public static RecepcionPedidoApi CrearRecepcion() => new(
+        new(2025, 11, 3), 14120m,
+        [new LineaRecepcionApi("PosturaUno", 80, 80)],
+        [new DiferenciaRecepcionApi("PosturaUno", 78, 80, -2)]);
 
     public static NotificacionPreciosDetalleApi CrearDetalle(
         Guid id, string estado = "Borrador", string vigenteDesde = "2025-12-01") =>

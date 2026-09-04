@@ -46,6 +46,10 @@
         {
             <a class="boton" asp-action="EntregaEstimada" asp-route-id="@pedido.Id">Cambiar entrega estimada</a>
         }
+        @if (Model.PuedeDespacharse)
+        {
+            <a class="boton boton--primario" asp-action="Despachar" asp-route-id="@pedido.Id">Registrar despacho</a>
+        }
         <a class="enlace" asp-action="Index">Volver a la bandeja</a>
     </div>
 </section>
@@ -110,3 +114,134 @@
         </table>
     }
 </section>
+@if (pedido.Entrega is { } entrega)
+{
+    <section class="tarjeta tarjeta--tabla">
+        <h2>Entrega y nota</h2>
+        <dl class="ficha">
+            <div>
+                <dt>Número de nota</dt>
+                <dd>@entrega.NumeroNota</dd>
+            </div>
+            <div>
+                <dt>Fecha de la nota</dt>
+                <dd>@entrega.FechaNota.ToString("dd/MM/yyyy")</dd>
+            </div>
+            <div>
+                <dt>Despachado el</dt>
+                <dd>@entrega.FechaDespacho.ToString("dd/MM/yyyy")</dd>
+            </div>
+            <div>
+                <dt>Total informado (nota)</dt>
+                <dd>@(entrega.TotalNetoInformado?.ToString("0.00") ?? "—")</dd>
+            </div>
+            <div>
+                <dt>Total despachado (canónico)</dt>
+                <dd>@entrega.TotalDespachado.ToString("0.00")</dd>
+            </div>
+        </dl>
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Tipo de alimento</th>
+                    <th scope="col">Entregado</th>
+                    <th scope="col">Equivalentes de 40 kg</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var linea in entrega.Lineas)
+                {
+                    <tr>
+                        <td>@linea.TipoAlimento</td>
+                        <td>@linea.CantidadEntregada</td>
+                        <td>@linea.Equivalentes40Kg</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+    <section class="tarjeta tarjeta--tabla">
+        <h2>Respaldos de la nota</h2>
+        @if (entrega.Documentos.Count == 0)
+        {
+            <p class="vacio__texto">Sin respaldos guardados todavía.</p>
+        }
+        else
+        {
+            <div class="respaldos">
+                @foreach (var documento in entrega.Documentos)
+                {
+                    <figure class="respaldos__item @(documento.Activo ? "" : "respaldos__item--inactivo")">
+                        <img src="@Url.Action("NotaDocumento", "Pedidos", new { id = pedido.Id, documentoId = documento.Id })"
+                             alt="Respaldo de la nota: @documento.NombreSeguro" loading="lazy" />
+                        <figcaption>
+                            @documento.NombreSeguro
+                            (@(documento.TamanoBytes / 1024) KB@(documento.Activo ? "" : ", reemplazado"))
+                        </figcaption>
+                    </figure>
+                }
+            </div>
+        }
+        @if (pedido.Estado == "Despachado")
+        {
+            <form asp-action="AgregarNotaDocumento" asp-route-id="@pedido.Id" method="post"
+                  enctype="multipart/form-data" class="campo">
+                <label for="archivo-nota">Agregar o reemplazar un respaldo</label>
+                <input id="archivo-nota" name="archivo" type="file"
+                       accept="image/jpeg,image/png,image/webp" required />
+                <select name="reemplazaDocumentoId" aria-label="Documento a reemplazar">
+                    <option value="">Agregar como nueva imagen</option>
+                    @foreach (var documento in entrega.Documentos.Where(d => d.Activo))
+                    {
+                        <option value="@documento.Id">Reemplazar: @documento.NombreSeguro</option>
+                    }
+                </select>
+                <button type="submit" class="boton boton--secundario">Guardar respaldo</button>
+            </form>
+        }
+    </section>
+}
+@if (pedido.Recepcion is { } recepcion)
+{
+    <section class="tarjeta tarjeta--tabla">
+        <h2>Recepción del tenant</h2>
+        <dl class="ficha">
+            <div>
+                <dt>Recibido el</dt>
+                <dd>@recepcion.FechaRecepcion.ToString("dd/MM/yyyy")</dd>
+            </div>
+            <div>
+                <dt>Total recibido (canónico)</dt>
+                <dd>@recepcion.TotalRecibido.ToString("0.00")</dd>
+            </div>
+        </dl>
+        @if (recepcion.Diferencias.Count > 0)
+        {
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Tipo de alimento</th>
+                        <th scope="col">Recibido</th>
+                        <th scope="col">Entregado</th>
+                        <th scope="col">Diferencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var diferencia in recepcion.Diferencias)
+                    {
+                        <tr>
+                            <td>@diferencia.TipoAlimento</td>
+                            <td>@diferencia.CantidadRecibida</td>
+                            <td>@diferencia.CantidadEntregada</td>
+                            <td>@diferencia.Diferencia</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="vacio__texto">Recepción conforme: todo lo entregado fue confirmado.</p>
+        }
+    </section>
+}

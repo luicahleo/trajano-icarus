@@ -294,4 +294,97 @@ public class DocumentosNotaEndpointsTests
 
         Assert.Equal(HttpStatusCode.Conflict, segundo.StatusCode);
     }
+
+    // SP8C Tarea 4 (spec: "Despacho, nota y recepción" y "Balance"): el tenant
+    // compara solicitado/despachado, informa la cantidad realmente recibida por
+    // línea y confirma el estado final; CAISY es notificada en la bandeja
+    // global. El histórico expone la entrega (nota, respaldos, totales) y la
+    // recepción con su snapshot de diferencias.
+    [Fact]
+    public async Task ElTenantConfirmaLaRecepcionYCaisyEsNotificada()
+    {
+        var (cliente, tokenTenant, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
+        await SubirImagenAsync(cliente, tokenCaisy, idPedido, ImagenPng());
+
+        // Recepción de un tercero: 404 sin revelar existencia.
+        var tokenAjeno = await LoginComo(cliente, SemillaIdentidad.EmailClienteC1);
+        var ajeno = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenAjeno,
+            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+        Assert.Equal(HttpStatusCode.NotFound, ajeno.StatusCode);
+
+        // El tenant informa lo realmente recibido: conforme con lo despachado.
+        var conforme = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
+            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+        Assert.Equal(HttpStatusCode.NoContent, conforme.StatusCode);
+
+        // Reintento: 409 sin duplicar la transición.
+        var reintento = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
+            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+        Assert.Equal(HttpStatusCode.Conflict, reintento.StatusCode);
+
+        // El histórico del tenant: entrega con nota, respaldos y totales, y
+        // recepción conforme; solicitado vs despachado vs recibido contrastable.
+        var detalle = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento/{idPedido}", tokenTenant));
+        Assert.Equal(HttpStatusCode.OK, detalle.StatusCode);
+        var cuerpo = await detalle.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("RecibidoConforme", cuerpo.GetProperty("estado").GetString());
+        var precioCongelado = cuerpo.GetProperty("lineas").EnumerateArray().Single()
+            .GetProperty("precioFinalPor40Kg").GetDecimal();
+        var entrega = cuerpo.GetProperty("entrega");
+        Assert.Equal(95, entrega.GetProperty("lineas").EnumerateArray().Single()
+            .GetProperty("cantidadEntregada").GetInt32());
+        Assert.Equal(95m * precioCongelado, entrega.GetProperty("totalDespachado").GetDecimal());
+        Assert.True(entrega.GetProperty("totalNetoInformado").GetDecimal() > 0);
+        Assert.Equal(1, entrega.GetProperty("documentos").GetArrayLength());
+        var recepcion = cuerpo.GetProperty("recepcion");
+        Assert.Equal(95, recepcion.GetProperty("lineas").EnumerateArray().Single()
+            .GetProperty("cantidadRecibida").GetInt32());
+        Assert.Equal(95m * precioCongelado, recepcion.GetProperty("totalRecibido").GetDecimal());
+        Assert.Equal(0, recepcion.GetProperty("diferencias").GetArrayLength());
+
+        // La bandeja de CAISY recibe la notificación de recepción conforme.
+        var bandeja = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento-caisy/notificaciones", tokenCaisy));
+        var tipos = (await bandeja.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items").EnumerateArray()
+            .Select(n => n.GetProperty("tipo").GetString()).ToHashSet();
+        Assert.Contains("RecepcionConforme", tipos);
+    }
+
+    [Fact]
+    public async Task LaRecepcionConDiferenciasQuedaEnElHistoricoConSuSnapshot()
+    {
+        var (cliente, tokenTenant, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
+
+        // Recibió una bolsa menos de lo despachado: diferencias explícitas.
+        var conDiferencias = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
+            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 93 } } })));
+        Assert.Equal(HttpStatusCode.NoContent, conDiferencias.StatusCode);
+
+        var detalle = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento/{idPedido}", tokenTenant));
+        var cuerpo = await detalle.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("RecibidoConDiferencias", cuerpo.GetProperty("estado").GetString());
+        var precioCongelado = cuerpo.GetProperty("lineas").EnumerateArray().Single()
+            .GetProperty("precioFinalPor40Kg").GetDecimal();
+        var recepcion = cuerpo.GetProperty("recepcion");
+        var diferencia = Assert.Single(recepcion.GetProperty("diferencias").EnumerateArray());
+        Assert.Equal(93, diferencia.GetProperty("cantidadRecibida").GetInt32());
+        Assert.Equal(95, diferencia.GetProperty("cantidadEntregada").GetInt32());
+        Assert.Equal(-2, diferencia.GetProperty("diferencia").GetInt32());
+        // El total recibido usa lo realmente recibido y el precio congelado.
+        Assert.Equal(93m * precioCongelado, recepcion.GetProperty("totalRecibido").GetDecimal());
+
+        var bandeja = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento-caisy/notificaciones", tokenCaisy));
+        var tipos = (await bandeja.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items").EnumerateArray()
+            .Select(n => n.GetProperty("tipo").GetString()).ToHashSet();
+        Assert.Contains("RecepcionConDiferencias", tipos);
+    }
 }

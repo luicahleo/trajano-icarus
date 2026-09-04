@@ -81,12 +81,12 @@ recepción por línea y reconocimiento correcto del gasto.
 - `Icarus/src/Apps/Trajano.GestorCaisy/Controllers/`, `Views/` y cliente API.
 - tests de integración, React y MVC correspondientes.
 
-- [ ] Rojo: CAISY carga datos y varias imágenes, revisa el resumen y despacha.
-- [ ] Rojo: tenant visualiza nota histórica, compara solicitado/despachado,
+- [x] Rojo: CAISY carga datos y varias imágenes, revisa el resumen y despacha.
+- [x] Rojo: tenant visualiza nota histórica, compara solicitado/despachado,
   informa recibido por línea y confirma el estado final.
-- [ ] Mostrar diferencias numéricas y total sin inferir resolución comercial.
-- [ ] Verificar descarga autenticada, teclado, foco, errores y responsive de la PWA.
-- [ ] Commit previsto: `feat(ui): completar entrega y recepcion de alimento`.
+- [x] Mostrar diferencias numéricas y total sin inferir resolución comercial.
+- [x] Verificar descarga autenticada, teclado, foco, errores y responsive de la PWA.
+- [x] Commit previsto: `feat(ui): completar entrega y recepcion de alimento`.
 
 ## Tarea 5 — Balance por recepción real
 

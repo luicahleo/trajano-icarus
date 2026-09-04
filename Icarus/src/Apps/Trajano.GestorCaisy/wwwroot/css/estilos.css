@@ -418,3 +418,35 @@ a { color: var(--aqua-oscuro); }
     .contenido { padding: 16px; }
     .tabla { display: block; overflow-x: auto; }
 }
+
+.respaldos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.respaldos__item {
+    margin: 0;
+    width: 180px;
+}
+
+.respaldos__item img {
+    display: block;
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    background-color: var(--bruma);
+}
+
+.respaldos__item figcaption {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: var(--neutro);
+    word-break: break-all;
+}
+
+.respaldos__item--inactivo img { opacity: 0.4; }
+
+.respaldos__item--inactivo figcaption { text-decoration: line-through; }

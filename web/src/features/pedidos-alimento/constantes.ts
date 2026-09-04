@@ -7,6 +7,9 @@ export const ETIQUETAS_ESTADO: Record<string, string> = {
   Solicitado: 'Solicitado',
   Rechazado: 'Rechazado',
   Aceptado: 'Aceptado',
+  Despachado: 'Despachado',
+  RecibidoConforme: 'Recibido conforme',
+  RecibidoConDiferencias: 'Recibido con diferencias',
 };
 
 export const COLOR_ESTADO: Record<string, 'default' | 'info' | 'error' | 'success'> = {
@@ -14,6 +17,9 @@ export const COLOR_ESTADO: Record<string, 'default' | 'info' | 'error' | 'succes
   Solicitado: 'info',
   Rechazado: 'error',
   Aceptado: 'success',
+  Despachado: 'info',
+  RecibidoConforme: 'success',
+  RecibidoConDiferencias: 'default',
 };
 
 export const ETIQUETAS_TIPO_ALIMENTO: Record<string, string> = {

@@ -30,7 +30,6 @@ public sealed class RecepcionPedidoAlimento : Entity
         FechaRecepcion = fechaRecepcion;
         TotalRecibido = totalRecibido;
         _lineas.AddRange(lineas);
-        _diferencias.AddRange(diferencias);
         DiferenciasJson = JsonSerializer.Serialize(diferencias, OpcionesJson);
     }
 
@@ -45,12 +44,14 @@ public sealed class RecepcionPedidoAlimento : Entity
 
     // Snapshot de diferencias contra lo despachado (spec SP8C): queda
     // persistido en JSON para el histórico, sin inferir resolución comercial.
-    // El detalle en memoria sirve a los mapeos del Application.
+    // La lista se reconstruye desde el JSON persistido al materializar.
     public string DiferenciasJson { get; private set; } = string.Empty;
 
-    private readonly List<DiferenciaRecepcion> _diferencias = [];
+    private List<DiferenciaRecepcion>? _diferenciasMaterializadas;
 
-    public IReadOnlyList<DiferenciaRecepcion> Diferencias => _diferencias.AsReadOnly();
+    public IReadOnlyList<DiferenciaRecepcion> Diferencias =>
+        _diferenciasMaterializadas ??= JsonSerializer
+            .Deserialize<List<DiferenciaRecepcion>>(DiferenciasJson, OpcionesJson) ?? [];
 
     private static readonly JsonSerializerOptions OpcionesJson = new()
     {

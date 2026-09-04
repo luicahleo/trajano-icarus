@@ -1,4 +1,4 @@
-import { peticion } from '../../lib/http';
+import { peticion, peticionBlob } from '../../lib/http';
 
 // SP8B: los pedidos son deliberadamente online (spec) — sin cola offline, sin
 // IndexedDB ni precalentado. Sin red la feature falla de forma explícita.
@@ -42,6 +42,50 @@ export interface TransicionPedido {
   fechaEntregaEstimada: string | null;
 }
 
+export interface LineaEntregaPedido {
+  tipoAlimento: string;
+  cantidadEntregada: number;
+  equivalentes40Kg: number;
+}
+
+export interface DocumentoNota {
+  id: string;
+  nombreSeguro: string;
+  mime: string;
+  tamanoBytes: number;
+  activo: boolean;
+}
+
+export interface EntregaPedido {
+  numeroNota: string;
+  fechaNota: string;
+  fechaDespacho: string;
+  totalNetoInformado: number | null;
+  totalDespachado: number;
+  lineas: LineaEntregaPedido[];
+  documentos: DocumentoNota[];
+}
+
+export interface LineaRecepcionPedido {
+  tipoAlimento: string;
+  cantidadRecibida: number;
+  equivalentes40Kg: number;
+}
+
+export interface DiferenciaRecepcion {
+  tipoAlimento: string;
+  cantidadRecibida: number;
+  cantidadEntregada: number;
+  diferencia: number;
+}
+
+export interface RecepcionPedido {
+  fechaRecepcion: string;
+  totalRecibido: number;
+  lineas: LineaRecepcionPedido[];
+  diferencias: DiferenciaRecepcion[];
+}
+
 export interface PedidoDetalle {
   id: string;
   clienteId: string;
@@ -51,6 +95,8 @@ export interface PedidoDetalle {
   totalSolicitado: number | null;
   lineas: LineaPedidoDetalle[];
   historial: TransicionPedido[];
+  entrega: EntregaPedido | null;
+  recepcion: RecepcionPedido | null;
 }
 
 export const listarPedidos = () =>
@@ -70,6 +116,24 @@ export const borrarPedido = (id: string) =>
 
 export const enviarPedido = (id: string) =>
   peticion<void>({ ruta: `/pedidos-alimento/${id}/enviar`, metodo: 'POST' });
+
+export interface LineaRecepcionDatos {
+  tipoAlimento: string;
+  cantidadRecibida: number;
+}
+
+// Recepción por línea (spec SP8C): el tenant confirma desde Despachado la
+// cantidad realmente recibida; el estado final lo decide el backend.
+export const recibirPedido = (id: string, lineas: LineaRecepcionDatos[]) =>
+  peticion<void>({ ruta: `/pedidos-alimento/${id}/recibir`, metodo: 'POST', cuerpo: { lineas } });
+
+// Vista derivada de un respaldo (inline, sin metadatos) para mostrar en el
+// detalle; el original se descarga como adjunto autorizado (spec SP8C).
+export const obtenerVistaDocumentoNota = (pedidoId: string, documentoId: string) =>
+  peticionBlob({ ruta: `/pedidos-alimento/${pedidoId}/nota/documentos/${documentoId}/vista` });
+
+export const obtenerOriginalDocumentoNota = (pedidoId: string, documentoId: string) =>
+  peticionBlob({ ruta: `/pedidos-alimento/${pedidoId}/nota/documentos/${documentoId}/original` });
 
 export interface DetallePrecioVigente {
   tipoAlimento: string;

@@ -209,6 +209,78 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         await AsegurarExitoAsync(respuesta, token);
     }
 
+    public async Task DespacharPedidoAsync(
+        ComandoDespachoApi comando, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"pedidos-alimento-caisy/{comando.Id}/despachar", accessToken,
+                new
+                {
+                    numeroNota = comando.NumeroNota,
+                    fechaNota = comando.FechaNota,
+                    totalInformado = comando.TotalInformado,
+                    lineas = comando.Lineas.Select(l => new
+                    {
+                        tipoAlimento = l.TipoAlimento,
+                        cantidadEntregada = l.CantidadEntregada,
+                    }),
+                }), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task<Guid> SubirDocumentoNotaAsync(
+        Guid id, Stream contenido, string nombreArchivo,
+        Guid? reemplazaDocumentoId, CancellationToken token = default)
+    {
+        // La imagen se copia a memoria (tope de 5 MB del lado de la API) para
+        // que la renovación de sesión pueda reenviar la misma carga.
+        using var memoria = new MemoryStream();
+        await contenido.CopyToAsync(memoria, token);
+        var bytes = memoria.ToArray();
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionMultipartDocumento(
+                id, bytes, nombreArchivo, reemplazaDocumentoId, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var creado = await respuesta.Content.ReadFromJsonAsync<DocumentoCreadoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de documento ilegible");
+        return creado.Id;
+    }
+
+    public async Task<(Stream Contenido, string TipoContenido)> DescargarDocumentoNotaAsync(
+        Guid id, Guid documentoId, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get,
+                $"pedidos-alimento-caisy/{id}/nota/documentos/{documentoId}/vista", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var tipo = respuesta.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+        var memoria = new MemoryStream();
+        await respuesta.Content.CopyToAsync(memoria, token);
+        memoria.Position = 0;
+        return (memoria, tipo);
+    }
+
+    private HttpRequestMessage PeticionMultipartDocumento(
+        Guid id, byte[] bytes, string nombreArchivo,
+        Guid? reemplazaDocumentoId, string? accessToken)
+    {
+        var peticion = new HttpRequestMessage(HttpMethod.Post, new Uri(ResolverBase()
+            + $"pedidos-alimento-caisy/{id}/nota/documentos"));
+        if (accessToken is not null)
+            peticion.Headers.Authorization = new("Bearer", accessToken);
+        var parte = new StreamContent(new MemoryStream(bytes));
+        parte.Headers.ContentType = new("application/octet-stream");
+        var cuerpo = new MultipartFormDataContent { { parte, "archivo", nombreArchivo } };
+        if (reemplazaDocumentoId is { } previo)
+            cuerpo.Add(new StringContent(previo.ToString()), "reemplazaDocumentoId");
+        peticion.Content = cuerpo;
+        return peticion;
+    }
+
+    private sealed record DocumentoCreadoApi(
+        [property: System.Text.Json.Serialization.JsonPropertyName("id")] Guid Id);
+
     // Núcleo: envía con el access token actual; ante un 401 renueva la sesión
     // una vez y reintenta con el token fresco. Rutas de sesión nunca se
     // renuevan (evita bucles con credenciales inválidas).

@@ -57,10 +57,42 @@ public sealed record TransicionPedidoApi(
 public sealed record PedidoDetalleApi(
     Guid Id, Guid ClienteId, string Estado, DateOnly? FechaPedido,
     DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado,
-    IReadOnlyList<LineaPedidoApi> Lineas, IReadOnlyList<TransicionPedidoApi> Historial);
+    IReadOnlyList<LineaPedidoApi> Lineas, IReadOnlyList<TransicionPedidoApi> Historial,
+    EntregaPedidoApi? Entrega = null, RecepcionPedidoApi? Recepcion = null);
 
 public sealed record NotificacionPedidoApi(
     Guid Id, string Tipo, Guid PedidoId, DateTime FechaUtc, bool Leida, string? Meta);
 
 public sealed record BandejaNotificacionesApi(
     IReadOnlyList<NotificacionPedidoApi> Items, int Contador);
+
+// Despacho y recepción (SP8C): espejo de la entrega/nota con sus respaldos y
+// de la recepción con su snapshot de diferencias.
+public sealed record LineaEntregaApi(
+    string TipoAlimento, int CantidadEntregada, int Equivalentes40Kg);
+
+public sealed record DocumentoNotaApi(
+    Guid Id, string NombreSeguro, string Mime, long TamanoBytes, bool Activo);
+
+public sealed record EntregaPedidoApi(
+    string NumeroNota, DateOnly FechaNota, DateOnly FechaDespacho,
+    decimal? TotalNetoInformado, decimal TotalDespachado,
+    IReadOnlyList<LineaEntregaApi> Lineas,
+    IReadOnlyList<DocumentoNotaApi> Documentos);
+
+public sealed record LineaRecepcionApi(
+    string TipoAlimento, int CantidadRecibida, int Equivalentes40Kg);
+
+public sealed record DiferenciaRecepcionApi(
+    string TipoAlimento, int CantidadRecibida, int CantidadEntregada, int Diferencia);
+
+public sealed record RecepcionPedidoApi(
+    DateOnly FechaRecepcion, decimal TotalRecibido,
+    IReadOnlyList<LineaRecepcionApi> Lineas,
+    IReadOnlyList<DiferenciaRecepcionApi> Diferencias);
+
+public sealed record LineaDespachoApi(string TipoAlimento, int CantidadEntregada);
+
+public sealed record ComandoDespachoApi(
+    Guid Id, string NumeroNota, DateOnly FechaNota, decimal? TotalInformado,
+    IReadOnlyList<LineaDespachoApi> Lineas);

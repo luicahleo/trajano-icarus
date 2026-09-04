@@ -238,3 +238,32 @@ export async function peticion<T>(o: {
   if (respuesta.status === 204) return undefined as T;
   return (await respuesta.json()) as T;
 }
+
+// Descarga binaria autenticada (respaldos de la nota, spec SP8C): devuelve el
+// blob con su tipo de contenido para mostrarlo inline o descargarlo como
+// adjunto. Nunca registra contenido, solo la ruta sanitizada.
+export async function peticionBlob(o: { ruta: string }): Promise<{ blob: Blob; tipo: string }> {
+  const { ruta } = o;
+  const crearRequest = () =>
+    new Request(urlCompleta(ruta), conHeaders({ method: 'GET', credentials: 'include' }));
+  const inicio = performance.now();
+  let respuesta: Response;
+  try {
+    respuesta = await fetchConTiempo(crearRequest());
+  } catch (error) {
+    registrarLlamadaApi(crearRequest(), inicio);
+    reportarFalloDeRed(ruta);
+    throw error;
+  }
+  registrarLlamadaApi(crearRequest(), inicio, respuesta);
+  avisarActividadApi();
+  if (respuesta.status === 401 && (await renovarSesionInterna())) {
+    respuesta = await fetchConTiempo(crearRequest());
+    registrarLlamadaApi(crearRequest(), inicio, respuesta);
+    avisarActividadApi();
+  } else if (respuesta.status === 401) {
+    clearAccessToken();
+  }
+  if (!respuesta.ok) throw await errorDesde(respuesta);
+  return { blob: await respuesta.blob(), tipo: respuesta.headers.get('content-type') ?? 'application/octet-stream' };
+}

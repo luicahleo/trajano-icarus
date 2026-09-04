@@ -8,8 +8,11 @@ import {
   listarPedidos,
   marcarNotificacionLeida,
   obtenerCupo,
+  obtenerOriginalDocumentoNota,
   obtenerPedido,
   obtenerPrecioVigente,
+  obtenerVistaDocumentoNota,
+  recibirPedido,
 } from './api';
 
 const r = (s: number, c: unknown) =>
@@ -68,6 +71,35 @@ describe('api pedidos de alimento', () => {
     const q = solicitud(f);
     expect(q.method).toBe('POST');
     expect(q.url).toContain('/api/pedidos-alimento/p1/enviar');
+  });
+
+  test('recibirPedido hace POST con las líneas recibidas', async () => {
+    const f: ReturnType<typeof vi.fn> = vi.fn(async () => sinCuerpo());
+    vi.stubGlobal('fetch', f);
+    await recibirPedido('p1', [{ tipoAlimento: 'PosturaUno', cantidadRecibida: 95 }]);
+    const q = solicitud(f);
+    expect(q.method).toBe('POST');
+    expect(q.url).toContain('/api/pedidos-alimento/p1/recibir');
+    const cuerpo = JSON.parse(await q.clone().text());
+    expect(cuerpo.lineas[0]).toEqual({ tipoAlimento: 'PosturaUno', cantidadRecibida: 95 });
+  });
+
+  test('los documentos de nota se piden como blob en vista y original', async () => {
+    const f: ReturnType<typeof vi.fn> = vi.fn(async () => {
+      const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
+      return new Response(blob, { status: 200, headers: { 'content-type': 'image/jpeg' } });
+    });
+    vi.stubGlobal('fetch', f);
+    const vista = await obtenerVistaDocumentoNota('p1', 'd1');
+    expect(vista.tipo).toBe('image/jpeg');
+    expect(vista.blob.size).toBeGreaterThan(0);
+    const original = await obtenerOriginalDocumentoNota('p1', 'd1');
+    expect(original.tipo).toBe('image/jpeg');
+    expect(original.blob.size).toBeGreaterThan(0);
+    const qVista = f.mock.calls.at(0)?.[0] as unknown as Request;
+    expect(qVista.url).toContain('/api/pedidos-alimento/p1/nota/documentos/d1/vista');
+    const qOriginal = f.mock.calls.at(1)?.[0] as unknown as Request;
+    expect(qOriginal.url).toContain('/api/pedidos-alimento/p1/nota/documentos/d1/original');
   });
 
   test('obtenerPrecioVigente y obtenerCupo consultan los endpoints del tenant', async () => {

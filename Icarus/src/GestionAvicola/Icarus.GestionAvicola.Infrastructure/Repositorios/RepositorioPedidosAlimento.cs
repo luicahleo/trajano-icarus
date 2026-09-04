@@ -25,6 +25,8 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
         Guid id, CancellationToken cancellationToken = default) =>
         await db.PedidosAlimento.Include(p => p.Detalles)
             .Include(p => p.Entrega)
+            .ThenInclude(e => e!.Lineas)
+            .Include(p => p.Entrega)
             .ThenInclude(e => e!.Documentos)
             .Include(p => p.Recepcion)
             .SingleOrDefaultAsync(p => p.Id == id, cancellationToken);

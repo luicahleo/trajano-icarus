@@ -134,11 +134,35 @@ public sealed record TransicionPedidoAlimentoResumen(
     string EstadoOrigen, string EstadoDestino, DateTime FechaUtc,
     string? Motivo, DateOnly? FechaEntregaEstimada);
 
+public sealed record LineaEntregaPedidoResumen(
+    string TipoAlimento, int CantidadEntregada, int Equivalentes40Kg);
+
+public sealed record DocumentoNotaResumen(
+    Guid Id, string NombreSeguro, string Mime, long TamanoBytes, bool Activo);
+
+public sealed record EntregaPedidoResumen(
+    string NumeroNota, DateOnly FechaNota, DateOnly FechaDespacho,
+    decimal? TotalNetoInformado, decimal TotalDespachado,
+    IReadOnlyList<LineaEntregaPedidoResumen> Lineas,
+    IReadOnlyList<DocumentoNotaResumen> Documentos);
+
+public sealed record LineaRecepcionPedidoResumen(
+    string TipoAlimento, int CantidadRecibida, int Equivalentes40Kg);
+
+public sealed record DiferenciaRecepcionResumen(
+    string TipoAlimento, int CantidadRecibida, int CantidadEntregada, int Diferencia);
+
+public sealed record RecepcionPedidoResumen(
+    DateOnly FechaRecepcion, decimal TotalRecibido,
+    IReadOnlyList<LineaRecepcionPedidoResumen> Lineas,
+    IReadOnlyList<DiferenciaRecepcionResumen> Diferencias);
+
 public sealed record PedidoAlimentoDetalle(
     Guid Id, Guid ClienteId, string Estado, DateOnly? FechaPedido,
     DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado,
     IReadOnlyList<LineaPedidoAlimentoResumen> Lineas,
-    IReadOnlyList<TransicionPedidoAlimentoResumen> Historial);
+    IReadOnlyList<TransicionPedidoAlimentoResumen> Historial,
+    EntregaPedidoResumen? Entrega, RecepcionPedidoResumen? Recepcion);
 
 public sealed class CrearPedidoAlimentoValidator : AbstractValidator<CrearPedidoAlimentoCommand>
 {
@@ -767,5 +791,43 @@ internal static class MapeadorPedidos
                 .Select(t => new TransicionPedidoAlimentoResumen(
                     t.EstadoOrigen.ToString(), t.EstadoDestino.ToString(), t.FechaUtc,
                     t.Motivo, t.FechaEntregaEstimada))
+                .ToList(),
+            MapearEntrega(pedido),
+            MapearRecepcion(pedido));
+
+    // Entrega histórica (spec SP8C): nota, líneas entregadas y respaldos con
+    // su metadata. El total despachado es el cálculo canónico con los precios
+    // congelados; el informado de la nota se conserva solo para contraste.
+    private static EntregaPedidoResumen? MapearEntrega(PedidoAlimento pedido)
+    {
+        if (pedido.Entrega is null)
+            return null;
+        return new EntregaPedidoResumen(
+            pedido.Entrega.NumeroNota, pedido.Entrega.FechaNota, pedido.Entrega.FechaDespacho,
+            pedido.Entrega.TotalNetoInformado, pedido.TotalDespachado ?? 0m,
+            pedido.Entrega.Lineas
+                .Select(l => new LineaEntregaPedidoResumen(
+                    l.TipoAlimento.ToString(), l.CantidadEntregada, l.Equivalentes40Kg))
+                .ToList(),
+            pedido.Entrega.Documentos
+                .Select(d => new DocumentoNotaResumen(
+                    d.Id, d.NombreSeguro, d.Mime, d.TamanoBytes, d.Activo))
                 .ToList());
+    }
+
+    private static RecepcionPedidoResumen? MapearRecepcion(PedidoAlimento pedido)
+    {
+        if (pedido.Recepcion is null)
+            return null;
+        return new RecepcionPedidoResumen(
+            pedido.Recepcion.FechaRecepcion, pedido.Recepcion.TotalRecibido,
+            pedido.Recepcion.Lineas
+                .Select(l => new LineaRecepcionPedidoResumen(
+                    l.TipoAlimento.ToString(), l.CantidadRecibida, l.Equivalentes40Kg))
+                .ToList(),
+            pedido.Recepcion.Diferencias
+                .Select(d => new DiferenciaRecepcionResumen(
+                    d.TipoAlimento.ToString(), d.CantidadRecibida, d.CantidadEntregada, d.Diferencia))
+                .ToList());
+    }
 }

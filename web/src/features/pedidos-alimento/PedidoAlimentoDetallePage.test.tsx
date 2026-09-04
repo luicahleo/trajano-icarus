@@ -45,6 +45,38 @@ const pedidoAceptado = {
   ],
 };
 
+const entregaDespachada = {
+  numeroNota: 'NOTA-77',
+  fechaNota: '2026-09-03',
+  fechaDespacho: '2026-09-04',
+  totalNetoInformado: 17000,
+  totalDespachado: 17100,
+  lineas: [{ tipoAlimento: 'PosturaUno', cantidadEntregada: 95, equivalentes40Kg: 95 }],
+  documentos: [],
+};
+
+const pedidoDespachado = {
+  ...pedidoBorradorDevuelto,
+  estado: 'Despachado',
+  entrega: entregaDespachada,
+  recepcion: null,
+  historial: [
+    ...pedidoBorradorDevuelto.historial,
+    { estadoOrigen: 'Aceptado', estadoDestino: 'Despachado', fechaUtc: '2026-09-04T18:00:00Z', motivo: null, fechaEntregaEstimada: null },
+  ],
+};
+
+const pedidoRecibidoConDiferencias = {
+  ...pedidoDespachado,
+  estado: 'RecibidoConDiferencias',
+  recepcion: {
+    fechaRecepcion: '2026-09-04',
+    totalRecibido: 16740,
+    lineas: [{ tipoAlimento: 'PosturaUno', cantidadRecibida: 93, equivalentes40Kg: 93 }],
+    diferencias: [{ tipoAlimento: 'PosturaUno', cantidadRecibida: 93, cantidadEntregada: 95, diferencia: -2 }],
+  },
+};
+
 function respuesta(status: number, cuerpo?: unknown) {
   return new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), {
     status,
@@ -135,5 +167,57 @@ describe('PedidoAlimentoDetallePage', () => {
     await usuario.click(await screen.findByRole('button', { name: 'Borrar borrador' }));
     await usuario.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(await screen.findByText('Bandeja')).toBeInTheDocument();
+  });
+
+  // SP8C: entrega, respaldos y recepción por línea con estado final.
+  test('un despachado muestra la entrega, la nota y permite confirmar la recepción', async () => {
+    const usuario = userEvent.setup();
+    let recibido = false;
+    const pedidoRecibido = {
+      ...pedidoDespachado,
+      estado: 'RecibidoConforme',
+      recepcion: {
+        fechaRecepcion: '2026-09-04',
+        totalRecibido: 17100,
+        lineas: [{ tipoAlimento: 'PosturaUno', cantidadRecibida: 95, equivalentes40Kg: 95 }],
+        diferencias: [],
+      },
+    };
+    // El GET vuelve con el estado recibido después de la confirmación.
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      if (ruta === 'POST /api/pedidos-alimento/p1/recibir') {
+        recibido = true;
+        return respuesta(204);
+      }
+      if (ruta === 'GET /api/pedidos-alimento/p1') {
+        return respuesta(200, recibido ? pedidoRecibido : pedidoDespachado);
+      }
+      return respuesta(404);
+    }));
+    renderPagina();
+    expect(await screen.findByText('Entrega y nota')).toBeInTheDocument();
+    expect(screen.getByText('NOTA-77')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Recibido' })).toHaveValue(95);
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar recepción' }));
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(
+      await screen.findByText(/Recepción confirmada el .* sin diferencias contra lo despachado\./),
+    ).toBeInTheDocument();
+  });
+
+  test('una recepción con diferencias muestra el total recibido real', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fetchSimulado({
+        'GET /api/pedidos-alimento/p1': respuesta(200, pedidoRecibidoConDiferencias),
+      }),
+    );
+    renderPagina();
+    expect(await screen.findByText(/Recepción confirmada el /i)).toBeInTheDocument();
+    expect(screen.getByText(/con 1 diferencia\(s\) contra lo despachado\./)).toBeInTheDocument();
+    expect(screen.getByText(/16\.740,00/)).toBeInTheDocument();
+    expect(screen.getAllByText('-2').length).toBeGreaterThan(0);
   });
 });

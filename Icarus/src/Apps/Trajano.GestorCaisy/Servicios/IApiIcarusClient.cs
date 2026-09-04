@@ -37,4 +37,16 @@ public interface IApiIcarusClient
     Task<BandejaNotificacionesApi> ListarNotificacionesPedidoAsync(CancellationToken token = default);
 
     Task MarcarNotificacionPedidoLeidaAsync(Guid id, CancellationToken token = default);
+
+    // Despacho (SP8C): registra la entrega/nota con líneas manuales; después
+    // cada respaldo de la nota se sube con su propio multipart. La vista
+    // derivada se descarga inline para mostrarla en el detalle.
+    Task DespacharPedidoAsync(ComandoDespachoApi comando, CancellationToken token = default);
+
+    Task<Guid> SubirDocumentoNotaAsync(
+        Guid id, Stream contenido, string nombreArchivo,
+        Guid? reemplazaDocumentoId, CancellationToken token = default);
+
+    Task<(Stream Contenido, string TipoContenido)> DescargarDocumentoNotaAsync(
+        Guid id, Guid documentoId, CancellationToken token = default);
 }

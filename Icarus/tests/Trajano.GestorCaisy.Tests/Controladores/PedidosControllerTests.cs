@@ -193,4 +193,113 @@ public class PedidosControllerTests
         Assert.Equal(1, _api.VecesMarcarLeida);
         Assert.Equal(id, _api.UltimaNotificacionMarcada);
     }
+
+    // SP8C: el despacho se prepara sobre un aceptado, registra la entrega/nota
+    // con sus líneas manuales y sube los respaldos de la nota.
+    [Fact]
+    public async Task ConfirmarDespachoDeUnAceptadoMuestraElFormulario()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado", new(2025, 12, 1));
+
+        var vista = await _controlador.ConfirmarDespacho(id, default);
+
+        var modelo = Assert.IsType<FormularioDespachoVista>(((ViewResult)vista).Model);
+        Assert.Equal(id, modelo.Id);
+        Assert.Equal("PosturaUno", modelo.Lineas.Single().TipoAlimento);
+        Assert.Equal(80, modelo.Lineas.Single().CantidadEntregada);
+    }
+
+    [Fact]
+    public async Task ConfirmarDespachoDeUnNoAceptadoRedirigeAlDetalle()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+
+        var resultado = await _controlador.ConfirmarDespacho(id, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PedidosController.Detalles), redireccion.ActionName);
+    }
+
+    [Fact]
+    public async Task DespacharValidaElNumeroDeNotaObligatorio()
+    {
+        var id = Guid.NewGuid();
+        var formulario = new FormularioDespachoVista { Id = id, NumeroNota = " " };
+        _controlador.ModelState.AddModelError(nameof(formulario.NumeroNota), "El número de nota es obligatorio.");
+
+        var resultado = await _controlador.Despachar(id, formulario, default);
+
+        var vista = Assert.IsType<ViewResult>(resultado);
+        Assert.Equal("Despachar", vista.ViewName);
+        Assert.Equal(0, _api.VecesDespachar);
+    }
+
+    [Fact]
+    public async Task DespacharRegistraLaEntregaYSubeLosRespaldos()
+    {
+        var id = Guid.NewGuid();
+        var formulario = new FormularioDespachoVista
+        {
+            Id = id,
+            NumeroNota = "NOTA-77",
+            FechaNota = FechasDeOficina.Hoy(),
+            TotalInformado = 14120m,
+            Lineas = [new LineaDespachoVista { TipoAlimento = "PosturaUno", CantidadSolicitada = 80, CantidadEntregada = 75 }],
+            Archivos = [],
+        };
+
+        var resultado = await _controlador.Despachar(id, formulario, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PedidosController.Detalles), redireccion.ActionName);
+        Assert.Equal(1, _api.VecesDespachar);
+        Assert.Equal("NOTA-77", _api.UltimoDespacho!.NumeroNota);
+        Assert.Equal(75, _api.UltimoDespacho.Lineas.Single().CantidadEntregada);
+        Assert.Equal(0, _api.VecesSubirDocumentoNota);
+    }
+
+    [Fact]
+    public async Task DespacharConConflictoDeEstadoMuestraElMensaje()
+    {
+        var id = Guid.NewGuid();
+        _api.ErrorDeDespachar = new ErrorApiException(409, "Conflicto con el estado actual");
+        var formulario = new FormularioDespachoVista
+        {
+            Id = id,
+            NumeroNota = "NOTA-1",
+            FechaNota = FechasDeOficina.Hoy(),
+            Lineas = [new LineaDespachoVista { TipoAlimento = "PosturaUno", CantidadSolicitada = 80, CantidadEntregada = 80 }],
+        };
+
+        var resultado = await _controlador.Despachar(id, formulario, default);
+
+        var vista = Assert.IsType<ViewResult>(resultado);
+        Assert.Equal("Despachar", vista.ViewName);
+        Assert.True(_controlador.ModelState.ContainsKey(string.Empty));
+    }
+
+    [Fact]
+    public async Task NotaDocumentoDevuelveLaVistaDerivada()
+    {
+        var id = Guid.NewGuid();
+        var documentoId = Guid.NewGuid();
+
+        var resultado = await _controlador.NotaDocumento(id, documentoId, default);
+
+        var archivo = Assert.IsType<FileStreamResult>(resultado);
+        Assert.Equal("image/jpeg", archivo.ContentType);
+        Assert.Equal((id, documentoId), _api.UltimaDescargaNota);
+    }
+
+    [Fact]
+    public async Task NotaDocumentoInexistenteDevuelve404()
+    {
+        _api.ErrorDeDocumentoNota = new ErrorApiException(404, "Recurso no encontrado");
+
+        var resultado = await _controlador.NotaDocumento(Guid.NewGuid(), Guid.NewGuid(), default);
+
+        Assert.IsType<NotFoundResult>(resultado);
+    }
 }

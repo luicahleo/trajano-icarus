@@ -73,6 +73,22 @@ public static class PedidosAlimentoEndpoints
             await mediator.Send(new EnviarPedidoAlimentoCommand(id), cancellationToken);
             return Results.NoContent();
         });
+        // Recepción por línea (spec SP8C): el tenant confirma desde Despachado
+        // la cantidad realmente recibida; el resultado se notifica a CAISY en
+        // la misma transacción. Un reintento responde 409.
+        tenant.MapPost("/{id:guid}/recibir", async (Guid id, RecepcionRequest cuerpo,
+            ISender mediator, CancellationToken cancellationToken) =>
+        {
+            var lineas = cuerpo.Lineas.Select(linea =>
+            {
+                if (!Enum.TryParse<TipoAlimento>(linea.TipoAlimento, true, out var tipo))
+                    throw new ValidationException("El tipo de alimento indicado no existe.");
+                return new DatosLineaRecepcion(tipo, linea.CantidadRecibida);
+            }).ToList();
+            await mediator.Send(
+                new ConfirmarRecepcionPedidoCommand(id, lineas), cancellationToken);
+            return Results.NoContent();
+        });
         // Descarga histórica de los respaldos de la nota (spec SP8C): solo el
         // tenant propietario los encuentra; un id ajeno responde 404 genérico.
         tenant.MapGet("/{id:guid}/nota/documentos/{documentoId:guid}/vista",
@@ -246,6 +262,10 @@ public static class PedidosAlimentoEndpoints
     private sealed record DespachoRequest(
         string NumeroNota, DateOnly FechaNota, decimal? TotalInformado,
         IReadOnlyList<LineaDespachoRequest> Lineas);
+
+    private sealed record LineaRecepcionRequest(string TipoAlimento, int CantidadRecibida);
+
+    private sealed record RecepcionRequest(IReadOnlyList<LineaRecepcionRequest> Lineas);
 
     // Descarga segura (spec SP8C "Documentos privados"): la vista derivada se
     // sirve inline y el original como adjunto, con CSP restrictiva y nosniff.

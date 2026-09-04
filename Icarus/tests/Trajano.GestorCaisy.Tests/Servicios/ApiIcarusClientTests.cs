@@ -94,6 +94,58 @@ public class ApiIcarusClientTests
     }
 
     [Fact]
+    public async Task DespacharPosteaNotaYLineasEnLaRutaDelPedido()
+    {
+        _manejador.Responder(HttpStatusCode.NoContent);
+        var id = Guid.NewGuid();
+
+        await _cliente.DespacharPedidoAsync(new ComandoDespachoApi(
+            id, "NOTA-77", new(2025, 12, 1), 14120m,
+            [new LineaDespachoApi("PosturaUno", 75)]));
+
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Post, peticion.Metodo);
+        Assert.Equal($"{BaseApi}pedidos-alimento-caisy/{id}/despachar", peticion.Uri.ToString());
+        Assert.Equal("Bearer token-actual", peticion.Autorizacion);
+        Assert.Contains("\"numeroNota\":\"NOTA-77\"", peticion.Cuerpo);
+        Assert.Contains("\"cantidadEntregada\":75", peticion.Cuerpo);
+    }
+
+    [Fact]
+    public async Task SubirDocumentoNotaEnviaMultipartYReemplazo()
+    {
+        _manejador.Responder(HttpStatusCode.Created, """{"id":"9b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c009"}""");
+        var id = Guid.NewGuid();
+        var previo = Guid.NewGuid();
+
+        var documentoId = await _cliente.SubirDocumentoNotaAsync(
+            id, new MemoryStream([1, 2, 3]), "nota-frente.png", previo);
+
+        Assert.Equal(Guid.Parse("9b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c009"), documentoId);
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Post, peticion.Metodo);
+        Assert.Equal($"{BaseApi}pedidos-alimento-caisy/{id}/nota/documentos", peticion.Uri.ToString());
+        Assert.Contains("reemplazaDocumentoId", peticion.Cuerpo);
+    }
+
+    [Fact]
+    public async Task DescargarDocumentoNotaDevuelveElContenidoYElTipo()
+    {
+        _manejador.Responder(HttpStatusCode.OK, contenido: [0xFF, 0xD8, 0xFF, 1], tipoDeContenido: "image/jpeg");
+        var id = Guid.NewGuid();
+        var documentoId = Guid.NewGuid();
+
+        var (contenido, tipo) = await _cliente.DescargarDocumentoNotaAsync(id, documentoId);
+
+        Assert.Equal("image/jpeg", tipo);
+        using var memoria = new MemoryStream();
+        await contenido.CopyToAsync(memoria);
+        Assert.Equal([0xFF, 0xD8, 0xFF, 1], memoria.ToArray());
+        Assert.Equal($"{BaseApi}pedidos-alimento-caisy/{id}/nota/documentos/{documentoId}/vista",
+            _manejador.Peticiones[0].Uri.ToString());
+    }
+
+    [Fact]
     public async Task ListarNotificacionesEnviaBearerYParseaLaColeccion()
     {
         _manejador.Responder(HttpStatusCode.OK,

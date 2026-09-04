@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Trajano.GestorCaisy.Autenticacion;
 using Trajano.GestorCaisy.Models;
@@ -46,7 +47,136 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         return View(new VistaPedidoDetalle(
             pedido,
             PuedeProcesarse: pedido.Estado == "Solicitado",
-            PuedeActualizarEntrega: pedido.Estado == "Aceptado"));
+            PuedeActualizarEntrega: pedido.Estado == "Aceptado",
+            PuedeDespacharse: pedido.Estado == "Aceptado"));
+    }
+
+    // Despacho (SP8C "Despacho, nota y recepción"): pantalla con el resumen de
+    // lo solicitado, campos manuales de la nota y selección de las imágenes de
+    // respaldo (páginas o reverso) que se suben tras registrar la entrega.
+    [HttpGet("{id:guid}/Despachar")]
+    [ActionName("Despachar")]
+    public async Task<IActionResult> ConfirmarDespacho(Guid id, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        var pedido = await api.ObtenerPedidoAsync(id, token);
+        if (pedido.Estado != "Aceptado")
+            return RedirectToAction(nameof(Detalles), new { id });
+        return View("Despachar", FormularioDespachoDesde(pedido));
+    }
+
+    private static FormularioDespachoVista FormularioDespachoDesde(PedidoDetalleApi pedido) => new()
+    {
+        Id = pedido.Id,
+        FechaNota = FechasDeOficina.Hoy(),
+        Lineas = pedido.Lineas.Select(l => new LineaDespachoVista
+        {
+            TipoAlimento = l.TipoAlimento,
+            CantidadSolicitada = l.CantidadSolicitada,
+            CantidadEntregada = l.CantidadSolicitada,
+        }).ToList(),
+    };
+
+    // Registra la entrega/nota (una única por pedido) y sube cada imagen de
+    // respaldo con su propio multipart. Si una imagen falla, el despacho ya
+    // quedó registrado: el error se muestra y el respaldo puede volverse a
+    // subir desde el detalle mientras el pedido esté despachado.
+    [HttpPost("{id:guid}/Despachar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Despachar(
+        Guid id, FormularioDespachoVista formulario, CancellationToken token)
+    {
+        formulario.Id = id;
+        if (!ModelState.IsValid)
+            return View("Despachar", formulario);
+        if (formulario.Lineas.Any(l => l.CantidadEntregada < 0))
+        {
+            ModelState.AddModelError(
+                string.Empty, "La cantidad entregada no puede ser negativa.");
+            return View("Despachar", formulario);
+        }
+        try
+        {
+            await api.DespacharPedidoAsync(new ComandoDespachoApi(
+                id, formulario.NumeroNota.Trim(), formulario.FechaNota,
+                formulario.TotalInformado,
+                formulario.Lineas.Select(l => new LineaDespachoApi(
+                    l.TipoAlimento, l.CantidadEntregada)).ToList()), token);
+        }
+        catch (ErrorApiException error) when (error.Estado is 400 or 409)
+        {
+            ModelState.AddModelError(string.Empty, error.MensajeParaLaInterfaz());
+            return View("Despachar", formulario);
+        }
+        var respaldos = 0;
+        var fallidos = 0;
+        foreach (var archivo in formulario.Archivos.Where(a => a.Length > 0))
+        {
+            try
+            {
+                await using var contenido = archivo.OpenReadStream();
+                await api.SubirDocumentoNotaAsync(id, contenido, archivo.FileName, null, token);
+                respaldos++;
+            }
+            catch (ErrorApiException)
+            {
+                fallidos++;
+            }
+        }
+        TempData["Exito"] = (respaldos, fallidos) switch
+        {
+            (0, 0) => "El pedido quedó despachado con su nota registrada.",
+            (_, 0) => "El pedido quedó despachado con su nota y sus respaldos guardados.",
+            (0, _) => "El pedido quedó despachado pero ningún respaldo se pudo guardar; subilos desde el detalle.",
+            _ => "El pedido quedó despachado; algunos respaldos no se pudieron guardar y se pueden volver a subir desde el detalle.",
+        };
+        return RedirectToAction(nameof(Detalles), new { id });
+    }
+
+    // Vista derivada de un respaldo para el detalle (inline); el original no
+    // se sirve por acá: la API lo entrega como adjunto autorizado al cliente.
+    [HttpGet("{id:guid}/Nota/{documentoId:guid}")]
+    public async Task<IActionResult> NotaDocumento(Guid id, Guid documentoId, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        try
+        {
+            var (contenido, tipoContenido) = await api.DescargarDocumentoNotaAsync(id, documentoId, token);
+            return File(contenido, tipoContenido);
+        }
+        catch (ErrorApiException error) when (error.Estado == StatusCodes.Status404NotFound)
+        {
+            return NotFound();
+        }
+    }
+
+    // Alta de un respaldo adicional (o sustitución) mientras el pedido está
+    // despachado, antes de la recepción (spec SP8C).
+    [HttpPost("{id:guid}/Nota/Documentos")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AgregarNotaDocumento(
+        Guid id, IFormFile? archivo, Guid? reemplazaDocumentoId, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        if (archivo is null || archivo.Length == 0)
+        {
+            TempData["Error"] = "Falta el archivo de imagen.";
+            return RedirectToAction(nameof(Detalles), new { id });
+        }
+        try
+        {
+            await using var contenido = archivo.OpenReadStream();
+            await api.SubirDocumentoNotaAsync(id, contenido, archivo.FileName, reemplazaDocumentoId, token);
+            TempData["Exito"] = "El respaldo de la nota quedó guardado.";
+        }
+        catch (ErrorApiException error) when (error.Estado is 400 or 409 or 413)
+        {
+            TempData["Error"] = error.MensajeParaLaInterfaz();
+        }
+        return RedirectToAction(nameof(Detalles), new { id });
     }
 
     [HttpGet("{id:guid}/Devolver")]

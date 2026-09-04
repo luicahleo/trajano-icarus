@@ -194,4 +194,85 @@ public class FlujoPedidosTests
         Assert.False(respuesta.IsSuccessStatusCode);
         Assert.Equal(0, aplicacion.Api.VecesDevolver);
     }
+
+    // SP8C: el formulario de despacho muestra las líneas solicitadas con su
+    // cantidad precargada y el POST registra la entrega/nota sin respaldos.
+    [Fact]
+    public async Task DespacharMuestraElResumenYRegistraLaEntrega()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado", FechasDeOficina.Hoy().AddDays(3));
+
+        var html = await cliente.GetStringAsync($"/Pedidos/{id}/Despachar");
+        Assert.Contains("Registrar despacho", html);
+        Assert.Contains("PosturaUno", html);
+        Assert.Contains("Entregado", html);
+        Assert.Contains("Imágenes de respaldo", html);
+
+        var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, $"/Pedidos/{id}/Despachar");
+        var cuerpo = new MultipartFormDataContent
+        {
+            { new StringContent("NOTA-77"), "NumeroNota" },
+            { new StringContent(FechasDeOficina.Hoy().ToString("yyyy-MM-dd")), "FechaNota" },
+            { new StringContent("80"), "Lineas[0].CantidadEntregada" },
+            { new StringContent("PosturaUno"), "Lineas[0].TipoAlimento" },
+            { new StringContent("80"), "Lineas[0].CantidadSolicitada" },
+            { new StringContent(token), "__RequestVerificationToken" },
+        };
+        var respuesta = await cliente.PostAsync($"/Pedidos/{id}/Despachar", cuerpo);
+
+        Assert.Equal(HttpStatusCode.Redirect, respuesta.StatusCode);
+        Assert.Equal(1, aplicacion.Api.VecesDespachar);
+        Assert.Equal("NOTA-77", aplicacion.Api.UltimoDespacho!.NumeroNota);
+        Assert.Equal(80, aplicacion.Api.UltimoDespacho.Lineas.Single().CantidadEntregada);
+    }
+
+    [Fact]
+    public async Task DespacharSinNumeroVuelveAlFormularioSinLlamarALaApi()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado", FechasDeOficina.Hoy().AddDays(3));
+        var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, $"/Pedidos/{id}/Despachar");
+
+        var respuesta = await cliente.PostAsync($"/Pedidos/{id}/Despachar",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["NumeroNota"] = "",
+                ["FechaNota"] = FechasDeOficina.Hoy().ToString("yyyy-MM-dd"),
+                ["Lineas[0].TipoAlimento"] = "PosturaUno",
+                ["Lineas[0].CantidadSolicitada"] = "80",
+                ["Lineas[0].CantidadEntregada"] = "80",
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        Assert.Contains("El número de nota es obligatorio.", await respuesta.Content.ReadAsStringAsync());
+        Assert.Equal(0, aplicacion.Api.VecesDespachar);
+    }
+
+    [Fact]
+    public async Task ElDetalleDeUnDespachadoMuestraNotaRespaldosYRecepcion()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(
+            id, "RecibidoConDiferencias",
+            entrega: ApiIcarusFalsa.CrearEntrega(id),
+            recepcion: ApiIcarusFalsa.CrearRecepcion());
+
+        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
+
+        Assert.Contains("Entrega y nota", html);
+        Assert.Contains("NOTA-77", html);
+        Assert.Contains("nota-frente.jpg", html);
+        Assert.Contains($"/Pedidos/{id}/Nota/", html);
+        Assert.Contains("Recepción del tenant", html);
+        Assert.Contains("14120.00", html);
+        Assert.Contains("-2", html);
+    }
 }

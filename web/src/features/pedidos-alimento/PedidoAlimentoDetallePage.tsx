@@ -18,16 +18,21 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import {
   borrarPedido,
   enviarPedido,
+  obtenerOriginalDocumentoNota,
   obtenerPedido,
+  obtenerVistaDocumentoNota,
+  recibirPedido,
+  type DocumentoNota,
   type LineaPedidoDetalle,
 } from './api';
 import {
@@ -47,7 +52,10 @@ export function PedidoAlimentoDetallePage() {
   const queryClient = useQueryClient();
   const [confirmarEnvio, setConfirmarEnvio] = useState(false);
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const [confirmarRecepcion, setConfirmarRecepcion] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Cantidades realmente recibidas por tipo: precargadas con lo entregado.
+  const [recibidas, setRecibidas] = useState<Record<string, string>>({});
 
   const { data: pedido, isLoading, isError } = useQuery({
     queryKey: ['pedidos-alimento', 'detalle', id],
@@ -76,6 +84,23 @@ export function PedidoAlimentoDetallePage() {
       navigate('/pedidos');
     },
     onError: (e) => setError(e instanceof Error ? e.message : 'No se pudo borrar el borrador.'),
+  });
+
+  const recibir = useMutation({
+    mutationFn: () =>
+      recibirPedido(
+        id!,
+        pedido!.entrega!.lineas.map((l) => ({
+          tipoAlimento: l.tipoAlimento,
+          cantidadRecibida: Number(recibidas[l.tipoAlimento] ?? l.cantidadEntregada),
+        })),
+      ),
+    onSuccess: () => {
+      setConfirmarRecepcion(false);
+      setError(null);
+      refrescar();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : 'No se pudo confirmar la recepción.'),
   });
 
   if (!pedido) {
@@ -133,6 +158,132 @@ export function PedidoAlimentoDetallePage() {
           </Typography>
         </Box>
       </Box>
+
+      {pedido.entrega && (
+        <>
+          <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
+            Entrega y nota
+          </Typography>
+          <TableContainer component={Paper} sx={{ mb: 1 }}>
+            <Table size="small" aria-label="Comparación de cantidades">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell align="right">Solicitado</TableCell>
+                  <TableCell align="right">Despachado</TableCell>
+                  <TableCell align="right">Recibido</TableCell>
+                  <TableCell align="right">Diferencia</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pedido.lineas.map((linea) => {
+                  const entregada =
+                    pedido.entrega!.lineas.find((l) => l.tipoAlimento === linea.tipoAlimento)
+                      ?.cantidadEntregada ?? null;
+                  const recibida =
+                    pedido.recepcion?.lineas.find((l) => l.tipoAlimento === linea.tipoAlimento)
+                      ?.cantidadRecibida ?? null;
+                  const diferencia =
+                    entregada !== null && recibida !== null ? recibida - entregada : null;
+                  return (
+                    <TableRow key={linea.id}>
+                      <TableCell>
+                        {ETIQUETAS_TIPO_ALIMENTO[linea.tipoAlimento] ?? linea.tipoAlimento}
+                      </TableCell>
+                      <TableCell align="right">{linea.cantidadSolicitada}</TableCell>
+                      <TableCell align="right">{entregada ?? '—'}</TableCell>
+                      <TableCell align="right">{recibida ?? '—'}</TableCell>
+                      <TableCell align="right">
+                        {diferencia === null
+                          ? '—'
+                          : diferencia === 0
+                            ? '0'
+                            : diferencia > 0
+                              ? `+${diferencia}`
+                              : diferencia}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              Nota <strong>{pedido.entrega.numeroNota}</strong> del{' '}
+              {formatoFecha(pedido.entrega.fechaNota)}
+            </Typography>
+            <Typography variant="body2">
+              Total despachado (canónico):{' '}
+              <strong>{formatoMoneda(pedido.entrega.totalDespachado)}</strong>
+            </Typography>
+            <Typography variant="body2">
+              Total informado (nota):{' '}
+              {pedido.entrega.totalNetoInformado === null
+                ? '—'
+                : formatoMoneda(pedido.entrega.totalNetoInformado)}
+            </Typography>
+          </Stack>
+          {pedido.entrega.documentos.length > 0 && (
+            <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: 'wrap' }}>
+              {pedido.entrega.documentos.map((documento) => (
+                <RespaldoNota key={documento.id} pedidoId={pedido.id} documento={documento} />
+              ))}
+            </Stack>
+          )}
+        </>
+      )}
+
+      {pedido.estado === 'Despachado' && pedido.entrega && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            Confirmar recepción
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Registrá la cantidad realmente recibida por línea: si coincide todo, el pedido
+            termina recibido conforme; con diferencias, queda el detalle para contraste.
+          </Typography>
+          <Stack spacing={1}>
+            {pedido.entrega.lineas.map((linea) => (
+              <Stack key={linea.tipoAlimento} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <Typography sx={{ minWidth: 160 }}>
+                  {ETIQUETAS_TIPO_ALIMENTO[linea.tipoAlimento] ?? linea.tipoAlimento}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 110 }}>
+                  Despachado: {linea.cantidadEntregada}
+                </Typography>
+                <TextField
+                  size="small"
+                  type="number"
+                  label="Recibido"
+                  value={recibidas[linea.tipoAlimento] ?? String(linea.cantidadEntregada)}
+                  onChange={(e) =>
+                    setRecibidas((previo) => ({
+                      ...previo,
+                      [linea.tipoAlimento]: e.target.value,
+                    }))
+                  }
+                  slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                  sx={{ width: 130 }}
+                />
+              </Stack>
+            ))}
+          </Stack>
+          <Button variant="contained" onClick={() => setConfirmarRecepcion(true)} sx={{ mt: 2 }}>
+            Confirmar recepción
+          </Button>
+        </Paper>
+      )}
+
+      {pedido.recepcion && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Recepción confirmada el {formatoFecha(pedido.recepcion.fechaRecepcion)}: total recibido{' '}
+          {formatoMoneda(pedido.recepcion.totalRecibido)}
+          {pedido.recepcion.diferencias.length > 0
+            ? ` con ${pedido.recepcion.diferencias.length} diferencia(s) contra lo despachado.`
+            : ' sin diferencias contra lo despachado.'}
+        </Alert>
+      )}
 
       {pedido.estado === 'Rechazado' && motivoDe(pedido.historial) && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -229,6 +380,15 @@ export function PedidoAlimentoDetallePage() {
         onConfirmar={() => borrar.mutate()}
       />
 
+      <DialogoConfirmacion
+        abierto={confirmarRecepcion}
+        titulo="Confirmar recepción"
+        mensaje="¿Confirmar la recepción con las cantidades indicadas? El pedido termina en Recibido conforme o Recibido con diferencias, y CAISY será notificada. No hay reapertura."
+        pendiente={recibir.isPending}
+        onCancelar={() => setConfirmarRecepcion(false)}
+        onConfirmar={() => recibir.mutate()}
+      />
+
       <Dialog open={confirmarEnvio} onClose={() => setConfirmarEnvio(false)}>
         <DialogTitle>Enviar pedido a CAISY</DialogTitle>
         <DialogContent>
@@ -278,6 +438,75 @@ function Linea({ linea }: { linea: LineaPedidoDetalle }) {
         {linea.subtotalSolicitado === null ? '—' : formatoMoneda(linea.subtotalSolicitado)}
       </TableCell>
     </TableRow>
+  );
+}
+
+// Respaldo de la nota (spec SP8C): muestra la copia segura de visualización y
+// ofrece el original como descarga autorizada (adjunto). La vista derivada se
+// trae como blob autenticado y se libera al desmontar.
+function RespaldoNota({
+  pedidoId,
+  documento,
+}: {
+  pedidoId: string;
+  documento: DocumentoNota;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!documento.activo) return;
+    let urlCreada: string | null = null;
+    let cancelado = false;
+    obtenerVistaDocumentoNota(pedidoId, documento.id)
+      .then(({ blob }) => {
+        if (cancelado) return;
+        urlCreada = URL.createObjectURL(blob);
+        setUrl(urlCreada);
+      })
+      .catch(() => setError(true));
+    return () => {
+      cancelado = true;
+      if (urlCreada) URL.revokeObjectURL(urlCreada);
+    };
+  }, [pedidoId, documento.id, documento.activo]);
+
+  const descargarOriginal = async () => {
+    const { blob } = await obtenerOriginalDocumentoNota(pedidoId, documento.id);
+    const urlOriginal = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = urlOriginal;
+    enlace.download = documento.nombreSeguro;
+    enlace.click();
+    URL.revokeObjectURL(urlOriginal);
+  };
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1, width: 170, opacity: documento.activo ? 1 : 0.4 }}>
+      {error ? (
+        <Typography variant="caption" color="text.secondary">
+          Sin vista previa
+        </Typography>
+      ) : url ? (
+        <Box
+          component="img"
+          src={url}
+          alt={`Respaldo de la nota: ${documento.nombreSeguro}`}
+          sx={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 1 }}
+        />
+      ) : (
+        <Box sx={{ width: '100%', height: 120, bgcolor: 'grey.100', borderRadius: 1 }} />
+      )}
+      <Typography variant="caption" sx={{ wordBreak: 'break-all', display: 'block' }}>
+        {documento.nombreSeguro}
+        {documento.activo ? '' : ' (reemplazado)'}
+      </Typography>
+      {documento.activo && (
+        <Button size="small" onClick={() => void descargarOriginal()}>
+          Descargar original
+        </Button>
+      )}
+    </Paper>
   );
 }
 
