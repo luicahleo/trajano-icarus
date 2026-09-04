@@ -4,6 +4,7 @@ using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Icarus.GestionAvicola.Infrastructure.Migrations
 {
     [DbContext(typeof(GestionAvicolaDbContext))]
-    partial class GestionAvicolaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260904140637_PedidosAlimentoInicial")]
+    partial class PedidosAlimentoInicial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

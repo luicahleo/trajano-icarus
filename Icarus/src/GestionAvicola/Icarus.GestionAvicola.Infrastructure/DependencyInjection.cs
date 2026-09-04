@@ -5,6 +5,7 @@ using Icarus.GestionAvicola.Application;
 using Icarus.GestionAvicola.Application.Galpones;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Mortalidad;
+using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Application.Produccion;
 using Icarus.GestionAvicola.Application.Vacunacion;
@@ -37,6 +38,16 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioTareasVacunacion, RepositorioTareasVacunacion>();
         servicios.AddScoped<IImportadorCronogramaVacunacion, ImportadorCronogramaVacunacion>();
         servicios.AddScoped<IRepositorioNotificacionesPrecios, RepositorioNotificacionesPrecios>();
+        servicios.AddScoped<IRepositorioPedidosAlimento, RepositorioPedidosAlimento>();
+        // Límite semanal de pedidos enviados (spec SP8): configurable sin
+        // cambiar código y validado al arrancar. El valor se entrega a los
+        // handlers ya resuelto (Application no depende de Options).
+        servicios.AddOptions<OpcionesPedidosAlimento>()
+            .Bind(configuracion.GetSection(OpcionesPedidosAlimento.Seccion))
+            .Validate(o => o.MaximoPorSemana > 0, "El máximo de pedidos por semana debe ser mayor que cero.")
+            .ValidateOnStart();
+        servicios.AddSingleton(sp =>
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesPedidosAlimento>>().Value);
         servicios.AddScoped<IImportadorNotificacionPreciosPdf, ImportadorNotificacionPreciosPdf>();
         servicios.AddScoped<IAlmacenDocumentosPrecios, AlmacenDocumentosLocal>();
         servicios.AddScoped<IUnidadTrabajoGestionAvicola>(sp =>

@@ -58,17 +58,24 @@ y procesarlos en CAISY mediante devolución, rechazo o aceptación.
 - `Icarus/src/Host/Icarus.Host/appsettings.json`
 - tests `PedidosAlimentoHandlerTests.cs`.
 
-- [ ] Rojo: crear/editar/desactivar respeta tenant y permite a Cliente o
+- [x] Rojo: crear/editar/desactivar respeta tenant y permite a Cliente o
   Trabajador autorizado actuar sobre borradores compartidos.
-- [ ] Rojo: enviar congela publicación/precios vigentes y fecha Bolivia en una
+  (CS0234/CS0246 por los tipos por crear)
+- [x] Rojo: enviar congela publicación/precios vigentes y fecha Bolivia en una
   transacción; falta de precio deja el borrador intacto.
-- [ ] Rojo: máximo configurable inicial 3 por cliente/semana ISO; dos envíos
+- [x] Rojo: máximo configurable inicial 3 por cliente/semana ISO; dos envíos
   concurrentes no superan el límite y un reenvío no suma otro cupo.
-- [ ] Implementar opciones validadas al arrancar, consulta bloqueable/índice y
+  (unidad: cupo agotado da 409 sin guardar, el reintento no consulta cupo; la
+  serialización en la base usa UPDLOCK + HOLDLOCK y se verificará con
+  integración en la Tarea 4)
+- [x] Implementar opciones validadas al arrancar, consulta bloqueable/índice y
   traducción uniforme de concurrencia a 409.
-- [ ] Generar migración `PedidosAlimentoInicial` y verificar filtros tenant sin
+- [x] Generar migración `PedidosAlimentoInicial` y verificar filtros tenant sin
   `.Value` sobre `Guid?`.
-- [ ] Commit previsto: `feat(avicola): crear y enviar pedidos de alimento`.
+  (tablas `pedidos_alimentos`, `detalles_pedidos_alimentos` y
+  `transiciones_pedidos_alimentos`, índice `ClienteId_FechaPedido`)
+- [x] Commit previsto: `feat(avicola): crear y enviar pedidos de alimento`.
+  (15/15 dirigidos, puerta completa verde: 334 unit + 89 integración)
 
 ## Tarea 3 — Notificaciones internas persistentes
 
