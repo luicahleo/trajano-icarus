@@ -11,6 +11,7 @@ artifacts/
 .superpowers/
 graphify-out/
 .kombai/
+.superdesign/tmp/
 
 # Handoff efímero: es estado de sesión, no memoria del proyecto.
 # La plantilla versionada es docs/ai/HANDOFF.template.md.

@@ -22,6 +22,7 @@ Los identificadores de dominio van en español, igual que el resto del proyecto.
 | Cliente (granjero) | El tenant del sistema. Granjero afiliado a CAISY. Puede registrar cualquier dato de su granja. |
 | Trabajador recolector | Trabajador del cliente encargado de la recolección de huevos: **la recolección la registra él**, no el cliente (aunque el cliente también puede). Usa Icarus solo con las funcionalidades que el cliente le asigna (entitlement por funcionalidad); nunca tiene acceso al resto de lo que ve el cliente. |
 | Permisos operativos del trabajador | El cliente con `GestionAvicola` administra la estructura de su única granja y opera todo el módulo. El trabajador solo recibe `ProduccionHuevos` y/o `Mortalidad`; esas funcionalidades le conceden lectura estructural implícita de la granja y sus galpones, pero nunca administración de estructura ni ajuste manual de inventario. Los permisos son efectivos únicamente mientras cliente y trabajador estén activos y el módulo siga habilitado. |
+| Gestor CAISY | Usuario global de oficina, sin tenant, con funcionalidades CAISY explícitas. SP8 incorpora `GestorPedidoAlimento`; no equivale a Administrador de plataforma. |
 
 ## Entidades de Gestión avícola
 
@@ -47,6 +48,22 @@ Definida en el spec del subproyecto 7
 | Tarea de vacunación | La ejecución de un ítem sobre un galpón. Estados: `Pendiente` → `Completada` o `Cancelada`. Completar registra `FechaAplicacion` (informada por el usuario, nunca futura; por defecto hoy), aves vacunadas y quién la registró. Cancelar es decisión solo del cliente, con motivo opcional. No hay reprogramación individual. |
 | Notificación de vacunación | Consulta de pendientes del tenant: vencidas y del día (`FechaProgramada <= hoy`) más próximas (7 días). Es el valor central de la feature: indica al trabajador qué toca vacunar. No hay jobs ni push. |
 
+## Pedidos de alimento (SP8)
+
+Definidos en
+`docs/superpowers/specs/2026-09-03-sp8-pedidos-alimento-integracion-caisy-design.md`.
+
+| Término | Definición |
+|---|---|
+| Pedido de alimento | Solicitud compartida del tenant que Cliente o Trabajador con `PedidoAlimento` prepara como borrador y envía a CAISY. Solo el borrador se edita o se borra lógicamente. |
+| Notificación de Precios de Alimentos | Publicación global de CAISY con vigencia desde una fecha y un precio final por cada tipo/presentación. Sigue vigente hasta la entrada en vigor de otra publicación. |
+| Precio final por 40 kg | Unidad canónica del precio, tanto para bolsa como para granel. Incluye aporte CAISY, fondo y servicios; se congela al enviar el pedido. |
+| Bolsa de alimento | Presentación cerrada de 40 kg. Se solicita en número entero de bolsas. |
+| Alimento a granel | Presentación solicitada en toneladas enteras. Un pedido exige al menos 2 t por tipo y 6 t en total; una tonelada equivale a 25 unidades de 40 kg. |
+| Devolución para corrección | Decisión no terminal de CAISY que devuelve el mismo pedido a `Borrador`, con motivo obligatorio, para que el tenant lo corrija y reenvíe. |
+| Nota de entrega de alimento | Documento que deja el distribuidor. SP8 admite una nota y una entrega por pedido, con datos manuales y varias imágenes privadas de respaldo. |
+| Recepción de alimento | Confirmación por línea del tenant después del despacho. Termina como `RecibidoConforme` o `RecibidoConDiferencias`; ambos estados reconocen el gasto real. |
+
 ## Unidades
 
 | Término | Definición |
@@ -70,9 +87,11 @@ como número suelto en el código.
 1. **Soft delete en todas las entidades.** Nunca se hace un borrado físico: se
    marca `EstaActivo = false`. Las consultas normales filtran por `EstaActivo`.
    El motivo es trazabilidad: registros de acceso y de producción no se borran.
-2. **Ninguna fecha del dominio admite futuro.** Una producción, una mortalidad,
-   una vacunación o un registro de acceso ocurren en el pasado o en el presente.
-   La validación es de dominio, no de interfaz.
+2. **Un hecho no se fecha en el futuro.** Producción, mortalidad, vacunación,
+   pedido realizado, despacho, recepción y acceso ocurren en el pasado o
+   presente. Una fecha de planificación o vigencia (`VigenteDesde` de precios,
+   entrega estimada) sí puede ser futura porque aún no afirma que el hecho
+   ocurrió. La validación es de dominio, no solo de interfaz.
 3. **Los datos biométricos y los registros nominales de acceso son sensibles.**
    Nunca aparecen en logs, mensajes de error ni trazas. Ver la regla anti-PII en
    `AGENTS.md`.
@@ -113,8 +132,5 @@ subproyecto 6 (`docs/superpowers/specs/2026-08-18-sp6-produccion-mortalidad-desi
 
 ## Pendiente
 
-Las entidades de alimentación, despachos y precios se definen al migrar cada
-bounded context, en los subproyectos siguientes (producción y mortalidad en
-SP6, vacunación en SP7). Orden orientativo: SP8 alimentación → SP9 despachos →
-SP10 precios. Cada subproyecto confirma su alcance en su propio spec y amplía
-este documento ahí; no se anticipa acá.
+La planificación del alimento que debe suministrarse a las aves, los despachos
+de huevos y otros precios ajenos al pedido se definirán en subproyectos futuros.

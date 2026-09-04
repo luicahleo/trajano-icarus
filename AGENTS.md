@@ -70,6 +70,9 @@ no contexto obligatorio. No cargarlos en bloque.
   ajuste de inventario, eficiencia diaria con umbral del 70 % y vacunación
   (catálogo global de programas de CAISY subido por el Administrador, asignación
   por galpón con día 0 = fecha de poblado, notificación de tareas al trabajador)),
+  y el catálogo global de Notificaciones de Precios de Alimentos de CAISY
+  (cuentas globales GestorCaisy con funcionalidades componibles, importación
+  del PDF original a borrador editable, publicación versionada con vigencia),
   con puerta de calidad con gates de backend. El frontend React
   (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola offline-first para
   recogida y mortalidad en el rol Trabajador (cola IndexedDB con idempotencia,
