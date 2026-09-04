@@ -78,7 +78,15 @@ no contexto obligatorio. No cargarlos en bloque.
   recogida y mortalidad en el rol Trabajador (cola IndexedDB con idempotencia,
   precalentado del día, sesión offline sin persistir el token y sincronización
   automática), además de eficiencia, vacunación y la administración del catálogo
-  de vacunación.
+  de vacunación. La aplicación de oficina MVC Trajano.GestorCaisy vive bajo
+  `Icarus/src/Apps/Trajano.GestorCaisy/`: server-rendered, consume
+  EXCLUSIVAMENTE la API de Trajano-Icarus por HTTP (sin DbContext ni acceso
+  SQL, regla blindada en pruebas de arquitectura), guarda access y refresh
+  token como claims de una cookie protegida HttpOnly (nunca localStorage),
+  exige rol `GestorCaisy` más la funcionalidad `GestorPedidoAlimento` y, por
+  ahora, cubre solo precios de alimento (los pedidos llegan en SP8B; sin
+  service worker, caché offline ni IndexedDB). Sus pruebas viven en
+  `Icarus/tests/Trajano.GestorCaisy.Tests/`.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.
 

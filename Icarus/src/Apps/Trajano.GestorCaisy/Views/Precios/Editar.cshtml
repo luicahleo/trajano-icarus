@@ -1,0 +1,132 @@
+@model FormularioBorradorVista
+@{
+    ViewData["Titulo"] = "Editar borrador";
+    ViewData["Seccion"] = "precios";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Editar borrador</h1>
+        <p class="pagina-cabecera__detalle">
+            Ajuste la propuesta extraída del PDF antes de publicar. Solo un
+            borrador es editable; la publicación la sella de forma definitiva.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<form asp-action="Editar" asp-route-id="@Model.NotificacionId" method="post" class="forma">
+    <div asp-validation-summary="ModelOnly" class="alerta alerta--error" role="alert"></div>
+    <section class="tarjeta">
+        <h2>Cabecera</h2>
+        <div class="campos">
+            <div class="campo">
+                <label asp-for="FechaDocumento">Fecha del documento</label>
+                <input asp-for="FechaDocumento" type="date" />
+            </div>
+            <div class="campo">
+                <label asp-for="VigenteDesde">Vigente desde</label>
+                <input asp-for="VigenteDesde" type="date" />
+                <p class="campo__ayuda">Puede ser futura: la vigencia aún no afirma que un hecho ocurrió.</p>
+            </div>
+            <div class="campo">
+                <label asp-for="AporteCaisy">Aporte CAISY por 40 kg</label>
+                <input asp-for="AporteCaisy" type="number" step="0.01" min="0.01" required />
+            </div>
+            <div class="campo">
+                <label asp-for="Fondo">Fondo por 40 kg</label>
+                <input asp-for="Fondo" type="number" step="0.01" min="0.01" required />
+            </div>
+            <div class="campo">
+                <label asp-for="Servicios">Servicios por 40 kg</label>
+                <input asp-for="Servicios" type="number" step="0.01" min="0.01" required />
+            </div>
+        </div>
+    </section>
+    <section class="tarjeta tarjeta--tabla">
+        <h2>Detalles de precio</h2>
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Tipo de alimento</th>
+                    <th scope="col">Presentación</th>
+                    <th scope="col">Precio final por 40 kg</th>
+                    <th scope="col">Precio actual del documento</th>
+                    <th scope="col">Edad desde (días)</th>
+                    <th scope="col">Edad hasta (días)</th>
+                    <th scope="col"><span class="solo-lectores">Quitar fila</span></th>
+                </tr>
+            </thead>
+            <tbody id="filas-detalle">
+                @for (var indice = 0; indice < Model.Detalles.Count; indice++)
+                {
+                    <tr data-fila-detalle>
+                        <td>
+                            <select asp-for="Detalles[indice].TipoAlimento">
+                                <option value="Preiniciador">Preiniciador</option>
+                                <option value="Iniciador">Iniciador</option>
+                                <option value="Crecimiento">Crecimiento</option>
+                                <option value="Finalizador">Finalizador</option>
+                                <option value="PosturaUno">PosturaUno</option>
+                                <option value="PosturaDos">PosturaDos</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select asp-for="Detalles[indice].Presentacion">
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Granel">Granel</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input asp-for="Detalles[indice].PrecioFinalPor40Kg" type="number" step="0.01" min="0.01" required />
+                        </td>
+                        <td>
+                            <input asp-for="Detalles[indice].PrecioActualDocumento" type="number" step="0.01" />
+                        </td>
+                        <td>
+                            <input asp-for="Detalles[indice].EdadDesdeDias" type="number" min="1" />
+                        </td>
+                        <td>
+                            <input asp-for="Detalles[indice].EdadHastaDias" type="number" min="1" />
+                        </td>
+                        <td>
+                            <button type="button" class="boton boton--neutro" data-quitar-detalle>Quitar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="acciones">
+            <button type="button" id="agregar-detalle" class="boton boton--neutro">Añadir fila</button>
+        </div>
+        <template id="plantilla-detalle">
+            <tr data-fila-detalle>
+                <td>
+                    <select name="Detalles[__i__].TipoAlimento">
+                        <option value="Preiniciador">Preiniciador</option>
+                        <option value="Iniciador">Iniciador</option>
+                        <option value="Crecimiento">Crecimiento</option>
+                        <option value="Finalizador">Finalizador</option>
+                        <option value="PosturaUno">PosturaUno</option>
+                        <option value="PosturaDos">PosturaDos</option>
+                    </select>
+                </td>
+                <td>
+                    <select name="Detalles[__i__].Presentacion">
+                        <option value="Bolsa">Bolsa</option>
+                        <option value="Granel">Granel</option>
+                    </select>
+                </td>
+                <td><input name="Detalles[__i__].PrecioFinalPor40Kg" type="number" step="0.01" min="0.01" required /></td>
+                <td><input name="Detalles[__i__].PrecioActualDocumento" type="number" step="0.01" /></td>
+                <td><input name="Detalles[__i__].EdadDesdeDias" type="number" min="1" /></td>
+                <td><input name="Detalles[__i__].EdadHastaDias" type="number" min="1" /></td>
+                <td><button type="button" class="boton boton--neutro" data-quitar-detalle>Quitar</button></td>
+            </tr>
+        </template>
+    </section>
+    <section class="tarjeta">
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Guardar borrador</button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@Model.NotificacionId">Cancelar</a>
+        </div>
+    </section>
+</form>

@@ -1,0 +1,56 @@
+@model IReadOnlyList<NotificacionPreciosResumenApi>
+@{
+    ViewData["Titulo"] = "Precios de alimento";
+    ViewData["Seccion"] = "precios";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Precios de alimento</h1>
+        <p class="pagina-cabecera__detalle">
+            Historial de Notificaciones de Precios de Alimentos de CAISY. El precio
+            canónico es el precio final por 40 kg, con aportes incluidos.
+        </p>
+    </div>
+    <a asp-action="Importar" class="boton">Importar PDF</a>
+</div>
+<partial name="_Avisos" />
+@if (Model.Count == 0)
+{
+    <section class="tarjeta vacio">
+        <h2>Aún no hay notificaciones</h2>
+        <p>Importe el PDF original de la Notificación de Precios de Alimentos para
+           crear el primer borrador editable.</p>
+    </section>
+}
+else
+{
+    <div class="tarjeta tarjeta--tabla">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Documento</th>
+                    <th scope="col">Vigente desde</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Detalles</th>
+                    <th scope="col">Original</th>
+                    <th scope="col"><span class="solo-lectores">Acciones</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var notificacion in Model)
+                {
+                    <tr>
+                        <td>@notificacion.FechaDocumento.ToString("dd/MM/yyyy")</td>
+                        <td>@notificacion.VigenteDesde.ToString("dd/MM/yyyy")</td>
+                        <td><span class="chip chip--@notificacion.Estado.ToLowerInvariant()">@notificacion.Estado</span></td>
+                        <td>@notificacion.CantidadDetalles</td>
+                        <td>@(notificacion.TieneDocumentoOriginal ? "Sí" : "—")</td>
+                        <td>
+                            <a class="enlace" asp-action="Detalles" asp-route-id="@notificacion.Id">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

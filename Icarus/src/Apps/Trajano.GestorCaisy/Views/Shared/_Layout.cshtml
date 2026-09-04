@@ -1,0 +1,48 @@
+@{
+    var seccion = ViewData["Seccion"] as string;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Titulo"] ?? "Trajano GestorCaisy") — Trajano GestorCaisy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Prompt:wght@600;700&display=swap" />
+    <link rel="stylesheet" href="~/css/estilos.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="salto" href="#contenido-principal">Saltar al contenido</a>
+    <header class="barra">
+        <span class="barra__marca">Trajano GestorCaisy</span>
+        <span class="barra__contexto" aria-hidden="true">/</span>
+        <span class="barra__titulo">@(ViewData["Titulo"] ?? "Inicio")</span>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            @if (User.FindFirst(ConstantesAutorizacion.ClaimCorreo)?.Value is { } correo)
+            {
+                <span class="barra__cuenta" title="@correo">@correo</span>
+            }
+            <form class="barra__salir" asp-controller="Sesion" asp-action="Salir" method="post">
+                <button type="submit" class="boton boton--claro">Cerrar sesión</button>
+            </form>
+        }
+    </header>
+    <div class="cuerpo">
+        @if (User.Identity?.IsAuthenticated == true && ReclamosCaisy.TieneGestorPedidoAlimento(User))
+        {
+            <nav class="lateral" aria-label="Navegación principal">
+                <a asp-controller="Precios" asp-action="Index"
+                   class="lateral__enlace @(seccion == "precios" ? "lateral__enlace--activo" : "")">
+                    Precios de alimento
+                </a>
+            </nav>
+        }
+        <main id="contenido-principal" class="contenido">
+            @RenderBody()
+        </main>
+    </div>
+    <script src="~/js/aplicacion.js" defer></script>
+</body>
+</html>

@@ -15,7 +15,10 @@ oficina y la publicación versionada de precios desde un PDF revisable.
 - Catálogo global sin filtro tenant; acceso solo por la política
   `FuncionalidadCaisy:GestorPedidoAlimento`.
 - PDF original privado, borrador editable, publicación explícita e inmutable.
-- La UI de Trajano-GestorCaisy no se implementa hasta aprobar el borrador de Superdesign.
+- Decisión del usuario del 2026-09-04: se omite Superdesign para la Tarea 5.
+  La implementación visual seguirá directamente este spec,
+  `web/src/app/theme.ts`, los patrones de Icarus y, si está disponible
+  localmente, `.superdesign/design-system.md` como referencia auxiliar.
 - Docker debe estar activo para integración. `./verify.ps1` antes del commit.
 
 ## Tarea 1 — Identidad y autorización CAISY
@@ -158,25 +161,49 @@ oficina y la publicación versionada de precios desde un PDF revisable.
 - `Icarus/tests/Trajano.GestorCaisy.Tests/`
 - `Icarus/Icarus.sln`
 
-- [ ] Esperar aprobación del borrador Superdesign del usuario.
-  Registro (2026-09-04): **pendiente**. No existe `.superdesign/resume.json`
-  ni constancia de aprobación; solo hay artefactos de inicialización. La tarea
-  queda sin empezar, conforme a la restricción global. Las pruebas de vistas y
-  el cliente API tipado se implementarán al retomar.
-- [ ] Rojo: login/sesión protegida, menú limitado por función, lista de
+- [x] Resolver la puerta de diseño.
+  Registro (2026-09-04): el usuario indicó explícitamente «Omite Superdesign y
+  continúa con la implementación de la Tarea 5». No se requiere
+  `.superdesign/resume.json`; usar el spec, `web/src/app/theme.ts` y los
+  componentes visuales existentes. `.superdesign/design-system.md` es solo una
+  referencia local opcional.
+- [x] Rojo: login/sesión protegida, menú limitado por función, lista de
   publicaciones, importación, revisión y confirmación de publicación.
-- [ ] Implementar MVC server-rendered y cliente API tipado; conservar access y
+  Registro (2026-09-04): se escribieron primero las 68 pruebas del proyecto
+  MVC (cliente API tipado, lector de token, política de funcionalidad,
+  principal de sesión, controladores con API falsa y flujos completos con
+  WebApplicationFactory). `dotnet test Icarus/tests/Trajano.GestorCaisy.Tests`
+  → **rojo** CS5001 (la aplicación no tenía Program: proyecto y vistas por
+  crear, motivo correcto).
+- [x] Implementar MVC server-rendered y cliente API tipado; conservar access y
   refresh token en sesión protegida HttpOnly/servidor, nunca en localStorage.
-- [ ] Mantener mismo origen lógico `/api` en despliegue para cookies seguras;
+  Registro (2026-09-04): cookie de autenticación protegida con DataProtection
+  (HttpOnly, SameSite Lax, tokens como claims cifrados), renovación automática
+  ante 401 con reintento único, filtro global de errores de la API (401 cierra
+  sesión, 404 genérico, resto página de error genérica), antiforgery en todos
+  los formularios POST. Iteraciones intermedias observadas: 46/68, 60/68,
+  67/68 → **verde 68/68** (hallazgo registrado: `RemoveAll` dentro de
+  ConfigureTestServices borra registraciones del host diferido; el reemplazo
+  es por última registración).
+- [x] Mantener mismo origen lógico `/api` en despliegue para cookies seguras;
   sin service worker, caché offline ni IndexedDB.
-- [ ] Pruebas de vistas/controladores con API falsa y accesibilidad básica.
+  Registro (2026-09-04): `ApiIcarus:BaseUrl` acepta ruta relativa (se resuelve
+  contra la petición en curso, `/api` por defecto) o URL absoluta para
+  desarrollo. Sin service worker, sin IndexedDB, sin caché offline.
+- [x] Pruebas de vistas/controladores con API falsa y accesibilidad básica.
+  Registro (2026-09-04): API falsa scriptable (`ApiIcarusFalsa`) para los
+  flujos; accesibilidad verificada (skip link, `lang="es"`, etiquetas
+  `for`, main principal, foco visible, chips con texto además de color).
+  Comando: `dotnet test Icarus/tests/Trajano.GestorCaisy.Tests` → **verde
+  68/68**. Prueba de arquitectura nueva: Trajano.GestorCaisy no depende de
+  Icarus ni de EF (agregada a `ReglasDeModulosTests`).
 - [ ] Commit previsto: `feat(gestor-caisy): publicar precios de alimentos`.
 
 ## Cierre SP8A
 
 - [x] Ejecutar pruebas unitarias, integración y del proyecto MVC.
-  Registro (2026-09-04): unitarios 301/301, integración 89/89,
-  arquitectura 5/5 (el proyecto MVC no existe: Tarea 5 pendiente).
+  Registro (2026-09-04): unitarios 301/301, integración 89/89 (Docker 28.5.1),
+  arquitectura 6/6, proyecto MVC Trajano.GestorCaisy.Tests 68/68.
 - [x] Ejecutar `./verify.ps1`, revisar `git diff --check` y diff propio.
   Registro: puerta completa verde al cierre de cada tarea con código; sin
   hallazgos en `git diff --check`.
@@ -194,6 +221,7 @@ oficina y la publicación versionada de precios desde un PDF revisable.
 ## Estado final (2026-09-04)
 
 - Tareas 1–4: terminadas y verificadas, un commit por tarea.
-- Tarea 5 (Trajano-GestorCaisy MVC): sin empezar; bloqueada por la aprobación
-  del diseño de Superdesign. Ver `docs/ai/HANDOFF.md`.
+- Tarea 5 (Trajano-GestorCaisy MVC): terminada tras la decisión explícita del
+  usuario de omitir Superdesign; 68/68 pruebas propias, cliente API tipado,
+  sesión en cookie protegida y UI server-rendered con el tema de Icarus.
 - SP8B no se inicia hasta integrar este bloque completo (restricción del plan).
