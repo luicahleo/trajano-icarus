@@ -23,8 +23,11 @@ import type {
   RecogidaResumen,
   TareaVacunacionResumen,
 } from '../../lib/tipos';
+import type { OperacionPendiente } from '../../lib/offline/tipos';
 import { ApiError } from '../../lib/http';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
+import { descartarOperacion } from '../../app/offline/coordinador';
+import { useOperacionesPendientes } from '../../app/offline/useOperacionesPendientes';
 import {
   desactivarMortalidad,
   desactivarProduccion,
@@ -36,24 +39,13 @@ import {
   quitarPlanVacunacion,
 } from './api';
 import { CLAVE_NOTIFICACION_VACUNACION, CLAVE_TAREAS_VACUNACION, hoyIso } from './constantes';
-import { formatearConteo, clasificarTarea } from './formatos';
+import { formatearConteo, clasificarTarea, totalHuevos } from './formatos';
+import { fusionarEventosDia, type Evento } from './eventosDia';
 import { RegistrarBajasDialog } from './RegistrarBajasDialog';
 import { RegistrarRecogidaDialog } from './RegistrarRecogidaDialog';
 import { EditarBajasDialog } from './EditarBajasDialog';
 import { EditarRecogidaDialog } from './EditarRecogidaDialog';
 import { AsignarPlanDialog } from './AsignarPlanDialog';
-
-type Evento =
-  | {
-      hora: string;
-      tipo: 'recogida';
-      datos: NonNullable<Awaited<ReturnType<typeof listarProduccion>>['recogidas']>[number];
-    }
-  | {
-      hora: string;
-      tipo: 'bajas';
-      datos: NonNullable<Awaited<ReturnType<typeof listarMortalidad>>['registros']>[number];
-    };
 
 function diaEficiencia(dias: EficienciaDia[] | undefined): EficienciaDia | undefined {
   return dias?.[0];
@@ -79,10 +71,14 @@ export function GalponPage() {
   const [registrandoRecogida, setRegistrandoRecogida] = useState(false);
   const [recogidaEditada, setRecogidaEditada] = useState<RecogidaResumen | null>(null);
   const [bajasEditadas, setBajasEditadas] = useState<MortalidadRegistro | null>(null);
+  const [recogidaPendiente, setRecogidaPendiente] = useState<OperacionPendiente | null>(null);
+  const [bajasPendiente, setBajasPendiente] = useState<OperacionPendiente | null>(null);
   const [registroAEliminar, setRegistroAEliminar] = useState<Evento | null>(null);
   const [asignandoPlan, setAsignandoPlan] = useState(false);
   const queryClient = useQueryClient();
   const esHoy = fecha === hoyIso();
+  // Operaciones aún en cola de este galpón: se muestran como filas del día.
+  const pendientes = useOperacionesPendientes(galponId);
   const galpon = useQuery({
     queryKey: ['avicola', 'galpon', galponId],
     queryFn: () => obtenerGalpon(galponId),
@@ -121,9 +117,11 @@ export function GalponPage() {
   });
   const eliminar = useMutation({
     mutationFn: (evento: Evento) =>
-      evento.tipo === 'recogida'
-        ? desactivarProduccion(evento.datos.id)
-        : desactivarMortalidad(evento.datos.id),
+      evento.pendiente
+        ? descartarOperacion(evento.pendiente.id) // nunca llegó al servidor
+        : evento.tipo === 'recogida'
+          ? desactivarProduccion(evento.datos.id)
+          : desactivarMortalidad(evento.datos.id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['avicola', 'produccion'] });
       void queryClient.invalidateQueries({ queryKey: ['avicola', 'mortalidad'] });
@@ -185,18 +183,13 @@ export function GalponPage() {
   )
     return null;
 
-  const eventos: Evento[] = [
-    ...(mortalidad.data?.registros ?? []).map((datos) => ({
-      hora: datos.hora,
-      tipo: 'bajas' as const,
-      datos,
-    })),
-    ...(produccion.data?.recogidas ?? []).map((datos) => ({
-      hora: datos.hora ?? '',
-      tipo: 'recogida' as const,
-      datos,
-    })),
-  ].sort((a, b) => a.hora.localeCompare(b.hora));
+  const eventos = fusionarEventosDia(
+    produccion.data?.recogidas ?? [],
+    mortalidad.data?.registros ?? [],
+    // Los pendientes son siempre del día en curso: no se muestran al consultar
+    // otra fecha.
+    esHoy ? pendientes : [],
+  );
   const dia = diaEficiencia(eficiencia.data?.dias);
   const planVigente =
     (tareasVacunacion.data ?? []).find((t) => t.estado === 'Pendiente')?.programaNombre ?? null;
@@ -206,26 +199,57 @@ export function GalponPage() {
     {
       clave: 'registro',
       encabezado: 'Registro',
-      render: (e) =>
-        e.tipo === 'bajas'
-          ? `${e.datos.cantidadMuertas} bajas`
-          : formatearConteo(e.datos.cantidadMaples, e.datos.unidadesIncompletas),
+      render: (e) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          {e.tipo === 'bajas'
+            ? `${e.datos.cantidadMuertas} bajas`
+            : formatearConteo(e.datos.cantidadMaples, e.datos.unidadesIncompletas)}
+          {e.pendiente && <Chip size="small" color="warning" label="Pendiente" />}
+        </Box>
+      ),
     },
     {
       clave: 'descarte',
       encabezado: 'Descarte',
-      render: (e) =>
-        e.tipo === 'recogida' && e.datos.totalDescarte > 0
+      render: (e) => {
+        if (e.tipo !== 'recogida') return null;
+        // El pendiente no tiene totales de servidor: se calculan del cuerpo.
+        const totalDescarte = e.pendiente
+          ? totalHuevos(e.datos.maplesDescarte, e.datos.unidadesDescarte)
+          : e.datos.totalDescarte;
+        return totalDescarte > 0
           ? formatearConteo(e.datos.maplesDescarte, e.datos.unidadesDescarte)
-          : null,
+          : null;
+      },
     },
     {
       clave: 'acciones',
       encabezado: '',
       alinear: 'right',
-      render: (e) =>
-        esHoy &&
-        ((e.tipo === 'recogida' && puedeProduccion) || (e.tipo === 'bajas' && puedeMortalidad)) ? (
+      render: (e) => {
+        // Los pendientes son datos locales: se editan y eliminan siempre.
+        if (e.pendiente) {
+          return (
+            <>
+              <Button
+                size="small"
+                onClick={() =>
+                  e.tipo === 'recogida'
+                    ? setRecogidaPendiente(e.pendiente)
+                    : setBajasPendiente(e.pendiente)
+                }
+              >
+                Editar
+              </Button>
+              <Button size="small" onClick={() => setRegistroAEliminar(e)}>
+                Eliminar
+              </Button>
+            </>
+          );
+        }
+        return esHoy &&
+          ((e.tipo === 'recogida' && puedeProduccion) ||
+            (e.tipo === 'bajas' && puedeMortalidad)) ? (
           <>
             <Button
               size="small"
@@ -239,7 +263,8 @@ export function GalponPage() {
               Eliminar
             </Button>
           </>
-        ) : null,
+        ) : null;
+      },
     },
   ];
 
@@ -334,18 +359,28 @@ export function GalponPage() {
       <TablaDatos
         columnas={columnasRegistros}
         filas={eventos}
-        claveDeFila={(e) => `${e.tipo}-${e.datos.id}`}
+        claveDeFila={(e) => `${e.tipo}-${e.pendiente ? e.pendiente.id : e.datos.id}`}
         mensajeVacio="Sin registros para la fecha seleccionada."
       />
       <RegistrarBajasDialog
+        key={bajasPendiente?.id ?? 'nueva'}
         galponId={galponId}
-        abierto={registrandoBajas}
-        alCerrar={() => setRegistrandoBajas(false)}
+        abierto={registrandoBajas || bajasPendiente !== null}
+        pendiente={bajasPendiente}
+        alCerrar={() => {
+          setRegistrandoBajas(false);
+          setBajasPendiente(null);
+        }}
       />
       <RegistrarRecogidaDialog
+        key={recogidaPendiente?.id ?? 'nueva'}
         galponId={galponId}
-        abierto={registrandoRecogida}
-        alCerrar={() => setRegistrandoRecogida(false)}
+        abierto={registrandoRecogida || recogidaPendiente !== null}
+        pendiente={recogidaPendiente}
+        alCerrar={() => {
+          setRegistrandoRecogida(false);
+          setRecogidaPendiente(null);
+        }}
       />
       <EditarRecogidaDialog
         recogida={recogidaEditada}
@@ -360,8 +395,9 @@ export function GalponPage() {
       <Dialog open={registroAEliminar !== null} onClose={() => setRegistroAEliminar(null)}>
         <DialogTitle>Eliminar registro</DialogTitle>
         <DialogContent>
-          El registro se desactiva; no se borra. Si era una baja, las gallinas vuelven al
-          inventario.
+          {registroAEliminar?.pendiente
+            ? 'El registro aún no se ha sincronizado: se eliminará de este dispositivo.'
+            : 'El registro se desactiva; no se borra. Si era una baja, las gallinas vuelven al inventario.'}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRegistroAEliminar(null)}>Cancelar</Button>

@@ -40,7 +40,7 @@ async function conCola(
 ): Promise<boolean> {
   if (navigator.onLine) {
     try {
-      await enviar();
+      await conPlazo(enviar(), TIEMPO_ESPERA_RESPUESTA_MS);
       return false;
     } catch (error) {
       if (error instanceof ApiError && !esFalloDeConectividad(error)) throw error;
@@ -48,6 +48,29 @@ async function conCola(
   }
   await encolarOperacion(tipo, galponId, cuerpo);
   return true;
+}
+
+// Sin este plazo, un backend inalcanzable con navigator.onLine en true (falso
+// positivo) deja el fetch colgado y el formulario queda en isPending sin
+// encolar ni cerrar (diagnóstico SES-BE7075EE1213). El envío original, si
+// completa después, es absorbido por IdempotencyKey, así que encolar aquí es
+// seguro.
+const TIEMPO_ESPERA_RESPUESTA_MS = 4_000;
+
+function conPlazo<T>(promesa: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const temporizador = setTimeout(() => reject(new TypeError('Tiempo de espera agotado.')), ms);
+    promesa.then(
+      (valor) => {
+        clearTimeout(temporizador);
+        resolve(valor);
+      },
+      (error) => {
+        clearTimeout(temporizador);
+        reject(error);
+      },
+    );
+  });
 }
 
 export const guardarRecogida = (galponId: string, d: DatosRecogida): Promise<boolean> =>

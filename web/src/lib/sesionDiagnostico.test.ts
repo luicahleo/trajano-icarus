@@ -13,6 +13,7 @@ describe('sesionDiagnostico', () => {
     sessionStorage.clear();
     window.history.replaceState(null, '', '/');
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   test('genera y conserva un session ID opaco por pestaña', () => {
@@ -89,5 +90,20 @@ describe('sesionDiagnostico', () => {
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:test');
+  });
+
+  test('el buffer sobrevive a una recarga de la pestaña y la secuencia continúa', async () => {
+    registrarEventoFlujo({ eventName: 'flow.navigation', detail: '/previa' });
+
+    // Una recarga real crea un módulo nuevo que lee sessionStorage.
+    vi.resetModules();
+    const recargado = await import('./sesionDiagnostico');
+    const previa = recargado.obtenerEventosRecientes(100).find((e) => e.detail === '/previa');
+    expect(previa).toBeDefined();
+
+    recargado.registrarEventoFlujo({ eventName: 'flow.navigation', detail: '/nueva' });
+    const ultimo = recargado.obtenerEventosRecientes(100).at(-1);
+    expect(ultimo?.detail).toBe('/nueva');
+    expect(ultimo!.seq).toBeGreaterThan(previa!.seq);
   });
 });

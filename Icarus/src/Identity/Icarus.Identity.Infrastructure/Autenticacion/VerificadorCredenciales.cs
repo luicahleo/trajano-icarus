@@ -34,6 +34,8 @@ public sealed class VerificadorCredenciales : IVerificadorCredenciales
         if (usuario.ClienteId is { } clienteId &&
             !await _estadoCliente.EstaActivoAsync(clienteId, cancellationToken))
             return null;
-        return new CredencialValida(usuario.Id, usuario.Rol, usuario.ClienteId, usuario.TrabajadorId);
+        return new CredencialValida(
+            usuario.Id, usuario.Rol, usuario.ClienteId, usuario.TrabajadorId,
+            usuario.FuncionalidadesCaisy);
     }
 }

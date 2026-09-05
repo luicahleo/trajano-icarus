@@ -4,12 +4,15 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.Identity.Application.RegistroCuentas;
 using Icarus.Identity.Application.Sesiones;
+using Icarus.Identity.Application.UsuariosCaisy;
 using Icarus.Identity.Domain;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using Icarus.Identity.Infrastructure.Persistencia;
 using Icarus.Identity.Infrastructure.RegistroCuentas;
 using Icarus.Identity.Infrastructure.Usuarios;
+using Icarus.Identity.Infrastructure.UsuariosCaisy;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +45,8 @@ public static class DependencyInjection
         servicios.AddScoped<IConsultaUsuarios, ConsultaUsuarios>();
         servicios.AddScoped<IEmisorAccessTokens, EmisorAccessTokens>();
         servicios.AddScoped<IServicioRefreshTokens, ServicioRefreshTokens>();
+        servicios.AddScoped<ICuentasCaisy, GestorCuentasCaisy>();
+        servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadCaisy>();
 
         var jwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>() ?? new OpcionesJwt();
         if (string.IsNullOrEmpty(jwt.Clave))
@@ -66,13 +71,26 @@ public static class DependencyInjection
                 };
             });
 
-        servicios.AddAuthorizationBuilder()
+        var autorizacion = servicios.AddAuthorizationBuilder()
             .AddPolicy(PoliticasAutorizacion.SoloAdministrador,
                 politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Administrador)))
             .AddPolicy(PoliticasAutorizacion.GestionTrabajadores,
                 politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Cliente)))
             .AddPolicy(PoliticasAutorizacion.SoloCliente,
                 politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Cliente)));
+
+        // Política dinámica por funcionalidad global de CAISY (spec SP8): rol
+        // GestorCaisy + flag concreto en el claim de bitmask.
+        foreach (var funcionalidad in Enum.GetValues<FuncionalidadesCaisy>())
+        {
+            if (funcionalidad == FuncionalidadesCaisy.Ninguno)
+                continue;
+            autorizacion.AddPolicy(PoliticasAutorizacion.FuncionalidadCaisy(funcionalidad), politica =>
+            {
+                politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.GestorCaisy));
+                politica.AddRequirements(new RequisitoFuncionalidadCaisy(funcionalidad));
+            });
+        }
 
         return servicios;
     }

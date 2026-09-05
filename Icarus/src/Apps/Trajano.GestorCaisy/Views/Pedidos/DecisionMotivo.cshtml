@@ -1,0 +1,36 @@
+@model FormularioMotivoVista
+@{
+    var esDevolucion = ViewData["Aviso"] is string aviso
+        && aviso.StartsWith("La devolución", StringComparison.Ordinal);
+    ViewData["Titulo"] = esDevolucion ? "Devolver para corrección" : "Rechazar pedido";
+    ViewData["Seccion"] = "pedidos";
+    var accion = esDevolucion ? "Devolver" : "Rechazar";
+    var confirmacion = esDevolucion
+        ? "El pedido volverá al borrador del tenant para su corrección. ¿Confirma la devolución?"
+        : "El rechazo es definitivo y el pedido no podrá procesarse después. ¿Confirma el rechazo?";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>@ViewData["Titulo"]</h1>
+        <p class="pagina-cabecera__detalle">@ViewData["Aviso"]</p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <form asp-action="@accion" asp-route-id="@Model.Id" method="post">
+        <div class="campos">
+            <div class="campo">
+                <label for="Motivo">Motivo (obligatorio, se muestra al tenant)</label>
+                <textarea id="Motivo" name="Motivo" rows="4" maxlength="500" required></textarea>
+                <span asp-validation-for="Motivo" class="campo__ayuda"></span>
+            </div>
+        </div>
+        <div class="acciones">
+            <button type="submit" class="boton @(esDevolucion ? "" : "boton--secundario")"
+                    data-confirmar="@confirmacion">
+                Confirmar @ViewData["Titulo"]
+            </button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@Model.Id">Cancelar</a>
+        </div>
+    </form>
+</section>

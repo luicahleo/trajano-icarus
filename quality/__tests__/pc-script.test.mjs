@@ -72,14 +72,19 @@ test('los tres wrappers delegan al core con su perfil', () => {
   }
 });
 
-test('el core y los wrappers aceptan el modo dev|prod', () => {
-  assert.match(core, /\[ValidateSet\('dev', 'prod'\)\]/);
+test('un solo entorno: el core y los wrappers siempre usan el build de producción', () => {
+  assert.doesNotMatch(core, /ValidateSet\('dev', 'prod'\)/);
   assert.match(core, /docker-compose\.prodlocal\.yml/);
   assert.match(core, /Construir-ContenidoProduccion/);
-  assert.match(core, /WEB_UPSTREAM/);
+  assert.doesNotMatch(core, /WEB_UPSTREAM/);
+  assert.doesNotMatch(core, /docker-compose\.dev\.yml/);
   for (const script of [pc1, pc2, pc3, pc1SinWifi]) {
-    assert.match(script, /Modo = \$Modo/);
+    assert.doesNotMatch(script, /Modo = \$Modo/);
   }
+});
+
+test('el build local de producción habilita el diagnóstico manual (?debug=1)', () => {
+  assert.match(core, /VITE_HABILITAR_DIAGNOSTICO_MANUAL = 'true'/);
 });
 
 test('el wrapper de PC1 sin WiFi inicia el entorno solo en localhost', () => {

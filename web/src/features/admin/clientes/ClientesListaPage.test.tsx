@@ -13,12 +13,10 @@ function respuesta(status: number, cuerpo?: unknown) {
 
 function fetchSimulado(reglas: Record<string, Response>) {
   const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req =
-      init !== undefined
-        ? new Request(String(input), init)
-        : input instanceof Request
-          ? input
-          : new Request(String(input));
+    // Si input ya es un Request, usarlo tal cual: fetch(input, init) lo
+    // consume sin alterar method/body. Reconstruirlo desde String(input)
+    // perdería el POST; re-armarlo con body exigiría duplex.
+    const req = input instanceof Request ? input : new Request(String(input), init);
     const clave = `${req.method} ${new URL(req.url).pathname}`;
     return reglas[clave] ?? new Response('', { status: 404 });
   });

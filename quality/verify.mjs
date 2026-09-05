@@ -6,7 +6,8 @@
 // los tests de integración con Testcontainers (planes 2-3) necesitan Docker.
 
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 import { ejecutar } from './lib/ejecutar.mjs';
 import { titulo, exito, fallo } from './lib/salida.mjs';
 
@@ -14,8 +15,14 @@ import { titulo, exito, fallo } from './lib/salida.mjs';
 const raiz = fileURLToPath(new URL('..', import.meta.url));
 const web = resolve(raiz, 'web');
 
-// npm en Windows es npm.cmd y necesita shell; dotnet/git no (se mantiene sinShell).
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+// npm en Windows es npm.cmd: lanzarlo con shell dispara el aviso DEP0190 de
+// Node (args concatenados sin escapar). Se invoca el CLI de npm con el propio
+// node, sin shell. En POSIX npm es un binario directo.
+const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const gateNpm = (script) =>
+  process.platform === 'win32' && existsSync(npmCli)
+    ? { comando: process.execPath, args: [npmCli, 'run', script], cwd: web }
+    : { comando: 'npm', args: ['run', script], cwd: web, shell: true };
 
 // Los argumentos posicionales de `node --test` son patrones glob, no rutas de
 // directorio: un directorio suelto se intentaría cargar como módulo y fallaría.
@@ -28,9 +35,9 @@ export const GATES = [
   { nombre: 'Adaptadores', comando: 'node', args: ['quality/check-adaptadores.mjs'] },
   { nombre: 'Mojibake', comando: 'node', args: ['quality/check-mojibake.mjs'] },
   { nombre: 'Enlaces', comando: 'node', args: ['quality/check-enlaces.mjs'] },
-  { nombre: 'Frontend lint', comando: npm, args: ['run', 'lint'], cwd: web, shell: true },
-  { nombre: 'Frontend build', comando: npm, args: ['run', 'build'], cwd: web, shell: true },
-  { nombre: 'Frontend tests', comando: npm, args: ['run', 'test'], cwd: web, shell: true },
+  { nombre: 'Frontend lint', ...gateNpm('lint') },
+  { nombre: 'Frontend build', ...gateNpm('build') },
+  { nombre: 'Frontend tests', ...gateNpm('test') },
   { nombre: 'Backend build', comando: 'dotnet', args: ['build', 'Icarus/Icarus.sln', '--nologo'] },
   { nombre: 'Backend tests', comando: 'dotnet', args: ['test', 'Icarus/Icarus.sln', '--nologo', '--no-build'] },
 ];

@@ -19,6 +19,12 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     public DbSet<ProgramaVacunacion> ProgramasVacunacion => Set<ProgramaVacunacion>();
     public DbSet<ItemPlanVacunacion> ItemsPlanVacunacion => Set<ItemPlanVacunacion>();
     public DbSet<TareaVacunacion> TareasVacunacion => Set<TareaVacunacion>();
+    public DbSet<NotificacionPreciosAlimentos> NotificacionesPreciosAlimentos => Set<NotificacionPreciosAlimentos>();
+    public DbSet<PedidoAlimento> PedidosAlimento => Set<PedidoAlimento>();
+    // Sin filtro de tenant (spec SP8): el alcance incluye la bandeja global
+    // de CAISY (ClienteId nulo) y cada consulta del repositorio pasa el
+    // alcance explícito.
+    public DbSet<NotificacionInterna> NotificacionesInternas => Set<NotificacionInterna>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,5 +40,13 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         modelBuilder.Entity<ItemPlanVacunacion>().HasQueryFilter(i => i.EstaActivo);
         modelBuilder.Entity<TareaVacunacion>().HasQueryFilter(t =>
             t.EstaActivo && (_clienteIdActual == null || t.ClienteId == _clienteIdActual));
+        // Catálogo global de precios (spec SP8): sin filtro de tenant, solo
+        // EstaActivo; el acceso se autoriza con la política de CAISY.
+        modelBuilder.Entity<NotificacionPreciosAlimentos>().HasQueryFilter(n => n.EstaActivo);
+        // Pedidos compartidos del tenant (spec SP8): cualquier cuenta del
+        // tenant los ve; las cuentas sin tenant (CAISY) consultan con
+        // repositorios explícitos autorizados por su política.
+        modelBuilder.Entity<PedidoAlimento>().HasQueryFilter(p =>
+            p.EstaActivo && (_clienteIdActual == null || p.ClienteId == _clienteIdActual));
     }
 }

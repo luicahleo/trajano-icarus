@@ -9,5 +9,6 @@ public sealed class ConfiguracionUsuario : IEntityTypeConfiguration<Usuario>
     {
         builder.ToTable("usuarios");
         builder.Property(u => u.Rol).HasMaxLength(32).IsRequired();
+        builder.Property(u => u.FuncionalidadesCaisy).HasConversion<int>();
     }
 }

@@ -1,0 +1,153 @@
+@model BandejaPedidosVista
+@{
+    ViewData["Titulo"] = "Pedidos de alimento";
+    ViewData["Seccion"] = "pedidos";
+    var pagina = Model.Pagina;
+    var totalPaginas = Math.Max(1, (int)Math.Ceiling(pagina.Total / (double)pagina.TamanoPagina));
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Pedidos de alimento</h1>
+        <p class="pagina-cabecera__detalle">
+            Bandeja global de pedidos entrantes de todos los tenants. Solo se
+            procesan los pedidos solicitados; el precio canónico es el congelado
+            al envío.
+        </p>
+    </div>
+    <a class="boton boton--neutro" asp-controller="Precios" asp-action="Index">Precios de alimento</a>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Novedades para CAISY (@Model.Notificaciones.Contador sin leer)</h2>
+    @if (Model.Notificaciones.Items.Count == 0)
+    {
+        <p class="vacio__texto">No hay notificaciones de pedidos.</p>
+    }
+    else
+    {
+        <ul class="novedades">
+            @foreach (var notificacion in Model.Notificaciones.Items)
+            {
+                <li>
+                    <div>
+                        <span class="chip chip--@EtiquetaChip(notificacion.Tipo)">@EtiquetaNotificacion(notificacion.Tipo)</span>
+                        <span>@notificacion.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    <div class="novedades__acciones">
+                        <a class="enlace" asp-action="Detalles" asp-route-id="@notificacion.PedidoId">Ver pedido</a>
+                        @if (!notificacion.Leida)
+                        {
+                            <form asp-action="MarcarLeida" asp-route-id="@notificacion.Id" method="post">
+                                <button type="submit" class="boton boton--neutro">Marcar como leída</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="novedades__leida">Leída</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Pedidos</h2>
+    <form method="get" class="campos">
+        <div class="campo">
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado">
+                <option value="">Todos</option>
+                @foreach (var estado in new[] { "Borrador", "Solicitado", "Rechazado", "Aceptado" })
+                {
+                    <option value="@estado" selected="@(Model.Estado == estado)">@estado</option>
+                }
+            </select>
+        </div>
+        <div class="campo">
+            <label for="presentacion">Presentación</label>
+            <select id="presentacion" name="presentacion">
+                <option value="">Todas</option>
+                @foreach (var presentacion in new[] { "Bolsa", "Granel" })
+                {
+                    <option value="@presentacion" selected="@(Model.Presentacion == presentacion)">@presentacion</option>
+                }
+            </select>
+        </div>
+        <div class="campo">
+            <button type="submit" class="boton">Filtrar</button>
+        </div>
+    </form>
+    @if (pagina.Items.Count == 0)
+    {
+        <p class="vacio__texto">No hay pedidos con ese filtro.</p>
+    }
+    else
+    {
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Enviado</th>
+                    <th scope="col">Tenant</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Presentación</th>
+                    <th scope="col">Líneas</th>
+                    <th scope="col">Total solicitado</th>
+                    <th scope="col">Entrega estimada</th>
+                    <th scope="col"><span class="solo-lectores">Acciones</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var pedido in pagina.Items)
+                {
+                    <tr>
+                        <td>@(pedido.FechaPedido?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td>@pedido.ClienteId.ToString()[..8]</td>
+                        <td><span class="chip chip--@pedido.Estado.ToLowerInvariant()">@pedido.Estado</span></td>
+                        <td>@pedido.Presentacion</td>
+                        <td>@pedido.CantidadLineas</td>
+                        <td>@(pedido.TotalSolicitado?.ToString("0.00") ?? "—")</td>
+                        <td>@(pedido.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td><a class="enlace" asp-action="Detalles" asp-route-id="@pedido.Id">Ver</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="pagina-cabecera__detalle">
+            Página @pagina.Pagina de @totalPaginas con @pagina.Total pedidos.
+            @if (pagina.Pagina > 1)
+            {
+                <a class="enlace" asp-action="Index"
+                   asp-route-estado="@Model.Estado" asp-route-presentacion="@Model.Presentacion"
+                   asp-route-pagina="@(pagina.Pagina - 1)">Anterior</a>
+            }
+            @if (pagina.Pagina < totalPaginas)
+            {
+                <a class="enlace" asp-action="Index"
+                   asp-route-estado="@Model.Estado" asp-route-presentacion="@Model.Presentacion"
+                   asp-route-pagina="@(pagina.Pagina + 1)">Siguiente</a>
+            }
+        </p>
+    }
+</section>
+@functions {
+    private static string EtiquetaNotificacion(string tipo) => tipo switch
+    {
+        "PedidoSolicitado" => "Pedido solicitado",
+        "PedidoReenviado" => "Pedido reenviado",
+        "PedidoDevuelto" => "Devolución",
+        "PedidoRechazado" => "Rechazo",
+        "PedidoAceptado" => "Aceptación",
+        "EntregaEstimadaActualizada" => "Entrega estimada",
+        _ => tipo,
+    };
+
+    private static string EtiquetaChip(string tipo) => tipo switch
+    {
+        "PedidoSolicitado" or "PedidoReenviado" => "solicitado",
+        "PedidoDevuelto" => "borrador",
+        "PedidoRechazado" => "rechazado",
+        "PedidoAceptado" or "EntregaEstimadaActualizada" => "aceptado",
+        _ => "borrador",
+    };
+}

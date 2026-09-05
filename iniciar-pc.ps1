@@ -1,8 +1,6 @@
-﻿param(
+param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
-    [ValidateSet('dev', 'prod')]
-    [string]$Modo = 'dev',
     [string]$Ip,
     [string]$SsidMobil,
     [switch]$SoloLocal,
@@ -93,22 +91,43 @@ function Construir-ContenidoProduccion {
     if (Test-Path $payload) { Remove-Item -Recurse -Force $payload }
     New-Item -ItemType Directory -Force (Join-Path $payload 'web/wwwroot') | Out-Null
 
-    & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Host/Icarus.Host/Icarus.Host.csproj') -c Release -o (Join-Path $payload 'web') --nologo
-    if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la API (modo producción).' }
-
-    Push-Location (Join-Path $PSScriptRoot 'web')
+    # npm (y a veces dotnet) escribe avisos por stderr; PowerShell 5.1 los
+    # convierte en NativeCommandError cuando la preferencia global es Stop.
+    $preferenciaErrores = $ErrorActionPreference
     try {
-        & npm ci --no-audit --no-fund
-        if ($LASTEXITCODE -ne 0) { throw 'No se pudieron instalar las dependencias web (modo producción).' }
-        & npm run build
-        if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar la PWA (modo producción).' }
+        $ErrorActionPreference = 'Continue'
+        & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Host/Icarus.Host/Icarus.Host.csproj') -c Release -o (Join-Path $payload 'web') --nologo
+        $codigoPublish = $LASTEXITCODE
+        & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Apps/Trajano.GestorCaisy/Trajano.GestorCaisy.csproj') -c Release -o (Join-Path $payload 'gestor') --nologo
+        $codigoPublishGestor = $LASTEXITCODE
+
+        Push-Location (Join-Path $PSScriptRoot 'web')
+        try {
+            & npm ci --no-audit --no-fund
+            $codigoNpmCi = $LASTEXITCODE
+            # El entorno local es el lugar donde se diagnostican los fallos
+            # (vista ?debug=1 descarga el JSON de eventos), así que el build de
+            # producción local siempre lleva el diagnóstico manual habilitado.
+            # El pipeline de despliegue no lo define: en la VPS sigue apagado.
+            $env:VITE_HABILITAR_DIAGNOSTICO_MANUAL = 'true'
+            & npm run build
+            $codigoBuild = $LASTEXITCODE
+        }
+        finally {
+            Pop-Location
+        }
     }
     finally {
-        Pop-Location
+        $ErrorActionPreference = $preferenciaErrores
     }
+    if ($codigoPublish -ne 0) { throw 'No se pudo publicar la API (modo producción).' }
+    if ($codigoPublishGestor -ne 0) { throw 'No se pudo publicar GestorCaisy (modo producción).' }
+    if ($codigoNpmCi -ne 0) { throw 'No se pudieron instalar las dependencias web (modo producción).' }
+    if ($codigoBuild -ne 0) { throw 'No se pudo compilar la PWA (modo producción).' }
 
     Copy-Item -Recurse -Force (Join-Path $PSScriptRoot 'web/dist/*') (Join-Path $payload 'web/wwwroot')
     Copy-Item -Force (Join-Path $PSScriptRoot 'Dockerfile.web') (Join-Path $payload 'Dockerfile.web')
+    Copy-Item -Force (Join-Path $PSScriptRoot 'Dockerfile.gestor') (Join-Path $payload 'Dockerfile.gestor')
     Copy-Item -Force (Join-Path $PSScriptRoot 'deploy/.dockerignore') (Join-Path $payload '.dockerignore')
     Write-Host "Contenido de producción listo en $payload" -ForegroundColor Cyan
 }
@@ -134,19 +153,14 @@ New-Item -ItemType Directory -Force (Join-Path $raiz ".local/$Perfil/caddy-data"
 New-Item -ItemType Directory -Force (Join-Path $raiz ".local/$Perfil/caddy-config") | Out-Null
 Set-Content -Path (Join-Path $raiz ".local/$Perfil/ip.txt") -Value $ipLan -Encoding ascii
 
+# Un solo entorno local: el artefacto de producción (API + PWA en un contenedor,
+# como en la VPS) con SQL y Seq locales. No hay modo dev para el stack PC: los
+# cambios se prueban como se desplegarían, sin esperar el deploy.
 $archivosCompose = @(
-    '-f', 'docker-compose.dev.yml',
+    '-f', 'docker-compose.prodlocal.yml',
     '-f', "docker-compose.$Perfil.yml"
 )
-if ($Modo -eq 'prod') {
-    # VPS en local: el build de producción (API + PWA) con SQL y Seq locales.
-    $env:WEB_UPSTREAM = 'web:8080'
-    $archivosCompose = @(
-        '-f', 'docker-compose.prodlocal.yml',
-        '-f', "docker-compose.$Perfil.yml"
-    )
-    Construir-ContenidoProduccion
-}
+Construir-ContenidoProduccion
 
 if ($RecrearDatos) {
     try {
@@ -164,7 +178,7 @@ if ($RecrearDatos) {
 # En PC1/PC2/PC3 la API no tiene bind mount: sin esta reconstrucción Docker
 # puede reutilizar una imagen previa aunque el usuario haya cambiado C#.
 # Se prioriza ejecutar el código actual sobre el tiempo de arranque.
-$serviciosBuild = if ($Modo -eq 'prod') { @('web') } else { @('api', 'web') }
+$serviciosBuild = @('web', 'gestor-caisy')
 try {
     $ErrorActionPreference = 'Continue'
     & docker compose @archivosCompose build --no-cache @serviciosBuild
@@ -209,7 +223,7 @@ for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
 if (-not $saludable) {
     try {
         $ErrorActionPreference = 'Continue'
-        $serviciosLogs = if ($Modo -eq 'prod') { @('gateway', 'web') } else { @('gateway', 'web', 'api') }
+        $serviciosLogs = @('gateway', 'web', 'gestor-caisy')
         & docker compose @archivosCompose logs --tail 50 @serviciosLogs
     }
     finally {
@@ -218,8 +232,38 @@ if (-not $saludable) {
     throw 'El gateway HTTPS no alcanzó un estado saludable.'
 }
 
+# La aplicación de oficina (GestorCaisy) se publica en el subdominio gestor
+# del mismo gateway; en modo sin WiFi es gestor.localhost.
+$hostGestor = "gestor.$hostLan"
+$urlSaludGestor = "https://$hostGestor/Sesion/Acceder"
+$saludableGestor = $false
+for ($intento = 0; $intento -lt 30 -and -not $saludableGestor; $intento++) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        & curl.exe -k -f -sS --max-time 5 --resolve "${hostGestor}:443:$ipLan" $urlSaludGestor -o NUL 2>$null
+        $codigoSaludGestor = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+    $saludableGestor = $codigoSaludGestor -eq 0
+    if (-not $saludableGestor) { Start-Sleep -Seconds 1 }
+}
+if (-not $saludableGestor) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        $serviciosLogs = @('gateway', 'gestor-caisy')
+        & docker compose @archivosCompose logs --tail 50 @serviciosLogs
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+    throw 'GestorCaisy no alcanzó un estado saludable tras el gateway.'
+}
+
 Write-Host ''
-Write-Host "Icarus ${nombreEquipo} (modo $Modo): https://$hostLan" -ForegroundColor Green
+Write-Host "Icarus ${nombreEquipo}: https://$hostLan" -ForegroundColor Green
+Write-Host "GestorCaisy ${nombreEquipo}: https://$hostGestor" -ForegroundColor Green
 Write-Host "Seq local (solo desarrollo): http://localhost:5341" -ForegroundColor Green
 if (Test-Path $certificado) {
     Write-Host "CA pública para instalar en el móvil: $certificado" -ForegroundColor Yellow

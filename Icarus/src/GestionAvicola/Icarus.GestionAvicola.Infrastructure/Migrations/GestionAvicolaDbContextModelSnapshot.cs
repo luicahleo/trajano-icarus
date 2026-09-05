@@ -23,6 +23,239 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetalleEntregaPedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CantidadEntregada")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("EntregaPedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Equivalentes40Kg")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Presentacion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoAlimento")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntregaPedidoAlimentoId", "TipoAlimento")
+                        .IsUnique();
+
+                    b.ToTable("detalles_entregas_pedidos_alimentos", "gestion_avicola", t =>
+                        {
+                            t.HasCheckConstraint("CK_detalles_entregas_cantidad", "[CantidadEntregada] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetallePedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CantidadSolicitada")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Equivalentes40Kg")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("NotificacionPreciosAlimentosId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("PrecioFinalPor40Kg")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("Presentacion")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("SubtotalSolicitado")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TipoAlimento")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoAlimentoId", "TipoAlimento")
+                        .IsUnique();
+
+                    b.ToTable("detalles_pedidos_alimentos", "gestion_avicola", t =>
+                        {
+                            t.HasCheckConstraint("CK_detalles_pedidos_cantidad", "[CantidadSolicitada] > 0");
+
+                            t.HasCheckConstraint("CK_detalles_pedidos_precio", "[PrecioFinalPor40Kg] IS NULL OR [PrecioFinalPor40Kg] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetallePrecioAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("EdadDesdeDias")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EdadHastaDias")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("NotificacionPreciosAlimentosId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("PrecioActualDocumento")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PrecioFinalPor40Kg")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("Presentacion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoAlimento")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificacionPreciosAlimentosId", "TipoAlimento", "Presentacion")
+                        .IsUnique();
+
+                    b.ToTable("detalles_precio_alimento", "gestion_avicola", t =>
+                        {
+                            t.HasCheckConstraint("CK_detalles_precio_final", "[PrecioFinalPor40Kg] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetalleRecepcionPedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CantidadRecibida")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Equivalentes40Kg")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Presentacion")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RecepcionPedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TipoAlimento")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecepcionPedidoAlimentoId", "TipoAlimento")
+                        .IsUnique();
+
+                    b.ToTable("detalles_recepciones_pedidos_alimentos", "gestion_avicola", t =>
+                        {
+                            t.HasCheckConstraint("CK_detalles_recepciones_cantidad", "[CantidadRecibida] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DocumentoNotaEntrega", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ClaveOriginal")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClaveVista")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EntregaPedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("FechaDesactivacionUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HashSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Mime")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("NombreSeguro")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("ReemplazadoPorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("TamanoBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TamanoVistaBytes")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntregaPedidoAlimentoId");
+
+                    b.HasIndex("ReemplazadoPorId");
+
+                    b.ToTable("documentos_nota_entrega", "gestion_avicola");
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.EntregaPedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("FechaDespacho")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("FechaNota")
+                        .HasColumnType("date");
+
+                    b.Property<string>("NumeroNota")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("PedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("TotalNetoInformado")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoAlimentoId")
+                        .IsUnique();
+
+                    b.ToTable("entregas_pedidos_alimentos", "gestion_avicola");
+                });
+
             modelBuilder.Entity("Icarus.GestionAvicola.Domain.Galpon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -141,6 +374,131 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.NotificacionInterna", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("FechaLeidaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Leida")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("LeidaPor")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Meta")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("PedidoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoId");
+
+                    b.HasIndex("ClienteId", "FechaUtc");
+
+                    b.ToTable("notificaciones_internas", "gestion_avicola");
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.NotificacionPreciosAlimentos", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AporteCaisy")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid?>("DocumentoOriginalId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("EstaActivo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("FechaDocumento")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("Fondo")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Servicios")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateOnly>("VigenteDesde")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VigenteDesde")
+                        .IsUnique()
+                        .HasFilter("[Estado] = 1 AND [EstaActivo] = 1");
+
+                    b.ToTable("notificaciones_precios_alimentos", "gestion_avicola", t =>
+                        {
+                            t.HasCheckConstraint("CK_notificaciones_precios_aportes", "[AporteCaisy] > 0 AND [Fondo] > 0 AND [Servicios] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.PedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreadoPor")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("EstaActivo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("FechaEntregaEstimada")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("FechaPedido")
+                        .HasColumnType("date");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId", "FechaPedido");
+
+                    b.HasIndex("Estado", "ClienteId", "FechaPedido");
+
+                    b.ToTable("pedidos_alimentos", "gestion_avicola");
+                });
+
             modelBuilder.Entity("Icarus.GestionAvicola.Domain.ProgramaVacunacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -174,6 +532,33 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_programas_vacunacion_cantidad_aves", "[CantidadAves] > 0");
                         });
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.RecepcionPedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DiferenciasJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("FechaRecepcion")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("PedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("TotalRecibido")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoAlimentoId")
+                        .IsUnique();
+
+                    b.ToTable("recepciones_pedidos_alimentos", "gestion_avicola");
                 });
 
             modelBuilder.Entity("Icarus.GestionAvicola.Domain.RegistroMortalidad", b =>
@@ -357,6 +742,100 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.TransicionPedidoAlimento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("EstadoDestino")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EstadoOrigen")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("FechaEntregaEstimada")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("PedidoAlimentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoAlimentoId");
+
+                    b.ToTable("transiciones_pedidos_alimentos", "gestion_avicola");
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetalleEntregaPedidoAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.EntregaPedidoAlimento", null)
+                        .WithMany("Lineas")
+                        .HasForeignKey("EntregaPedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetallePedidoAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.PedidoAlimento", null)
+                        .WithMany("Detalles")
+                        .HasForeignKey("PedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetallePrecioAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.NotificacionPreciosAlimentos", null)
+                        .WithMany("Detalles")
+                        .HasForeignKey("NotificacionPreciosAlimentosId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DetalleRecepcionPedidoAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.RecepcionPedidoAlimento", null)
+                        .WithMany("Lineas")
+                        .HasForeignKey("RecepcionPedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.DocumentoNotaEntrega", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.EntregaPedidoAlimento", null)
+                        .WithMany("Documentos")
+                        .HasForeignKey("EntregaPedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Icarus.GestionAvicola.Domain.DocumentoNotaEntrega", null)
+                        .WithMany()
+                        .HasForeignKey("ReemplazadoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.EntregaPedidoAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.PedidoAlimento", null)
+                        .WithOne("Entrega")
+                        .HasForeignKey("Icarus.GestionAvicola.Domain.EntregaPedidoAlimento", "PedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Icarus.GestionAvicola.Domain.ItemPlanVacunacion", b =>
                 {
                     b.HasOne("Icarus.GestionAvicola.Domain.ProgramaVacunacion", null)
@@ -366,9 +845,55 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.RecepcionPedidoAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.PedidoAlimento", null)
+                        .WithOne("Recepcion")
+                        .HasForeignKey("Icarus.GestionAvicola.Domain.RecepcionPedidoAlimento", "PedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.TransicionPedidoAlimento", b =>
+                {
+                    b.HasOne("Icarus.GestionAvicola.Domain.PedidoAlimento", null)
+                        .WithMany("Historial")
+                        .HasForeignKey("PedidoAlimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.EntregaPedidoAlimento", b =>
+                {
+                    b.Navigation("Documentos");
+
+                    b.Navigation("Lineas");
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.NotificacionPreciosAlimentos", b =>
+                {
+                    b.Navigation("Detalles");
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.PedidoAlimento", b =>
+                {
+                    b.Navigation("Detalles");
+
+                    b.Navigation("Entrega");
+
+                    b.Navigation("Historial");
+
+                    b.Navigation("Recepcion");
+                });
+
             modelBuilder.Entity("Icarus.GestionAvicola.Domain.ProgramaVacunacion", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Icarus.GestionAvicola.Domain.RecepcionPedidoAlimento", b =>
+                {
+                    b.Navigation("Lineas");
                 });
 #pragma warning restore 612, 618
         }

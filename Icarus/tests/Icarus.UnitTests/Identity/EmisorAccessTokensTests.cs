@@ -1,3 +1,4 @@
+using Icarus.Identity.Domain;
 using Icarus.Identity.Infrastructure.Autenticacion;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -25,7 +26,8 @@ public class EmisorAccessTokensTests
         var usuarioId = Guid.NewGuid();
         var clienteId = Guid.NewGuid();
 
-        var token = CrearEmisor().Emitir(usuarioId, "Cliente", clienteId, null, out var expiraEnSegundos);
+        var token = CrearEmisor().Emitir(
+            usuarioId, "Cliente", clienteId, null, FuncionalidadesCaisy.Ninguno, out var expiraEnSegundos);
         var leido = Leer(token);
 
         Assert.Equal(usuarioId.ToString(), leido.Claims.Single(c => c.Type == "sub").Value);
@@ -37,7 +39,8 @@ public class EmisorAccessTokensTests
     [Fact]
     public void TokenSinClienteOmiteElClaimClienteId()
     {
-        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Administrador", null, null, out _);
+        var token = CrearEmisor().Emitir(
+            Guid.NewGuid(), "Administrador", null, null, FuncionalidadesCaisy.Ninguno, out _);
         var leido = Leer(token);
 
         Assert.DoesNotContain(leido.Claims, c => c.Type == "clienteId");
@@ -49,7 +52,8 @@ public class EmisorAccessTokensTests
         var trabajadorId = Guid.NewGuid();
 
         var token = CrearEmisor().Emitir(
-            Guid.NewGuid(), "Trabajador", Guid.NewGuid(), trabajadorId, out _);
+            Guid.NewGuid(), "Trabajador", Guid.NewGuid(), trabajadorId,
+            FuncionalidadesCaisy.Ninguno, out _);
         var leido = Leer(token);
 
         Assert.Equal(trabajadorId.ToString(), leido.Claims.Single(c => c.Type == "trabajadorId").Value);
@@ -58,7 +62,8 @@ public class EmisorAccessTokensTests
     [Fact]
     public void TokenSinTrabajadorOmiteElClaimTrabajadorId()
     {
-        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Cliente", Guid.NewGuid(), null, out _);
+        var token = CrearEmisor().Emitir(
+            Guid.NewGuid(), "Cliente", Guid.NewGuid(), null, FuncionalidadesCaisy.Ninguno, out _);
         var leido = Leer(token);
 
         Assert.DoesNotContain(leido.Claims, c => c.Type == "trabajadorId");
@@ -67,7 +72,8 @@ public class EmisorAccessTokensTests
     [Fact]
     public void TokenLlevaEmisorYAudienciaConfigurados()
     {
-        var token = CrearEmisor().Emitir(Guid.NewGuid(), "Administrador", null, null, out _);
+        var token = CrearEmisor().Emitir(
+            Guid.NewGuid(), "Administrador", null, null, FuncionalidadesCaisy.Ninguno, out _);
         var leido = Leer(token);
 
         Assert.Equal("Icarus", leido.Issuer);

@@ -1,10 +1,22 @@
 https://{$ICARUS_LAN_HOST} {
 	tls internal
 	encode zstd gzip
-	# Upstream definido por el script: web:5173 (dev server) o web:8080 (build de producción).
-	reverse_proxy {$WEB_UPSTREAM}
+	# La web es siempre el build de producción (API + PWA) del contenedor web.
+	reverse_proxy web:8080
+}
+
+# Aplicación de oficina de CAISY (GestorCaisy): mismo gateway, subdominio
+# gestor. En modo sin WiFi el host es gestor.localhost.
+https://gestor.{$ICARUS_LAN_HOST} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy gestor-caisy:8080
 }
 
 http://{$ICARUS_LAN_HOST} {
 	redir https://{$ICARUS_LAN_HOST}{uri} permanent
+}
+
+http://gestor.{$ICARUS_LAN_HOST} {
+	redir https://gestor.{$ICARUS_LAN_HOST}{uri} permanent
 }

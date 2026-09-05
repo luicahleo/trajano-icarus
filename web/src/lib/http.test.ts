@@ -1,4 +1,5 @@
 import { ApiError, peticion } from './http';
+import { suscribirActividadApi } from './offline/actividadApi';
 import { getAccessToken, setAccessToken } from './session';
 import { obtenerSesionId } from './sesionDiagnostico';
 
@@ -89,6 +90,18 @@ describe('peticion', () => {
       status: 401,
     });
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('cualquier respuesta del API avisa actividad (prueba de conectividad real)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(respuesta(200, { ok: true })));
+    const aviso = vi.fn();
+    const desuscribir = suscribirActividadApi(aviso);
+    try {
+      await peticion({ ruta: '/clientes' });
+      expect(aviso).toHaveBeenCalledTimes(1);
+    } finally {
+      desuscribir();
+    }
   });
 
   test('204 devuelve undefined', async () => {

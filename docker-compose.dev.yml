@@ -1,9 +1,11 @@
-# Orquestación de desarrollo local: SQL Server + API (.NET) + Web (Vite/React) + Seq.
+# Orquestación de desarrollo local para la API: SQL Server + API (.NET) + Seq.
+# El frontend se desarrolla con `npm run dev` en el host (Vite proxya /api al
+# contenedor api). El stack PC (iniciar-pc*.ps1) usa el artefacto de producción
+# (docker-compose.prodlocal.yml): este compose no incluye la web de Vite.
 # Uso: cp .env.example .env  (ajusta SA_PASSWORD)  ->  docker compose -f docker-compose.dev.yml up -d
-# La API queda en http://localhost:8080, la web en http://localhost:5173
-# (proxya /api hacia la API), Seq en http://localhost:5341 y SQL Server en
-# localhost,1433 (sa / ${SA_PASSWORD}, credencial solo de desarrollo, coincide
-# con appsettings.Development.json para correr sin Docker).
+# La API queda en http://localhost:8080, Seq en http://localhost:5341 y SQL
+# Server en localhost,1433 (sa / ${SA_PASSWORD}, credencial solo de desarrollo,
+# coincide con appsettings.Development.json para correr sin Docker).
 services:
   seq:
     image: datalust/seq:2026.1
@@ -56,31 +58,20 @@ services:
       # de compose; la API key es opcional (el Seq local no exige auth).
       Seq__Url: "http://seq:80"
       Seq__ApiKey: "${SEQ_API_KEY:-}"
+      # Volumen privado de respaldos de notas (spec SP8C): fuera del web root,
+      # persistente entre recreaciones del contenedor (no es backup por sí solo).
+      AlmacenDocumentosPedido__Ruta: "/app/documentos-pedidos"
     ports:
       - "8080:8080"
+    volumes:
+      - documentos-pedidos:/app/documentos-pedidos
     restart: unless-stopped
     depends_on:
       sqlserver:
         # Espera a que sqlserver pase el healthcheck antes de arrancar la API.
         condition: service_healthy
 
-  web:
-    build:
-      context: ./web
-    environment:
-      # El dev server de Vite proxya /api hacia el contenedor api (no localhost).
-      VITE_API_PROXY_TARGET: "http://api:8080"
-    ports:
-      - "5173:5173"
-    volumes:
-      # Bind mount del código fuente para HMR; volumen anónimo para no pisar
-      # las node_modules instaladas dentro de la imagen con las del host.
-      - ./web:/app
-      - /app/node_modules
-    depends_on:
-      - api
-    restart: unless-stopped
-
 volumes:
   seq-data:
   mssql-data:
+  documentos-pedidos:

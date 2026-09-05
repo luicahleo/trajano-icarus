@@ -1,0 +1,22 @@
+@model FormularioAcceso
+@{
+    ViewData["Titulo"] = "Iniciar sesión";
+}
+<div class="acceso">
+    <section class="tarjeta acceso__tarjeta">
+        <h1 class="acceso__titulo">Iniciar sesión</h1>
+        <p class="acceso__detalle">Oficina de CAISY para la gestión de precios y pedidos de alimento.</p>
+        <div asp-validation-summary="ModelOnly" class="alerta alerta--error" role="alert"></div>
+        <form asp-action="Acceder" method="post" class="forma">
+            <div class="campo">
+                <label for="Correo">Correo</label>
+                <input type="email" id="Correo" name="Correo" autocomplete="username" required />
+            </div>
+            <div class="campo">
+                <label for="Contrasena">Contraseña</label>
+                <input type="password" id="Contrasena" name="Contrasena" autocomplete="current-password" required />
+            </div>
+            <button type="submit" class="boton boton--ancho">Iniciar sesión</button>
+        </form>
+    </section>
+</div>

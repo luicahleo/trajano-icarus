@@ -1,6 +1,6 @@
-﻿param(
-    [ValidateSet('dev', 'prod')]
-    [string]$Modo = 'dev',
+﻿#.\iniciar-pc.ps1 -Perfil pc1 -SsidMobil aseproda
+
+param(
     [string]$Ip,
     [switch]$Logs,
     [switch]$RecrearDatos,
@@ -9,7 +9,6 @@
 
 $argumentos = @{
     Perfil = 'pc1'
-    Modo = $Modo
     SsidMobil = 'aseproda'
 }
 if ($Ip) { $argumentos.Ip = $Ip }

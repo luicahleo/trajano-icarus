@@ -8,8 +8,13 @@ export type Funcionalidad =
   | 'Vacunacion'
   | 'Alimentacion'
   | 'Despachos'
-  | 'Precios';
-export type FuncionalidadOperativaTrabajador = 'ProduccionHuevos' | 'Mortalidad' | 'Vacunacion';
+  | 'Precios'
+  | 'PedidoAlimento';
+export type FuncionalidadOperativaTrabajador =
+  | 'ProduccionHuevos'
+  | 'Mortalidad'
+  | 'Vacunacion'
+  | 'PedidoAlimento';
 
 export interface SesionInfo {
   accessToken: string;

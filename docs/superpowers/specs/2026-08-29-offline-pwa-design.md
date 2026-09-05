@@ -103,6 +103,32 @@ Reglas (paridad con `OfflineSyncEngine` de IMGA, verificadas en su código):
   (terminal, requiere acción del usuario).
 - **Backoff exponencial** 2^intentos minutos desde el último intento
   (`proximoIntentoEn`).
+- **Rearme al recuperar la red** (2026-09-01, diagnóstico SES-F83DFD4FD0ED):
+  los disparadores 1 y 2 reariman el backoff antes de sincronizar
+  (`rearmarPendientes` quita `proximoIntentoEn` conservando `intentos` y
+  `estado`; las de estado `error` no se tocan). Sin rearme, una operación en
+  backoff quedaba invisible hasta 2-5 min tras volver la red.
+- **Sonda de conectividad real** (2026-09-01, mismo diagnóstico): los
+  disparadores 1, 2 y el ciclo inicial primero sondean el API
+  (`apiAccesible`, GET `/api/identidad/me` con timeout de 4 s; cualquier
+  respuesta salvo 408/502/503/504 cuenta). `navigator.onLine` solo garantiza
+  interfaz de red levantada, no backend vivo: sin sonda, el evento `online`
+  quemaba reintentos en timeouts de 15 s contra una red caída. Si la sonda
+  falla, el ciclo se pospone sin tocar la cola.
+- **Reintento de sonda con pendientes** (2026-09-01, diagnóstico
+  SES-3C45D68DB78A): si la sonda pospone habiendo operaciones en cola, se
+  programa un reintento a los 15 s (un solo temporizador a la vez, cancelado
+  al desmontar). Sin él, una recuperación del API sin evento `online` (WiFi
+  viva, backend caído unos segundos) dejaba la cola esperando hasta el timer
+  de respaldo y el usuario tenía que refrescar la página a mano. Sin
+  pendientes no se reintentan sondas.
+- **Actividad real del API adelanta la sync pospuesta** (2026-09-01,
+  diagnóstico SES-C54A1A220B07): cualquier respuesta HTTP (aun un 401 o 500)
+  prueba conectividad real, así que `peticion()` avisa
+  (`avisarActividadApi`, `lib/offline/actividadApi.ts`) y el coordinador
+  cancela el reintento programado y sincroniza de inmediato. Sin esto, el API
+  podía volver entre sondas (la UI ya hacía GET 200) y la cola seguía
+  esperando al timer ciego de 15 s.
 - Al sincronizar una operación se invalida el prefijo `['avicola']` de
   TanStack Query para refrescar la UI.
 
@@ -147,6 +173,16 @@ Los datos cacheados se muestran tal cual (el banner ya avisa de la falta de
 conexión). Eficiencia, vacunación y el resto de módulos quedan fuera: sin red
 muestran el error actual.
 
+**`networkMode: 'offlineFirst'`** (2026-09-01, diagnóstico
+SES-8B501C010EBD): con el `networkMode` por defecto de TanStack Query
+('online'), `navigator.onLine === false` **pausa las queries sin ejecutar el
+queryFn**, así que `conCacheLectura` nunca consultaba la caché IndexedDB: tras
+«Continuar sin conexión» la app quedaba sin datos (p. ej. `/avicola` mostraba
+«La cuenta no tiene una granja configurada») y el trabajador rebotaba a
+`/login`. El `QueryClient` de la app (`web/src/app/queryClient.ts`) se crea con
+'offlineFirst': el primer intento corre aunque no haya red, falla rápido y cae
+a la caché; en línea el comportamiento es idéntico a 'online'.
+
 ### 6. Sesión offline del trabajador (sin persistir el token)
 
 IMGA persistía el refresh token en SecureStorage para abrir la app sin red. En
@@ -178,8 +214,14 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
   el backend rechazó la sesión (401), no hay fallback: sesión anónima.
 - Con sesión de snapshot activa, al dispararse `online` se revalida
   (`renovarSesion` + `/identidad/sesion/actual`) y se reemplaza el snapshot.
-- `cerrarSesion()` borra el snapshot; la cola NO se borra (podría perder datos
-  del campo).
+- `cerrarSesion()` **con red** borra el snapshot (dispositivo compartido).
+  **Sin red** lo conserva: permite reincorporarse offline desde el login y
+  caduca a las 12 h igualmente (diagnóstico SES-4AF9D4EF3BC1: un cierre de
+  sesión offline dejaba al trabajador fuera hasta recuperar red). La cola NO
+  se borra en ningún caso (podría perder datos del campo).
+- En `/login` sin red y con snapshot vigente se ofrece «Continuar sin
+  conexión»: restaura el snapshot como sesión de solo UI (sin llamar al API)
+  y revalida al reconectar, igual que la restauración al arrancar.
 - La autorización real sigue siendo el backend: el snapshot solo habilita la
   UI; al sincronizar, el backend valida tenant y permisos.
 
@@ -187,15 +229,24 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
 
 - `BannerSinConexion`: el texto pasa a «Sin conexión: los registros se guardan
   en este dispositivo y se sincronizarán al volver la red», y muestra el
-  contador de operaciones pendientes cuando lo hay.
+  contador de operaciones pendientes cuando lo hay. Su fuente, `useConexion`,
+  re-sincroniza con `navigator.onLine` al suscribirse: los eventos
+  online/offline que ocurren sin consumidores montados (p. ej. en `/login`)
+  no tienen listener y dejaban el estado obsoleto, mostrando el banner
+  habiendo red (diagnóstico SES-4AF9D4EF3BC1).
 - Contador de pendientes accesible también con conexión (chip en la barra
   superior), con acciones manuales **Reintentar** (resetea intentos y dispara
   el motor) y **Descartar** (con confirmación) por operación en `error`.
 - `RegistrarRecogidaDialog` y `RegistrarBajasDialog`: el botón Guardar deja de
   depender de `!online`; al encolar, cierra con snackbar «Guardado sin
   conexión».
-- Edición y eliminación de registros siguen deshabilitadas sin conexión (sin
-  cambios).
+- Los registros aún en cola se muestran en la tabla del día con un chip
+  «Pendiente», sin sumar a los totales hasta sincronizarse. Al ser datos
+  locales (nunca llegaron al servidor) se pueden **editar** (actualiza el
+  cuerpo encolado conservando su `idempotencyKey`) y **eliminar** (descarta la
+  operación de la cola, con confirmación) estén online u offline. La edición y
+  eliminación de registros **ya sincronizados** siguen deshabilitadas sin
+  conexión (conflicto de versiones, ver Fuera de alcance).
 
 ### 8. Pruebas
 
@@ -211,9 +262,10 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
 
 ## Fuera de alcance
 
-- Edición offline de registros (IMGA tiene `PendienteEdicion`; aquí se difiere:
-  el alta es el caso crítico y la edición offline añade conflicto de
-  versiones).
+- Edición offline de registros **ya sincronizados** (IMGA tiene
+  `PendienteEdicion`; aquí se difiere: el alta es el caso crítico y la edición
+  offline de registros del servidor añade conflicto de versiones). Los
+  pendientes en cola sí se editan y descartan localmente (decisión 7).
 - Vacunación offline (completar/cancelar tareas).
 - **Persistencia del token o de credenciales** (IMGA lo hacía en SecureStorage;
   aquí se descarta por la regla anti-PII — ver decisión 6).
@@ -239,6 +291,10 @@ trabajador pueda abrir la PWA sin red y seguir trabajando:
   trabajador mientras está offline, la UI seguirá mostrando las del snapshot
   hasta la revalidación al reconectar; el backend sigue siendo la autoridad, así
   que el impacto es solo de UI.
-- **Dispositivo compartido**: el snapshot se borra al cerrar sesión y al
-  entrar con otro rol; si dos trabajadores comparten dispositivo sin cerrar
-  sesión, la cola mezcla operaciones y el backend resuelve por tenant.
+- **Dispositivo compartido**: el snapshot se borra al cerrar sesión con red y
+  al entrar con otro rol; al cerrar sesión sin red se conserva (ver decisión
+  6), así que cualquiera con el dispositivo podría reentrar offline dentro de
+  las 12 h de validez: riesgo aceptado porque el snapshot no contiene
+  credenciales y el backend sigue siendo la autoridad. Si dos trabajadores
+  comparten dispositivo sin cerrar sesión, la cola mezcla operaciones y el
+  backend resuelve por tenant.

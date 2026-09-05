@@ -1,0 +1,29 @@
+@{
+    ViewData["Titulo"] = "Importar PDF";
+    ViewData["Seccion"] = "precios";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Importar PDF</h1>
+        <p class="pagina-cabecera__detalle">
+            Cargue el PDF original de la Notificación de Precios de Alimentos. Se
+            creará un borrador editable; la publicación exige confirmación
+            explícita y nunca es automática.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <div asp-validation-summary="ModelOnly" class="alerta alerta--error" role="alert"></div>
+    <form asp-action="Importar" method="post" enctype="multipart/form-data" class="forma">
+        <div class="campo">
+            <label for="archivo">Archivo PDF de la notificación</label>
+            <input type="file" id="archivo" name="archivo" accept=".pdf,application/pdf" required />
+            <p class="campo__ayuda">Tamaño máximo: 20 MB. Solo se acepta el documento original.</p>
+        </div>
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Importar</button>
+            <a class="enlace" asp-action="Index">Cancelar</a>
+        </div>
+    </form>
+</section>

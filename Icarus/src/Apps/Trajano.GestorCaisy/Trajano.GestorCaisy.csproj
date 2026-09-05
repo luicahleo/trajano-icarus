@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Aplicación de oficina Trajano-GestorCaisy (spec SP8): consume
+       exclusivamente la API de Trajano-Icarus por HTTP; no referencia ningún
+       proyecto del backend ni tiene acceso a base de datos. -->
+
+</Project>

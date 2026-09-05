@@ -1,6 +1,4 @@
 param(
-    [ValidateSet('dev', 'prod')]
-    [string]$Modo = 'dev',
     [switch]$Logs,
     [switch]$RecrearDatos,
     [switch]$ConfirmarBorradoDatos
@@ -8,7 +6,6 @@ param(
 
 $argumentos = @{
     Perfil = 'pc1'
-    Modo = $Modo
     SoloLocal = $true
 }
 if ($Logs) { $argumentos.Logs = $true }

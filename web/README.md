@@ -25,22 +25,25 @@ El servidor de Vite reescribe `/api/*` hacia la API real
 (`http://localhost:8080/*`, configurable con `VITE_API_PROXY_TARGET`), así que
 el frontend siempre llama bajo `/api` y no hay CORS.
 
-### Arranque en contenedores
+### API en contenedor (desarrollo)
 
-El `docker-compose.dev.yml` de la raíz incluye un servicio `web` (Vite en un
-contenedor Node 22 con bind mount y HMR) además de SQL Server y la API:
+El `docker-compose.dev.yml` de la raíz levanta SQL Server + API + Seq (sin la
+web: el frontend corre con `npm run dev` en el host):
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-Queda en `http://localhost:5173` proxying `/api` hacia el contenedor `api`.
+La API queda en `http://localhost:8080`; Vite (host) proxya `/api` hacia ella.
 
 ## Probar desde un móvil (entorno PC)
 
 Los scripts `iniciar-pc.ps1` (core) y `iniciar-pc1.ps1` / `iniciar-pc2.ps1` /
 `iniciar-pc3.ps1` (wrappers) levantan todo el stack en contenedores y publican
-HTTPS en la LAN con un gateway Caddy (`tls internal`, host `<ip>.sslip.io`):
+HTTPS en la LAN con un gateway Caddy (`tls internal`, host `<ip>.sslip.io`).
+El stack PC usa **siempre el artefacto de producción** (API + PWA en un solo
+contenedor, como en la VPS): no hay dev server de Vite, para que los cambios se
+prueben como se desplegarían sin esperar el deploy.
 
 ```powershell
 .\iniciar-pc1.ps1              # esta máquina es PC1

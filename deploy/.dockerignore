@@ -1,4 +1,6 @@
 **
 !web/**
+!gestor/**
 !Dockerfile.web
+!Dockerfile.gestor
 !.dockerignore

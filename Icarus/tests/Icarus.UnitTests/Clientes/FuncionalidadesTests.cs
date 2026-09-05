@@ -43,14 +43,15 @@ public class FuncionalidadesTests
             .OrderBy(v => v)
             .ToArray();
 
-        Assert.Equal(8, valores.Length);
-        Assert.Equal(new[] { 1, 2, 4, 8, 16, 32, 64, 128 }, valores);
+        Assert.Equal(9, valores.Length);
+        Assert.Equal(new[] { 1, 2, 4, 8, 16, 32, 64, 128, 256 }, valores);
     }
 
     [Theory]
     [InlineData(Funcionalidades.ProduccionHuevos)]
     [InlineData(Funcionalidades.Mortalidad)]
     [InlineData(Funcionalidades.Vacunacion)]
+    [InlineData(Funcionalidades.PedidoAlimento)]
     public void SoloFuncionalidadesOperativasSonAsignables(Funcionalidades funcionalidad)
     {
         Assert.True(FuncionalidadesTrabajador.EsAsignable(funcionalidad));
@@ -68,10 +69,11 @@ public class FuncionalidadesTests
     }
 
     [Fact]
-    public void AsignablesIncluyeProduccionMortalidadYVacunacion()
+    public void AsignablesIncluyeProduccionMortalidadVacunacionYPedidoAlimento()
     {
         Assert.Equal(
-            Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad | Funcionalidades.Vacunacion,
+            Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad
+                | Funcionalidades.Vacunacion | Funcionalidades.PedidoAlimento,
             FuncionalidadesTrabajador.Asignables);
     }
 }

@@ -21,10 +21,17 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Identity;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddObservabilidad();
+
+// Los enums del contrato API viajan como nombres legibles (los tipos y
+// presentaciones del catálogo de precios son contrato del GestorCaisy).
+builder.Services.ConfigureHttpJsonOptions(opciones =>
+    opciones.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
@@ -94,10 +101,27 @@ var api = app.MapGroup("/api");
 api.MapGet("/health", () => Results.Ok(new { estado = "ok" }));
 api.MapIdentidad();
 api.MapClientes();
+api.MapUsuariosCaisy();
 api.MapGestionAvicola();
+api.MapPreciosAlimentos();
+api.MapPedidosAlimento();
+api.MapBalanceAlimentos();
 api.MapDiagnosticos();
 
-app.UseStaticFiles();
+// sw.js, el manifiesto e index.html gobiernan qué build ejecuta la PWA: si el
+// navegador los cachea, el service worker viejo sigue sirviendo un bundle
+// obsoleto (el update check del SW respeta la caché HTTP). Los assets con hash
+// sí son cacheables de forma segura.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        if (ctx.File.Name is "sw.js" or "manifest.webmanifest" or "index.html")
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+});
 app.MapFallbackToFile("index.html");
 
 var esDesarrollo = app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing");

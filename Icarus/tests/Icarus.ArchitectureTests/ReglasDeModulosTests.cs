@@ -59,4 +59,20 @@ public class ReglasDeModulosTests
         Assert.True(otrosHaciaAvicola.IsSuccessful,
             string.Join(", ", otrosHaciaAvicola.FailingTypeNames ?? []));
     }
+
+    // Trajano-GestorCaisy es un desplegable independiente que consume la API de
+    // Trajano-Icarus por HTTP (spec SP8): sin referencia a proyectos del
+    // backend, sin DbContext ni acceso SQL directo.
+    [Fact]
+    public void GestorCaisyNoDependeDelBackend()
+    {
+        var resultado = Types
+            .InAssembly(typeof(Program).Assembly)
+            .ShouldNot().HaveDependencyOnAny(
+                "Icarus", "Microsoft.EntityFrameworkCore", "Microsoft.Data.SqlClient")
+            .GetResult();
+
+        Assert.True(resultado.IsSuccessful,
+            string.Join(", ", resultado.FailingTypeNames ?? []));
+    }
 }

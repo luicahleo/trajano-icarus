@@ -19,8 +19,8 @@ archivo define el estándar local de `web/`.
   correlation ID (`correlation.ts`) y contratos (`tipos.ts`). No importa de
   `features/` ni de `app/`.
 - `src/lib/offline/`: cola y caché offline en IndexedDB (tipos, almacenes,
-  motor de sincronización, caché de lectura). No importa de `features/` ni de
-  `app/`.
+  motor de sincronización, caché de lectura) y sonda de conectividad real con
+  el API (`sondaApi.ts`). No importa de `features/` ni de `app/`.
 - `src/app/offline/`: coordinador singleton que cablea almacén + motor +
   dispatcher, hook de pendientes, snapshot de sesión offline del trabajador
   (sin token ni correo), precalentado de caché y UI (chip, diálogo, snackbar).

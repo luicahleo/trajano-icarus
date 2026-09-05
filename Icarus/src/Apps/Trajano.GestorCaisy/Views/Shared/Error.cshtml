@@ -1,0 +1,16 @@
+@{
+    var codigo = (int?)(ViewData["Codigo"] ?? 500) ?? 500;
+    ViewData["Titulo"] = "Error";
+    var mensaje = codigo switch
+    {
+        404 => "No se encontró el recurso solicitado.",
+        409 => "La operación entró en conflicto con el estado actual; recargue e inténtelo de nuevo.",
+        413 => "El archivo supera el tamaño máximo permitido.",
+        _ => "Ocurrió un error inesperado; inténtelo de nuevo.",
+    };
+}
+<section class="tarjeta vacio">
+    <h1>No se pudo completar la operación</h1>
+    <p>@mensaje</p>
+    <a class="boton" asp-controller="Precios" asp-action="Index">Volver a precios de alimento</a>
+</section>

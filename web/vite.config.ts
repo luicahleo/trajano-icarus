@@ -11,6 +11,9 @@ export function crearHostsPermitidos(host: string | undefined): string[] {
 }
 
 export default defineConfig(({ mode }) => ({
+  // Sello del build: permite saber qué bundle está ejecutando realmente el
+  // navegador (diagnóstico de service workers obsoletos) sin tocar el código.
+  define: { __APP_BUILD__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
     VitePWA({

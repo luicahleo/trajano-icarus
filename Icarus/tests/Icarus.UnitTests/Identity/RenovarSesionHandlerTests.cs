@@ -17,10 +17,11 @@ public class RenovarSesionHandlerTests
     {
         _handler = new RenovarSesionHandler(_refresh, _consulta, _emisor, _estadoCliente);
         _emisor.Emitir(
-                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>())
+                Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(),
+                Arg.Any<Icarus.Identity.Domain.FuncionalidadesCaisy>(), out Arg.Any<int>())
             .Returns(call =>
             {
-                call[4] = 900;
+                call[5] = 900;
                 return "access-token-nuevo";
             });
         _estadoCliente.EstaActivoAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(true);
@@ -75,7 +76,8 @@ public class RenovarSesionHandlerTests
             _handler.Handle(new RenovarSesionCommand("refresh-viejo"), CancellationToken.None));
 
         _emisor.DidNotReceive().Emitir(
-            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>());
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(),
+            Arg.Any<Icarus.Identity.Domain.FuncionalidadesCaisy>(), out Arg.Any<int>());
     }
 
     [Fact]
@@ -90,6 +92,7 @@ public class RenovarSesionHandlerTests
             _handler.Handle(new RenovarSesionCommand("refresh-viejo"), CancellationToken.None));
 
         _emisor.DidNotReceive().Emitir(
-            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), out Arg.Any<int>());
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(),
+            Arg.Any<Icarus.Identity.Domain.FuncionalidadesCaisy>(), out Arg.Any<int>());
     }
 }

@@ -15,6 +15,7 @@ public sealed class ConsultaUsuarios : IConsultaUsuarios
         await _db.Users
             .Where(u => u.Id == usuarioId && u.Activo)
             .Select(u => new UsuarioResumen(
-                u.Id, u.Email ?? string.Empty, u.Rol, u.ClienteId, u.TrabajadorId))
+                u.Id, u.Email ?? string.Empty, u.Rol, u.ClienteId, u.TrabajadorId,
+                u.FuncionalidadesCaisy))
             .SingleOrDefaultAsync(cancellationToken);
 }

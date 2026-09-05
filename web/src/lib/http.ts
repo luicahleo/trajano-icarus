@@ -1,5 +1,6 @@
 import { crearCorrelationId } from './correlation';
 import { crearErrorId, reportarDiagnostico } from './diagnosticos';
+import { avisarActividadApi } from './offline/actividadApi';
 import { clearAccessToken, getAccessToken, setAccessToken } from './session';
 import { obtenerSesionId, registrarEventoFlujo, sanitizarRuta } from './sesionDiagnostico';
 import type { SesionInfo } from './tipos';
@@ -202,6 +203,9 @@ export async function peticion<T>(o: {
     throw error;
   }
   registrarLlamadaApi(original, inicio, respuesta);
+  // Cualquier respuesta (aun un 401 o 500) prueba que el API responde: el
+  // coordinador offline adelanta una sincronización pospuesta si la hay.
+  avisarActividadApi();
 
   if (respuesta.status === 401 && reintentable && (await renovarSesionInterna())) {
     const reintento = crearRequest();
@@ -214,6 +218,7 @@ export async function peticion<T>(o: {
       throw error;
     }
     registrarLlamadaApi(reintento, inicioReintento, respuesta);
+    avisarActividadApi();
   } else if (respuesta.status === 401 && reintentable) {
     clearAccessToken();
   }
@@ -235,4 +240,33 @@ export async function peticion<T>(o: {
   }
   if (respuesta.status === 204) return undefined as T;
   return (await respuesta.json()) as T;
+}
+
+// Descarga binaria autenticada (respaldos de la nota, spec SP8C): devuelve el
+// blob con su tipo de contenido para mostrarlo inline o descargarlo como
+// adjunto. Nunca registra contenido, solo la ruta sanitizada.
+export async function peticionBlob(o: { ruta: string }): Promise<{ blob: Blob; tipo: string }> {
+  const { ruta } = o;
+  const crearRequest = () =>
+    new Request(urlCompleta(ruta), conHeaders({ method: 'GET', credentials: 'include' }));
+  const inicio = performance.now();
+  let respuesta: Response;
+  try {
+    respuesta = await fetchConTiempo(crearRequest());
+  } catch (error) {
+    registrarLlamadaApi(crearRequest(), inicio);
+    reportarFalloDeRed(ruta);
+    throw error;
+  }
+  registrarLlamadaApi(crearRequest(), inicio, respuesta);
+  avisarActividadApi();
+  if (respuesta.status === 401 && (await renovarSesionInterna())) {
+    respuesta = await fetchConTiempo(crearRequest());
+    registrarLlamadaApi(crearRequest(), inicio, respuesta);
+    avisarActividadApi();
+  } else if (respuesta.status === 401) {
+    clearAccessToken();
+  }
+  if (!respuesta.ok) throw await errorDesde(respuesta);
+  return { blob: await respuesta.blob(), tipo: respuesta.headers.get('content-type') ?? 'application/octet-stream' };
 }

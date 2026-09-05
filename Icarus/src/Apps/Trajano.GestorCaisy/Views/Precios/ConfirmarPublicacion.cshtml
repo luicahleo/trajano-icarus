@@ -1,0 +1,73 @@
+@model VistaDetalles
+@{
+    var notificacion = Model.Notificacion;
+    ViewData["Titulo"] = "Confirmar la publicación";
+    ViewData["Seccion"] = "precios";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Confirmar la publicación</h1>
+        <p class="pagina-cabecera__detalle">
+            Revisé el borrador y confirmo su publicación. Una publicación es
+            inmutable: las correcciones posteriores se expresan con otra
+            publicación o con una anulación antes de que entre en vigor.
+        </p>
+    </div>
+    <span class="chip chip--@notificacion.Estado.ToLowerInvariant()">@notificacion.Estado</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Resumen a publicar</h2>
+    <dl class="ficha">
+        <div>
+            <dt>Fecha del documento</dt>
+            <dd>@notificacion.FechaDocumento.ToString("dd/MM/yyyy")</dd>
+        </div>
+        <div>
+            <dt>Vigente desde</dt>
+            <dd>@notificacion.VigenteDesde.ToString("dd/MM/yyyy")</dd>
+        </div>
+        <div>
+            <dt>Aporte CAISY</dt>
+            <dd>@notificacion.AporteCaisy.ToString("0.00")</dd>
+        </div>
+        <div>
+            <dt>Fondo</dt>
+            <dd>@notificacion.Fondo.ToString("0.00")</dd>
+        </div>
+        <div>
+            <dt>Servicios</dt>
+            <dd>@notificacion.Servicios.ToString("0.00")</dd>
+        </div>
+    </dl>
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Detalles de precio</h2>
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Tipo de alimento</th>
+                <th scope="col">Presentación</th>
+                <th scope="col">Precio final por 40 kg</th>
+                <th scope="col">Precio actual del documento</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var detalle in notificacion.Detalles)
+            {
+                <tr>
+                    <td>@detalle.TipoAlimento</td>
+                    <td>@detalle.Presentacion</td>
+                    <td>@detalle.PrecioFinalPor40Kg.ToString("0.00")</td>
+                    <td>@(detalle.PrecioActualDocumento?.ToString("0.00") ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+<section class="tarjeta">
+    <form asp-action="Publicar" asp-route-id="@notificacion.Id" method="post" class="acciones">
+        <button type="submit" class="boton boton--primario">Publicar ahora</button>
+        <a class="enlace" asp-action="Detalles" asp-route-id="@notificacion.Id">Cancelar y volver al borrador</a>
+    </form>
+</section>

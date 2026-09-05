@@ -50,6 +50,22 @@ se escriben como escapes `\uXXXX`.
 La regla vale para los spans en línea, no para los bloques cercados. Dentro de un
 bloque de código en un `.md`, citar el patrón con su escape.
 
+### Cómo editar archivos con acentos sin introducir mojibake
+
+El mojibake suele llegar por la herramienta, no por descuido: en PowerShell 5.1,
+`Get-Content` lee con la codificación del sistema y `Set-Content` a secas
+reescribe en otra, duplicando los bytes de las tildes (p. ej. `ó` pasa de `C3 B3`
+a `C3 83 C2 B3`). Regla para agentes y para edición manual:
+
+- Usar herramientas que lean y escriban **UTF-8 sin BOM** de forma explícita
+  (los editores del entorno y `[System.IO.File]::ReadAllText`/`WriteAllText` con
+  `UTF8Encoding($false)`).
+- No usar `Get-Content`/`Set-Content` de PowerShell 5.1 para modificar archivos
+  que contienen acentos.
+- El gate de mojibake atrapa el error en `verify.ps1`; si aparece, revisar el
+  `git diff` del archivo y restaurar el texto correcto en UTF-8, no maquillar el
+  gate.
+
 ## Reglas innegociables
 
 1. Nunca `--no-verify`, ni en commit ni en push.
