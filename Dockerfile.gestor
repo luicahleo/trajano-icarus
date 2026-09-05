@@ -1,0 +1,22 @@
+# Dockerfile de producción local de Trajano.GestorCaisy (stack PC).
+# Runtime-only: copia el payload publicado por iniciar-pc.ps1 (binarios .NET).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:1fa23fc4872d95fd71c2833ebe65d7e84a43b2d51a31d119516852f13d9505a7
+
+WORKDIR /app
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY gestor/ .
+
+ENV ASPNETCORE_HTTP_PORTS=8080
+EXPOSE 8080
+
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=12 \
+  CMD curl -fsS http://localhost:8080/Sesion/Acceder || exit 1
+
+USER app
+
+ENTRYPOINT ["dotnet", "Trajano.GestorCaisy.dll"]

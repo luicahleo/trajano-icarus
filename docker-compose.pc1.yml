@@ -18,4 +18,5 @@ services:
       - ./.local/pc1/caddy-config:/config
     depends_on:
       - web
+      - gestor-caisy
     restart: unless-stopped

@@ -1,4 +1,4 @@
-﻿param(
+param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
     [string]$Ip,
@@ -98,6 +98,8 @@ function Construir-ContenidoProduccion {
         $ErrorActionPreference = 'Continue'
         & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Host/Icarus.Host/Icarus.Host.csproj') -c Release -o (Join-Path $payload 'web') --nologo
         $codigoPublish = $LASTEXITCODE
+        & dotnet publish (Join-Path $PSScriptRoot 'Icarus/src/Apps/Trajano.GestorCaisy/Trajano.GestorCaisy.csproj') -c Release -o (Join-Path $payload 'gestor') --nologo
+        $codigoPublishGestor = $LASTEXITCODE
 
         Push-Location (Join-Path $PSScriptRoot 'web')
         try {
@@ -119,11 +121,13 @@ function Construir-ContenidoProduccion {
         $ErrorActionPreference = $preferenciaErrores
     }
     if ($codigoPublish -ne 0) { throw 'No se pudo publicar la API (modo producción).' }
+    if ($codigoPublishGestor -ne 0) { throw 'No se pudo publicar GestorCaisy (modo producción).' }
     if ($codigoNpmCi -ne 0) { throw 'No se pudieron instalar las dependencias web (modo producción).' }
     if ($codigoBuild -ne 0) { throw 'No se pudo compilar la PWA (modo producción).' }
 
     Copy-Item -Recurse -Force (Join-Path $PSScriptRoot 'web/dist/*') (Join-Path $payload 'web/wwwroot')
     Copy-Item -Force (Join-Path $PSScriptRoot 'Dockerfile.web') (Join-Path $payload 'Dockerfile.web')
+    Copy-Item -Force (Join-Path $PSScriptRoot 'Dockerfile.gestor') (Join-Path $payload 'Dockerfile.gestor')
     Copy-Item -Force (Join-Path $PSScriptRoot 'deploy/.dockerignore') (Join-Path $payload '.dockerignore')
     Write-Host "Contenido de producción listo en $payload" -ForegroundColor Cyan
 }
@@ -174,7 +178,7 @@ if ($RecrearDatos) {
 # En PC1/PC2/PC3 la API no tiene bind mount: sin esta reconstrucción Docker
 # puede reutilizar una imagen previa aunque el usuario haya cambiado C#.
 # Se prioriza ejecutar el código actual sobre el tiempo de arranque.
-$serviciosBuild = @('web')
+$serviciosBuild = @('web', 'gestor-caisy')
 try {
     $ErrorActionPreference = 'Continue'
     & docker compose @archivosCompose build --no-cache @serviciosBuild
@@ -219,7 +223,7 @@ for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
 if (-not $saludable) {
     try {
         $ErrorActionPreference = 'Continue'
-        $serviciosLogs = @('gateway', 'web')
+        $serviciosLogs = @('gateway', 'web', 'gestor-caisy')
         & docker compose @archivosCompose logs --tail 50 @serviciosLogs
     }
     finally {
@@ -228,8 +232,38 @@ if (-not $saludable) {
     throw 'El gateway HTTPS no alcanzó un estado saludable.'
 }
 
+# La aplicación de oficina (GestorCaisy) se publica en el subdominio gestor
+# del mismo gateway; en modo sin WiFi es gestor.localhost.
+$hostGestor = "gestor.$hostLan"
+$urlSaludGestor = "https://$hostGestor/Sesion/Acceder"
+$saludableGestor = $false
+for ($intento = 0; $intento -lt 30 -and -not $saludableGestor; $intento++) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        & curl.exe -k -f -sS --max-time 5 --resolve "${hostGestor}:443:$ipLan" $urlSaludGestor -o NUL 2>$null
+        $codigoSaludGestor = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+    $saludableGestor = $codigoSaludGestor -eq 0
+    if (-not $saludableGestor) { Start-Sleep -Seconds 1 }
+}
+if (-not $saludableGestor) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        $serviciosLogs = @('gateway', 'gestor-caisy')
+        & docker compose @archivosCompose logs --tail 50 @serviciosLogs
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
+    throw 'GestorCaisy no alcanzó un estado saludable tras el gateway.'
+}
+
 Write-Host ''
 Write-Host "Icarus ${nombreEquipo}: https://$hostLan" -ForegroundColor Green
+Write-Host "GestorCaisy ${nombreEquipo}: https://$hostGestor" -ForegroundColor Green
 Write-Host "Seq local (solo desarrollo): http://localhost:5341" -ForegroundColor Green
 if (Test-Path $certificado) {
     Write-Host "CA pública para instalar en el móvil: $certificado" -ForegroundColor Yellow
