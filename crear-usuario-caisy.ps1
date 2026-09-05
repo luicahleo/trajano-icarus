@@ -18,6 +18,9 @@ param(
     [Parameter(Mandatory)][string]$Email,
     [string]$AdminEmail = 'admin@icarus.test',
     [string[]]$Funcionalidades = @('GestorPedidoAlimento'),
+    # Opcionales para automatización; si faltan se piden de forma interactiva.
+    [SecureString]$ClaveAdmin,
+    [SecureString]$ClaveCaisy,
     [switch]$Inseguro
 )
 
@@ -36,6 +39,8 @@ if ($Inseguro) {
         $saltoCertificado = @{ SkipCertificateCheck = $true }
     } else {
         [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+        # PS 5.1 negocia TLS 1.0 por defecto y Caddy exige TLS 1.2+.
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
         $saltoCertificado = @{}
     }
 } else {
@@ -43,20 +48,24 @@ if ($Inseguro) {
 }
 
 $base = $BaseUrl.TrimEnd('/')
-$claveAdmin = Convertir-SecureString (Read-Host "Contraseña de $AdminEmail" -AsSecureString)
-$claveCaisy = Convertir-SecureString (Read-Host "Contraseña para la cuenta $Email" -AsSecureString)
+if (-not $ClaveAdmin) { $ClaveAdmin = Read-Host "Contraseña de $AdminEmail" -AsSecureString }
+if (-not $ClaveCaisy) { $ClaveCaisy = Read-Host "Contraseña para la cuenta $Email" -AsSecureString }
+# OJO: PowerShell no distingue mayúsculas: un local $claveAdmin sería la MISMA
+# variable tipada que el parámetro $ClaveAdmin y la asignación reventaría.
+$textoAdmin = Convertir-SecureString $ClaveAdmin
+$textoCaisy = Convertir-SecureString $ClaveCaisy
 
 # 1. Sesión del Administrador de plataforma.
 try {
     $sesion = Invoke-RestMethod -Method Post -Uri "$base/api/identidad/sesion" @saltoCertificado `
         -ContentType 'application/json; charset=utf-8' `
-        -Body (@{ email = $AdminEmail; contrasena = $claveAdmin } | ConvertTo-Json)
+        -Body (@{ email = $AdminEmail; contrasena = $textoAdmin } | ConvertTo-Json)
 } catch {
     throw "No se pudo autenticar el administrador ($($_.Exception.Message))."
 }
 
 # 2. Alta de la cuenta CAISY con sus funcionalidades.
-$cuerpo = @{ email = $Email; contrasena = $claveCaisy; funcionalidades = $Funcionalidades } | ConvertTo-Json
+$cuerpo = @{ email = $Email; contrasena = $textoCaisy; funcionalidades = $Funcionalidades } | ConvertTo-Json
 try {
     $creada = Invoke-RestMethod -Method Post -Uri "$base/api/usuarios-caisy" @saltoCertificado `
         -ContentType 'application/json; charset=utf-8' `
