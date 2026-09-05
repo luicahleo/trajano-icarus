@@ -26,6 +26,14 @@ public sealed record ImportarNotificacionPdfCommand(Stream Contenido)
         new Dictionary<string, DatoRegistroVuelo> { ["DetallesImportados"] = DatoRegistroVuelo.Entero });
 }
 
+public sealed record ImportarNotificacionExcelCommand(Stream Contenido)
+    : IRequest<Guid>, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.precios.importar-excel",
+        new Dictionary<string, DatoRegistroVuelo> { ["DetallesImportados"] = DatoRegistroVuelo.Entero });
+}
+
 public sealed record ActualizarBorradorPreciosCommand(
     Guid NotificacionId, DateOnly FechaDocumento, DateOnly VigenteDesde,
     decimal AporteCaisy, decimal Fondo, decimal Servicios,
@@ -147,6 +155,38 @@ public sealed class ImportarNotificacionPdfHandler(
     private static bool EsPdf(byte[] bytes) =>
         bytes.Length >= 5 && bytes[0] == (byte)'%' && bytes[1] == (byte)'P'
             && bytes[2] == (byte)'D' && bytes[3] == (byte)'F' && bytes[4] == (byte)'-';
+}
+
+public sealed class ImportarNotificacionExcelHandler(
+    IRepositorioNotificacionesPrecios repositorio,
+    IImportadorNotificacionPreciosExcel importador,
+    IAlmacenDocumentosPrecios almacen,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    : IRequestHandler<ImportarNotificacionExcelCommand, Guid>
+{
+    public async Task<Guid> Handle(ImportarNotificacionExcelCommand request, CancellationToken cancellationToken)
+    {
+        using var memoria = new MemoryStream();
+        await request.Contenido.CopyToAsync(memoria, cancellationToken);
+        var bytes = memoria.ToArray();
+        var resultado = importador.Importar(new MemoryStream(bytes));
+        if (resultado.Errores.Count > 0 || resultado.Propuesta is null)
+            throw new ValidationException(resultado.Errores.Select(e => new ValidationFailure(
+                "Documento", e.Fila is { } fila ? $"Fila {fila}: {e.Mensaje}" : e.Mensaje)));
+        Guid documentoOriginalId;
+        await using (var original = new MemoryStream(bytes))
+            documentoOriginalId = await almacen.GuardarAsync(original, cancellationToken);
+        var propuesta = resultado.Propuesta;
+        var notificacion = new NotificacionPreciosAlimentos(propuesta.FechaDocumento, propuesta.VigenteDesde,
+            propuesta.AporteCaisy, propuesta.Fondo, propuesta.Servicios, propuesta.Detalles);
+        notificacion.AsignarDocumentoOriginal(documentoOriginalId);
+        repositorio.Agregar(notificacion);
+        registroVuelo.Decidir("avicola.precios.importar-excel", "importacion", "aplicada",
+            new Dictionary<string, object?> { ["DetallesImportados"] = propuesta.Detalles.Count });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+        return notificacion.Id;
+    }
 }
 
 public sealed class ActualizarBorradorPreciosHandler(

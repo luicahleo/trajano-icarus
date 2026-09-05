@@ -31,7 +31,12 @@ public static class PreciosAlimentosEndpoints
             if (archivo.Length > TamanoMaximoPdf)
                 return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
             await using var contenido = archivo.OpenReadStream();
-            var id = await mediator.Send(new ImportarNotificacionPdfCommand(contenido), cancellationToken);
+            var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+            if (extension is not (".pdf" or ".xlsx"))
+                return Results.BadRequest(new { error = "Solo se aceptan archivos PDF o XLSX." });
+            var id = extension == ".xlsx"
+                ? await mediator.Send(new ImportarNotificacionExcelCommand(contenido), cancellationToken)
+                : await mediator.Send(new ImportarNotificacionPdfCommand(contenido), cancellationToken);
             return Results.Created($"/precios-alimentos/{id}", new { id });
         }).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(TamanoMaximoPdf));
 

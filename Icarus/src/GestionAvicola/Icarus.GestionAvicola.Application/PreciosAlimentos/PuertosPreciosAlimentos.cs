@@ -41,6 +41,11 @@ public interface IImportadorNotificacionPreciosPdf
     ResultadoImportacionPdf Importar(Stream contenido);
 }
 
+public interface IImportadorNotificacionPreciosExcel
+{
+    ResultadoImportacionPdf Importar(Stream contenido);
+}
+
 public sealed record DatosNotificacionPdf(
     DateOnly FechaDocumento, DateOnly VigenteDesde,
     decimal AporteCaisy, decimal Fondo, decimal Servicios,

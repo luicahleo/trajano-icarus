@@ -54,6 +54,7 @@ public static class DependencyInjection
         servicios.AddSingleton(sp =>
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesPedidosAlimento>>().Value);
         servicios.AddScoped<IImportadorNotificacionPreciosPdf, ImportadorNotificacionPreciosPdf>();
+        servicios.AddScoped<IImportadorNotificacionPreciosExcel, ImportadorNotificacionPreciosExcel>();
         servicios.AddScoped<IAlmacenDocumentosPrecios, AlmacenDocumentosLocal>();
         // Volumen privado de respaldos de notas (spec SP8C): límites
         // configurables validados al arrancar; se entregan ya resueltos.

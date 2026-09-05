@@ -86,8 +86,10 @@ describe('api pedidos de alimento', () => {
 
   test('los documentos de nota se piden como blob en vista y original', async () => {
     const f: ReturnType<typeof vi.fn> = vi.fn(async () => {
-      const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
-      return new Response(blob, { status: 200, headers: { 'content-type': 'image/jpeg' } });
+      return new Response(new Uint8Array([1, 2, 3]), {
+        status: 200,
+        headers: { 'content-type': 'image/jpeg' },
+      });
     });
     vi.stubGlobal('fetch', f);
     const vista = await obtenerVistaDocumentoNota('p1', 'd1');
