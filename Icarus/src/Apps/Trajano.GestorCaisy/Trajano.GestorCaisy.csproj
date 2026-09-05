@@ -4,4 +4,11 @@
        exclusivamente la API de Trajano-Icarus por HTTP; no referencia ningún
        proyecto del backend ni tiene acceso a base de datos. -->
 
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.Seq" />
+  </ItemGroup>
+
 </Project>

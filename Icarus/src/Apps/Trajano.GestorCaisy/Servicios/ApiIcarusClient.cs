@@ -39,7 +39,7 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         // intentos con credenciales ya rechazadas.
         using var respuesta = await EnviarAsync(
             _ => PeticionJson(HttpMethod.Post, "identidad/sesion", null,
-                new { correo, contrasena }),
+                new { email = correo, contrasena }),
             renovable: false, token);
         await AsegurarExitoAsync(respuesta, token);
         var sesion = await respuesta.Content

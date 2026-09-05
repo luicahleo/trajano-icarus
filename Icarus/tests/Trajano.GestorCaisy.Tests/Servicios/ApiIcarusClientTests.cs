@@ -50,7 +50,7 @@ public class ApiIcarusClientTests
         var peticion = _manejador.Peticiones[0];
         Assert.Equal(HttpMethod.Post, peticion.Metodo);
         Assert.Equal($"{BaseApi}identidad/sesion", peticion.Uri.ToString());
-        Assert.Contains("\"correo\":\"gestor@caisy.test\"", peticion.Cuerpo);
+        Assert.Contains("\"email\":\"gestor@caisy.test\"", peticion.Cuerpo);
         Assert.Contains("\"contrasena\":\"Clave-123\"", peticion.Cuerpo);
         Assert.Null(peticion.Autorizacion);
     }

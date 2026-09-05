@@ -7,7 +7,12 @@ WORKDIR /app
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Volúmenes privados de documentos (PDF original de precios y respaldos de
+    # notas): se crean con dueño app para que el proceso (uid 1654) pueda
+    # escribir; los volúmenes nuevos heredan este dueño al inicializarse.
+    && mkdir -p /app/documentos-privados /app/documentos-pedidos \
+    && chown -R app:app /app/documentos-privados /app/documentos-pedidos
 
 COPY web/ .
 

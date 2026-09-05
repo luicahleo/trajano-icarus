@@ -92,6 +92,8 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       TZ: "America/La_Paz"
       ApiIcarus__BaseUrl: "http://web:8080/api"
+      Seq__Url: "http://seq:80"
+      Seq__ApiKey: "${SEQ_API_KEY:-}"
     volumes:
       # Claves DataProtection: conservan las sesiones de oficina al recrear el
       # contenedor (iniciar-pc.ps1 usa --force-recreate en cada arranque).
