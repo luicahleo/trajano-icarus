@@ -18,6 +18,8 @@ public interface IApiIcarusClient
 
     Task AnularFuturaAsync(Guid id, CancellationToken token = default);
 
+    Task DescartarBorradorAsync(Guid id, CancellationToken token = default);
+
     Task<Stream> DescargarDocumentoOriginalAsync(Guid id, CancellationToken token = default);
 
     Task<PaginaPedidosApi> ListarPedidosAsync(

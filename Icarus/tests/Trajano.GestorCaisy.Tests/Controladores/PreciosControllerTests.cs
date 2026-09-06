@@ -42,7 +42,7 @@ public class PreciosControllerTests
     }
 
     [Fact]
-    public async Task DetallesDeUnBorradorPermiteEditarPeroNoAnular()
+    public async Task DetallesDeUnBorradorPermiteEditarYDescartarPeroNoAnular()
     {
         var id = Guid.NewGuid();
         _api.DetalleActual = ApiIcarusFalsa.CrearDetalle(id, "Borrador");
@@ -52,7 +52,9 @@ public class PreciosControllerTests
         var modelo = Assert.IsType<VistaDetalles>(((ViewResult)vista).Model);
         Assert.Equal(id, modelo.Notificacion.Id);
         Assert.True(modelo.PuedeEditarse);
+        Assert.True(modelo.PuedeDescartarse);
         Assert.False(modelo.PuedeAnularse);
+        Assert.False(modelo.EsPublicacionEfectiva);
     }
 
     [Fact]
@@ -66,11 +68,13 @@ public class PreciosControllerTests
 
         var modelo = Assert.IsType<VistaDetalles>(((ViewResult)vista).Model);
         Assert.False(modelo.PuedeEditarse);
+        Assert.False(modelo.PuedeDescartarse);
         Assert.True(modelo.PuedeAnularse);
+        Assert.False(modelo.EsPublicacionEfectiva);
     }
 
     [Fact]
-    public async Task DetallesDeUnaPublicacionEfectivaNoPermiteAnular()
+    public async Task DetallesDeUnaPublicacionEfectivaNoPermiteEditarNiAnularNiDescartar()
     {
         _api.DetalleActual = ApiIcarusFalsa.CrearDetalle(
             Guid.NewGuid(), "Publicada", vigenteDesde: "2025-01-01");
@@ -78,7 +82,10 @@ public class PreciosControllerTests
         var vista = await _controlador.Detalles(Guid.NewGuid(), default);
 
         var modelo = Assert.IsType<VistaDetalles>(((ViewResult)vista).Model);
+        Assert.False(modelo.PuedeEditarse);
+        Assert.False(modelo.PuedeDescartarse);
         Assert.False(modelo.PuedeAnularse);
+        Assert.True(modelo.EsPublicacionEfectiva);
     }
 
     [Fact]
@@ -170,6 +177,70 @@ public class PreciosControllerTests
 
         Assert.IsType<RedirectToActionResult>(resultado);
         Assert.Contains("ya efectiva", _controlador.TempData["Error"]?.ToString());
+    }
+
+    [Fact]
+    public async Task ConfirmarDescartarMuestraElResumenDelBorrador()
+    {
+        var id = Guid.NewGuid();
+        _api.DetalleActual = ApiIcarusFalsa.CrearDetalle(id, "Borrador");
+
+        var vista = await _controlador.ConfirmarDescartar(id, default);
+
+        var modelo = Assert.IsType<VistaDetalles>(((ViewResult)vista).Model);
+        Assert.Equal(id, modelo.Notificacion.Id);
+        Assert.True(modelo.PuedeDescartarse);
+    }
+
+    [Fact]
+    public async Task ConfirmarDescartarDeUnaNoBorradorRedirigeADetalles()
+    {
+        _api.DetalleActual = ApiIcarusFalsa.CrearDetalle(Guid.NewGuid(), "Publicada");
+
+        var resultado = await _controlador.ConfirmarDescartar(Guid.NewGuid(), default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosController.Detalles), redireccion.ActionName);
+    }
+
+    [Fact]
+    public async Task DescartarInvocaAlClienteYRedirigeAlHistorial()
+    {
+        var id = Guid.NewGuid();
+
+        var resultado = await _controlador.Descartar(id, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosController.Index), redireccion.ActionName);
+        Assert.Equal(id, _api.UltimoDescartado);
+        Assert.NotNull(_controlador.TempData["Exito"]);
+    }
+
+    [Fact]
+    public async Task DescartarConErrorDeNegocioRegresaAConfirmarConElMensaje()
+    {
+        var id = Guid.NewGuid();
+        _api.ErrorDeDescartar = new ErrorApiException(409, "Conflicto con el estado actual");
+
+        var resultado = await _controlador.Descartar(id, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosController.ConfirmarDescartar), redireccion.ActionName);
+        Assert.Contains("Conflicto", _controlador.TempData["Error"]?.ToString());
+    }
+
+    [Fact]
+    public async Task DescartarUnBorradorYaDescartadoEsIdempotenteYRedirigeAlHistorial()
+    {
+        var id = Guid.NewGuid();
+        _api.ErrorDeDescartar = new ErrorApiException(404, "Recurso no encontrado");
+
+        var resultado = await _controlador.Descartar(id, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosController.Index), redireccion.ActionName);
+        Assert.Equal(1, _api.VecesDescartar);
+        Assert.NotNull(_controlador.TempData["Exito"]);
     }
 
     [Fact]

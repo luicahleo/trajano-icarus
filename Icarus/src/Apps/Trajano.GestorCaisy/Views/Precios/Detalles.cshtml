@@ -44,24 +44,38 @@
         {
             <a class="boton" asp-action="Editar" asp-route-id="@notificacion.Id">Editar borrador</a>
             <a class="boton boton--primario" asp-action="ConfirmarPublicacion" asp-route-id="@notificacion.Id">Publicar</a>
+            <a class="boton boton--secundario" asp-action="ConfirmarDescartar" asp-route-id="@notificacion.Id">Eliminar borrador</a>
         }
         @if (Model.PuedeAnularse)
         {
             <form asp-action="Anular" asp-route-id="@notificacion.Id" method="post"
                   data-confirmar="La publicación futura quedará anulada de forma definitiva. ¿Confirma la anulación?">
-                <button type="submit" class="boton boton--secundario">Anular</button>
+                <button type="submit" class="boton boton--secundario">Anular publicación</button>
             </form>
         }
         @if (notificacion.DocumentoOriginalId is not null)
         {
             <a class="boton boton--neutro" asp-action="DocumentoOriginal" asp-route-id="@notificacion.Id">Descargar PDF original</a>
         }
-        @if (notificacion.Estado == "Borrador")
+        @if (Model.PuedeEditarse)
         {
-            <a class="boton boton--neutro" asp-action="Importar">Importar otro PDF</a>
+            <a class="boton boton--neutro" asp-action="Importar">Importar otro PDF o Excel</a>
+        }
+        @if (Model.EsPublicacionEfectiva)
+        {
+            <a class="boton boton--neutro" asp-action="Importar">Importar una notificación corregida</a>
         }
         <a class="enlace" asp-action="Index">Volver al historial</a>
     </div>
+    @if (Model.EsPublicacionEfectiva)
+    {
+        <div class="alerta alerta--aviso" role="note">
+            Esta publicación ya entró en vigor y es inmutable: no se puede editar,
+            borrar ni anular. Si contiene datos incorrectos, importe una notificación
+            corregida y publíquela con su propia fecha de vigencia. Los pedidos ya
+            enviados conservan el precio y la publicación que tenían congelados.
+        </div>
+    }
 </section>
 <section class="tarjeta tarjeta--tabla">
     <h2>Detalles de precio</h2>

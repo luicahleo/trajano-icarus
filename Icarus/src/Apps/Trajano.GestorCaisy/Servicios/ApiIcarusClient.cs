@@ -113,6 +113,14 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         await AsegurarExitoAsync(respuesta, token);
     }
 
+    public async Task DescartarBorradorAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Delete, $"precios-alimentos/{id}", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
     public async Task<Stream> DescargarDocumentoOriginalAsync(
         Guid id, CancellationToken token = default)
     {
@@ -380,11 +388,16 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         if (accessToken is not null)
             peticion.Headers.Authorization = new("Bearer", accessToken);
         var parte = new StreamContent(new MemoryStream(bytes));
-        parte.Headers.ContentType = new("application/pdf");
+        parte.Headers.ContentType = new(ObtenerTipoContenidoArchivo(nombreArchivo));
         var cuerpo = new MultipartFormDataContent { { parte, "archivo", nombreArchivo } };
         peticion.Content = cuerpo;
         return peticion;
     }
+
+    private static string ObtenerTipoContenidoArchivo(string nombreArchivo) =>
+        string.Equals(Path.GetExtension(nombreArchivo), ".xlsx", StringComparison.OrdinalIgnoreCase)
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            : "application/pdf";
 
     // La API vive bajo /api del mismo origen lógico en despliegue; si la
     // configuración trae una URL absoluta (desarrollo, pruebas) se usa tal cual.

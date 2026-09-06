@@ -75,6 +75,15 @@ public static class PreciosAlimentosEndpoints
             return Results.NoContent();
         });
 
+        // Descarte lógico de un borrador (glosario): solo el estado Borrador lo
+        // permite; publicaciones y anuladas responden error de negocio.
+        grupo.MapDelete("/{id:guid}", async (Guid id, ISender mediator,
+            CancellationToken cancellationToken) =>
+        {
+            await mediator.Send(new DescartarBorradorPreciosCommand(id), cancellationToken);
+            return Results.NoContent();
+        });
+
         grupo.MapGet("/{id:guid}/documento-original", async (Guid id, ISender mediator,
             CancellationToken cancellationToken) =>
             Results.Stream(await mediator.Send(new DescargarDocumentoOriginalQuery(id), cancellationToken),

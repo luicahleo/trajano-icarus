@@ -238,6 +238,70 @@ public class FlujoPreciosTests
         Assert.StartsWith("/Sesion/Error", respuesta.Headers.Location?.OriginalString);
     }
 
+    [Fact]
+    public async Task DescartarUnBorradorPideConfirmacionYRedirigeAlHistorial()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.DetalleActual = ApiIcarusFalsa.CrearDetalle(id, "Borrador");
+
+        var confirmacion = await cliente.GetStringAsync($"/Precios/{id}/Descartar");
+        Assert.Contains("Descartar", confirmacion);
+        Assert.Contains("Preiniciador", confirmacion);
+
+        var token = AplicacionDePruebas.ExtraerTokenAntiforgery(confirmacion)!;
+        var respuesta = await cliente.PostAsync($"/Precios/{id}/Descartar",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, respuesta.StatusCode);
+        Assert.Equal("/Precios", respuesta.Headers.Location?.OriginalString);
+        Assert.Equal(1, aplicacion.Api.VecesDescartar);
+        Assert.Equal(id, aplicacion.Api.UltimoDescartado);
+    }
+
+    [Fact]
+    public async Task DescartarUnBorradorYaDescartadoRedirigeIgualAlHistorial()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.DetalleActual = ApiIcarusFalsa.CrearDetalle(id, "Borrador");
+        aplicacion.Api.ErrorDeDescartar = new ErrorApiException(404, "Recurso no encontrado");
+        var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, $"/Precios/{id}/Descartar");
+
+        var respuesta = await cliente.PostAsync($"/Precios/{id}/Descartar",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, respuesta.StatusCode);
+        Assert.Equal("/Precios", respuesta.Headers.Location?.OriginalString);
+        Assert.Equal(1, aplicacion.Api.VecesDescartar);
+    }
+
+    [Fact]
+    public async Task PublicacionEfectivaNoSeBorraNiSeAnulaYOfreceCorreccion()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.DetalleActual = ApiIcarusFalsa.CrearDetalle(
+            id, "Publicada", vigenteDesde: "2025-01-01");
+
+        var html = await cliente.GetStringAsync($"/Precios/{id}");
+
+        Assert.DoesNotContain($"/Precios/{id}/Anular", html);
+        Assert.DoesNotContain($"/Precios/{id}/Descartar", html);
+        Assert.DoesNotContain($"/Precios/{id}/Editar", html);
+        Assert.Contains("inmutable", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"/Precios/Importar", html);
+    }
+
     private static MultipartFormDataContent ContenidoMultiparte(string token)
     {
         var contenido = new MultipartFormDataContent();

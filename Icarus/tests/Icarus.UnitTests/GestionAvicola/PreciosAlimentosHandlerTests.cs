@@ -44,6 +44,9 @@ public class PreciosAlimentosHandlerTests
     private ActualizarBorradorPreciosHandler CrearActualizador() =>
         new(_repositorio, _registroVuelo, _unidadTrabajo);
 
+    private DescartarBorradorPreciosHandler CrearDescartador() =>
+        new(_repositorio, _registroVuelo, _unidadTrabajo);
+
     private static IReadOnlyList<DatosDetallePrecio> DoceDetalles(decimal? precioActualControl = 180m) =>
         Enum.GetValues<TipoAlimento>()
             .SelectMany(t => new[]
@@ -209,5 +212,67 @@ public class PreciosAlimentosHandlerTests
                 new ActualizarBorradorPreciosCommand(
                     publicada.Id, FechaDocumento, VigenteDesde, 1.20m, 0.60m, 0.75m, DoceDetalles()),
                 CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task DescartarUnBorradorLoDesactivaYGuarda()
+    {
+        var borrador = CrearBorradorPublicable();
+        _repositorio.ObtenerPorIdAsync(borrador.Id, Arg.Any<CancellationToken>())
+            .Returns(borrador);
+
+        await CrearDescartador().Handle(
+            new DescartarBorradorPreciosCommand(borrador.Id), CancellationToken.None);
+
+        Assert.False(borrador.EstaActivo);
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Borrador, borrador.Estado);
+        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DescartarUnaPublicacionLanzaReglaDeNegocio()
+    {
+        var publicada = CrearBorradorPublicable();
+        publicada.Publicar();
+        _repositorio.ObtenerPorIdAsync(publicada.Id, Arg.Any<CancellationToken>())
+            .Returns(publicada);
+
+        var excepcion = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            CrearDescartador().Handle(
+                new DescartarBorradorPreciosCommand(publicada.Id), CancellationToken.None));
+
+        Assert.Equal("Solo un borrador se puede descartar.", excepcion.Message);
+        Assert.True(publicada.EstaActivo);
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Publicada, publicada.Estado);
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DescartarUnaAnuladaLanzaReglaDeNegocio()
+    {
+        var anulada = CrearBorradorPublicable();
+        anulada.Publicar();
+        anulada.AnularFutura(anulada.VigenteDesde.AddDays(-1));
+        _repositorio.ObtenerPorIdAsync(anulada.Id, Arg.Any<CancellationToken>())
+            .Returns(anulada);
+
+        var excepcion = await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            CrearDescartador().Handle(
+                new DescartarBorradorPreciosCommand(anulada.Id), CancellationToken.None));
+
+        Assert.Equal("Solo un borrador se puede descartar.", excepcion.Message);
+        Assert.True(anulada.EstaActivo);
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DescartarUnaNotificacionInexistenteEs404()
+    {
+        _repositorio.ObtenerPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((NotificacionPreciosAlimentos?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            CrearDescartador().Handle(
+                new DescartarBorradorPreciosCommand(Guid.NewGuid()), CancellationToken.None));
     }
 }

@@ -364,6 +364,13 @@ public class PreciosAlimentosEndpointsTests
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
 
+    private static async Task<HttpStatusCode> DescartarAsync(HttpClient cliente, string token, Guid id)
+    {
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Delete, $"/api/precios-alimentos/{id}", token));
+        return respuesta.StatusCode;
+    }
+
     [Fact]
     public async Task ConsultasSinAutorizacionDevuelven401()
     {
@@ -372,5 +379,51 @@ public class PreciosAlimentosEndpointsTests
         var respuesta = await cliente.GetAsync("/api/precios-alimentos");
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task DescartarUnBorradorImportadoLoQuitaDelListadoYEsIdempotente()
+    {
+        var (cliente, token) = await CrearCuentaCaisyConFuncion();
+        var id = await ImportarConAsync(
+            cliente, token, FixtureConFechas(FechaDocumentoComun, VigenciaUnica()));
+
+        Assert.Equal(HttpStatusCode.NoContent, await DescartarAsync(cliente, token, id));
+
+        var historial = await ObtenerAsync(cliente, token, "/api/precios-alimentos");
+        Assert.DoesNotContain(historial.EnumerateArray(),
+            i => Guid.Parse(i.GetProperty("id").GetString()!) == id);
+
+        var detalle = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/precios-alimentos/{id}", token));
+        Assert.Equal(HttpStatusCode.NotFound, detalle.StatusCode);
+
+        // Idempotencia: repetir el descarte responde 404 (registro ya inactivo),
+        // nunca un error técnico.
+        Assert.Equal(HttpStatusCode.NotFound, await DescartarAsync(cliente, token, id));
+    }
+
+    [Fact]
+    public async Task DescartarUnaPublicacionOAnuladaDevuelveErrorDeNegocio()
+    {
+        var (cliente, token) = await CrearCuentaCaisyConFuncion();
+        var publicada = await ImportarConAsync(
+            cliente, token, FixtureConFechas(FechaDocumentoComun, VigenciaFutura));
+        Assert.Equal(HttpStatusCode.NoContent, await PublicarAsync(cliente, token, publicada));
+
+        var descartePublicada = await DescartarAsync(cliente, token, publicada);
+        Assert.Equal(HttpStatusCode.BadRequest, descartePublicada);
+
+        // Sigue publicada y puede anularse como futura; el descarte no la dañó.
+        var detalle = await ObtenerAsync(cliente, token, $"/api/precios-alimentos/{publicada}");
+        Assert.Equal("Publicada", detalle.GetProperty("estado").GetString());
+
+        var anular = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/precios-alimentos/{publicada}/anular", token));
+        Assert.Equal(HttpStatusCode.NoContent, anular.StatusCode);
+
+        var anulada = await ObtenerAsync(cliente, token, $"/api/precios-alimentos/{publicada}");
+        Assert.Equal("Anulada", anulada.GetProperty("estado").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, await DescartarAsync(cliente, token, publicada));
     }
 }

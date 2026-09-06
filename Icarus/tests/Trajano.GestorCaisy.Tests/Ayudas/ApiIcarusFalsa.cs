@@ -12,6 +12,7 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
     public Exception? ErrorDeObtener { get; set; }
     public Exception? ErrorDePublicar { get; set; }
     public Exception? ErrorDeAnular { get; set; }
+    public Exception? ErrorDeDescartar { get; set; }
     public Exception? ErrorDeActualizar { get; set; }
     public Exception? ErrorDeImportar { get; set; }
     public Exception? ErrorDeDescargar { get; set; }
@@ -29,11 +30,13 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
     public int VecesActualizar { get; private set; }
     public int VecesPublicar { get; private set; }
     public int VecesAnular { get; private set; }
+    public int VecesDescartar { get; private set; }
     public int VecesDescargar { get; private set; }
 
     public Guid? UltimoObtenido { get; private set; }
     public Guid? UltimoPublicado { get; private set; }
     public Guid? UltimoAnulado { get; private set; }
+    public Guid? UltimoDescartado { get; private set; }
     public (string Correo, string Contrasena)? UltimoAcceso { get; private set; }
     public ComandoActualizarBorradorApi? UltimoComando { get; private set; }
     public byte[]? UltimoPdfImportado { get; private set; }
@@ -98,6 +101,14 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         VecesAnular++;
         UltimoAnulado = id;
         if (ErrorDeAnular is not null) throw ErrorDeAnular;
+        return Task.CompletedTask;
+    }
+
+    public Task DescartarBorradorAsync(Guid id, CancellationToken token = default)
+    {
+        VecesDescartar++;
+        UltimoDescartado = id;
+        if (ErrorDeDescartar is not null) throw ErrorDeDescartar;
         return Task.CompletedTask;
     }
 

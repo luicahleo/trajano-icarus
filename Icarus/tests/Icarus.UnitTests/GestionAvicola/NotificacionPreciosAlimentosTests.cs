@@ -163,4 +163,47 @@ public class NotificacionPreciosAlimentosTests
         Assert.Throws<ReglaNegocioException>(() => notificacion.AnularFutura(new(2025, 11, 1)));
         Assert.Equal(EstadoNotificacionPreciosAlimentos.Borrador, notificacion.Estado);
     }
+
+    [Fact]
+    public void DescartarBorradorLoDesactivaSinBorrarlo()
+    {
+        var notificacion = BorradorConDoceDetalles();
+
+        notificacion.DescartarBorrador();
+
+        Assert.False(notificacion.EstaActivo);
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Borrador, notificacion.Estado);
+        Assert.Equal(12, notificacion.Detalles.Count);
+    }
+
+    [Fact]
+    public void DescartarNoAlcanzaAUnaPublicacionNiAUnaAnulada()
+    {
+        var publicada = BorradorConDoceDetalles();
+        publicada.Publicar();
+        var anulada = BorradorConDoceDetalles();
+        anulada.Publicar();
+        anulada.AnularFutura(anulada.VigenteDesde.AddDays(-1));
+
+        var excepcion = Assert.Throws<ReglaNegocioException>(() => publicada.DescartarBorrador());
+
+        Assert.Equal("Solo un borrador se puede descartar.", excepcion.Message);
+        Assert.True(publicada.EstaActivo);
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Publicada, publicada.Estado);
+        Assert.Throws<ReglaNegocioException>(() => anulada.DescartarBorrador());
+        Assert.True(anulada.EstaActivo);
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Anulada, anulada.Estado);
+    }
+
+    [Fact]
+    public void DescartarUnBorradorYaDescartadoEsInocuo()
+    {
+        var notificacion = BorradorConDoceDetalles();
+
+        notificacion.DescartarBorrador();
+        notificacion.DescartarBorrador();
+
+        Assert.False(notificacion.EstaActivo);
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Borrador, notificacion.Estado);
+    }
 }

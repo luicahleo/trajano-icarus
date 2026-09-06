@@ -3,10 +3,30 @@ using Trajano.GestorCaisy.Servicios;
 
 namespace Trajano.GestorCaisy.Models;
 
-// Vista de detalle con las acciones habilitadas según el estado del agregado:
-// solo el borrador se edita y solo una publicación futura se anula.
+// Vista de detalle con las acciones habilitadas según el estado del agregado
+// y la fecha de negocio (spec SP8): solo el borrador se edita o se descarta y
+// solo una publicación futura se anula. Una publicación efectiva es inmutable:
+// no ofrece editar, descartar ni anular, solo la guía a una corrección nueva.
 public sealed record VistaDetalles(
-    NotificacionPreciosDetalleApi Notificacion, bool PuedeEditarse, bool PuedeAnularse);
+    NotificacionPreciosDetalleApi Notificacion,
+    bool PuedeEditarse,
+    bool PuedeAnularse,
+    bool PuedeDescartarse,
+    bool EsPublicacionEfectiva)
+{
+    public static VistaDetalles Crear(NotificacionPreciosDetalleApi notificacion)
+    {
+        var hoy = FechasDeOficina.Hoy();
+        return new VistaDetalles(
+            notificacion,
+            PuedeEditarse: notificacion.Estado == "Borrador",
+            PuedeAnularse: notificacion.Estado == "Publicada"
+                && notificacion.VigenteDesde > hoy,
+            PuedeDescartarse: notificacion.Estado == "Borrador",
+            EsPublicacionEfectiva: notificacion.Estado == "Publicada"
+                && notificacion.VigenteDesde <= hoy);
+    }
+}
 
 public sealed class FilaDetalleVista
 {

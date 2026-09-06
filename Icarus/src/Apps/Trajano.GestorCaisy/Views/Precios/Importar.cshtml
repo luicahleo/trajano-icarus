@@ -14,7 +14,7 @@
 </div>
 <partial name="_Avisos" />
 <section class="tarjeta">
-    <div asp-validation-summary="ModelOnly" class="alerta alerta--error" role="alert"></div>
+    <div asp-validation-summary="All" class="alerta alerta--error" role="alert"></div>
     <form asp-action="Importar" method="post" enctype="multipart/form-data" class="forma">
         <div class="campo">
             <label for="archivo">Archivo PDF de la notificación</label>

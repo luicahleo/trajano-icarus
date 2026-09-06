@@ -100,6 +100,16 @@ public sealed class NotificacionPreciosAlimentos : AggregateRoot
         Estado = EstadoNotificacionPreciosAlimentos.Publicada;
     }
 
+    // Borrado lógico (glosario, regla transversal 1): solo un borrador se
+    // descarta; queda inactivo para auditoría técnica y deja de aparecer en el
+    // listado por el filtro global. Es inocuo repetirlo sobre un borrador ya
+    // descartado.
+    public void DescartarBorrador()
+    {
+        AsegurarEditable("Solo un borrador se puede descartar.");
+        EstaActivo = false;
+    }
+
     // Solo una publicación futura (aún no efectiva) se puede anular; una
     // efectiva queda sellada para siempre.
     public void AnularFutura(DateOnly hoy)

@@ -8,8 +8,9 @@ namespace Trajano.GestorCaisy.Controllers;
 
 // Notificaciones de Precios de Alimentos (SP8A): lista e historial,
 // importación del PDF, revisión del borrador, publicación con confirmación
-// explícita, anulación de una publicación futura y descarga del original.
-// Los pedidos de alimento llegan en SP8B; no se muestran controles de pedidos.
+// explícita, descarte lógico de un borrador, anulación de una publicación
+// futura y descarga del original. Los pedidos de alimento llegan en SP8B; no
+// se muestran controles de pedidos.
 [Route("Precios")]
 [Authorize(Policy = ConstantesAutorizacion.PoliticaGestorPedidoAlimento)]
 public sealed class PreciosController(IApiIcarusClient api) : Controller
@@ -33,10 +34,7 @@ public sealed class PreciosController(IApiIcarusClient api) : Controller
         {
             return NotFound();
         }
-        return View(new VistaDetalles(
-            notificacion,
-            PuedeEditarse: notificacion.Estado == "Borrador",
-            PuedeAnularse: PuedeAnularse(notificacion)));
+        return View(VistaDetalles.Crear(notificacion));
     }
 
     [HttpGet("Importar")]
@@ -143,10 +141,7 @@ public sealed class PreciosController(IApiIcarusClient api) : Controller
         if (!ModelState.IsValid)
             return BadRequest();
         var notificacion = await api.ObtenerNotificacionAsync(id, token);
-        return View(new VistaDetalles(
-            notificacion,
-            PuedeEditarse: false,
-            PuedeAnularse: PuedeAnularse(notificacion)));
+        return View(VistaDetalles.Crear(notificacion));
     }
 
     [HttpPost("{id:guid}/Publicar")]
@@ -186,6 +181,46 @@ public sealed class PreciosController(IApiIcarusClient api) : Controller
         return RedirectToAction(nameof(Detalles), new { id });
     }
 
+    // El descarte de un borrador exige una confirmación en su propia página:
+    // el borrador desaparece del historial y no se puede recuperar.
+    [HttpGet("{id:guid}/Descartar")]
+    [ActionName("ConfirmarDescartar")]
+    public async Task<IActionResult> ConfirmarDescartar(Guid id, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        var notificacion = await api.ObtenerNotificacionAsync(id, token);
+        if (notificacion.Estado != "Borrador")
+            return RedirectToAction(nameof(Detalles), new { id });
+        return View("Descartar", VistaDetalles.Crear(notificacion));
+    }
+
+    [HttpPost("{id:guid}/Descartar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Descartar(Guid id, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        try
+        {
+            await api.DescartarBorradorAsync(id, token);
+            TempData["Exito"] = "El borrador se descartó y ya no figura en el historial.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (ErrorApiException error) when (error.Estado is 400 or 409)
+        {
+            TempData["Error"] = error.MensajeParaLaInterfaz();
+            return RedirectToAction(nameof(ConfirmarDescartar), new { id });
+        }
+        catch (ErrorApiException error) when (error.Estado == StatusCodes.Status404NotFound)
+        {
+            // Idempotencia: un reintento tras descartar encuentra el borrador
+            // inactivo y la API responde 404; se trata como éxito ya aplicado.
+            TempData["Exito"] = "El borrador se descartó y ya no figura en el historial.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
     [HttpGet("{id:guid}/DocumentoOriginal")]
     public async Task<IActionResult> DocumentoOriginal(Guid id, CancellationToken token)
     {
@@ -205,10 +240,6 @@ public sealed class PreciosController(IApiIcarusClient api) : Controller
             contenido, "application/pdf",
             $"notificacion-precios-{notificacion.FechaDocumento:yyyy-MM-dd}.pdf");
     }
-
-    private static bool PuedeAnularse(NotificacionPreciosDetalleApi notificacion) =>
-        notificacion.Estado == "Publicada"
-        && notificacion.VigenteDesde > FechasDeOficina.Hoy();
 
     private void CopiarErroresDeValidacion(ErrorApiException error)
     {

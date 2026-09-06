@@ -61,6 +61,14 @@ public sealed record AnularNotificacionFuturaCommand(Guid NotificacionId)
         new Dictionary<string, DatoRegistroVuelo>());
 }
 
+public sealed record DescartarBorradorPreciosCommand(Guid NotificacionId)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.precios.descartar-borrador",
+        new Dictionary<string, DatoRegistroVuelo>());
+}
+
 public sealed record ListarNotificacionesPreciosQuery
     : IRequest<IReadOnlyList<NotificacionPreciosResumen>>;
 
@@ -273,6 +281,26 @@ public sealed class AnularNotificacionFuturaHandler(
         // (spec SP8) y la corrección es otra publicación.
         notificacion.AnularFutura(FechasNegocio.Hoy());
         registroVuelo.Decidir("avicola.precios.anular-futura", "anulacion", "aplicada",
+            new Dictionary<string, object?>());
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+}
+
+// Descarte de un borrador (soft delete del glosario): el agregado solo lo
+// permite en estado Borrador y el filtro global oculta el registro inactivo.
+// El control de concurrencia optimista lo aporta la unidad de trabajo.
+public sealed class DescartarBorradorPreciosHandler(
+    IRepositorioNotificacionesPrecios repositorio,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    : IRequestHandler<DescartarBorradorPreciosCommand>
+{
+    public async Task Handle(DescartarBorradorPreciosCommand request, CancellationToken cancellationToken)
+    {
+        var notificacion = await repositorio.ObtenerPorIdAsync(request.NotificacionId, cancellationToken)
+            ?? throw new NotFoundException("Notificación de precios", request.NotificacionId);
+        notificacion.DescartarBorrador();
+        registroVuelo.Decidir("avicola.precios.descartar-borrador", "borrado", "aplicada",
             new Dictionary<string, object?>());
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }

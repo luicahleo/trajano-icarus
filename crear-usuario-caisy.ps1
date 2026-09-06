@@ -12,6 +12,8 @@
 #
 # -Inseguro acepta el certificado autofirmado de Caddy del stack PC local; no
 # lo uses contra la VPS (allí el certificado es válido).
+
+# Usar este comando, hay que cambiar la ip segun la pc  .\crear-usuario-caisy.ps1 -BaseUrl "https://192.168.1.106.sslip.io" -Email "gpa@icarus.test" -Inseguro
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$BaseUrl,
