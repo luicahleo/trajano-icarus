@@ -614,9 +614,12 @@ public sealed class AgregarDocumentoNotaHandler(
     private static string SanearNombre(string? nombreArchivo)
     {
         var nombre = Path.GetFileName(nombreArchivo?.Trim() ?? string.Empty);
-        var caracteresInvalidos = Path.GetInvalidFileNameChars();
+        // Conjunto explícito e independiente de la plataforma:
+        // Path.GetInvalidFileNameChars() varía (en Linux <, >, ", |, ?, * y \
+        // son caracteres válidos) y el contrato de seguridad del nombre debe
+        // ser el mismo en Windows, Linux y dentro del contenedor.
         var sano = new string(nombre
-            .Select(c => Array.IndexOf(caracteresInvalidos, c) >= 0 ? '-' : c)
+            .Select(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or ' ' ? c : '-')
             .ToArray())
             .Replace("..", "-", StringComparison.Ordinal)
             .Trim('.', ' ');
