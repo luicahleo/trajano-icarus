@@ -1,0 +1,39 @@
+# Producción VPS de Trajano.GestorCaisy (aplicación de oficina de CAISY).
+# La imagen se construye y valida por SHA desde el workflow de despliegue.
+# Paridad con el entorno preparado por el agenteVPS (doc 39 del intercambio
+# agenteLocal/agenteVPS): puerto 8086 en loopback, volumen de claves
+# DataProtection pre-asignado a uid 1654 y healthcheck en la página de login
+# (la app no expone /health).
+services:
+  trajano-gestorcaisy:
+    image: trajano-gestorcaisy:${TRAJANOGESTORCAISY_IMAGE_TAG:-latest}
+    container_name: trajano-gestorcaisy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file: .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_HTTP_PORTS: "8080"
+      TZ: "America/La_Paz"
+    ports:
+      - "127.0.0.1:8086:8080"
+    networks: [trajano-shared-network]
+    volumes:
+      # Claves DataProtection: conservan las sesiones de oficina al recrear el
+      # contenedor. Carpeta pre-asignada a uid/gid 1654 (usuario app) en la VPS.
+      - ./dataprotection-keys:/home/app/.aspnet/DataProtection-Keys
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Host: gestor.trajano.online' http://localhost:8080/Sesion/Acceder || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  trajano-shared-network:
+    external: true
