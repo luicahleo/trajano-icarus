@@ -99,8 +99,7 @@ export interface PedidoDetalle {
   recepcion: RecepcionPedido | null;
 }
 
-export const listarPedidos = () =>
-  peticion<PedidoResumen[]>({ ruta: '/pedidos-alimento' });
+export const listarPedidos = () => peticion<PedidoResumen[]>({ ruta: '/pedidos-alimento' });
 
 export const obtenerPedido = (id: string) =>
   peticion<PedidoDetalle>({ ruta: `/pedidos-alimento/${id}` });
@@ -138,6 +137,7 @@ export const obtenerOriginalDocumentoNota = (pedidoId: string, documentoId: stri
 export interface DetallePrecioVigente {
   tipoAlimento: string;
   presentacion: string;
+  codigo: string;
   precioFinalPor40Kg: number;
   edadDesdeDias: number | null;
   edadHastaDias: number | null;
@@ -146,6 +146,8 @@ export interface DetallePrecioVigente {
 export interface PublicacionVigente {
   id: string;
   estado: string;
+  fechaDocumento: string;
+  vigenteDesde: string;
   aporteCaisy: number;
   fondo: number;
   servicios: number;

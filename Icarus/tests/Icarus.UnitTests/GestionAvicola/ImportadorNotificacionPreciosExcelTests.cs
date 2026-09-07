@@ -40,12 +40,12 @@ public sealed class ImportadorNotificacionPreciosExcelTests
             hoja.Cell("A5").Value = "Fecha de Aplicación:"; hoja.Cell("B5").Value = "05/09/2026";
             hoja.Cell("A7").Value = "Código"; hoja.Cell("B7").Value = "Tipo / Descripción de Alimento";
             hoja.Cell("C7").Value = "Presentación"; hoja.Cell("D7").Value = "Edad de Alimentación (Días)";
-            hoja.Cell("E7").Value = "Precio Actual (40kg) [Bs.]"; hoja.Cell("F7").Value = "Precio Nuevo (40kg) [Bs.]";
+            hoja.Cell("E7").Value = "Precio Actual (40kg) [Bs.]"; hoja.Cell("F7").Value = "Nuevo Precio (40kg) [Bs.]";
             hoja.Cell("G7").Value = "Diferencia [Bs.]";
-            hoja.Cell("A8").Value = "SJ-1B"; hoja.Cell("B8").Value = "Crecimiento";
+            hoja.Cell("A8").Value = "SJ-1B"; hoja.Cell("B8").Value = "Crecimiento / Polluela 1";
             hoja.Cell("C8").Value = "Saco / Bolsa"; hoja.Cell("D8").Value = "29 - 70";
             hoja.Cell("E8").Value = 170; hoja.Cell("F8").Value = cambiarPrecio ? "" : 180;
-            hoja.Cell("A10").Value = "Nota: Los precios incluyen Reserva de Utilización (Bs. 1.20), Aporte/Cuota (Bs. 0.60) y Comisión de Procesamiento (Bs. 0.75).";
+            hoja.Cell("A10").Value = "Nota: Los precios incluyen Reserva de Utilización (Bs. 1.20), Aporte/Cuota (Bs. 0.70) y Comisión de Procesamiento (Bs. 0.75).";
             libro.SaveAs(stream);
         }
         stream.Position = 0;

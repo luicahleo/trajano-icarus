@@ -84,7 +84,7 @@ public sealed record ObtenerPrecioVigenteQuery(DateOnly? Fecha)
 
 public sealed record DetallePrecioResumen(
     Guid Id, string TipoAlimento, string Presentacion, decimal PrecioFinalPor40Kg,
-    decimal? PrecioActualDocumento, int? EdadDesdeDias, int? EdadHastaDias);
+    decimal? PrecioActualDocumento, int? EdadDesdeDias, int? EdadHastaDias, string Codigo);
 
 public sealed record NotificacionPreciosDetalle(
     Guid Id, DateOnly FechaDocumento, DateOnly VigenteDesde, string Estado,
@@ -371,6 +371,7 @@ internal static class MapeadorPrecios
                 .OrderBy(d => d.TipoAlimento).ThenBy(d => d.Presentacion)
                 .Select(d => new DetallePrecioResumen(
                     d.Id, d.TipoAlimento.ToString(), d.Presentacion.ToString(),
-                    d.PrecioFinalPor40Kg, d.PrecioActualDocumento, d.EdadDesdeDias, d.EdadHastaDias))
+                    d.PrecioFinalPor40Kg, d.PrecioActualDocumento, d.EdadDesdeDias, d.EdadHastaDias,
+                    CatalogoAlimentosCaisy.CodigoDe(d.TipoAlimento, d.Presentacion)))
                 .ToList());
 }

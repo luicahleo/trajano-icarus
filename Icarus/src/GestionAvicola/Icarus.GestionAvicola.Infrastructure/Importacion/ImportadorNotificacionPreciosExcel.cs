@@ -7,25 +7,11 @@ using Icarus.GestionAvicola.Domain;
 
 namespace Icarus.GestionAvicola.Infrastructure.Importacion;
 
-// Importa el formato real de CAISY: los códigos distinguen tipo y presentación,
-// la edad llega como rango textual y los tres aportes están en la nota final.
+// Importa el formato real de CAISY: los códigos distinguen tipo y presentación
+// (catálogo del dominio), la edad llega como rango textual y los tres aportes
+// están en la nota final.
 public sealed partial class ImportadorNotificacionPreciosExcel : IImportadorNotificacionPreciosExcel
 {
-    private static readonly Dictionary<string, (TipoAlimento Tipo, PresentacionAlimento Presentacion)> Productos = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["SJ-PRE"] = (TipoAlimento.Preiniciador, PresentacionAlimento.Bolsa),
-        ["SJ-PREG"] = (TipoAlimento.Preiniciador, PresentacionAlimento.Granel),
-        ["SJ-1B"] = (TipoAlimento.Iniciador, PresentacionAlimento.Bolsa),
-        ["SJ-1G"] = (TipoAlimento.Iniciador, PresentacionAlimento.Granel),
-        ["SJ-2B"] = (TipoAlimento.Crecimiento, PresentacionAlimento.Bolsa),
-        ["SJ-2G"] = (TipoAlimento.Crecimiento, PresentacionAlimento.Granel),
-        ["SJ-3B"] = (TipoAlimento.Finalizador, PresentacionAlimento.Bolsa),
-        ["SJ-3G"] = (TipoAlimento.Finalizador, PresentacionAlimento.Granel),
-        ["SJ-P1B"] = (TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa),
-        ["SJ-P1G"] = (TipoAlimento.PosturaUno, PresentacionAlimento.Granel),
-        ["SJ-P2B"] = (TipoAlimento.PosturaDos, PresentacionAlimento.Bolsa),
-        ["SJ-P2G"] = (TipoAlimento.PosturaDos, PresentacionAlimento.Granel),
-    };
 
     [GeneratedRegex(@"RESERVA DE UTILIZACION\s*\(BS\.\s*([\d.,]+)\).*?APORTE/CUOTA\s*\(BS\.\s*([\d.,]+)\).*?COMISION DE PROCESAMIENTO\s*\(BS\.\s*([\d.,]+)", RegexOptions.IgnoreCase)]
     private static partial Regex PatronAportes();
@@ -58,7 +44,7 @@ public sealed partial class ImportadorNotificacionPreciosExcel : IImportadorNoti
                 errores.Add(new ErrorImportacionPdf(null, "No se encontraron los aportes, fondo y servicios en la nota del documento."));
             var encabezado = usados.Rows().FirstOrDefault(r =>
                 r.CellsUsed().Any(c => Normalizar(c.GetString()) == "CODIGO") &&
-                r.CellsUsed().Any(c => Normalizar(c.GetString()).StartsWith("PRECIO NUEVO")));
+                r.CellsUsed().Any(c => EsColumnaPrecioNuevo(Normalizar(c.GetString()))));
             if (encabezado is null)
                 errores.Add(new ErrorImportacionPdf(7, "No se encontró la cabecera de la tabla de precios."));
 
@@ -71,7 +57,7 @@ public sealed partial class ImportadorNotificacionPreciosExcel : IImportadorNoti
                     var codigo = Texto(fila, columnas.Codigo);
                     if (string.IsNullOrWhiteSpace(codigo)) continue;
                     if (Normalizar(codigo).StartsWith("NOTA", StringComparison.Ordinal)) continue;
-                    if (!Productos.TryGetValue(codigo, out var producto))
+                    if (CatalogoAlimentosCaisy.BuscarPorCodigo(codigo) is not { } producto)
                     { errores.Add(new ErrorImportacionPdf(fila.RowNumber(), $"El código de producto '{codigo}' no es reconocido.")); continue; }
                     var nuevo = DecimalCelda(fila, columnas.PrecioNuevo);
                     if (nuevo is null or <= 0)
@@ -105,10 +91,14 @@ public sealed partial class ImportadorNotificacionPreciosExcel : IImportadorNoti
             if (nombre == "CODIGO") codigo = celda.Address.ColumnNumber;
             else if (nombre.StartsWith("EDAD DE ALIMENTACION")) edad = celda.Address.ColumnNumber;
             else if (nombre.StartsWith("PRECIO ACTUAL")) actual = celda.Address.ColumnNumber;
-            else if (nombre.StartsWith("PRECIO NUEVO")) nuevo = celda.Address.ColumnNumber;
+            else if (EsColumnaPrecioNuevo(nombre)) nuevo = celda.Address.ColumnNumber;
         }
         return (codigo, edad, actual, nuevo);
     }
+
+    // El formato real de CAISY nombra la columna "Nuevo Precio (40kg) [Bs.]".
+    private static bool EsColumnaPrecioNuevo(string nombre) =>
+        nombre.StartsWith("NUEVO PRECIO") || nombre.StartsWith("PRECIO NUEVO");
 
     private static (int? Desde, int? Hasta) Edades(string texto)
     {

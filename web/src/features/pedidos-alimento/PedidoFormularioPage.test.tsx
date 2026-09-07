@@ -29,12 +29,28 @@ const pedidoBorrador = {
 const precios = {
   id: 'pub1',
   estado: 'Publicada',
+  fechaDocumento: '2026-08-09',
+  vigenteDesde: '2026-08-09',
   aporteCaisy: 1.2,
   fondo: 0.6,
   servicios: 0.75,
   detalles: [
-    { tipoAlimento: 'PosturaUno', presentacion: 'Bolsa', precioFinalPor40Kg: 176.5, edadDesdeDias: 130, edadHastaDias: 500 },
-    { tipoAlimento: 'Iniciador', presentacion: 'Bolsa', precioFinalPor40Kg: 180, edadDesdeDias: 21, edadHastaDias: 60 },
+    {
+      tipoAlimento: 'PosturaUno',
+      presentacion: 'Bolsa',
+      codigo: 'SJ-P1B',
+      precioFinalPor40Kg: 176.5,
+      edadDesdeDias: 130,
+      edadHastaDias: 500,
+    },
+    {
+      tipoAlimento: 'Iniciador',
+      presentacion: 'Bolsa',
+      codigo: 'SJ-1B',
+      precioFinalPor40Kg: 180,
+      edadDesdeDias: 21,
+      edadHastaDias: 60,
+    },
   ],
 };
 
@@ -48,7 +64,9 @@ function respuesta(status: number, cuerpo?: unknown) {
 function fetchSimulado(reglas: Record<string, Response>) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = input instanceof Request ? input : new Request(String(input), init);
-    return reglas[`${req.method} ${new URL(req.url).pathname}`] ?? new Response('', { status: 404 });
+    return (
+      reglas[`${req.method} ${new URL(req.url).pathname}`] ?? new Response('', { status: 404 })
+    );
   });
 }
 
@@ -88,7 +106,9 @@ describe('PedidoFormularioPage', () => {
     });
     expect(creacion).toBeTruthy();
     const cuerpo = JSON.parse(await (creacion![0] as Request).clone().text());
-    expect(cuerpo.detalles).toEqual([{ tipoAlimento: 'PosturaUno', presentacion: 'Bolsa', cantidad: 100 }]);
+    expect(cuerpo.detalles).toEqual([
+      { tipoAlimento: 'PosturaUno', presentacion: 'Bolsa', cantidad: 100 },
+    ]);
     expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
   });
 
@@ -152,6 +172,24 @@ describe('PedidoFormularioPage', () => {
     expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
   });
 
+  test('muestra la notificación vigente y el código de cada tipo en el combo', async () => {
+    const usuario = userEvent.setup();
+    vi.stubGlobal(
+      'fetch',
+      fetchSimulado({
+        'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+        'GET /api/granjas': respuesta(200, []),
+      }),
+    );
+    renderPagina();
+    expect(
+      await screen.findByText(/vigente desde el 09\/08\/2026 \(notificada el 09\/08\/2026\)/),
+    ).toBeInTheDocument();
+    await usuario.click(screen.getByLabelText('Tipo de alimento'));
+    expect(await screen.findByRole('option', { name: 'SJ-P1B — Postura 1' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'SJ-1B — Iniciador' })).toBeInTheDocument();
+  });
+
   test('recomienda tipos por la edad de los galpones sin obligar cantidad', async () => {
     const fechafutura = new Date(Date.now() - 40 * 86_400_000).toISOString().slice(0, 10);
     vi.stubGlobal(
@@ -175,8 +213,6 @@ describe('PedidoFormularioPage', () => {
     // Un lote de ~40 días (la resta de fechas puede variar ±1 día según la
     // hora local frente al recorte UTC) cae dentro de la ventana de Iniciador
     // (21-60 días) de la publicación: la recomendación no depende del día exacto.
-    expect(
-      await screen.findByText(/Galpón 1 \((\d+) días\): Iniciador/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Galpón 1 \((\d+) días\): Iniciador/)).toBeInTheDocument();
   });
 });

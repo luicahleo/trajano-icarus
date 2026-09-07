@@ -25,10 +25,7 @@ import {
   obtenerPrecioVigente,
   type LineaPedido,
 } from './api';
-import {
-  ETIQUETAS_TIPO_ALIMENTO,
-  formatoMoneda,
-} from './constantes';
+import { ETIQUETAS_TIPO_ALIMENTO, formatoFecha, formatoMoneda } from './constantes';
 
 const TIPOS = Object.keys(ETIQUETAS_TIPO_ALIMENTO);
 
@@ -92,13 +89,14 @@ export function PedidoFormularioPage() {
     setPrecargado(true);
   }
 
-  const precioDe = useMemo(() => {
+  const detalleDe = useMemo(() => {
     const indice = new Map(
       (precios?.detalles ?? []).map((d) => [`${d.tipoAlimento}|${d.presentacion}`, d]),
     );
-    return (tipoAlimento: string) =>
-      indice.get(`${tipoAlimento}|${presentacion}`)?.precioFinalPor40Kg ?? null;
+    return (tipoAlimento: string) => indice.get(`${tipoAlimento}|${presentacion}`) ?? null;
   }, [precios, presentacion]);
+
+  const precioDe = (tipoAlimento: string) => detalleDe(tipoAlimento)?.precioFinalPor40Kg ?? null;
 
   const recomendaciones = useMemo(() => {
     const hoy = new Date();
@@ -131,8 +129,7 @@ export function PedidoFormularioPage() {
       queryClient.invalidateQueries({ queryKey: ['pedidos-alimento'] });
       navigate(`/pedidos/${resultado.id}`);
     },
-    onError: (e) =>
-      setError(e instanceof Error ? e.message : 'No se pudo guardar el pedido.'),
+    onError: (e) => setError(e instanceof Error ? e.message : 'No se pudo guardar el pedido.'),
   });
 
   const enviar = () => {
@@ -142,7 +139,12 @@ export function PedidoFormularioPage() {
       return;
     }
     const cantidades = lineas.map((l) => Number(l.cantidad));
-    if (lineas.some((l) => l.cantidad === '' || !Number.isInteger(Number(l.cantidad)) || Number(l.cantidad) <= 0)) {
+    if (
+      lineas.some(
+        (l) =>
+          l.cantidad === '' || !Number.isInteger(Number(l.cantidad)) || Number(l.cantidad) <= 0,
+      )
+    ) {
       setError('Las cantidades deben ser números enteros mayores que cero.');
       return;
     }
@@ -160,14 +162,19 @@ export function PedidoFormularioPage() {
       return;
     }
     guardar.mutate(
-      lineas.map((l) => ({ tipoAlimento: l.tipoAlimento, presentacion, cantidad: Number(l.cantidad) })),
+      lineas.map((l) => ({
+        tipoAlimento: l.tipoAlimento,
+        presentacion,
+        cantidad: Number(l.cantidad),
+      })),
     );
   };
 
   const total = lineas.reduce((acumulado, linea) => {
     const precio = precioDe(linea.tipoAlimento);
     if (precio === null) return acumulado;
-    const equivalente = presentacion === 'Bolsa' ? Number(linea.cantidad) : Number(linea.cantidad) * 25;
+    const equivalente =
+      presentacion === 'Bolsa' ? Number(linea.cantidad) : Number(linea.cantidad) * 25;
     return acumulado + precio * equivalente;
   }, 0);
 
@@ -179,13 +186,19 @@ export function PedidoFormularioPage() {
 
       <EstadoCarga cargando={esEdicion && cargandoPedido} error={false}>
         <Stack spacing={2}>
+          {precios && (
+            <Typography variant="body2" color="text.secondary">
+              Notificación de precios vigente desde el {formatoFecha(precios.vigenteDesde)}{' '}
+              (notificada el {formatoFecha(precios.fechaDocumento)}).
+            </Typography>
+          )}
           {esEdicion && pedido && pedido.estado !== 'Borrador' && (
             <Alert severity="warning">Solo un borrador se puede editar.</Alert>
           )}
           {errorPrecios && (
             <Alert severity="info">
-              No hay publicación de precios vigente: podés preparar el borrador, pero
-              el envío exige precios vigentes.
+              No hay publicación de precios vigente: podés preparar el borrador, pero el envío exige
+              precios vigentes.
             </Alert>
           )}
           {error && <Alert severity="error">{error}</Alert>}
@@ -237,16 +250,23 @@ export function PedidoFormularioPage() {
                   value={linea.tipoAlimento}
                   onChange={(e) =>
                     setLineas((actuales) =>
-                      actuales.map((l, i) => (i === indice ? { ...l, tipoAlimento: e.target.value } : l)),
+                      actuales.map((l, i) =>
+                        i === indice ? { ...l, tipoAlimento: e.target.value } : l,
+                      ),
                     )
                   }
                   sx={{ minWidth: 220 }}
                 >
-                  {TIPOS.map((tipo) => (
-                    <MenuItem key={tipo} value={tipo}>
-                      {ETIQUETAS_TIPO_ALIMENTO[tipo]}
-                    </MenuItem>
-                  ))}
+                  {TIPOS.map((tipo) => {
+                    const codigo = detalleDe(tipo)?.codigo;
+                    return (
+                      <MenuItem key={tipo} value={tipo}>
+                        {codigo
+                          ? `${codigo} — ${ETIQUETAS_TIPO_ALIMENTO[tipo]}`
+                          : ETIQUETAS_TIPO_ALIMENTO[tipo]}
+                      </MenuItem>
+                    );
+                  })}
                 </TextField>
                 <TextField
                   label={presentacion === 'Bolsa' ? 'Bolsas' : 'Toneladas'}
@@ -254,7 +274,9 @@ export function PedidoFormularioPage() {
                   value={linea.cantidad}
                   onChange={(e) =>
                     setLineas((actuales) =>
-                      actuales.map((l, i) => (i === indice ? { ...l, cantidad: e.target.value } : l)),
+                      actuales.map((l, i) =>
+                        i === indice ? { ...l, cantidad: e.target.value } : l,
+                      ),
                     )
                   }
                   slotProps={{ htmlInput: { min: 1, step: 1 } }}
@@ -279,15 +301,15 @@ export function PedidoFormularioPage() {
           <Box>
             <Button
               startIcon={<AddRoundedIcon />}
-              onClick={() => setLineas((actuales) => [...actuales, { tipoAlimento: 'PosturaUno', cantidad: '' }])}
+              onClick={() =>
+                setLineas((actuales) => [...actuales, { tipoAlimento: 'PosturaUno', cantidad: '' }])
+              }
             >
               Agregar tipo
             </Button>
           </Box>
 
-          <Typography variant="subtitle1">
-            Total estimado: {formatoMoneda(total)}
-          </Typography>
+          <Typography variant="subtitle1">Total estimado: {formatoMoneda(total)}</Typography>
 
           <Stack direction="row" spacing={1}>
             <Button variant="contained" onClick={enviar} disabled={guardar.isPending}>
