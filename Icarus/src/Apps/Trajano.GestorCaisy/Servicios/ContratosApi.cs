@@ -72,7 +72,7 @@ public sealed record LineaEntregaApi(
     string TipoAlimento, int CantidadEntregada, int Equivalentes40Kg);
 
 public sealed record DocumentoNotaApi(
-    Guid Id, string NombreSeguro, string Mime, long TamanoBytes, bool Activo);
+    Guid Id, string NombreSeguro, string Mime, long TamanoBytes);
 
 public sealed record EntregaPedidoApi(
     string NumeroNota, DateOnly FechaNota, DateOnly FechaDespacho,

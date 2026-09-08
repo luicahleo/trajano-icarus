@@ -237,7 +237,7 @@ public class PedidosControllerTests
     }
 
     [Fact]
-    public async Task DespacharRegistraLaEntregaYSubeLosRespaldos()
+    public async Task DespacharRegistraLaEntregaYRedirigeAlDetalle()
     {
         var id = Guid.NewGuid();
         var formulario = new FormularioDespachoVista
@@ -247,7 +247,6 @@ public class PedidosControllerTests
             FechaNota = FechasDeOficina.Hoy(),
             TotalInformado = 14120m,
             Lineas = [new LineaDespachoVista { TipoAlimento = "PosturaUno", CantidadSolicitada = 80, CantidadEntregada = 75 }],
-            Archivos = [],
         };
 
         var resultado = await _controlador.Despachar(id, formulario, default);
@@ -257,7 +256,7 @@ public class PedidosControllerTests
         Assert.Equal(1, _api.VecesDespachar);
         Assert.Equal("NOTA-77", _api.UltimoDespacho!.NumeroNota);
         Assert.Equal(75, _api.UltimoDespacho.Lineas.Single().CantidadEntregada);
-        Assert.Equal(0, _api.VecesSubirDocumentoNota);
+        Assert.Equal(0, _api.VecesDescargarNota);
     }
 
     [Fact]
@@ -278,6 +277,21 @@ public class PedidosControllerTests
         var vista = Assert.IsType<ViewResult>(resultado);
         Assert.Equal("Despachar", vista.ViewName);
         Assert.True(_controlador.ModelState.ContainsKey(string.Empty));
+    }
+
+    // SP8D: el recibo imprimible del despacho se sirve como PDF y la carga de
+    // respaldos de CAISY ya no existe (la foto la adjunta el receptor).
+    [Fact]
+    public async Task Recibo_DevuelveArchivoPdf()
+    {
+        var id = Guid.NewGuid();
+
+        var resultado = await _controlador.Recibo(id, default);
+
+        var archivo = Assert.IsType<FileStreamResult>(resultado);
+        Assert.Equal("application/pdf", archivo.ContentType);
+        Assert.Equal("recibo.pdf", archivo.FileDownloadName);
+        Assert.Equal(id, _api.UltimoReciboPedido);
     }
 
     [Fact]

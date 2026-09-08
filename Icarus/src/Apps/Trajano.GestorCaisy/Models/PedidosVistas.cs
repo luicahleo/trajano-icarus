@@ -68,8 +68,8 @@ public sealed class LineaDespachoVista
     public int CantidadEntregada { get; set; }
 }
 
-// Formulario del despacho (SP8C): nota manual, líneas y las imágenes de
-// respaldo (páginas o reverso) que se suben tras registrar la entrega.
+// Formulario del despacho (SP8C/SP8D): nota manual y líneas entregadas. La
+// foto del receptor no se sube acá: viaja con la confirmación de recepción.
 public sealed class FormularioDespachoVista
 {
     [JsonRequired]
@@ -87,6 +87,4 @@ public sealed class FormularioDespachoVista
 
     [JsonRequired]
     public List<LineaDespachoVista> Lineas { get; set; } = [];
-
-    public List<IFormFile> Archivos { get; set; } = [];
 }

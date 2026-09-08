@@ -50,6 +50,10 @@
         {
             <a class="boton boton--primario" asp-action="Despachar" asp-route-id="@pedido.Id">Registrar despacho</a>
         }
+        @if (pedido.Entrega is not null)
+        {
+            <a class="boton" asp-action="Recibo" asp-route-id="@pedido.Id" target="_blank">Imprimir recibo</a>
+        }
         <a class="enlace" asp-action="Index">Volver a la bandeja</a>
     </div>
 </section>
@@ -161,43 +165,26 @@
         </table>
     </section>
     <section class="tarjeta tarjeta--tabla">
-        <h2>Respaldos de la nota</h2>
+        <h2>Respaldo fotográfico del receptor</h2>
         @if (entrega.Documentos.Count == 0)
         {
-            <p class="vacio__texto">Sin respaldos guardados todavía.</p>
+            <p class="vacio__texto">El receptor aún no confirmó la recepción con su foto.</p>
         }
         else
         {
             <div class="respaldos">
                 @foreach (var documento in entrega.Documentos)
                 {
-                    <figure class="respaldos__item @(documento.Activo ? "" : "respaldos__item--inactivo")">
+                    <figure class="respaldos__item">
                         <img src="@Url.Action("NotaDocumento", "Pedidos", new { id = pedido.Id, documentoId = documento.Id })"
-                             alt="Respaldo de la nota: @documento.NombreSeguro" loading="lazy" />
+                             alt="Respaldo de la nota recibida: @documento.NombreSeguro" loading="lazy" />
                         <figcaption>
                             @documento.NombreSeguro
-                            (@(documento.TamanoBytes / 1024) KB@(documento.Activo ? "" : ", reemplazado"))
+                            (@(documento.TamanoBytes / 1024) KB)
                         </figcaption>
                     </figure>
                 }
             </div>
-        }
-        @if (pedido.Estado == "Despachado")
-        {
-            <form asp-action="AgregarNotaDocumento" asp-route-id="@pedido.Id" method="post"
-                  enctype="multipart/form-data" class="campo">
-                <label for="archivo-nota">Agregar o reemplazar un respaldo</label>
-                <input id="archivo-nota" name="archivo" type="file"
-                       accept="image/jpeg,image/png,image/webp" required />
-                <select name="reemplazaDocumentoId" aria-label="Documento a reemplazar">
-                    <option value="">Agregar como nueva imagen</option>
-                    @foreach (var documento in entrega.Documentos.Where(d => d.Activo))
-                    {
-                        <option value="@documento.Id">Reemplazar: @documento.NombreSeguro</option>
-                    }
-                </select>
-                <button type="submit" class="boton boton--secundario">Guardar respaldo</button>
-            </form>
         }
     </section>
 }

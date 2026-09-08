@@ -78,10 +78,9 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         }).ToList(),
     };
 
-    // Registra la entrega/nota (una única por pedido) y sube cada imagen de
-    // respaldo con su propio multipart. Si una imagen falla, el despacho ya
-    // quedó registrado: el error se muestra y el respaldo puede volverse a
-    // subir desde el detalle mientras el pedido esté despachado.
+    // Registra la entrega/nota (una única por pedido). La foto de la nota la
+    // adjunta el receptor al confirmar la recepción (SP8D): CAISY no sube
+    // respaldos en este paso.
     [HttpPost("{id:guid}/Despachar")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Despachar(
@@ -109,29 +108,26 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
             ModelState.AddModelError(string.Empty, error.MensajeParaLaInterfaz());
             return View("Despachar", formulario);
         }
-        var respaldos = 0;
-        var fallidos = 0;
-        foreach (var archivo in formulario.Archivos.Where(a => a.Length > 0))
-        {
-            try
-            {
-                await using var contenido = archivo.OpenReadStream();
-                await api.SubirDocumentoNotaAsync(id, contenido, archivo.FileName, null, token);
-                respaldos++;
-            }
-            catch (ErrorApiException)
-            {
-                fallidos++;
-            }
-        }
-        TempData["Exito"] = (respaldos, fallidos) switch
-        {
-            (0, 0) => "El pedido quedó despachado con su nota registrada.",
-            (_, 0) => "El pedido quedó despachado con su nota y sus respaldos guardados.",
-            (0, _) => "El pedido quedó despachado pero ningún respaldo se pudo guardar; subilos desde el detalle.",
-            _ => "El pedido quedó despachado; algunos respaldos no se pudieron guardar y se pueden volver a subir desde el detalle.",
-        };
+        TempData["Exito"] = "El pedido quedó despachado con su nota registrada.";
         return RedirectToAction(nameof(Detalles), new { id });
+    }
+
+    // Recibo imprimible (spec SP8D): PDF con los datos del despacho, para
+    // firmar/sellar en papel antes de entregarlo al transportista.
+    [HttpGet("{id:guid}/Recibo")]
+    public async Task<IActionResult> Recibo(Guid id, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        try
+        {
+            var contenido = await api.ObtenerReciboPdfAsync(id, token);
+            return File(contenido, "application/pdf", "recibo.pdf");
+        }
+        catch (ErrorApiException error) when (error.Estado == StatusCodes.Status404NotFound)
+        {
+            return NotFound();
+        }
     }
 
     // Vista derivada de un respaldo para el detalle (inline); el original no
@@ -150,33 +146,6 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         {
             return NotFound();
         }
-    }
-
-    // Alta de un respaldo adicional (o sustitución) mientras el pedido está
-    // despachado, antes de la recepción (spec SP8C).
-    [HttpPost("{id:guid}/Nota/Documentos")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AgregarNotaDocumento(
-        Guid id, IFormFile? archivo, Guid? reemplazaDocumentoId, CancellationToken token)
-    {
-        if (!ModelState.IsValid)
-            return BadRequest();
-        if (archivo is null || archivo.Length == 0)
-        {
-            TempData["Error"] = "Falta el archivo de imagen.";
-            return RedirectToAction(nameof(Detalles), new { id });
-        }
-        try
-        {
-            await using var contenido = archivo.OpenReadStream();
-            await api.SubirDocumentoNotaAsync(id, contenido, archivo.FileName, reemplazaDocumentoId, token);
-            TempData["Exito"] = "El respaldo de la nota quedó guardado.";
-        }
-        catch (ErrorApiException error) when (error.Estado is 400 or 409 or 413)
-        {
-            TempData["Error"] = error.MensajeParaLaInterfaz();
-        }
-        return RedirectToAction(nameof(Detalles), new { id });
     }
 
     [HttpGet("{id:guid}/Devolver")]

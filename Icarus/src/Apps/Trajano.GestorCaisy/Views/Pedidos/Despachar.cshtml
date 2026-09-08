@@ -9,15 +9,14 @@
         <p class="pagina-cabecera__detalle">
             Se registra una única entrega con una única nota por pedido. Los datos
             de la nota son manuales; las diferencias contra lo solicitado son
-            válidas y el tenant las verá al recibir. Las imágenes son respaldos
-            privados del documento en papel (páginas o reverso).
+            válidas y el tenant las verá al recibir. La foto de la nota la
+            adjunta el receptor al confirmar la recepción.
         </p>
     </div>
 </div>
 <partial name="_Avisos" />
 <section class="tarjeta">
-    <form asp-action="Despachar" asp-route-id="@Model.Id" method="post"
-          enctype="multipart/form-data">
+    <form asp-action="Despachar" asp-route-id="@Model.Id" method="post">
         <div class="campos">
             <div class="campo">
                 <label for="NumeroNota">Número de nota</label>
@@ -68,14 +67,6 @@
                 }
             </tbody>
         </table>
-        <div class="campo">
-            <label for="Archivos">Imágenes de respaldo (páginas o reverso)</label>
-            <input id="Archivos" name="Archivos" type="file" accept="image/jpeg,image/png,image/webp" multiple />
-            <span class="campo__ayuda">
-                Hasta 8 imágenes de 5 MB por nota. Se guardan privadas: la
-                interfaz muestra una copia segura sin metadatos.
-            </span>
-        </div>
         <div class="acciones">
             <button type="submit" class="boton boton--primario"
                     data-confirmar="Se registrará la entrega con su nota y pasará al estado Despachado. El tenant será notificado. ¿Confirma el despacho?">

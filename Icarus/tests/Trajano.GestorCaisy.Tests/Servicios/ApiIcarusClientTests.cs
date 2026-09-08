@@ -112,20 +112,21 @@ public class ApiIcarusClientTests
     }
 
     [Fact]
-    public async Task SubirDocumentoNotaEnviaMultipartYReemplazo()
+    public async Task ObtenerReciboPdfDevuelveElContenidoDesdeLaRutaDelPedido()
     {
-        _manejador.Responder(HttpStatusCode.Created, """{"id":"9b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c009"}""");
+        _manejador.Responder(HttpStatusCode.OK,
+            contenido: "%PDF-1.7 recibo de despacho"u8.ToArray(), tipoDeContenido: "application/pdf");
         var id = Guid.NewGuid();
-        var previo = Guid.NewGuid();
 
-        var documentoId = await _cliente.SubirDocumentoNotaAsync(
-            id, new MemoryStream([1, 2, 3]), "nota-frente.png", previo);
+        var flujo = await _cliente.ObtenerReciboPdfAsync(id);
 
-        Assert.Equal(Guid.Parse("9b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c009"), documentoId);
+        using var memoria = new MemoryStream();
+        await flujo.CopyToAsync(memoria);
+        Assert.Equal("%PDF-1.7 recibo de despacho"u8.ToArray(), memoria.ToArray());
         var peticion = _manejador.Peticiones[0];
-        Assert.Equal(HttpMethod.Post, peticion.Metodo);
-        Assert.Equal($"{BaseApi}pedidos-alimento-caisy/{id}/nota/documentos", peticion.Uri.ToString());
-        Assert.Contains("reemplazaDocumentoId", peticion.Cuerpo);
+        Assert.Equal(HttpMethod.Get, peticion.Metodo);
+        Assert.Equal($"{BaseApi}pedidos-alimento-caisy/{id}/recibo.pdf", peticion.Uri.ToString());
+        Assert.Equal("Bearer token-actual", peticion.Autorizacion);
     }
 
     [Fact]

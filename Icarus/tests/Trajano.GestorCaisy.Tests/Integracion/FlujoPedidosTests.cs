@@ -209,7 +209,8 @@ public class FlujoPedidosTests
         Assert.Contains("Registrar despacho", html);
         Assert.Contains("PosturaUno", html);
         Assert.Contains("Entregado", html);
-        Assert.Contains("Imágenes de respaldo", html);
+        Assert.Contains("Cantidades entregadas", html);
+        Assert.DoesNotContain("Archivos", html);
 
         var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, $"/Pedidos/{id}/Despachar");
         var cuerpo = new MultipartFormDataContent

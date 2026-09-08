@@ -213,20 +213,21 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         return Task.CompletedTask;
     }
 
-    // SP8C: despacho, respaldos de la nota y su descarga para el detalle.
+    // SP8C/SP8D: despacho, respaldo del receptor y su descarga para el detalle,
+    // y el recibo imprimible del despacho.
     public Exception? ErrorDeDespachar { get; set; }
     public Exception? ErrorDeDocumentoNota { get; set; }
+    public Exception? ErrorDeRecibo { get; set; }
 
     public byte[] ContenidoNota { get; set; } = [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3];
 
     public int VecesDespachar { get; private set; }
-    public int VecesSubirDocumentoNota { get; private set; }
     public int VecesDescargarNota { get; private set; }
+    public int VecesDescargarRecibo { get; private set; }
 
     public ComandoDespachoApi? UltimoDespacho { get; private set; }
-    public (Guid Id, string Nombre, Guid? Reemplaza)? UltimoDocumentoNota { get; private set; }
     public (Guid Id, Guid Documento)? UltimaDescargaNota { get; private set; }
-    public Guid IdDocumentoNota { get; set; } = Guid.NewGuid();
+    public Guid? UltimoReciboPedido { get; private set; }
 
     public Task DespacharPedidoAsync(ComandoDespachoApi comando, CancellationToken token = default)
     {
@@ -234,16 +235,6 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         UltimoDespacho = comando;
         if (ErrorDeDespachar is not null) throw ErrorDeDespachar;
         return Task.CompletedTask;
-    }
-
-    public Task<Guid> SubirDocumentoNotaAsync(
-        Guid id, Stream contenido, string nombreArchivo,
-        Guid? reemplazaDocumentoId, CancellationToken token = default)
-    {
-        VecesSubirDocumentoNota++;
-        UltimoDocumentoNota = (id, nombreArchivo, reemplazaDocumentoId);
-        if (ErrorDeDocumentoNota is not null) throw ErrorDeDocumentoNota;
-        return Task.FromResult(IdDocumentoNota);
     }
 
     public Task<(Stream Contenido, string TipoContenido)> DescargarDocumentoNotaAsync(
@@ -254,6 +245,15 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         if (ErrorDeDocumentoNota is not null) throw ErrorDeDocumentoNota;
         return Task.FromResult(
             (new MemoryStream(ContenidoNota, writable: false) as Stream, "image/jpeg"));
+    }
+
+    public Task<Stream> ObtenerReciboPdfAsync(Guid id, CancellationToken token = default)
+    {
+        VecesDescargarRecibo++;
+        UltimoReciboPedido = id;
+        if (ErrorDeRecibo is not null) throw ErrorDeRecibo;
+        return Task.FromResult<Stream>(new MemoryStream(
+            "%PDF-1.7 recibo de despacho"u8.ToArray(), writable: false));
     }
 
     public static PedidoDetalleApi CrearPedido(
@@ -274,7 +274,7 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
     public static EntregaPedidoApi CrearEntrega(Guid pedidoId) => new(
         "NOTA-77", new(2025, 11, 1), new(2025, 11, 2), 14100m, 14120m,
         [new LineaEntregaApi("PosturaUno", 80, 80)],
-        [new DocumentoNotaApi(Guid.NewGuid(), "nota-frente.jpg", "image/jpeg", 1024, true)]);
+        [new DocumentoNotaApi(Guid.NewGuid(), "nota-frente.jpg", "image/jpeg", 1024)]);
 
     public static RecepcionPedidoApi CrearRecepcion() => new(
         new(2025, 11, 3), 14120m,
