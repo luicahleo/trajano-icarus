@@ -320,6 +320,19 @@ public class DocumentosNotaEndpointsTests
     // pedido despachado sin recibir aporta cero y los rangos y tenants ajenos
     // no ven el balance.
     [Fact]
+    public async Task ReciboPdfDevuelveContenidoPdf()
+    {
+        var (cliente, _, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
+
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{idPedido}/recibo.pdf", tokenCaisy));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        Assert.Equal("application/pdf", respuesta.Content.Headers.ContentType?.MediaType);
+        Assert.NotEmpty(await respuesta.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
     public async Task ElBalanceSoloSumaLosPedidosRecibidosDelRangoDelTenant()
     {
         var (cliente, tokenTenant, tokenCaisy, _) = await PrepararFlujoCompletoAsync();

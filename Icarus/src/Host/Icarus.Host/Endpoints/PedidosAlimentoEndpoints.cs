@@ -181,6 +181,16 @@ public static class PedidosAlimentoEndpoints
             return Results.NoContent();
         });
 
+        // Recibo imprimible (spec SP8D): PDF con los datos ya guardados del
+        // despacho, reimprimible sin límite sobre cualquier pedido con
+        // entrega registrada.
+        caisy.MapGet("/{id:guid}/recibo.pdf", async (Guid id, ISender mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var bytes = await mediator.Send(new ObtenerReciboPedidoPdfQuery(id), cancellationToken);
+            return Results.File(bytes, "application/pdf", "recibo.pdf");
+        });
+
         // Descarga autorizada (spec SP8C): vista inline, original solo como
         // adjunto. El filtro de alcance hace 404 para documentos ajenos.
         caisy.MapGet("/{id:guid}/nota/documentos/{documentoId:guid}/vista",
