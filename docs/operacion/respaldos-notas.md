@@ -2,9 +2,10 @@
 
 Los documentos privados viven en volúmenes Docker fuera del web root, detrás
 de los puertos `IAlmacenDocumentosPrecios` (PDF de la Notificación de Precios)
-e `IAlmacenDocumentosPedido` (imágenes de respaldo de las notas de entrega).
-SQL Server guarda solo la clave lógica UUID, el MIME, el tamaño, el hash
-SHA-256 y un nombre seguro; nunca rutas físicas, Base64 ni URL públicas.
+e `IAlmacenDocumentosPedido` (respaldo fotográfico que adjunta el receptor al
+confirmar la recepción de una nota de entrega). SQL Server guarda solo la
+clave lógica UUID, el MIME, el tamaño, el hash SHA-256 y un nombre seguro;
+nunca rutas físicas, Base64 ni URL públicas.
 
 ## Por qué el volumen no es copia de seguridad
 
@@ -17,7 +18,7 @@ esa copia externa, el valor probatorio de los respaldos de notas se pierde.
 
 | Volumen (compose) | Ruta en el contenedor | Contenido |
 |---|---|---|
-| `documentos-pedidos` | `/app/documentos-pedidos` | Originales (`.bin`) y vistas (`.jpg`) de las notas de alimento |
+| `documentos-pedidos` | `/app/documentos-pedidos` | Originales (`.bin`) y vistas (`.jpg`) del respaldo fotográfico del receptor al confirmar la recepción |
 | `mssql-data` | `/var/opt/mssql` | La base, con las claves lógicas y hashes de cada documento |
 | `seq-data` | `/data` | Logs (no es obligatorio restaurarlo, solo conservar ventanas recientes) |
 
@@ -72,19 +73,18 @@ variables de entorno `AlmacenDocumentosPedido__*`) y se validan al arrancar:
 | `Ruta` | (vacío → `/app/documentos-pedidos`) | Directorio del volumen privado |
 | `MaxTamanoBytes` | 5 MiB | Tamaño máximo por archivo subido |
 | `MaxDimensionesPixeles` | 8000 | Lado máximo de la imagen (por lado) |
-| `MaxDocumentosPorNota` | 8 | Cantidad máxima de respaldos activos por nota |
 
 Además, el endpoint rechaza de forma temprana (413) cualquier cuerpo mayor a
-5 MiB antes de leerlo. Las cuotas se comparten con el tope de pedidos por
-semana (`PedidosAlimento__MaximoPorSemana`): subir respaldos solo es posible
-sobre pedidos despachados, que ya consumieron cupo de envío.
+5 MiB antes de leerlo. La foto del receptor se sube en el mismo paso que la
+confirmación de recepción, nunca por separado: cada pedido genera como máximo
+un respaldo, una sola vez.
 
 ## Monitorización
 
-- **Seq**: en la operación de registro de un respaldo solo aparecen el id del
-  pedido, la bandeja (CAISY) y el indicador de sustitución. Nunca se registran
-  rutas físicas, nombres de archivo originales, número de nota ni contenido de
-  la imagen. La descarga no genera eventos con contenido.
+- **Seq**: en la operación de recepción solo aparecen el id del pedido y el
+  evento de recepción del tenant (conforme o con diferencias). Nunca se
+  registran rutas físicas, nombres de archivo originales, número de nota ni
+  contenido de la imagen. La descarga no genera eventos con contenido.
 - **Volumen**: vigilar el uso de disco del punto de montaje
   `/app/documentos-pedidos` (alertar por encima del 80 %) y el estado del
   volumen (`docker volume ls`, tamaño con `du -sh` sobre el punto de montaje).
