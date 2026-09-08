@@ -73,15 +73,21 @@ describe('api pedidos de alimento', () => {
     expect(q.url).toContain('/api/pedidos-alimento/p1/enviar');
   });
 
-  test('recibirPedido hace POST con las líneas recibidas', async () => {
+  test('recibirPedido envia multipart con la foto y las lineas', async () => {
     const f: ReturnType<typeof vi.fn> = vi.fn(async () => sinCuerpo());
     vi.stubGlobal('fetch', f);
-    await recibirPedido('p1', [{ tipoAlimento: 'PosturaUno', cantidadRecibida: 95 }]);
+    const archivo = new File(['imagen'], 'foto-recepcion.jpg', { type: 'image/jpeg' });
+    await recibirPedido('p1', [{ tipoAlimento: 'PosturaUno', cantidadRecibida: 95 }], archivo);
     const q = solicitud(f);
     expect(q.method).toBe('POST');
     expect(q.url).toContain('/api/pedidos-alimento/p1/recibir');
-    const cuerpo = JSON.parse(await q.clone().text());
-    expect(cuerpo.lineas[0]).toEqual({ tipoAlimento: 'PosturaUno', cantidadRecibida: 95 });
+    // FormData: el navegador fija el boundary multipart, no se serializa JSON.
+    expect(q.headers.get('content-type')).toContain('multipart/form-data');
+    const cuerpo = await q.clone().text();
+    expect(cuerpo).toContain('name="lineas"');
+    expect(cuerpo).toContain('{"tipoAlimento":"PosturaUno","cantidadRecibida":95}');
+    expect(cuerpo).toContain('name="archivo"');
+    expect(cuerpo).toContain('Content-Type: image/jpeg');
   });
 
   test('los documentos de nota se piden como blob en vista y original', async () => {

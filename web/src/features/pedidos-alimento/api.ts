@@ -53,7 +53,6 @@ export interface DocumentoNota {
   nombreSeguro: string;
   mime: string;
   tamanoBytes: number;
-  activo: boolean;
 }
 
 export interface EntregaPedido {
@@ -121,10 +120,15 @@ export interface LineaRecepcionDatos {
   cantidadRecibida: number;
 }
 
-// Recepción por línea (spec SP8C): el tenant confirma desde Despachado la
-// cantidad realmente recibida; el estado final lo decide el backend.
-export const recibirPedido = (id: string, lineas: LineaRecepcionDatos[]) =>
-  peticion<void>({ ruta: `/pedidos-alimento/${id}/recibir`, metodo: 'POST', cuerpo: { lineas } });
+// Recepción con foto obligatoria (spec SP8D): el tenant confirma desde
+// Despachado la cantidad realmente recibida y adjunta, en el mismo envío, una
+// foto de su copia de la nota. El estado final lo decide el backend.
+export const recibirPedido = (id: string, lineas: LineaRecepcionDatos[], archivo: File) => {
+  const formData = new FormData();
+  formData.append('lineas', JSON.stringify(lineas));
+  formData.append('archivo', archivo, archivo.name);
+  return peticion<void>({ ruta: `/pedidos-alimento/${id}/recibir`, metodo: 'POST', cuerpo: formData });
+};
 
 // Vista derivada de un respaldo (inline, sin metadatos) para mostrar en el
 // detalle; el original se descarga como adjunto autorizado (spec SP8C).

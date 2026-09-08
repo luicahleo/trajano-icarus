@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PedidoAlimentoDetallePage } from './PedidoAlimentoDetallePage';
@@ -270,11 +270,34 @@ describe('PedidoAlimentoDetallePage', () => {
     expect(await screen.findByText('Entrega y nota')).toBeInTheDocument();
     expect(screen.getByText('NOTA-77')).toBeInTheDocument();
     expect(screen.getByRole('spinbutton', { name: 'Recibido' })).toHaveValue(95);
-    await usuario.click(screen.getByRole('button', { name: 'Confirmar recepción' }));
+    // SP8D: la foto del receptor es obligatoria; sin ella el botón está
+    // deshabilitado.
+    const boton = screen.getByRole('button', { name: 'Confirmar recepción' });
+    expect(boton).toBeDisabled();
+    const foto = new File(['imagen'], 'nota-recibida.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('Elegir foto de la nota recibida'), {
+      target: { files: [foto] },
+    });
+    expect(await screen.findByText('Foto elegida: nota-recibida.jpg')).toBeInTheDocument();
+    expect(boton).toBeEnabled();
+    await usuario.click(boton);
     await usuario.click(screen.getByRole('button', { name: 'Confirmar' }));
     expect(
       await screen.findByText(/Recepción confirmada el .* sin diferencias contra lo despachado\./),
     ).toBeInTheDocument();
+  });
+
+  // SP8D: la recepción exige la foto de la nota del receptor.
+  test('deshabilita confirmar recepción hasta elegir una foto', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fetchSimulado({ 'GET /api/pedidos-alimento/p1': respuesta(200, pedidoDespachado) }),
+    );
+    renderPagina();
+
+    const boton = await screen.findByRole('button', { name: 'Confirmar recepción' });
+
+    expect(boton).toBeDisabled();
   });
 
   test('una recepción con diferencias muestra el total recibido real', async () => {

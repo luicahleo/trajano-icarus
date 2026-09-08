@@ -44,6 +44,32 @@ import {
   formatoMoneda,
 } from './constantes';
 
+// Compresión client-side (spec SP8D): pensada para conectividad rural, no
+// reemplaza el reprocesamiento del servidor (que igual corrige orientación y
+// quita metadatos). Si el navegador no soporta canvas, se sube el archivo
+// original sin tocar y el servidor lo reprocesa igual.
+async function comprimirImagen(archivo: File): Promise<File> {
+  if (typeof document === 'undefined' || typeof createImageBitmap !== 'function') return archivo;
+  try {
+    const bitmap = await createImageBitmap(archivo);
+    const ladoMaximo = 1600;
+    const escala = Math.min(1, ladoMaximo / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * escala);
+    canvas.height = Math.round(bitmap.height * escala);
+    const contexto = canvas.getContext('2d');
+    if (!contexto) return archivo;
+    contexto.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.7),
+    );
+    if (!blob) return archivo;
+    return new File([blob], archivo.name, { type: 'image/jpeg' });
+  } catch {
+    return archivo;
+  }
+}
+
 // Detalle del pedido (spec SP8): precios congelados al enviar, historial
 // completo de transiciones con motivos, y acciones solo en borrador. Abrir o
 // leer el pedido nunca cambia su estado.
@@ -57,6 +83,8 @@ export function PedidoAlimentoDetallePage() {
   const [error, setError] = useState<string | null>(null);
   // Cantidades realmente recibidas por tipo: precargadas con lo entregado.
   const [recibidas, setRecibidas] = useState<Record<string, string>>({});
+  // Foto de la copia de la nota del receptor (spec SP8D), obligatoria.
+  const [fotoRecepcion, setFotoRecepcion] = useState<File | null>(null);
 
   const { data: pedido, isLoading, isError } = useQuery({
     queryKey: ['pedidos-alimento', 'detalle', id],
@@ -110,16 +138,20 @@ export function PedidoAlimentoDetallePage() {
   });
 
   const recibir = useMutation({
-    mutationFn: () =>
-      recibirPedido(
+    mutationFn: () => {
+      if (!fotoRecepcion) throw new Error('Falta la foto de la nota recibida.');
+      return recibirPedido(
         id!,
         pedido!.entrega!.lineas.map((l) => ({
           tipoAlimento: l.tipoAlimento,
           cantidadRecibida: Number(recibidas[l.tipoAlimento] ?? l.cantidadEntregada),
         })),
-      ),
+        fotoRecepcion,
+      );
+    },
     onSuccess: () => {
       setConfirmarRecepcion(false);
+      setFotoRecepcion(null);
       setError(null);
       refrescar();
     },
@@ -278,8 +310,9 @@ export function PedidoAlimentoDetallePage() {
             Confirmar recepción
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Registrá la cantidad realmente recibida por línea: si coincide todo, el pedido
-            termina recibido conforme; con diferencias, queda el detalle para contraste.
+            Registrá la cantidad realmente recibida por línea y adjuntá una foto de tu copia de
+            la nota: si coincide todo, el pedido termina recibido conforme; con diferencias,
+            queda el detalle para contraste.
           </Typography>
           <Stack spacing={1}>
             {pedido.entrega.lineas.map((linea) => (
@@ -306,8 +339,29 @@ export function PedidoAlimentoDetallePage() {
                 />
               </Stack>
             ))}
+            <Stack spacing={1} sx={{ mt: 2 }}>
+              <Button variant="outlined" component="label">
+                {fotoRecepcion
+                  ? `Foto elegida: ${fotoRecepcion.name}`
+                  : 'Elegir foto de la nota recibida'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={async (e) => {
+                    const archivo = e.target.files?.[0];
+                    if (archivo) setFotoRecepcion(await comprimirImagen(archivo));
+                  }}
+                />
+              </Button>
+            </Stack>
           </Stack>
-          <Button variant="contained" onClick={() => setConfirmarRecepcion(true)} sx={{ mt: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setConfirmarRecepcion(true)}
+            sx={{ mt: 2 }}
+            disabled={!fotoRecepcion}
+          >
             Confirmar recepción
           </Button>
         </Paper>
@@ -496,9 +550,10 @@ function Linea({
   );
 }
 
-// Respaldo de la nota (spec SP8C): muestra la copia segura de visualización y
-// ofrece el original como descarga autorizada (adjunto). La vista derivada se
-// trae como blob autenticado y se libera al desmontar.
+// Respaldo del receptor (spec SP8C/SP8D): muestra la copia segura de
+// visualización y ofrece el original como descarga autorizada (adjunto). La
+// vista derivada se trae como blob autenticado y se libera al desmontar. El
+// documento no admite sustitución: se crea una sola vez con la recepción.
 function RespaldoNota({
   pedidoId,
   documento,
@@ -510,7 +565,6 @@ function RespaldoNota({
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!documento.activo) return;
     let urlCreada: string | null = null;
     let cancelado = false;
     obtenerVistaDocumentoNota(pedidoId, documento.id)
@@ -524,7 +578,7 @@ function RespaldoNota({
       cancelado = true;
       if (urlCreada) URL.revokeObjectURL(urlCreada);
     };
-  }, [pedidoId, documento.id, documento.activo]);
+  }, [pedidoId, documento.id]);
 
   const descargarOriginal = async () => {
     const { blob } = await obtenerOriginalDocumentoNota(pedidoId, documento.id);
@@ -537,7 +591,7 @@ function RespaldoNota({
   };
 
   return (
-    <Paper variant="outlined" sx={{ p: 1, width: 170, opacity: documento.activo ? 1 : 0.4 }}>
+    <Paper variant="outlined" sx={{ p: 1, width: 170 }}>
       {error ? (
         <Typography variant="caption" color="text.secondary">
           Sin vista previa
@@ -554,13 +608,10 @@ function RespaldoNota({
       )}
       <Typography variant="caption" sx={{ wordBreak: 'break-all', display: 'block' }}>
         {documento.nombreSeguro}
-        {documento.activo ? '' : ' (reemplazado)'}
       </Typography>
-      {documento.activo && (
-        <Button size="small" onClick={() => void descargarOriginal()}>
-          Descargar original
-        </Button>
-      )}
+      <Button size="small" onClick={() => void descargarOriginal()}>
+        Descargar original
+      </Button>
     </Paper>
   );
 }
