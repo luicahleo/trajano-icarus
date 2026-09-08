@@ -94,6 +94,10 @@ services:
       ApiIcarus__BaseUrl: "http://web:8080/api"
       Seq__Url: "http://seq:80"
       Seq__ApiKey: "${SEQ_API_KEY:-}"
+    ports:
+      # Acceso directo desde la PC a la oficina sin pasar por el gateway
+      # (gestor.localhost no resuelve en Windows sin entrada en hosts).
+      - "127.0.0.1:8086:8080"
     volumes:
       # Claves DataProtection: conservan las sesiones de oficina al recrear el
       # contenedor (iniciar-pc.ps1 usa --force-recreate en cada arranque).
