@@ -66,6 +66,7 @@ public static class DependencyInjection
         servicios.AddSingleton(sp =>
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesAlmacenDocumentosPedido>>().Value);
         servicios.AddScoped<IAlmacenDocumentosPedido, AlmacenDocumentosPedidoLocal>();
+        servicios.AddSingleton<IReciboPedidoRenderer, ReciboPedidoRendererQuestPdf>();
         servicios.AddScoped<IUnidadTrabajoGestionAvicola>(sp =>
             new UnidadTrabajoConConcurrencia(sp.GetRequiredService<GestionAvicolaDbContext>()));
         return servicios;
