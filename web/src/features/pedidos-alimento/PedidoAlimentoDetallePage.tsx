@@ -21,7 +21,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
@@ -30,6 +30,7 @@ import {
   enviarPedido,
   obtenerOriginalDocumentoNota,
   obtenerPedido,
+  obtenerPrecioVigente,
   obtenerVistaDocumentoNota,
   recibirPedido,
   type DocumentoNota,
@@ -62,6 +63,28 @@ export function PedidoAlimentoDetallePage() {
     queryFn: () => obtenerPedido(id!),
     enabled: Boolean(id),
   });
+
+  // Publicación vigente: un borrador nuevo aún no tiene precios congelados
+  // (se congelan al enviar), así que se estiman con la vigente para mostrar
+  // el total y habilitar el primer envío. Fuera de borrador las líneas ya
+  // traen su snapshot y esta consulta no altera nada.
+  const { data: preciosVigentes } = useQuery({
+    queryKey: ['pedidos-alimento', 'precios-vigentes'],
+    queryFn: obtenerPrecioVigente,
+  });
+
+  const precioEstimadoDe = useMemo(() => {
+    const indice = new Map(
+      (preciosVigentes?.detalles ?? []).map((d) => [
+        `${d.tipoAlimento}|${d.presentacion}`,
+        d.precioFinalPor40Kg,
+      ]),
+    );
+    return (linea: LineaPedidoDetalle): number | null =>
+      linea.precioFinalPor40Kg ??
+      indice.get(`${linea.tipoAlimento}|${linea.presentacion}`) ??
+      null;
+  }, [preciosVigentes]);
 
   const refrescar = () => {
     queryClient.invalidateQueries({ queryKey: ['pedidos-alimento'] });
@@ -113,6 +136,19 @@ export function PedidoAlimentoDetallePage() {
 
   const esBorrador = pedido.estado === 'Borrador';
 
+  // Total a enviar: el congelado si existe; si el borrador nunca se envió, la
+  // estimación con la publicación vigente (solo cuando cubre todas las
+  // líneas; si falta alguna, el envío fallaría y se deja en null).
+  const totalEstimado =
+    pedido.lineas.length > 0 && pedido.lineas.every((l) => precioEstimadoDe(l) !== null)
+      ? pedido.lineas.reduce(
+          (acumulado, l) => acumulado + precioEstimadoDe(l)! * l.equivalentes40Kg,
+          0,
+        )
+      : null;
+  const totalParaEnviar = pedido.totalSolicitado ?? totalEstimado;
+  const esEstimado = pedido.totalSolicitado === null && totalEstimado !== null;
+
   return (
     <Box sx={{ py: 3, px: { xs: 2, md: 4 } }}>
       <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
@@ -154,7 +190,9 @@ export function PedidoAlimentoDetallePage() {
             Total solicitado
           </Typography>
           <Typography>
-            {pedido.totalSolicitado === null ? '—' : formatoMoneda(pedido.totalSolicitado)}
+            {totalParaEnviar === null
+              ? '—'
+              : `${formatoMoneda(totalParaEnviar)}${esEstimado ? ' (estimado)' : ''}`}
           </Typography>
         </Box>
       </Box>
@@ -310,11 +348,17 @@ export function PedidoAlimentoDetallePage() {
           </TableHead>
           <TableBody>
             {pedido.lineas.map((linea) => (
-              <Linea key={linea.id} linea={linea} />
+              <Linea key={linea.id} linea={linea} precioEstimado={precioEstimadoDe(linea)} />
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {esBorrador && esEstimado && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Precios estimados con la publicación vigente: se congelan al enviar.
+        </Typography>
+      )}
 
       {esBorrador && (
         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
@@ -400,9 +444,9 @@ export function PedidoAlimentoDetallePage() {
             <Typography variant="body2">
               Total a enviar:{' '}
               <strong>
-                {pedido.totalSolicitado === null
-                  ? 'sin precios congelados'
-                  : formatoMoneda(pedido.totalSolicitado)}
+                {totalParaEnviar === null
+                  ? 'sin precios vigentes para todas las líneas'
+                  : `${formatoMoneda(totalParaEnviar)}${esEstimado ? ' (estimado, se congela al enviar)' : ''}`}
               </strong>
             </Typography>
           </DialogContentText>
@@ -412,7 +456,7 @@ export function PedidoAlimentoDetallePage() {
           <Button
             variant="contained"
             onClick={() => enviar.mutate()}
-            disabled={enviar.isPending || pedido.totalSolicitado === null}
+            disabled={enviar.isPending || totalParaEnviar === null}
           >
             Confirmar envío
           </Button>
@@ -422,7 +466,18 @@ export function PedidoAlimentoDetallePage() {
   );
 }
 
-function Linea({ linea }: { linea: LineaPedidoDetalle }) {
+function Linea({
+  linea,
+  precioEstimado,
+}: {
+  linea: LineaPedidoDetalle;
+  precioEstimado: number | null;
+}) {
+  // Sin congelado (borrador nuevo) se muestra la estimación con la vigente.
+  const precio = linea.precioFinalPor40Kg ?? precioEstimado;
+  const subtotal =
+    linea.subtotalSolicitado ??
+    (precioEstimado === null ? null : precioEstimado * linea.equivalentes40Kg);
   return (
     <TableRow>
       <TableCell>{ETIQUETAS_TIPO_ALIMENTO[linea.tipoAlimento] ?? linea.tipoAlimento}</TableCell>
@@ -432,10 +487,10 @@ function Linea({ linea }: { linea: LineaPedidoDetalle }) {
       </TableCell>
       <TableCell align="right">{linea.equivalentes40Kg}</TableCell>
       <TableCell align="right">
-        {linea.precioFinalPor40Kg === null ? '—' : formatoMoneda(linea.precioFinalPor40Kg)}
+        {precio === null ? '—' : formatoMoneda(precio)}
       </TableCell>
       <TableCell align="right">
-        {linea.subtotalSolicitado === null ? '—' : formatoMoneda(linea.subtotalSolicitado)}
+        {subtotal === null ? '—' : formatoMoneda(subtotal)}
       </TableCell>
     </TableRow>
   );

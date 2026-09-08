@@ -35,6 +35,50 @@ const pedidoBorradorDevuelto = {
   ],
 };
 
+const pedidoBorradorNuevo = {
+  id: 'p1',
+  clienteId: 'c1',
+  estado: 'Borrador',
+  fechaPedido: null,
+  fechaEntregaEstimada: null,
+  totalSolicitado: null,
+  lineas: [
+    {
+      id: 'l1',
+      tipoAlimento: 'PosturaUno',
+      presentacion: 'Bolsa',
+      cantidadSolicitada: 150,
+      equivalentes40Kg: 150,
+      precioFinalPor40Kg: null,
+      subtotalSolicitado: null,
+      notificacionPreciosAlimentosId: null,
+    },
+  ],
+  historial: [],
+  entrega: null,
+  recepcion: null,
+};
+
+const preciosVigentes = {
+  id: 'pub1',
+  estado: 'Publicada',
+  fechaDocumento: '2026-09-01',
+  vigenteDesde: '2026-09-01',
+  aporteCaisy: 0,
+  fondo: 0,
+  servicios: 0,
+  detalles: [
+    {
+      tipoAlimento: 'PosturaUno',
+      presentacion: 'Bolsa',
+      codigo: 'P-1',
+      precioFinalPor40Kg: 176.5,
+      edadDesdeDias: null,
+      edadHastaDias: null,
+    },
+  ],
+};
+
 const pedidoAceptado = {
   ...pedidoBorradorDevuelto,
   estado: 'Aceptado',
@@ -151,6 +195,32 @@ describe('PedidoAlimentoDetallePage', () => {
     expect(screen.getByText(/consume el cupo semanal/i)).toBeInTheDocument();
     expect((await screen.findAllByText(/26\.475/)).length).toBeGreaterThan(0);
     await usuario.click(screen.getByRole('button', { name: 'Confirmar envío' }));
+    expect(envios).toBe(1);
+  });
+
+  test('un borrador nuevo estima los precios vigentes y permite el primer envío', async () => {
+    const usuario = userEvent.setup();
+    let envios = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      if (ruta === 'POST /api/pedidos-alimento/p1/enviar') {
+        envios += 1;
+        return respuesta(204);
+      }
+      if (ruta === 'GET /api/pedidos-alimento/p1') return respuesta(200, pedidoBorradorNuevo);
+      if (ruta === 'GET /api/pedidos-alimento/precios-vigentes') return respuesta(200, preciosVigentes);
+      return respuesta(404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    // El borrador nuevo no tiene congelados: se estiman con la publicación vigente.
+    expect((await screen.findAllByText(/176,50/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/26\.475/)).length).toBeGreaterThan(0);
+    await usuario.click(screen.getByRole('button', { name: 'Enviar a CAISY' }));
+    const confirmar = screen.getByRole('button', { name: 'Confirmar envío' });
+    expect(confirmar).toBeEnabled();
+    await usuario.click(confirmar);
     expect(envios).toBe(1);
   });
 
