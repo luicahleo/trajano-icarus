@@ -138,7 +138,7 @@ public sealed record LineaEntregaPedidoResumen(
     string TipoAlimento, int CantidadEntregada, int Equivalentes40Kg);
 
 public sealed record DocumentoNotaResumen(
-    Guid Id, string NombreSeguro, string Mime, long TamanoBytes, bool Activo);
+    Guid Id, string NombreSeguro, string Mime, long TamanoBytes);
 
 public sealed record EntregaPedidoResumen(
     string NumeroNota, DateOnly FechaNota, DateOnly FechaDespacho,
@@ -513,42 +513,19 @@ public sealed class RegistrarDespachoPedidoHandler(
             .Count(par => par.e.CantidadEntregada != par.d.CantidadSolicitada);
 }
 
-// Alta o sustitución de un respaldo privado de la nota (spec SP8C
-// "Documentos privados"): lo registra CAISY sobre un pedido despachado y antes
-// de la recepción. El contenido pasa por el almacén privado, que valida firma,
-// MIME, tamaño y dimensiones, y devuelve clave lógica y metadatos; SQL nunca
-// conoce rutas ni contenido. El nombre de archivo se sanea para el campo
-// nombre seguro y no llega al registro de vuelo (anti-PII).
-public sealed record AgregarDocumentoNotaCommand(
-    Guid PedidoId, Stream Contenido, string? NombreArchivo, Guid? ReemplazaDocumentoId)
-    : IRequest<Guid>, IOperacionRegistrable
-{
-    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
-        "avicola.pedidos.nota-documento", new Dictionary<string, DatoRegistroVuelo>
-        { ["Sustituye"] = DatoRegistroVuelo.Entero });
-}
-
-// Recepción (spec SP8C): el tenant confirma desde Despachado la cantidad
-// realmente recibida por línea; el resultado (conforme o con diferencias) se
-// notifica a la bandeja de CAISY en la misma transacción. Los reintentos
-// chocan con el estado y responden 409 sin duplicar nada.
+// Recepción (spec SP8C/SP8D): el tenant confirma desde Despachado la cantidad
+// realmente recibida por línea y adjunta, en el mismo envío, una foto de su
+// copia de la nota — obligatoria, sin excepción. El resultado (conforme o con
+// diferencias) se notifica a la bandeja de CAISY en la misma transacción. Los
+// reintentos chocan con el estado y responden 409 sin duplicar nada.
 public sealed record ConfirmarRecepcionPedidoCommand(
-    Guid PedidoId, IReadOnlyList<DatosLineaRecepcion> LineasRecibidas)
+    Guid PedidoId, IReadOnlyList<DatosLineaRecepcion> LineasRecibidas,
+    Stream Contenido, string? NombreArchivo)
     : IRequest, IOperacionRegistrable
 {
     public DescriptorOperacionRegistroVuelo Registro { get; } = new(
         "avicola.pedidos.recibir", new Dictionary<string, DatoRegistroVuelo>
         { ["Lineas"] = DatoRegistroVuelo.Entero });
-}
-
-public sealed class AgregarDocumentoNotaValidator : AbstractValidator<AgregarDocumentoNotaCommand>
-{
-    public AgregarDocumentoNotaValidator()
-    {
-        RuleFor(c => c.PedidoId).NotEmpty();
-        RuleFor(c => c.Contenido).NotNull();
-        RuleFor(c => c.NombreArchivo).MaximumLength(260);
-    }
 }
 
 public sealed class ConfirmarRecepcionPedidoValidator
@@ -561,83 +538,25 @@ public sealed class ConfirmarRecepcionPedidoValidator
         RuleForEach(c => c.LineasRecibidas)
             .Must(l => l.CantidadRecibida >= 0)
             .WithMessage("La cantidad recibida no puede ser negativa.");
+        RuleFor(c => c.Contenido).NotNull()
+            .WithMessage("La foto de la nota recibida es obligatoria.");
+        RuleFor(c => c.NombreArchivo).MaximumLength(260);
     }
 }
 
-public sealed class AgregarDocumentoNotaHandler(
-    IRepositorioPedidosAlimento repositorio,
-    IAlmacenDocumentosPedido almacen,
-    OpcionesAlmacenDocumentosPedido opciones,
-    ICurrentUser usuarioActual,
-    IRegistroVuelo registroVuelo,
-    IUnidadTrabajoGestionAvicola unidadTrabajo)
-    : IRequestHandler<AgregarDocumentoNotaCommand, Guid>
-{
-    public async Task<Guid> Handle(AgregarDocumentoNotaCommand request, CancellationToken cancellationToken)
-    {
-        var actorId = usuarioActual.UsuarioId
-            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
-        var pedido = await repositorio.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
-            ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
-        if (pedido.Estado != EstadoPedidoAlimento.Despachado)
-            throw new ConflictException("Los respaldos de la nota se registran sobre un pedido despachado.");
-        if (request.ReemplazaDocumentoId is { } previo
-            && !pedido.Entrega!.Documentos.Any(d => d.Id == previo && d.Activo))
-            throw new ConflictException("El documento a reemplazar no existe o ya fue reemplazado.");
-        if (request.ReemplazaDocumentoId is null
-            && pedido.Entrega!.Documentos.Count(d => d.Activo) >= opciones.MaxDocumentosPorNota)
-            throw new ConflictException(
-                $"La nota admite hasta {opciones.MaxDocumentosPorNota.ToString(CultureInfo.InvariantCulture)} imágenes.");
-
-        var guardado = await almacen.GuardarAsync(request.Contenido, cancellationToken);
-        var datos = new DatosDocumentoNota(
-            guardado.ClaveOriginal, guardado.ClaveVista, guardado.Mime,
-            guardado.TamanoOriginalBytes, guardado.TamanoVistaBytes,
-            guardado.HashSha256, SanearNombre(request.NombreArchivo));
-        var documento = request.ReemplazaDocumentoId is null
-            ? pedido.AgregarDocumentoNota(datos)
-            : pedido.ReemplazarDocumentoNota(request.ReemplazaDocumentoId.Value, datos);
-        repositorio.AgregarDocumentoNota(documento);
-        registroVuelo.Decidir("avicola.pedidos.nota-documento", "registro", "aplicada",
-            new Dictionary<string, object?>
-            {
-                ["Sustituye"] = request.ReemplazaDocumentoId is null ? 0 : 1,
-                ["Actor"] = actorId != Guid.Empty ? 1 : 0,
-            });
-        await unidadTrabajo.SaveChangesAsync(cancellationToken);
-        return documento.Id;
-    }
-
-    // Nombre seguro (spec SP8C): sin rutas ni caracteres problemáticos; si el
-    // archivo llega sin nombre útil se usa uno genérico. No se guarda el nombre
-    // original completo del cliente.
-    private static string SanearNombre(string? nombreArchivo)
-    {
-        var nombre = Path.GetFileName(nombreArchivo?.Trim() ?? string.Empty);
-        // Conjunto explícito e independiente de la plataforma:
-        // Path.GetInvalidFileNameChars() varía (en Linux <, >, ", |, ?, * y \
-        // son caracteres válidos) y el contrato de seguridad del nombre debe
-        // ser el mismo en Windows, Linux y dentro del contenedor.
-        var sano = new string(nombre
-            .Select(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or ' ' ? c : '-')
-            .ToArray())
-            .Replace("..", "-", StringComparison.Ordinal)
-            .Trim('.', ' ');
-        if (sano.Length > 200)
-            sano = sano[^200..];
-        return sano.Length == 0 ? "nota.jpg" : sano;
-    }
-}
-
-// Recepción (spec SP8C "Despacho, nota y recepción"): la confirma el tenant
-// (Cliente o Trabajador con la función PedidoAlimento) sobre un pedido
-// despachado. El filtro del DbContext aísla el tenant: un id ajeno responde
-// 404 genérico. El agregado termina el pedido como RecibidoConforme o
-// RecibidoConDiferencias, persiste el snapshot de diferencias y el total
-// recibido, y la notificación para CAISY se crea en la misma transacción
-// local. Los reintentos chocan con el estado y responden 409.
+// Recepción (spec SP8C "Despacho, nota y recepción", SP8D "Evidencia del
+// receptor"): la confirma el tenant (Cliente o Trabajador con la función
+// PedidoAlimento) sobre un pedido despachado, guardando antes la foto de su
+// copia de la nota en el almacén privado. El filtro del DbContext aísla el
+// tenant: un id ajeno responde 404 genérico. El agregado adjunta el respaldo
+// y termina el pedido como RecibidoConforme o RecibidoConDiferencias, persiste
+// el snapshot de diferencias y el total recibido, y la notificación para CAISY
+// se crea en la misma transacción local. Si falla el guardado del archivo, la
+// excepción propaga antes de tocar el agregado y no queda transición ni
+// notificación a medias. Los reintentos chocan con el estado y responden 409.
 public sealed class ConfirmarRecepcionPedidoHandler(
     IRepositorioPedidosAlimento repositorio,
+    IAlmacenDocumentosPedido almacen,
     ICurrentUser usuarioActual,
     IRegistroVuelo registroVuelo,
     IUnidadTrabajoGestionAvicola unidadTrabajo,
@@ -652,7 +571,14 @@ public sealed class ConfirmarRecepcionPedidoHandler(
             ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
         if (pedido.Estado != EstadoPedidoAlimento.Despachado)
             throw new ConflictException("Solo un pedido despachado se puede recibir.");
-        pedido.ConfirmarRecepcion(request.LineasRecibidas, actorId);
+
+        var guardado = await almacen.GuardarAsync(request.Contenido, cancellationToken);
+        var datosDocumento = new DatosDocumentoNota(
+            guardado.ClaveOriginal, guardado.ClaveVista, guardado.Mime,
+            guardado.TamanoOriginalBytes, guardado.TamanoVistaBytes,
+            guardado.HashSha256, SanearNombre(request.NombreArchivo));
+
+        pedido.ConfirmarRecepcion(request.LineasRecibidas, datosDocumento, actorId);
         notificaciones.Agregar(NotificacionInterna.ParaCaisy(
             pedido.Estado == EstadoPedidoAlimento.RecibidoConforme
                 ? TipoNotificacionPedido.RecepcionConforme
@@ -665,6 +591,26 @@ public sealed class ConfirmarRecepcionPedidoHandler(
                 ["Diferencias"] = pedido.Recepcion!.Diferencias.Count,
             });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+
+    // Nombre seguro (spec SP8C/SP8D): sin rutas ni caracteres problemáticos; si
+    // el archivo llega sin nombre útil se usa uno genérico. No se guarda el
+    // nombre original completo del cliente.
+    private static string SanearNombre(string? nombreArchivo)
+    {
+        var nombre = Path.GetFileName(nombreArchivo?.Trim() ?? string.Empty);
+        // Conjunto explícito e independiente de la plataforma:
+        // Path.GetInvalidFileNameChars() varía (en Linux <, >, ", |, ?, * y \
+        // son caracteres válidos) y el contrato de seguridad del nombre debe
+        // ser el mismo en Windows, Linux y dentro del contenedor.
+        var sano = new string(nombre
+            .Select(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or ' ' ? c : '-')
+            .ToArray())
+            .Replace("..", "-", StringComparison.Ordinal)
+            .Trim('.', ' ');
+        if (sano.Length > 200)
+            sano = sano[^200..];
+        return sano.Length == 0 ? "recepcion.jpg" : sano;
     }
 }
 
@@ -798,9 +744,10 @@ internal static class MapeadorPedidos
             MapearEntrega(pedido),
             MapearRecepcion(pedido));
 
-    // Entrega histórica (spec SP8C): nota, líneas entregadas y respaldos con
-    // su metadata. El total despachado es el cálculo canónico con los precios
-    // congelados; el informado de la nota se conserva solo para contraste.
+    // Entrega histórica (spec SP8C/SP8D): nota, líneas entregadas y el
+    // respaldo fotográfico del receptor con su metadata. El total despachado
+    // es el cálculo canónico con los precios congelados; el informado de la
+    // nota se conserva solo para contraste.
     private static EntregaPedidoResumen? MapearEntrega(PedidoAlimento pedido)
     {
         if (pedido.Entrega is null)
@@ -814,7 +761,7 @@ internal static class MapeadorPedidos
                 .ToList(),
             pedido.Entrega.Documentos
                 .Select(d => new DocumentoNotaResumen(
-                    d.Id, d.NombreSeguro, d.Mime, d.TamanoBytes, d.Activo))
+                    d.Id, d.NombreSeguro, d.Mime, d.TamanoBytes))
                 .ToList());
     }
 

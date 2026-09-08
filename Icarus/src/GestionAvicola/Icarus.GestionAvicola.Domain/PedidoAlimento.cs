@@ -203,46 +203,30 @@ public sealed class PedidoAlimento : AggregateRoot
         RegistrarTransicion(EstadoPedidoAlimento.Aceptado, EstadoPedidoAlimento.Despachado, actorId);
     }
 
-    // Alta de un respaldo privado de la nota (spec SP8C): solo sobre un pedido
-    // despachado, antes de la recepción. Los datos llegan validados desde el
-    // almacén privado; el contenido nunca pasa por el agregado.
-    public DocumentoNotaEntrega AgregarDocumentoNota(DatosDocumentoNota datos) =>
-        AplicarSobreDespachado(e => e.AgregarDocumento(new DocumentoNotaEntrega(
-            datos.ClaveOriginal, datos.ClaveVista, datos.Mime, datos.TamanoBytes,
-            datos.TamanoVistaBytes, datos.HashSha256, datos.NombreSeguro)));
-
-    // Sustitución con trazabilidad: el documento previo se desactiva y queda
-    // referenciado por el nuevo (spec SP8C, documentos inmutables).
-    public DocumentoNotaEntrega ReemplazarDocumentoNota(Guid documentoId, DatosDocumentoNota datos) =>
-        AplicarSobreDespachado(e => e.ReemplazarDocumento(documentoId, new DocumentoNotaEntrega(
-            datos.ClaveOriginal, datos.ClaveVista, datos.Mime, datos.TamanoBytes,
-            datos.TamanoVistaBytes, datos.HashSha256, datos.NombreSeguro)));
-
-    private DocumentoNotaEntrega AplicarSobreDespachado(
-        Func<EntregaPedidoAlimento, DocumentoNotaEntrega> operacion)
-    {
-        AsegurarEstado(
-            EstadoPedidoAlimento.Despachado,
-            "Los respaldos de la nota se registran sobre un pedido despachado.");
-        if (_entrega is null)
-            throw new ReglaNegocioException("El pedido no tiene una nota registrada.");
-        return operacion(_entrega);
-    }
-
-    // Recepción (spec SP8C "Despacho, nota y recepción"): el tenant confirma
-    // desde Despachado la cantidad realmente recibida por cada línea. La
-    // coincidencia completa contra lo entregado termina RecibidoConforme; con
-    // diferencias termina RecibidoConDiferencias y el snapshot queda calculado
-    // y persistido. Ambos estados son terminales: un reintento choca con el
-    // estado y no duplica la transición ni la notificación.
+    // Recepción (spec SP8C "Despacho, nota y recepción", foto obligatoria en
+    // SP8D): el tenant confirma desde Despachado la cantidad realmente
+    // recibida por cada línea y adjunta, en la misma transacción, la foto de
+    // su copia de la nota como único respaldo. La coincidencia completa contra
+    // lo entregado termina RecibidoConforme; con diferencias termina
+    // RecibidoConDiferencias y el snapshot queda calculado y persistido. Ambos
+    // estados son terminales: un reintento choca con el estado y no duplica la
+    // transición ni la notificación.
     public void ConfirmarRecepcion(
-        IReadOnlyList<DatosLineaRecepcion> lineasRecibidas, Guid actorId)
+        IReadOnlyList<DatosLineaRecepcion> lineasRecibidas,
+        DatosDocumentoNota documentoReceptor, Guid actorId)
     {
         AsegurarEstado(EstadoPedidoAlimento.Despachado, "Solo un pedido despachado se puede recibir.");
+        if (_entrega is null)
+            throw new ReglaNegocioException("El pedido no tiene una nota registrada.");
+        _entrega.AgregarDocumento(new DocumentoNotaEntrega(
+            documentoReceptor.ClaveOriginal, documentoReceptor.ClaveVista,
+            documentoReceptor.Mime, documentoReceptor.TamanoBytes,
+            documentoReceptor.TamanoVistaBytes, documentoReceptor.HashSha256,
+            documentoReceptor.NombreSeguro));
         var recibidas = lineasRecibidas
             .GroupBy(l => l.Tipo)
             .ToDictionary(g => g.Key, g => g.Sum(l => l.CantidadRecibida));
-        var despachadas = _entrega!.Lineas.ToDictionary(l => l.TipoAlimento);
+        var despachadas = _entrega.Lineas.ToDictionary(l => l.TipoAlimento);
         if (recibidas.Count != despachadas.Count
             || despachadas.Keys.Any(t => !recibidas.ContainsKey(t)))
             throw new ReglaNegocioException(

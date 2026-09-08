@@ -41,26 +41,16 @@ public sealed class EntregaPedidoAlimento : Entity
 
     public IReadOnlyList<DetalleEntregaPedidoAlimento> Lineas => _lineas.AsReadOnly();
 
-    // Respaldos privados de la nota (spec SP8C), incluidas las versiones
-    // desactivadas por sustitución para conservar la trazabilidad.
+    // Respaldo fotográfico del receptor (spec SP8D): se agrega una sola vez,
+    // en la misma transacción que confirma la recepción; no admite
+    // sustitución porque la recepción es terminal.
     public IReadOnlyList<DocumentoNotaEntrega> Documentos => _documentos.AsReadOnly();
 
-    // La clave del documento la genera el dominio antes de registrarla:
-    // la trazabilidad de la sustitución necesita referencias estables.
+    // Alta del único respaldo del receptor (spec SP8D): la clave lógica la
+    // genera el almacén privado, nunca el agregado.
     public DocumentoNotaEntrega AgregarDocumento(DocumentoNotaEntrega documento)
     {
         _documentos.Add(documento);
         return documento;
-    }
-
-    // Sustitución con auditoría: el previo queda desactivado con la referencia
-    // al nuevo; el contenido ya guardado no se toca (documentos inmutables).
-    public DocumentoNotaEntrega ReemplazarDocumento(Guid documentoId, DocumentoNotaEntrega nuevo)
-    {
-        var previo = _documentos.SingleOrDefault(d => d.Id == documentoId && d.Activo)
-            ?? throw new ReglaNegocioException("El documento a reemplazar no existe o ya fue reemplazado.");
-        previo.Desactivar(nuevo.Id);
-        _documentos.Add(nuevo);
-        return nuevo;
     }
 }

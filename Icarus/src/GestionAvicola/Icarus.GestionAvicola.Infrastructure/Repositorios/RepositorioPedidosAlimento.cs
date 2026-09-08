@@ -18,9 +18,6 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
     public void AgregarDetalle(DetallePedidoAlimento detalle) =>
         db.Set<DetallePedidoAlimento>().Add(detalle);
 
-    public void AgregarDocumentoNota(DocumentoNotaEntrega documento) =>
-        db.Set<DocumentoNotaEntrega>().Add(documento);
-
     public async Task<PedidoAlimento?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default) =>
         await db.PedidosAlimento.Include(p => p.Detalles)

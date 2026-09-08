@@ -15,11 +15,6 @@ public interface IRepositorioPedidosAlimento
     // EF Core los marcaría Modified por asumir que ya existen).
     void AgregarDetalle(DetallePedidoAlimento detalle);
 
-    // Los documentos de nota nacen con clave generada y son referenciados por
-    // otros documentos (trazabilidad de sustitución): se registran como Added
-    // explícitamente para conservar la clave.
-    void AgregarDocumentoNota(DocumentoNotaEntrega documento);
-
     Task<PedidoAlimento?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default);
 

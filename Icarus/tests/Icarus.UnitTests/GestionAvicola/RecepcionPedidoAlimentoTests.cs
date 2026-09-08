@@ -16,6 +16,10 @@ public class RecepcionPedidoAlimentoTests
     private static readonly DateOnly Hoy = new(2026, 9, 4);
     private static readonly DateOnly FechaNota = new(2026, 9, 3);
 
+    private static DatosDocumentoNota DocumentoReceptor() =>
+        new(Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 2048, 1024,
+            new string('a', 64), "recepcion.jpg");
+
     private static PedidoAlimento PedidoDespachadoDeBolsas(
         params (TipoAlimento Tipo, int Solicitada, int Entregada)[] lineas)
     {
@@ -30,24 +34,42 @@ public class RecepcionPedidoAlimentoTests
     }
 
     [Fact]
+    public void ConfirmarRecepcionAdjuntaElDocumentoDelReceptor()
+    {
+        var pedido = PedidoDespachadoDeBolsas(
+            (TipoAlimento.PosturaUno, 100, 100));
+        var datosDocumento = new DatosDocumentoNota(
+            Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 2048, 1024,
+            new string('a', 64), "recepcion.jpg");
+
+        pedido.ConfirmarRecepcion(
+            [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)],
+            datosDocumento, ActorId);
+
+        var documento = Assert.Single(pedido.Entrega!.Documentos);
+        Assert.Equal(datosDocumento.HashSha256, documento.HashSha256);
+        Assert.Equal(datosDocumento.NombreSeguro, documento.NombreSeguro);
+    }
+
+    [Fact]
     public void LaRecepcionSoloSeRegistraDesdeUnPedidoDespachado()
     {
         var pedido = new PedidoAlimento(ClienteId, ActorId,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100)]);
 
         var excepcionBorrador = Assert.Throws<ReglaNegocioException>(() =>
-            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)], ActorId));
+            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)], DocumentoReceptor(), ActorId));
         Assert.Equal("Solo un pedido despachado se puede recibir.", excepcionBorrador.Message);
 
         pedido.EnviarACaisy(new DateOnly(2026, 8, 28), ActorId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
         var excepcionSolicitado = Assert.Throws<ReglaNegocioException>(() =>
-            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)], ActorId));
+            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)], DocumentoReceptor(), ActorId));
         Assert.Equal("Solo un pedido despachado se puede recibir.", excepcionSolicitado.Message);
 
         pedido.Rechazar("Sin stock", ActorId);
         var excepcionRechazado = Assert.Throws<ReglaNegocioException>(() =>
-            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)], ActorId));
+            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 100)], DocumentoReceptor(), ActorId));
         Assert.Equal("Solo un pedido despachado se puede recibir.", excepcionRechazado.Message);
     }
 
@@ -59,7 +81,7 @@ public class RecepcionPedidoAlimentoTests
 
         pedido.ConfirmarRecepcion(
             [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95),
-             new DatosLineaRecepcion(TipoAlimento.PosturaDos, 50)], ActorId);
+             new DatosLineaRecepcion(TipoAlimento.PosturaDos, 50)], DocumentoReceptor(), ActorId);
 
         Assert.Equal(EstadoPedidoAlimento.RecibidoConforme, pedido.Estado);
         Assert.NotNull(pedido.Recepcion);
@@ -79,7 +101,7 @@ public class RecepcionPedidoAlimentoTests
 
         pedido.ConfirmarRecepcion(
             [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 92),
-             new DatosLineaRecepcion(TipoAlimento.PosturaDos, 50)], ActorId);
+             new DatosLineaRecepcion(TipoAlimento.PosturaDos, 50)], DocumentoReceptor(), ActorId);
 
         Assert.Equal(EstadoPedidoAlimento.RecibidoConDiferencias, pedido.Estado);
         var diferencia = Assert.Single(pedido.Recepcion!.Diferencias);
@@ -98,14 +120,14 @@ public class RecepcionPedidoAlimentoTests
 
         var incompleta = Assert.Throws<ReglaNegocioException>(() =>
             pedido.ConfirmarRecepcion(
-                [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95)], ActorId));
+                [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95)], DocumentoReceptor(), ActorId));
         Assert.Equal("La recepción debe cubrir todas las líneas del pedido.", incompleta.Message);
 
         var ajena = Assert.Throws<ReglaNegocioException>(() =>
             pedido.ConfirmarRecepcion(
                 [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95),
                  new DatosLineaRecepcion(TipoAlimento.PosturaDos, 50),
-                 new DatosLineaRecepcion(TipoAlimento.Crecimiento, 10)], ActorId));
+                 new DatosLineaRecepcion(TipoAlimento.Crecimiento, 10)], DocumentoReceptor(), ActorId));
         Assert.Equal("La recepción incluye una línea que no pertenece al pedido.", ajena.Message);
 
         Assert.Equal(EstadoPedidoAlimento.Despachado, pedido.Estado);
@@ -119,7 +141,7 @@ public class RecepcionPedidoAlimentoTests
 
         var excepcion = Assert.Throws<ReglaNegocioException>(() =>
             pedido.ConfirmarRecepcion(
-                [new DatosLineaRecepcion(TipoAlimento.PosturaUno, -1)], ActorId));
+                [new DatosLineaRecepcion(TipoAlimento.PosturaUno, -1)], DocumentoReceptor(), ActorId));
 
         Assert.Equal("La cantidad recibida no puede ser negativa.", excepcion.Message);
         Assert.Equal(EstadoPedidoAlimento.Despachado, pedido.Estado);
@@ -129,10 +151,10 @@ public class RecepcionPedidoAlimentoTests
     public void LosEstadosRecibidosSonTerminalesYElReintentoNoDuplica()
     {
         var pedido = PedidoDespachadoDeBolsas((TipoAlimento.PosturaUno, 100, 95));
-        pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95)], ActorId);
+        pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95)], DocumentoReceptor(), ActorId);
 
         var reintento = Assert.Throws<ReglaNegocioException>(() =>
-            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95)], ActorId));
+            pedido.ConfirmarRecepcion([new DatosLineaRecepcion(TipoAlimento.PosturaUno, 95)], DocumentoReceptor(), ActorId));
         Assert.Equal("Solo un pedido despachado se puede recibir.", reintento.Message);
 
         // Ninguna otra transición sale de un estado recibido.
@@ -162,7 +184,7 @@ public class RecepcionPedidoAlimentoTests
 
         pedido.ConfirmarRecepcion(
             [new DatosLineaRecepcion(TipoAlimento.PosturaUno, 3),
-             new DatosLineaRecepcion(TipoAlimento.PosturaDos, 2)], ActorId);
+             new DatosLineaRecepcion(TipoAlimento.PosturaDos, 2)], DocumentoReceptor(), ActorId);
 
         Assert.Equal(EstadoPedidoAlimento.RecibidoConforme, pedido.Estado);
         var lineaDos = pedido.Recepcion!.Lineas.Single(l => l.TipoAlimento == TipoAlimento.PosturaDos);

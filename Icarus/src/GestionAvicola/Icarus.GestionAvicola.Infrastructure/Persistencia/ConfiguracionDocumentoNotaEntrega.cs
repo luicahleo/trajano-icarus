@@ -4,9 +4,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Icarus.GestionAvicola.Infrastructure.Persistencia;
 
-// Respaldo privado de la nota (spec SP8C "Documentos privados"): SQL guarda
-// clave lógica, MIME, tamaños, hash y nombre seguro; nunca ruta física,
-// Base64 ni URL pública. El contenido vive en el volumen privado.
+// Respaldo privado de la nota que aporta el receptor al confirmar la
+// recepción (spec SP8D): SQL guarda clave lógica, MIME, tamaños, hash y
+// nombre seguro; nunca ruta física, Base64 ni URL pública. El contenido vive
+// en el volumen privado.
 public sealed class ConfiguracionDocumentoNotaEntrega
     : IEntityTypeConfiguration<DocumentoNotaEntrega>
 {
@@ -19,12 +20,6 @@ public sealed class ConfiguracionDocumentoNotaEntrega
 
         builder.HasOne<EntregaPedidoAlimento>().WithMany(e => e.Documentos)
             .HasForeignKey("EntregaPedidoAlimentoId").IsRequired();
-
-        // Trazabilidad de la sustitución: referencia al documento que lo
-        // reemplazó; el previo nunca se borra físicamente.
-        builder.HasOne<DocumentoNotaEntrega>().WithMany()
-            .HasForeignKey(d => d.ReemplazadoPorId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex("EntregaPedidoAlimentoId");
     }

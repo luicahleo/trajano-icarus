@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
@@ -73,22 +74,40 @@ public static class PedidosAlimentoEndpoints
             await mediator.Send(new EnviarPedidoAlimentoCommand(id), cancellationToken);
             return Results.NoContent();
         });
-        // Recepción por línea (spec SP8C): el tenant confirma desde Despachado
-        // la cantidad realmente recibida; el resultado se notifica a CAISY en
-        // la misma transacción. Un reintento responde 409.
-        tenant.MapPost("/{id:guid}/recibir", async (Guid id, RecepcionRequest cuerpo,
+        // Recepción por línea con foto obligatoria (spec SP8D): el tenant
+        // confirma desde Despachado la cantidad realmente recibida y adjunta
+        // en el mismo envío una foto de su copia de la nota. El resultado se
+        // notifica a CAISY en la misma transacción. Un reintento responde 409.
+        tenant.MapPost("/{id:guid}/recibir", async Task<IResult> (
+            Guid id, IFormFile? archivo, [FromForm] string lineas,
             ISender mediator, CancellationToken cancellationToken) =>
         {
-            var lineas = cuerpo.Lineas.Select(linea =>
+            if (archivo is null || archivo.Length == 0)
+                return Results.BadRequest(new { error = "Falta la foto de la nota recibida." });
+            if (archivo.Length > TamanoMaximoImagen)
+                return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+            List<LineaRecepcionRequest> lineasParseadas;
+            try
+            {
+                lineasParseadas = JsonSerializer.Deserialize<List<LineaRecepcionRequest>>(
+                    lineas, JsonSerializerOptions.Web) ?? [];
+            }
+            catch (JsonException)
+            {
+                return Results.BadRequest(new { error = "Las líneas recibidas no son válidas." });
+            }
+            var datosLineas = lineasParseadas.Select(linea =>
             {
                 if (!Enum.TryParse<TipoAlimento>(linea.TipoAlimento, true, out var tipo))
                     throw new ValidationException("El tipo de alimento indicado no existe.");
                 return new DatosLineaRecepcion(tipo, linea.CantidadRecibida);
             }).ToList();
+            await using var contenido = archivo.OpenReadStream();
             await mediator.Send(
-                new ConfirmarRecepcionPedidoCommand(id, lineas), cancellationToken);
+                new ConfirmarRecepcionPedidoCommand(id, datosLineas, contenido, archivo.FileName),
+                cancellationToken);
             return Results.NoContent();
-        });
+        }).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(TamanoMaximoImagen));
         // Descarga histórica de los respaldos de la nota (spec SP8C): solo el
         // tenant propietario los encuentra; un id ajeno responde 404 genérico.
         tenant.MapGet("/{id:guid}/nota/documentos/{documentoId:guid}/vista",
@@ -161,28 +180,6 @@ public static class PedidosAlimentoEndpoints
                 cancellationToken);
             return Results.NoContent();
         });
-
-        // Alta o sustitución de respaldos privados de la nota (spec SP8C):
-        // multipart con una imagen por llamada. Sin antiforgery: la
-        // autenticación es Bearer, no cookie.
-        caisy.MapPost("/{id:guid}/nota/documentos", async Task<IResult> (
-            Guid id, IFormFile? archivo,
-            [FromForm] Guid? reemplazaDocumentoId, ISender mediator,
-            CancellationToken cancellationToken) =>
-        {
-            if (archivo is null || archivo.Length == 0)
-                return Results.BadRequest(new { error = "Falta el archivo de imagen." });
-            if (archivo.Length > TamanoMaximoImagen)
-                return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
-            await using var contenido = archivo.OpenReadStream();
-            var documentoId = await mediator.Send(
-                new AgregarDocumentoNotaCommand(
-                    id, contenido, archivo.FileName, reemplazaDocumentoId),
-                cancellationToken);
-            return Results.Created(
-                $"/pedidos-alimento-caisy/{id}/nota/documentos/{documentoId}",
-                new { id = documentoId });
-        }).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(TamanoMaximoImagen));
 
         // Descarga autorizada (spec SP8C): vista inline, original solo como
         // adjunto. El filtro de alcance hace 404 para documentos ajenos.
@@ -264,8 +261,6 @@ public static class PedidosAlimentoEndpoints
         IReadOnlyList<LineaDespachoRequest> Lineas);
 
     private sealed record LineaRecepcionRequest(string TipoAlimento, int CantidadRecibida);
-
-    private sealed record RecepcionRequest(IReadOnlyList<LineaRecepcionRequest> Lineas);
 
     // Descarga segura (spec SP8C "Documentos privados"): la vista derivada se
     // sirve inline y el original como adjunto, con CSP restrictiva y nosniff.

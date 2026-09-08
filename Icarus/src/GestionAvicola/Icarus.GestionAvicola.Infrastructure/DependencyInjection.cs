@@ -62,7 +62,6 @@ public static class DependencyInjection
             .Bind(configuracion.GetSection(OpcionesAlmacenDocumentosPedido.Seccion))
             .Validate(o => o.MaxTamanoBytes > 0, "El tamaño máximo debe ser mayor que cero.")
             .Validate(o => o.MaxDimensionesPixeles > 0, "Las dimensiones máximas deben ser mayores que cero.")
-            .Validate(o => o.MaxDocumentosPorNota > 0, "La cantidad máxima de imágenes por nota debe ser mayor que cero.")
             .ValidateOnStart();
         servicios.AddSingleton(sp =>
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesAlmacenDocumentosPedido>>().Value);

@@ -2,11 +2,14 @@ using Icarus.BuildingBlocks.Domain;
 
 namespace Icarus.GestionAvicola.Domain;
 
-// Respaldo probatorio de la nota en papel (spec SP8C "Documentos privados"):
-// una imagen del original guardada en un volumen privado. SQL conserva solo
-// la clave lógica opaca de original y vista, el MIME, los tamaños, el hash
-// SHA-256 y un nombre seguro para mostrar; nunca la ruta física, Base64 ni
-// una URL pública. El contenido lo custodia IAlmacenDocumentosPedido.
+// Respaldo probatorio de la nota en papel que recibe el tenant al recibir la
+// mercadería (spec SP8D): una imagen guardada en un volumen privado. SQL
+// conserva solo la clave lógica opaca de original y vista, el MIME, los
+// tamaños, el hash SHA-256 y un nombre seguro para mostrar; nunca la ruta
+// física, Base64 ni una URL pública. El contenido lo custodia
+// IAlmacenDocumentosPedido. Se crea una sola vez, junto con la confirmación
+// de recepción: no admite sustitución posterior porque la recepción es
+// terminal.
 public sealed class DocumentoNotaEntrega : Entity
 {
     private DocumentoNotaEntrega()
@@ -17,6 +20,10 @@ public sealed class DocumentoNotaEntrega : Entity
         Guid claveOriginal, Guid claveVista, string mime, long tamanoBytes,
         long tamanoVistaBytes, string hashSha256, string nombreSeguro)
     {
+        // Nace con la clave vacía: EF la descubre por la navegación de la
+        // entrega y la registra como Added (patrón AgregarDetalle). Sin
+        // sustitución, no hace falta una clave estable antes de guardar.
+        Id = Guid.Empty;
         ClaveOriginal = claveOriginal;
         ClaveVista = claveVista;
         Mime = mime;
@@ -25,7 +32,6 @@ public sealed class DocumentoNotaEntrega : Entity
         HashSha256 = hashSha256;
         NombreSeguro = nombreSeguro;
         FechaUtc = DateTime.UtcNow;
-        Activo = true;
     }
 
     public Guid ClaveOriginal { get; private set; }
@@ -43,21 +49,6 @@ public sealed class DocumentoNotaEntrega : Entity
     public string NombreSeguro { get; private set; } = string.Empty;
 
     public DateTime FechaUtc { get; private set; }
-
-    public bool Activo { get; private set; }
-
-    // Trazabilidad de la sustitución (spec SP8C): el documento publicado es
-    // inmutable; la corrección desactiva esta versión y referencia a la nueva.
-    public Guid? ReemplazadoPorId { get; private set; }
-
-    public DateTime? FechaDesactivacionUtc { get; private set; }
-
-    internal void Desactivar(Guid reemplazadoPorId)
-    {
-        Activo = false;
-        ReemplazadoPorId = reemplazadoPorId;
-        FechaDesactivacionUtc = DateTime.UtcNow;
-    }
 }
 
 // Datos que el almacenamiento privado entrega al dominio tras validar y

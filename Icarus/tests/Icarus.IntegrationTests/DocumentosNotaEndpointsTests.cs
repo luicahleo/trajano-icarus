@@ -9,13 +9,14 @@ using Xunit;
 
 namespace Icarus.IntegrationTests;
 
-// SP8C Tarea 2 (spec: "Documentos privados"): los respaldos de la nota son
-// privados y probatorios. CAISY los sube sobre un pedido despachado; solo el
-// tenant propietario y CAISY los descargan (un tercero recibe 404 o 403 sin
-// revelar existencia). La vista derivada se sirve inline y el original solo
-// como adjunto con cabeceras seguras. La sustitución desactiva el previo
-// conservando el histórico. Cada prueba crea su propio tenant: no comparte
-// cupo semanal con las pruebas de SP8B.
+// SP8C/SP8D (spec: "Documentos privados" y "Evidencia del receptor"): el
+// respaldo probatorio de la nota lo adjunta el tenant al confirmar la
+// recepción, en el mismo envío y como única carga posible (el upload de CAISY
+// ya no existe). El documento es privado: solo el tenant propietario y CAISY
+// lo descargan (un tercero recibe 404 o 403 sin revelar existencia). La vista
+// derivada se sirve inline y el original solo como adjunto con cabeceras
+// seguras. Cada prueba crea su propio tenant: no comparte cupo semanal con las
+// pruebas de SP8B.
 [Collection(IntegracionCollection.Nombre)]
 public class DocumentosNotaEndpointsTests
 {
@@ -92,14 +93,13 @@ public class DocumentosNotaEndpointsTests
         return datos.ToArray();
     }
 
-    private static HttpContent ImagenMultipart(byte[] imagen, string nombre, Guid? reemplazaDocumentoId = null)
+    private static HttpContent RecepcionMultipart(byte[] imagen, int cantidadRecibida, string nombre = "recepcion.jpg")
     {
         var cuerpo = new MultipartFormDataContent
         {
             { new ByteArrayContent(imagen) { Headers = { ContentType = new MediaTypeHeaderValue("image/png") } }, "archivo", nombre },
+            { new StringContent(JsonSerializer.Serialize(new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida } })), "lineas" },
         };
-        if (reemplazaDocumentoId is { } previo)
-            cuerpo.Add(new StringContent(previo.ToString()), "reemplazaDocumentoId");
         return cuerpo;
     }
 
@@ -181,15 +181,53 @@ public class DocumentosNotaEndpointsTests
         return (cliente, tokenTenant, tokenCaisy, idPedido);
     }
 
-    private static async Task<Guid> SubirImagenAsync(
-        HttpClient cliente, string tokenCaisy, Guid idPedido, byte[] imagen,
-        Guid? reemplazaDocumentoId = null, string nombre = "nota-frente.png")
+    // Recepción con foto obligatoria (spec SP8D): el respaldo viaja en el
+    // mismo envío que la confirmación, nunca por separado.
+    private static async Task<HttpStatusCode> ConfirmarRecepcionAsync(
+        HttpClient cliente, string tokenTenant, Guid idPedido, byte[] imagen, int cantidadRecibida)
     {
         var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
+            RecepcionMultipart(imagen, cantidadRecibida)));
+        return respuesta.StatusCode;
+    }
+
+    [Fact]
+    public async Task RecibirSinArchivoDevuelveBadRequest()
+    {
+        var (cliente, tokenTenant, _, idPedido) = await PrepararFlujoCompletoAsync();
+
+        using var cuerpo = new MultipartFormDataContent
+        {
+            { new StringContent("""[{"tipoAlimento":"PosturaUno","cantidadRecibida":95}]"""), "lineas" },
+        };
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant, cuerpo));
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task LaCargaDeCaisyYaNoExiste()
+    {
+        var (cliente, _, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
+
+        var respuesta = await cliente.SendAsync(Pedido(
             HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/nota/documentos", tokenCaisy,
-            ImagenMultipart(imagen, nombre, reemplazaDocumentoId)));
-        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
-        return Guid.Parse((await respuesta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!);
+            RecepcionMultipart(ImagenPng(), 95)));
+
+        Assert.True(respuesta.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed);
+    }
+
+    private static async Task<Guid> ObtenerDocumentoUnicoAsync(
+        HttpClient cliente, string token, Guid idPedido)
+    {
+        var detalle = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento/{idPedido}", token));
+        Assert.Equal(HttpStatusCode.OK, detalle.StatusCode);
+        var cuerpo = await detalle.Content.ReadFromJsonAsync<JsonElement>();
+        return Guid.Parse(cuerpo.GetProperty("entrega").GetProperty("documentos")
+            .EnumerateArray().Single().GetProperty("id").GetString()!);
     }
 
     [Fact]
@@ -197,7 +235,10 @@ public class DocumentosNotaEndpointsTests
     {
         var (cliente, tokenTenant, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
         var imagen = ImagenPng();
-        var documentoId = await SubirImagenAsync(cliente, tokenCaisy, idPedido, imagen);
+        // El respaldo del receptor se adjunta al confirmar la recepción (SP8D).
+        Assert.Equal(HttpStatusCode.NoContent,
+            await ConfirmarRecepcionAsync(cliente, tokenTenant, idPedido, imagen, 95));
+        var documentoId = await ObtenerDocumentoUnicoAsync(cliente, tokenTenant, idPedido);
 
         // Vista derivada inline: se reencodifica, no son los bytes originales.
         var vistaCaisy = await cliente.SendAsync(Pedido(
@@ -236,52 +277,24 @@ public class DocumentosNotaEndpointsTests
     }
 
     [Fact]
-    public async Task LaSustitucionDesactivaElPrevioYConservaElHistorico()
+    public async Task UnaImagenFalsaSeRechazaSinConfirmarLaRecepcion()
     {
-        var (cliente, tokenTenant, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
-        var previo = await SubirImagenAsync(cliente, tokenCaisy, idPedido, ImagenPng(), nombre: "borrosa.png");
+        var (cliente, tokenTenant, _, idPedido) = await PrepararFlujoCompletoAsync();
 
-        var nuevo = await SubirImagenAsync(
-            cliente, tokenCaisy, idPedido, ImagenPng(9, 9), previo, "neta.png");
-
-        // El histórico completo sigue descargable: los documentos publicados
-        // son inmutables y la corrección solo los desactiva.
-        var vistaPrevio = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, $"/api/pedidos-alimento/{idPedido}/nota/documentos/{previo}/vista", tokenTenant));
-        var vistaNuevo = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{idPedido}/nota/documentos/{nuevo}/vista", tokenCaisy));
-        Assert.Equal(HttpStatusCode.OK, vistaPrevio.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, vistaNuevo.StatusCode);
-
-        // El documento ya reemplazado no se reemplaza otra vez: 409, y un id
-        // inexistente también es 409 (nada se escribe al volumen).
-        var reemplazoDuplicado = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/nota/documentos", tokenCaisy,
-            ImagenMultipart(ImagenPng(), "otra.png", previo)));
-        var reemplazoInexistente = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/nota/documentos", tokenCaisy,
-            ImagenMultipart(ImagenPng(), "otra.png", Guid.NewGuid())));
-        Assert.Equal(HttpStatusCode.Conflict, reemplazoDuplicado.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, reemplazoInexistente.StatusCode);
-    }
-
-    [Fact]
-    public async Task UnPedidoAjenoDevuelve404YUnaImagenFalsaSeRechaza()
-    {
-        var (cliente, _, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
-
-        // Pedido inexistente: 404 sin revelar datos.
-        var ajeno = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{Guid.NewGuid()}/nota/documentos", tokenCaisy,
-            ImagenMultipart(ImagenPng(), "x.png")));
-        Assert.Equal(HttpStatusCode.NotFound, ajeno.StatusCode);
-
-        // Imagen falsa (un PDF renombrado): la firma real la rechaza.
+        // Imagen falsa (un PDF renombrado): la firma real la rechaza antes de
+        // tocar el pedido, que sigue despachado y sin respaldo.
         var pdfFalso = "%PDF-1.7 esto no es una imagen"u8.ToArray();
         var falso = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/nota/documentos", tokenCaisy,
-            ImagenMultipart(pdfFalso, "falsa.png")));
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
+            RecepcionMultipart(pdfFalso, 95)));
         Assert.Equal(HttpStatusCode.BadRequest, falso.StatusCode);
+
+        var detalle = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento/{idPedido}", tokenTenant));
+        var cuerpo = await detalle.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Despachado", cuerpo.GetProperty("estado").GetString());
+        Assert.Equal(JsonValueKind.Null, cuerpo.GetProperty("recepcion").ValueKind);
+        Assert.Equal(0, cuerpo.GetProperty("entrega").GetProperty("documentos").GetArrayLength());
     }
 
     [Fact]
@@ -318,14 +331,10 @@ public class DocumentosNotaEndpointsTests
         Assert.Equal(3, pedidos.Count);
         // El primero queda despachado sin recibir; los otros dos se reciben
         // (95 conforme y 93 con diferencias).
-        var recibir95 = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{pedidos[1]}/recibir", tokenTenant,
-            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
-        Assert.Equal(HttpStatusCode.NoContent, recibir95.StatusCode);
-        var recibir93 = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{pedidos[2]}/recibir", tokenTenant,
-            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 93 } } })));
-        Assert.Equal(HttpStatusCode.NoContent, recibir93.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,
+            await ConfirmarRecepcionAsync(cliente, tokenTenant, pedidos[1], ImagenPng(), 95));
+        Assert.Equal(HttpStatusCode.NoContent,
+            await ConfirmarRecepcionAsync(cliente, tokenTenant, pedidos[2], ImagenPng(), 93));
 
         var hoy = HoyBolivia().ToString("yyyy-MM-dd");
         var balance = await cliente.SendAsync(Pedido(
@@ -385,25 +394,25 @@ public class DocumentosNotaEndpointsTests
     public async Task ElTenantConfirmaLaRecepcionYCaisyEsNotificada()
     {
         var (cliente, tokenTenant, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
-        await SubirImagenAsync(cliente, tokenCaisy, idPedido, ImagenPng());
 
         // Recepción de un tercero: 404 sin revelar existencia.
         var tokenAjeno = await LoginComo(cliente, SemillaIdentidad.EmailClienteC1);
         var ajeno = await cliente.SendAsync(Pedido(
             HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenAjeno,
-            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+            RecepcionMultipart(ImagenPng(), 95)));
         Assert.Equal(HttpStatusCode.NotFound, ajeno.StatusCode);
 
-        // El tenant informa lo realmente recibido: conforme con lo despachado.
+        // El tenant informa lo realmente recibido con la foto del receptor:
+        // conforme con lo despachado, y el respaldo queda adjuntado.
         var conforme = await cliente.SendAsync(Pedido(
             HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
-            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+            RecepcionMultipart(ImagenPng(), 95)));
         Assert.Equal(HttpStatusCode.NoContent, conforme.StatusCode);
 
         // Reintento: 409 sin duplicar la transición.
         var reintento = await cliente.SendAsync(Pedido(
             HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
-            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 95 } } })));
+            RecepcionMultipart(ImagenPng(), 95)));
         Assert.Equal(HttpStatusCode.Conflict, reintento.StatusCode);
 
         // El histórico del tenant: entrega con nota, respaldos y totales, y
@@ -442,10 +451,8 @@ public class DocumentosNotaEndpointsTests
         var (cliente, tokenTenant, tokenCaisy, idPedido) = await PrepararFlujoCompletoAsync();
 
         // Recibió una bolsa menos de lo despachado: diferencias explícitas.
-        var conDiferencias = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/recibir", tokenTenant,
-            JsonContent.Create(new { lineas = new[] { new { tipoAlimento = "PosturaUno", cantidadRecibida = 93 } } })));
-        Assert.Equal(HttpStatusCode.NoContent, conDiferencias.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,
+            await ConfirmarRecepcionAsync(cliente, tokenTenant, idPedido, ImagenPng(), 93));
 
         var detalle = await cliente.SendAsync(Pedido(
             HttpMethod.Get, $"/api/pedidos-alimento/{idPedido}", tokenTenant));

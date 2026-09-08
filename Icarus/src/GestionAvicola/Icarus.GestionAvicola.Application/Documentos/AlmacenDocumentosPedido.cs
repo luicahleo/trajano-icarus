@@ -30,8 +30,9 @@ public sealed record DocumentoAlmacenado(
     long TamanoVistaBytes);
 
 // Límites de validación configurables sin cambiar código: tamaño máximo por
-// archivo, dimensiones máximas de la imagen (en pixeles por lado) y cantidad
-// máxima de imágenes activas por nota (páginas y reverso).
+// archivo y dimensiones máximas de la imagen (en pixeles por lado). La
+// recepción crea como máximo un documento, una sola vez: no hay cuota por
+// nota.
 public sealed class OpcionesAlmacenDocumentosPedido
 {
     public const string Seccion = "AlmacenDocumentosPedido";
@@ -41,6 +42,4 @@ public sealed class OpcionesAlmacenDocumentosPedido
     public long MaxTamanoBytes { get; set; } = 5 * 1024 * 1024;
 
     public int MaxDimensionesPixeles { get; set; } = 8000;
-
-    public int MaxDocumentosPorNota { get; set; } = 8;
 }
