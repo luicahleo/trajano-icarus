@@ -354,6 +354,92 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
             "%PDF-1.7 recibo de despacho"u8.ToArray(), writable: false));
     }
 
+    // SP9C: bandeja de recepción de huevo de CAISY (confirmar recepción y
+    // recibo del despacho de huevo).
+    public Exception? ErrorDeListarDespachosHuevo { get; set; }
+    public Exception? ErrorDeObtenerDespachoHuevo { get; set; }
+    public Exception? ErrorDeConfirmarRecepcion { get; set; }
+    public Exception? ErrorDeReciboHuevo { get; set; }
+    public Exception? ErrorDeNotificacionesHuevo { get; set; }
+    public Exception? ErrorDeMarcarLeidaHuevo { get; set; }
+
+    public PaginaDespachosHuevoApi PaginaDeDespachosHuevo { get; set; } = new([], 0);
+    public DespachoHuevoDetalleApi? DespachoHuevoActual { get; set; }
+    public BandejaNotificacionesDespachoHuevoApi NotificacionesDeDespachosHuevo { get; set; } = new([], 0);
+
+    public int VecesListarDespachosHuevo { get; private set; }
+    public int VecesObtenerDespachoHuevo { get; private set; }
+    public int VecesConfirmarRecepcion { get; private set; }
+    public int VecesDescargarReciboHuevo { get; private set; }
+    public int VecesListarNotificacionesHuevo { get; private set; }
+    public int VecesMarcarLeidaHuevo { get; private set; }
+
+    public FiltrosDespachosHuevoApi? UltimosFiltrosDespachosHuevo { get; private set; }
+    public Guid? UltimoDespachoHuevoObtenido { get; private set; }
+    public Guid? UltimaRecepcionConfirmada { get; private set; }
+    public Guid? UltimoReciboHuevo { get; private set; }
+    public Guid? UltimaNotificacionHuevoMarcada { get; private set; }
+
+    public Task<PaginaDespachosHuevoApi> ListarDespachosHuevoAsync(
+        FiltrosDespachosHuevoApi filtros, CancellationToken token = default)
+    {
+        VecesListarDespachosHuevo++;
+        UltimosFiltrosDespachosHuevo = filtros;
+        if (ErrorDeListarDespachosHuevo is not null) throw ErrorDeListarDespachosHuevo;
+        return Task.FromResult(PaginaDeDespachosHuevo);
+    }
+
+    public Task<DespachoHuevoDetalleApi> ObtenerDespachoHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        VecesObtenerDespachoHuevo++;
+        UltimoDespachoHuevoObtenido = id;
+        if (ErrorDeObtenerDespachoHuevo is not null) throw ErrorDeObtenerDespachoHuevo;
+        return Task.FromResult(DespachoHuevoActual ?? CrearDespachoHuevo(id, "Despachado"));
+    }
+
+    public Task ConfirmarRecepcionDespachoHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        VecesConfirmarRecepcion++;
+        UltimaRecepcionConfirmada = id;
+        if (ErrorDeConfirmarRecepcion is not null) throw ErrorDeConfirmarRecepcion;
+        return Task.CompletedTask;
+    }
+
+    public Task<Stream> ObtenerReciboDespachoHuevoPdfAsync(Guid id, CancellationToken token = default)
+    {
+        VecesDescargarReciboHuevo++;
+        UltimoReciboHuevo = id;
+        if (ErrorDeReciboHuevo is not null) throw ErrorDeReciboHuevo;
+        return Task.FromResult<Stream>(new MemoryStream(
+            "%PDF-1.7 recibo de recepcion de huevo"u8.ToArray(), writable: false));
+    }
+
+    public Task<BandejaNotificacionesDespachoHuevoApi> ListarNotificacionesDespachoHuevoAsync(
+        CancellationToken token = default)
+    {
+        VecesListarNotificacionesHuevo++;
+        if (ErrorDeNotificacionesHuevo is not null) throw ErrorDeNotificacionesHuevo;
+        return Task.FromResult(NotificacionesDeDespachosHuevo);
+    }
+
+    public Task MarcarNotificacionDespachoHuevoLeidaAsync(Guid id, CancellationToken token = default)
+    {
+        VecesMarcarLeidaHuevo++;
+        UltimaNotificacionHuevoMarcada = id;
+        if (ErrorDeMarcarLeidaHuevo is not null) throw ErrorDeMarcarLeidaHuevo;
+        return Task.CompletedTask;
+    }
+
+    public static DespachoHuevoDetalleApi CrearDespachoHuevo(
+        Guid id, string estado = "Despachado") =>
+        new(
+            id, estado, new(2025, 11, 2), 10, 2950, 1602.75m,
+            [
+                new DetalleDespachoHuevoApi(
+                    Guid.NewGuid(), "Primera", 10, 0, 2950, 0.5433m, 1602.75m),
+            ]);
+
     public static PedidoDetalleApi CrearPedido(
         Guid id, string estado = "Solicitado", DateOnly? fechaEntregaEstimada = null,
         EntregaPedidoApi? entrega = null, RecepcionPedidoApi? recepcion = null) =>

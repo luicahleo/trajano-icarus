@@ -146,6 +146,93 @@ public class ApiIcarusClientTests
             _manejador.Peticiones[0].Uri.ToString());
     }
 
+    // SP9C: la bandeja de recepción de huevo apunta al grupo
+    // /despachos-huevo-caisy con el mismo cuerpo que sus pares de pedidos.
+    [Fact]
+    public async Task ListarDespachosHuevoEnviaFiltrosEnLaRutaCaisy()
+    {
+        _manejador.Responder(HttpStatusCode.OK,
+            """{"items":[{"id":"6b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c001","estado":"Despachado","fechaDespacho":"2025-11-02","totalAmarras":10,"totalHuevos":2950,"totalBs":1602.75}],"total":1}""");
+
+        var pagina = await _cliente.ListarDespachosHuevoAsync(
+            new FiltrosDespachosHuevoApi("Despachado", 2, 50));
+
+        var resumen = Assert.Single(pagina.Items);
+        Assert.Equal(1, pagina.Total);
+        Assert.Equal("Despachado", resumen.Estado);
+        Assert.Equal(2950, resumen.TotalHuevos);
+        Assert.Equal(1602.75m, resumen.TotalBs);
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Get, peticion.Metodo);
+        Assert.Equal(
+            $"{BaseApi}despachos-huevo-caisy?pagina=2&tamanoPagina=50&estado=Despachado",
+            peticion.Uri.ToString());
+        Assert.Equal("Bearer token-actual", peticion.Autorizacion);
+    }
+
+    [Fact]
+    public async Task ConfirmarRecepcionDespachoHuevoPosteaALaRutaCaisy()
+    {
+        _manejador.Responder(HttpStatusCode.NoContent);
+        var id = Guid.NewGuid();
+
+        await _cliente.ConfirmarRecepcionDespachoHuevoAsync(id);
+
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Post, peticion.Metodo);
+        Assert.Equal($"{BaseApi}despachos-huevo-caisy/{id}/confirmar-recepcion",
+            peticion.Uri.ToString());
+        Assert.Equal("Bearer token-actual", peticion.Autorizacion);
+    }
+
+    [Fact]
+    public async Task ObtenerReciboDespachoHuevoPdfDevuelveElContenidoDesdeLaRutaCaisy()
+    {
+        _manejador.Responder(HttpStatusCode.OK,
+            contenido: "%PDF-1.7 recibo de huevo"u8.ToArray(), tipoDeContenido: "application/pdf");
+        var id = Guid.NewGuid();
+
+        var flujo = await _cliente.ObtenerReciboDespachoHuevoPdfAsync(id);
+
+        using var memoria = new MemoryStream();
+        await flujo.CopyToAsync(memoria);
+        Assert.Equal("%PDF-1.7 recibo de huevo"u8.ToArray(), memoria.ToArray());
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Get, peticion.Metodo);
+        Assert.Equal($"{BaseApi}despachos-huevo-caisy/{id}/recibo.pdf", peticion.Uri.ToString());
+    }
+
+    [Fact]
+    public async Task ListarNotificacionesDespachoHuevoParseaItemsYContador()
+    {
+        _manejador.Responder(HttpStatusCode.OK,
+            """{"items":[{"id":"6b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c001","tipo":"DespachoRecibido","despachoHuevoId":"7c3f5d57-3e2b-4c8f-8a5c-1d2e3f4a5b6c","fechaUtc":"2025-11-02T15:00:00Z","leida":false,"meta":null}],"contador":1}""");
+
+        var bandeja = await _cliente.ListarNotificacionesDespachoHuevoAsync();
+
+        var notificacion = Assert.Single(bandeja.Items);
+        Assert.Equal(1, bandeja.Contador);
+        Assert.Equal("DespachoRecibido", notificacion.Tipo);
+        Assert.False(notificacion.Leida);
+        Assert.Equal(Guid.Parse("7c3f5d57-3e2b-4c8f-8a5c-1d2e3f4a5b6c"), notificacion.DespachoHuevoId);
+        Assert.Equal($"{BaseApi}despachos-huevo-caisy/notificaciones",
+            _manejador.Peticiones[0].Uri.ToString());
+    }
+
+    [Fact]
+    public async Task MarcarNotificacionDespachoHuevoLeidaPosteaALaRutaCaisy()
+    {
+        _manejador.Responder(HttpStatusCode.NoContent);
+        var id = Guid.NewGuid();
+
+        await _cliente.MarcarNotificacionDespachoHuevoLeidaAsync(id);
+
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Post, peticion.Metodo);
+        Assert.Equal($"{BaseApi}despachos-huevo-caisy/notificaciones/{id}/marcar-leida",
+            peticion.Uri.ToString());
+    }
+
     [Fact]
     public async Task ListarNotificacionesEnviaBearerYParseaLaColeccion()
     {

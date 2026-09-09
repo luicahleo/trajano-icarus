@@ -118,3 +118,34 @@ public sealed record LineaDespachoApi(string TipoAlimento, int CantidadEntregada
 public sealed record ComandoDespachoApi(
     Guid Id, string NumeroNota, DateOnly FechaNota, decimal? TotalInformado,
     IReadOnlyList<LineaDespachoApi> Lineas);
+
+// Recepción de huevo (SP9C): espejo de los DTO del grupo
+// /despachos-huevo-caisy para la bandeja del GestorCaisy. El tamaño viaja como
+// nombre JSON (Extra, Primera, ...); el precio congelado es el snapshot del
+// despacho y nunca se recalcula.
+public sealed record FiltrosDespachosHuevoApi(
+    string? Estado, int Pagina, int TamanoPagina);
+
+public sealed record DespachoHuevoResumenApi(
+    Guid Id, string Estado, DateOnly? FechaDespacho, int TotalAmarras,
+    int TotalHuevos, decimal? TotalBs);
+
+public sealed record PaginaDespachosHuevoApi(
+    IReadOnlyList<DespachoHuevoResumenApi> Items, int Total);
+
+public sealed record DetalleDespachoHuevoApi(
+    Guid Id, string Tamano, int CantidadAmarras, int UnidadesSueltas,
+    int CantidadHuevos, decimal? PrecioProductorCongelado, decimal? Subtotal);
+
+public sealed record DespachoHuevoDetalleApi(
+    Guid Id, string Estado, DateOnly? FechaDespacho, int TotalAmarras,
+    int TotalHuevos, decimal? TotalBs, IReadOnlyList<DetalleDespachoHuevoApi> Detalles);
+
+// Las notificaciones de despacho de huevo usan una entidad dedicada (SP9): el
+// identificador del despacho es anulable porque CreditoInsuficiente se origina
+// en un pedido de alimento, no en un despacho.
+public sealed record NotificacionDespachoHuevoApi(
+    Guid Id, string Tipo, Guid? DespachoHuevoId, DateTime FechaUtc, bool Leida, string? Meta);
+
+public sealed record BandejaNotificacionesDespachoHuevoApi(
+    IReadOnlyList<NotificacionDespachoHuevoApi> Items, int Contador);

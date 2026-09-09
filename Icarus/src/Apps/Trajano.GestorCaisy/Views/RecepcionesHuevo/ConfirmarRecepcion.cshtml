@@ -1,0 +1,76 @@
+@model VistaDespachoHuevoDetalle
+@{
+    var despacho = Model.Despacho;
+    ViewData["Titulo"] = "Confirmar recepción";
+    ViewData["Seccion"] = "recepciones-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Confirmar recepción</h1>
+        <p class="pagina-cabecera__detalle">
+            Confirma que el despacho llegó completo. La confirmación es un paso
+            terminal: notifica al emisor, habilita el recibo en PDF y descuenta
+            el crédito del tenant. Antes de confirmar verifica el total de
+            huevos contra la nota de entrega.
+        </p>
+    </div>
+    <span class="chip chip--solicitado">@despacho.Estado</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Resumen del despacho</h2>
+    <dl class="ficha">
+        <div>
+            <dt>Fecha de despacho</dt>
+            <dd>@(despacho.FechaDespacho?.ToString("dd/MM/yyyy") ?? "—")</dd>
+        </div>
+        <div>
+            <dt>Total de amarras</dt>
+            <dd>@despacho.TotalAmarras</dd>
+        </div>
+        <div>
+            <dt>Total de huevos</dt>
+            <dd>@despacho.TotalHuevos</dd>
+        </div>
+        <div>
+            <dt>Total (Bs)</dt>
+            <dd>@(despacho.TotalBs?.ToString("0.00") ?? "—")</dd>
+        </div>
+    </dl>
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Detalle por tamaño</h2>
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Tamaño</th>
+                <th scope="col">Amarras</th>
+                <th scope="col">Unidades sueltas</th>
+                <th scope="col">Huevos</th>
+                <th scope="col">Precio congelado (Bs/unidad)</th>
+                <th scope="col">Subtotal (Bs)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var detalle in despacho.Detalles)
+            {
+                <tr>
+                    <td>@detalle.Tamano</td>
+                    <td>@detalle.CantidadAmarras</td>
+                    <td>@detalle.UnidadesSueltas</td>
+                    <td>@detalle.CantidadHuevos</td>
+                    <td>@(detalle.PrecioProductorCongelado?.ToString("0.0000") ?? "—")</td>
+                    <td>@(detalle.Subtotal?.ToString("0.00") ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+<section class="tarjeta">
+    <div class="acciones">
+        <form asp-action="ConfirmarRecepcion" asp-route-id="@despacho.Id" method="post">
+            <button type="submit" class="boton boton--primario">Confirmar recepción</button>
+        </form>
+        <a class="enlace" asp-action="Detalles" asp-route-id="@despacho.Id">Cancelar y volver al despacho</a>
+    </div>
+</section>

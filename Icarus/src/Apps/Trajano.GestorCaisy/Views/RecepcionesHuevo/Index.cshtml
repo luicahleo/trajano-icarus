@@ -1,0 +1,145 @@
+@model BandejaDespachosHuevoVista
+@{
+    ViewData["Titulo"] = "Recepción de huevo";
+    ViewData["Seccion"] = "recepciones-huevo";
+    var pagina = Model.Pagina;
+    var totalPaginas = Math.Max(1, (int)Math.Ceiling(pagina.Total / (double)Model.TamanoPagina));
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Recepción de huevo</h1>
+        <p class="pagina-cabecera__detalle">
+            Bandeja global de despachos de huevo despachados por los tenants.
+            Confirma la recepción del que llegó y descarga su recibo; el precio
+            del productor es el congelado al despacho.
+        </p>
+    </div>
+    <a class="boton boton--neutro" asp-controller="PreciosHuevo" asp-action="Index">Precios de huevo</a>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Novedades para CAISY (@Model.Notificaciones.Contador sin leer)</h2>
+    @if (Model.Notificaciones.Items.Count == 0)
+    {
+        <p class="vacio__texto">No hay notificaciones de despachos de huevo.</p>
+    }
+    else
+    {
+        <ul class="novedades">
+            @foreach (var notificacion in Model.Notificaciones.Items)
+            {
+                <li>
+                    <div>
+                        <span class="chip chip--@EtiquetaChip(notificacion.Tipo)">@EtiquetaNotificacion(notificacion.Tipo)</span>
+                        <span>@notificacion.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    <div class="novedades__acciones">
+                        @if (notificacion.DespachoHuevoId is { } despachoId)
+                        {
+                            <a class="enlace" asp-action="Detalles" asp-route-id="@despachoId">Ver despacho</a>
+                        }
+                        @if (!notificacion.Leida)
+                        {
+                            <form asp-action="MarcarLeida" asp-route-id="@notificacion.Id" method="post">
+                                <button type="submit" class="boton boton--neutro">Marcar como leída</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="novedades__leida">Leída</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Despachos de huevo</h2>
+    <form method="get" class="campos">
+        <div class="campo">
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado">
+                <option value="">Todos</option>
+                @foreach (var estado in new[] { "Despachado", "Recibido" })
+                {
+                    <option value="@estado" selected="@(Model.Estado == estado)">@estado</option>
+                }
+            </select>
+        </div>
+        <div class="campo">
+            <button type="submit" class="boton">Filtrar</button>
+        </div>
+    </form>
+    @if (pagina.Items.Count == 0)
+    {
+        <p class="vacio__texto">No hay despachos de huevo con ese filtro.</p>
+    }
+    else
+    {
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Despachado</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Amarras</th>
+                    <th scope="col">Huevos</th>
+                    <th scope="col">Total (Bs)</th>
+                    <th scope="col"><span class="solo-lectores">Acciones</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var despacho in pagina.Items)
+                {
+                    <tr>
+                        <td>@(despacho.FechaDespacho?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td><span class="chip chip--@ClaseChipEstado(despacho.Estado)">@despacho.Estado</span></td>
+                        <td>@despacho.TotalAmarras</td>
+                        <td>@despacho.TotalHuevos</td>
+                        <td>@(despacho.TotalBs?.ToString("0.00") ?? "—")</td>
+                        <td><a class="enlace" asp-action="Detalles" asp-route-id="@despacho.Id">Ver</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="pagina-cabecera__detalle">
+            Página @Model.NumeroPagina de @totalPaginas con @pagina.Total despachos de huevo.
+            @if (Model.NumeroPagina > 1)
+            {
+                <a class="enlace" asp-action="Index"
+                   asp-route-estado="@Model.Estado"
+                   asp-route-pagina="@(Model.NumeroPagina - 1)"
+                   asp-route-tamanoPagina="@Model.TamanoPagina">Anterior</a>
+            }
+            @if (Model.NumeroPagina < totalPaginas)
+            {
+                <a class="enlace" asp-action="Index"
+                   asp-route-estado="@Model.Estado"
+                   asp-route-pagina="@(Model.NumeroPagina + 1)"
+                   asp-route-tamanoPagina="@Model.TamanoPagina">Siguiente</a>
+            }
+        </p>
+    }
+</section>
+@functions {
+    private static string EtiquetaNotificacion(string tipo) => tipo switch
+    {
+        "DespachoRecibido" => "Despacho recibido",
+        "CreditoInsuficiente" => "Crédito insuficiente",
+        _ => tipo,
+    };
+
+    private static string EtiquetaChip(string tipo) => tipo switch
+    {
+        "DespachoRecibido" => "aceptado",
+        "CreditoInsuficiente" => "rechazado",
+        _ => "borrador",
+    };
+
+    private static string ClaseChipEstado(string estado) => estado switch
+    {
+        "Despachado" => "solicitado",
+        "Recibido" => "aceptado",
+        _ => "borrador",
+    };
+}

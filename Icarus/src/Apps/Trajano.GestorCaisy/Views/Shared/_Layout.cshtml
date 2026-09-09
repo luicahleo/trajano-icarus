@@ -52,6 +52,10 @@
                        class="lateral__enlace @(seccion == "precios-huevo" ? "lateral__enlace--activo" : "")">
                         Precios de huevo
                     </a>
+                    <a asp-controller="RecepcionesHuevo" asp-action="Index"
+                       class="lateral__enlace @(seccion == "recepciones-huevo" ? "lateral__enlace--activo" : "")">
+                        Recepción de huevo
+                    </a>
                 }
             </nav>
         }

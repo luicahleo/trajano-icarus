@@ -75,4 +75,22 @@ public interface IApiIcarusClient
     // Recibo imprimible (spec SP8D): PDF con los datos ya guardados del
     // despacho, para que CAISY lo firme/selle en papel.
     Task<Stream> ObtenerReciboPdfAsync(Guid id, CancellationToken token = default);
+
+    // Recepción de huevo (SP9C): bandeja global de despachos de huevo del
+    // grupo /despachos-huevo-caisy. CAISY solo confirma la recepción y sirve
+    // el recibo PDF; no hay negociación ni carga de archivos.
+    Task<PaginaDespachosHuevoApi> ListarDespachosHuevoAsync(
+        FiltrosDespachosHuevoApi filtros, CancellationToken token = default);
+
+    Task<DespachoHuevoDetalleApi> ObtenerDespachoHuevoAsync(
+        Guid id, CancellationToken token = default);
+
+    Task ConfirmarRecepcionDespachoHuevoAsync(Guid id, CancellationToken token = default);
+
+    Task<Stream> ObtenerReciboDespachoHuevoPdfAsync(Guid id, CancellationToken token = default);
+
+    Task<BandejaNotificacionesDespachoHuevoApi> ListarNotificacionesDespachoHuevoAsync(
+        CancellationToken token = default);
+
+    Task MarcarNotificacionDespachoHuevoLeidaAsync(Guid id, CancellationToken token = default);
 }

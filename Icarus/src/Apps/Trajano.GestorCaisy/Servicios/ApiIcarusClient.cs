@@ -349,6 +349,75 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         return memoria;
     }
 
+    // SP9C: bandeja de recepción de huevo. Mismo cuerpo que los pares de
+    // pedidos, con la ruta base /despachos-huevo-caisy.
+    public async Task<PaginaDespachosHuevoApi> ListarDespachosHuevoAsync(
+        FiltrosDespachosHuevoApi filtros, CancellationToken token = default)
+    {
+        var consulta = new StringBuilder("despachos-huevo-caisy?").AppendFormat(
+            CultureInfo.InvariantCulture, "pagina={0}&tamanoPagina={1}", filtros.Pagina, filtros.TamanoPagina);
+        if (!string.IsNullOrEmpty(filtros.Estado))
+            consulta.Append("&estado=").Append(Uri.EscapeDataString(filtros.Estado));
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(), accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<PaginaDespachosHuevoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public async Task<DespachoHuevoDetalleApi> ObtenerDespachoHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, $"despachos-huevo-caisy/{id}", accessToken),
+            token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<DespachoHuevoDetalleApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public async Task ConfirmarRecepcionDespachoHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"despachos-huevo-caisy/{id}/confirmar-recepcion", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task<Stream> ObtenerReciboDespachoHuevoPdfAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get,
+                $"despachos-huevo-caisy/{id}/recibo.pdf", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var memoria = new MemoryStream();
+        await respuesta.Content.CopyToAsync(memoria, token);
+        memoria.Position = 0;
+        return memoria;
+    }
+
+    public async Task<BandejaNotificacionesDespachoHuevoApi> ListarNotificacionesDespachoHuevoAsync(
+        CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Get, "despachos-huevo-caisy/notificaciones", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<BandejaNotificacionesDespachoHuevoApi>(Json, token)
+            ?? new BandejaNotificacionesDespachoHuevoApi([], 0);
+    }
+
+    public async Task MarcarNotificacionDespachoHuevoLeidaAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post,
+                $"despachos-huevo-caisy/notificaciones/{id}/marcar-leida", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
     // Núcleo: envía con el access token actual; ante un 401 renueva la sesión
     // una vez y reintenta con el token fresco. Rutas de sesión nunca se
     // renuevan (evita bucles con credenciales inválidas).

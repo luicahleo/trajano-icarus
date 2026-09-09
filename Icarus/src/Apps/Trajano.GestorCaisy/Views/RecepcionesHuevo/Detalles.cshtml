@@ -1,0 +1,85 @@
+@model VistaDespachoHuevoDetalle
+@{
+    var despacho = Model.Despacho;
+    ViewData["Titulo"] = "Despacho de huevo";
+    ViewData["Seccion"] = "recepciones-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Despacho de huevo</h1>
+        <p class="pagina-cabecera__detalle">
+            Despachado el @(despacho.FechaDespacho?.ToString("dd/MM/yyyy") ?? "—").
+            El precio del productor es el congelado al despacho y nunca se recalcula.
+        </p>
+    </div>
+    <span class="chip chip--@ClaseChipEstado(despacho.Estado)">@despacho.Estado</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Resumen</h2>
+    <dl class="ficha">
+        <div>
+            <dt>Fecha de despacho</dt>
+            <dd>@(despacho.FechaDespacho?.ToString("dd/MM/yyyy") ?? "—")</dd>
+        </div>
+        <div>
+            <dt>Total de amarras</dt>
+            <dd>@despacho.TotalAmarras</dd>
+        </div>
+        <div>
+            <dt>Total de huevos</dt>
+            <dd>@despacho.TotalHuevos</dd>
+        </div>
+        <div>
+            <dt>Total (Bs)</dt>
+            <dd>@(despacho.TotalBs?.ToString("0.00") ?? "—")</dd>
+        </div>
+    </dl>
+    <div class="acciones">
+        @if (Model.PuedeConfirmarse)
+        {
+            <a class="boton boton--primario" asp-action="ConfirmarRecepcion" asp-route-id="@despacho.Id">Confirmar recepción</a>
+        }
+        @if (despacho.Estado == "Recibido")
+        {
+            <a class="boton" asp-action="Recibo" asp-route-id="@despacho.Id" target="_blank">Descargar recibo</a>
+        }
+        <a class="enlace" asp-action="Index">Volver a la bandeja</a>
+    </div>
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Detalle por tamaño</h2>
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Tamaño</th>
+                <th scope="col">Amarras</th>
+                <th scope="col">Unidades sueltas</th>
+                <th scope="col">Huevos</th>
+                <th scope="col">Precio congelado (Bs/unidad)</th>
+                <th scope="col">Subtotal (Bs)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var detalle in despacho.Detalles)
+            {
+                <tr>
+                    <td>@detalle.Tamano</td>
+                    <td>@detalle.CantidadAmarras</td>
+                    <td>@detalle.UnidadesSueltas</td>
+                    <td>@detalle.CantidadHuevos</td>
+                    <td>@(detalle.PrecioProductorCongelado?.ToString("0.0000") ?? "—")</td>
+                    <td>@(detalle.Subtotal?.ToString("0.00") ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+@functions {
+    private static string ClaseChipEstado(string estado) => estado switch
+    {
+        "Despachado" => "solicitado",
+        "Recibido" => "aceptado",
+        _ => "borrador",
+    };
+}
