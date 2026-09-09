@@ -22,6 +22,7 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     public DbSet<NotificacionPreciosAlimentos> NotificacionesPreciosAlimentos => Set<NotificacionPreciosAlimentos>();
     public DbSet<PublicacionPrecioHuevo> PublicacionesPreciosHuevo => Set<PublicacionPrecioHuevo>();
     public DbSet<PedidoAlimento> PedidosAlimento => Set<PedidoAlimento>();
+    public DbSet<DespachoHuevo> DespachosHuevo => Set<DespachoHuevo>();
     // Sin filtro de tenant (spec SP8): el alcance incluye la bandeja global
     // de CAISY (ClienteId nulo) y cada consulta del repositorio pasa el
     // alcance explícito.
@@ -53,5 +54,10 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         // repositorios explícitos autorizados por su política.
         modelBuilder.Entity<PedidoAlimento>().HasQueryFilter(p =>
             p.EstaActivo && (_clienteIdActual == null || p.ClienteId == _clienteIdActual));
+        // Despachos del tenant (spec SP9): mismo filtro que los pedidos de
+        // alimento (EstaActivo y tenant); las cuentas sin tenant (CAISY) los
+        // ven enteros y el acceso se autoriza con su política.
+        modelBuilder.Entity<DespachoHuevo>().HasQueryFilter(d =>
+            d.EstaActivo && (_clienteIdActual == null || d.ClienteId == _clienteIdActual));
     }
 }
