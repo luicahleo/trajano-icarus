@@ -15,7 +15,8 @@ export type FuncionalidadOperativaTrabajador =
   | 'ProduccionHuevos'
   | 'Mortalidad'
   | 'Vacunacion'
-  | 'PedidoAlimento';
+  | 'PedidoAlimento'
+  | 'DespachoHuevo';
 
 export interface SesionInfo {
   accessToken: string;

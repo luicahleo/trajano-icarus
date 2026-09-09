@@ -76,6 +76,7 @@ const FUNCIONALIDADES_OPERATIVAS: FuncionalidadOperativaTrabajador[] = [
   'Mortalidad',
   'Vacunacion',
   'PedidoAlimento',
+  'DespachoHuevo',
 ];
 
 function esOperativa(f: Funcionalidad): f is FuncionalidadOperativaTrabajador {
@@ -83,7 +84,8 @@ function esOperativa(f: Funcionalidad): f is FuncionalidadOperativaTrabajador {
     f === 'ProduccionHuevos' ||
     f === 'Mortalidad' ||
     f === 'Vacunacion' ||
-    f === 'PedidoAlimento'
+    f === 'PedidoAlimento' ||
+    f === 'DespachoHuevo'
   );
 }
 
@@ -91,6 +93,7 @@ function etiquetaFuncionalidad(funcionalidad: FuncionalidadOperativaTrabajador):
   if (funcionalidad === 'ProduccionHuevos') return 'Producción de huevos';
   if (funcionalidad === 'Mortalidad') return 'Mortalidad';
   if (funcionalidad === 'PedidoAlimento') return 'Pedidos de alimento';
+  if (funcionalidad === 'DespachoHuevo') return 'Despachos de huevo';
   return 'Vacunación';
 }
 
