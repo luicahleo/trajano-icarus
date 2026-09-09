@@ -22,7 +22,7 @@ Los identificadores de dominio van en español, igual que el resto del proyecto.
 | Cliente (granjero) | El tenant del sistema. Granjero afiliado a CAISY. Puede registrar cualquier dato de su granja. |
 | Trabajador recolector | Trabajador del cliente encargado de la recolección de huevos: **la recolección la registra él**, no el cliente (aunque el cliente también puede). Usa Icarus solo con las funcionalidades que el cliente le asigna (entitlement por funcionalidad); nunca tiene acceso al resto de lo que ve el cliente. |
 | Permisos operativos del trabajador | El cliente con `GestionAvicola` administra la estructura de su única granja y opera todo el módulo. El trabajador solo recibe `ProduccionHuevos` y/o `Mortalidad`; esas funcionalidades le conceden lectura estructural implícita de la granja y sus galpones, pero nunca administración de estructura ni ajuste manual de inventario. Los permisos son efectivos únicamente mientras cliente y trabajador estén activos y el módulo siga habilitado. |
-| Gestor CAISY | Usuario global de oficina, sin tenant, con funcionalidades CAISY explícitas. SP8 incorpora `GestorPedidoAlimento`; no equivale a Administrador de plataforma. |
+| Gestor CAISY | Usuario global de oficina, sin tenant, con funcionalidades CAISY explícitas. SP8 incorpora `GestorPedidoAlimento` y SP9A incorpora `GestorRecepcionHuevos`; no equivale a Administrador de plataforma. |
 
 ## Entidades de Gestión avícola
 
@@ -65,6 +65,22 @@ Definidos en
 | Nota de entrega de alimento | Documento que deja el distribuidor. SP8 admite una nota y una entrega por pedido, con datos manuales y varias imágenes privadas de respaldo. |
 | Recepción de alimento | Confirmación por línea del tenant después del despacho. Termina como `RecibidoConforme` o `RecibidoConDiferencias`; ambos estados reconocen el gasto real. |
 | Balance de alimento | Consulta del tenant por rango de fechas que suma el gasto real reconocido: equivalentes realmente recibidos × `PrecioFinalPor40Kg` congelado al envío, solo de pedidos en `RecibidoConforme` o `RecibidoConDiferencias`. El precio vigente posterior y el total manual de la nota no alteran un pedido recibido. |
+
+## Precios de huevo (SP9A)
+
+Definidos en el spec del subproyecto 9
+(`docs/superpowers/specs/2026-09-09-sp9-despacho-huevos-design.md`).
+Catálogo global gestionado por el Gestor CAISY con la funcionalidad
+`GestorRecepcionHuevos`, en la app de oficina Trajano.GestorCaisy.
+
+| Término | Definición |
+|---|---|
+| Publicación de precio de huevo | Publicación global de CAISY (sin tenant) con vigencia desde una fecha, un único valor de servicio por publicación y un precio por cada tamaño de huevo. Ciclo de estados `Borrador` → `Publicada` (o `Anulada` si aún no entró en vigor); publicada es inmutable. Sigue vigente hasta la entrada en vigor de otra publicación posterior. Se captura exclusivamente importando el Excel de CAISY (el documento real ya llega en ese formato). |
+| Tamaño de huevo | Clasificación del huevo de la tabla de CAISY: `Extra`, `Primera`, `Segunda`, `Tercera`, `Cuarta`, `Quinta`. Un tamaño tiene un solo precio por publicación. |
+| Servicio | Valor único por publicación (no por tamaño), confirmado contra el documento real de CAISY: la boleta de recepción usa el mismo servicio para las seis filas. El importador rechaza el archivo si las filas difieren. |
+| Precio al productor | El monto que se congela en los despachos (SP9B) a la fecha de éstos. Es el precio oficial por tamaño; llega con 4 decimales (p. ej. `0.7957`). |
+| Precio actual del documento | Columna «Precio Actual» del Excel de CAISY: control informativo contra la publicación vigente. A diferencia de alimento, **no bloquea** la publicación. |
+| Precio unitario | `Precio al productor + Servicio`, calculado al consultar (nunca se persiste). Es el dato que el recibo y el crédito de SP9C consumirán. |
 
 ## Unidades
 
@@ -134,5 +150,7 @@ subproyecto 6 (`docs/superpowers/specs/2026-08-18-sp6-produccion-mortalidad-desi
 
 ## Pendiente
 
-La planificación del alimento que debe suministrarse a las aves, los despachos
-de huevos y otros precios ajenos al pedido se definirán en subproyectos futuros.
+La planificación del alimento que debe suministrarse a las aves y los despachos
+de huevos con su recepción, recibo y crédito se definirán en subproyectos
+futuros (SP9B y SP9C). Los precios de huevo ya quedaron definidos en SP9A (ver
+«Precios de huevo» más arriba).
