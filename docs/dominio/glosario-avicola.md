@@ -96,6 +96,21 @@ el camión).
 | Envío del despacho | Operación única: el servidor fija la fecha de negocio de Bolivia, congela el `Precio al productor` vigente de cada línea con su publicación y exige la foto de la nota de entrega en la misma operación. Si falta el precio vigente de una línea, el envío falla completo y el borrador queda intacto. |
 | Nota de entrega del despacho | Foto de la nota que el emisor sube al enviar (a diferencia de alimento, donde la sube el receptor al recibir). Un solo documento por despacho, inmutable, con original privado y copia de visualización, en el mismo almacén privado que los documentos de los pedidos de alimento. |
 
+## Recepción, recibo y crédito de huevo (SP9C)
+
+Cierre de la máquina de estados del despacho (`Despachado` → `Recibido`),
+definido en el spec del subproyecto 9
+(`docs/superpowers/specs/2026-09-09-sp9-despacho-huevos-design.md`).
+Lo confirma el Gestor CAISY con la funcionalidad `GestorRecepcionHuevos`, en la
+app de oficina Trajano.GestorCaisy.
+
+| Término | Definición |
+|---|---|
+| Confirmación de recepción | Cierre del despacho sin recuento por línea: el transportista solo verifica visualmente, no hay reconteo formal. Fija la fecha de recepción (fecha de negocio del servidor) y notifica al tenant en la misma operación. Solo un despacho `Despachado` se puede recibir; el reintento responde 409 sin repetir la transición ni la notificación. |
+| Recibo de recepción | PDF imprimible generado sobre datos ya persistidos, disponible solo una vez confirmada la recepción y solicitables las veces que haga falta. Lleva las líneas por tamaño (amarras, unidades sueltas, huevos, precio congelado y subtotal), los totales y la firma y sello de CAISY. |
+| Crédito por despacho | Saldo calculado al consultar (sin tabla de saldo persistida): suma el total de los despachos `Recibido` cuya recepción tiene más de 14 días y resta el gasto real reconocido de alimento (`RecibidoConforme` o `RecibidoConDiferencias`). El dinero queda disponible recién **catorce días después de la recepción**; el desfase es una constante de dominio, no configurable. |
+| Advertencia de crédito insuficiente | Al enviar un pedido de alimento, si el saldo proyectado (saldo disponible menos total solicitado) queda negativo, CAISY recibe una notificación interna en la misma transacción del envío. Es una advertencia, no un bloqueo: el pedido se envía igual. |
+
 ## Unidades
 
 | Término | Definición |
@@ -164,7 +179,7 @@ subproyecto 6 (`docs/superpowers/specs/2026-08-18-sp6-produccion-mortalidad-desi
 
 ## Pendiente
 
-La planificación del alimento que debe suministrarse a las aves y los despachos
-de huevos con su recepción, recibo y crédito se definirán en subproyectos
-futuros (SP9B y SP9C). Los precios de huevo ya quedaron definidos en SP9A (ver
-«Precios de huevo» más arriba).
+La planificación del alimento que debe suministrarse a las aves queda para un
+subproyecto futuro. Los despachos de huevo con su recepción, recibo y crédito
+quedaron implementados en SP9B y SP9C (ver «Despacho de huevo» y «Recepción,
+recibo y crédito de huevo» más arriba), y los precios de huevo en SP9A.
