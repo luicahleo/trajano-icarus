@@ -14,6 +14,12 @@ public sealed class TransicionDespachoHuevo : Entity
     internal TransicionDespachoHuevo(
         EstadoDespachoHuevo origen, EstadoDespachoHuevo destino, Guid actorId)
     {
+        // La transición nace con la clave vacía: EF la descubre por la
+        // navegación del agregado y, con la clave sin asignar, la registra
+        // como Added y genera el Guid al insertar (con clave ya asignada la
+        // marcaría Modified y fallaría, mismo caso que TransicionPedidoAlimento
+        // en SP8).
+        Id = Guid.Empty;
         Origen = origen;
         Destino = destino;
         ActorId = actorId;

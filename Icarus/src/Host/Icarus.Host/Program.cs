@@ -105,6 +105,7 @@ api.MapUsuariosCaisy();
 api.MapGestionAvicola();
 api.MapPreciosAlimentos();
 api.MapPreciosHuevo();
+api.MapDespachosHuevo();
 api.MapPedidosAlimento();
 api.MapBalanceAlimentos();
 api.MapDiagnosticos();

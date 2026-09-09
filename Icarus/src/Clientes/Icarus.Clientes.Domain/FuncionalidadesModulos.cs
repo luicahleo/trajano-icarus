@@ -16,6 +16,7 @@ public static class FuncionalidadesModulos
         Funcionalidades.Despachos => Modulos.GestionAvicola,
         Funcionalidades.Precios => Modulos.GestionAvicola,
         Funcionalidades.PedidoAlimento => Modulos.GestionAvicola,
+        Funcionalidades.DespachoHuevo => Modulos.GestionAvicola,
         _ => Modulos.Ninguno,
     };
 
@@ -25,7 +26,7 @@ public static class FuncionalidadesModulos
             | Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad
             | Funcionalidades.Vacunacion | Funcionalidades.Alimentacion
             | Funcionalidades.Despachos | Funcionalidades.Precios
-            | Funcionalidades.PedidoAlimento,
+            | Funcionalidades.PedidoAlimento | Funcionalidades.DespachoHuevo,
         _ => Funcionalidades.Ninguno,
     };
 }

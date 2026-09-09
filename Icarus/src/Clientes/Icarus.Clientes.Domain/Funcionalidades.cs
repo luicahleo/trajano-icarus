@@ -21,5 +21,7 @@ public enum Funcionalidades
     // SP8: pedidos de alimento hacia CAISY. Bit nuevo sin renumerar los
     // existentes (se persisten como entero en trabajadores.Funcionalidades).
     PedidoAlimento = 256,
+    // SP9: despacho de huevos hacia CAISY. Bit nuevo sin renumerar.
+    DespachoHuevo = 512,
 }
 #pragma warning restore S2346
