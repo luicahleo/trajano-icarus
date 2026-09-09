@@ -15,4 +15,13 @@ public static class ReclamosCaisy
                 out var mascara)
             && (mascara & ConstantesAutorizacion.BitGestorPedidoAlimento)
                 == ConstantesAutorizacion.BitGestorPedidoAlimento;
+
+    public static bool TieneGestorRecepcionHuevos(ClaimsPrincipal usuario) =>
+        usuario.HasClaim(c => c.Type == ConstantesAutorizacion.ClaimRol
+                && c.Value == ConstantesAutorizacion.RolGestorCaisy)
+            && int.TryParse(
+                usuario.FindFirst(ConstantesAutorizacion.ClaimFuncionalidadesCaisy)?.Value,
+                out var mascara)
+            && (mascara & ConstantesAutorizacion.BitGestorRecepcionHuevos)
+                == ConstantesAutorizacion.BitGestorRecepcionHuevos;
 }

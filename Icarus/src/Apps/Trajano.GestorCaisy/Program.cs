@@ -76,11 +76,18 @@ builder.Services
 
 builder.Services.AddSingleton<IAuthorizationHandler, ManejadorRolYFuncionalidad>();
 builder.Services.AddAuthorization(opciones =>
+{
     opciones.AddPolicy(
         ConstantesAutorizacion.PoliticaGestorPedidoAlimento, politica =>
             politica.AddRequirements(new RequerimientoRolYFuncionalidad(
                 ConstantesAutorizacion.RolGestorCaisy,
-                ConstantesAutorizacion.BitGestorPedidoAlimento))));
+                ConstantesAutorizacion.BitGestorPedidoAlimento)));
+    opciones.AddPolicy(
+        ConstantesAutorizacion.PoliticaGestorRecepcionHuevos, politica =>
+            politica.AddRequirements(new RequerimientoRolYFuncionalidad(
+                ConstantesAutorizacion.RolGestorCaisy,
+                ConstantesAutorizacion.BitGestorRecepcionHuevos)));
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ISesionCaisyActual, SesionCaisyCookie>();

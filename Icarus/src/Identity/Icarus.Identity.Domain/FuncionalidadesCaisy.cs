@@ -13,6 +13,7 @@ public enum FuncionalidadesCaisy
 {
     Ninguno = 0,
     GestorPedidoAlimento = 1,
+    GestorRecepcionHuevos = 2,
 }
 #pragma warning restore S2346
 

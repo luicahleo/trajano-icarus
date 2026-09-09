@@ -32,38 +32,42 @@ public class FuncionalidadesCaisyTests
 
     [Theory]
     [InlineData("GestorPedidoAlimento")]
+    [InlineData("GestorRecepcionHuevos")]
     public void SoloSeAdmitenFuncionalidadesDefinidas(string nombre)
     {
         Assert.True(ReglasFuncionalidadesCaisy.EsValida(nombre));
     }
 
     [Theory]
-    [InlineData("GestorRecepcionHuevos")]
     [InlineData("")]
     [InlineData("Ninguno")]
+    [InlineData("GestorInexistente")]
     public void UnaFuncionalidadNoDefinidaEsRechazada(string nombre)
     {
         Assert.False(ReglasFuncionalidadesCaisy.EsValida(nombre));
     }
 
     [Fact]
-    public void LosNombresValidosSeCombinanEnUnBitmask()
+    public void LosNombresValidosSeCombinanEnUnBitmaskConVariasFunciones()
     {
-        var combinadas = ReglasFuncionalidadesCaisy.Combinar(["GestorPedidoAlimento"]);
+        var combinadas = ReglasFuncionalidadesCaisy.Combinar(
+            ["GestorPedidoAlimento", "GestorRecepcionHuevos"]);
 
-        Assert.Equal(FuncionalidadesCaisy.GestorPedidoAlimento, combinadas);
+        Assert.Equal(
+            FuncionalidadesCaisy.GestorPedidoAlimento | FuncionalidadesCaisy.GestorRecepcionHuevos,
+            combinadas);
     }
 
     [Fact]
-    public void ElTokenDeGestorCaisyConFuncionalidadIncluyeElClaimDeBitmask()
+    public void ElTokenDeGestorCaisyConGestorRecepcionHuevosIncluyeElClaimDeBitmask()
     {
         var token = CrearEmisor().Emitir(
             Guid.NewGuid(), nameof(Rol.GestorCaisy), null, null,
-            FuncionalidadesCaisy.GestorPedidoAlimento, out _);
+            FuncionalidadesCaisy.GestorRecepcionHuevos, out _);
         var leido = Leer(token);
 
         Assert.Equal(
-            ((int)FuncionalidadesCaisy.GestorPedidoAlimento).ToString(),
+            ((int)FuncionalidadesCaisy.GestorRecepcionHuevos).ToString(),
             leido.Claims.Single(c => c.Type == ClaimsIdentidad.FuncionalidadesCaisy).Value);
     }
 
