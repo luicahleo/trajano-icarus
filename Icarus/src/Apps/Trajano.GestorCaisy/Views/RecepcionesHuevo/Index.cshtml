@@ -122,16 +122,20 @@
     }
 </section>
 @functions {
+    // Esta bandeja es global de CAISY (ClienteId nulo en la consulta): solo
+    // puede recibir notificaciones creadas con ese mismo alcance nulo, es
+    // decir, CreditoInsuficiente. DespachoRecibido se crea con el ClienteId
+    // real del tenant emisor (para su propia bandeja en la PWA) y nunca
+    // puede aparecer acá — no incluir esa rama evita un caso muerto que
+    // sugiere una función que esta pantalla no tiene.
     private static string EtiquetaNotificacion(string tipo) => tipo switch
     {
-        "DespachoRecibido" => "Despacho recibido",
         "CreditoInsuficiente" => "Crédito insuficiente",
         _ => tipo,
     };
 
     private static string EtiquetaChip(string tipo) => tipo switch
     {
-        "DespachoRecibido" => "aceptado",
         "CreditoInsuficiente" => "rechazado",
         _ => "borrador",
     };

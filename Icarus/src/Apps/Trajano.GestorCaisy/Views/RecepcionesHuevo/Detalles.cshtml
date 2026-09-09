@@ -49,31 +49,7 @@
 </section>
 <section class="tarjeta tarjeta--tabla">
     <h2>Detalle por tamaño</h2>
-    <table class="tabla">
-        <thead>
-            <tr>
-                <th scope="col">Tamaño</th>
-                <th scope="col">Amarras</th>
-                <th scope="col">Unidades sueltas</th>
-                <th scope="col">Huevos</th>
-                <th scope="col">Precio congelado (Bs/unidad)</th>
-                <th scope="col">Subtotal (Bs)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var detalle in despacho.Detalles)
-            {
-                <tr>
-                    <td>@detalle.Tamano</td>
-                    <td>@detalle.CantidadAmarras</td>
-                    <td>@detalle.UnidadesSueltas</td>
-                    <td>@detalle.CantidadHuevos</td>
-                    <td>@(detalle.PrecioProductorCongelado?.ToString("0.0000") ?? "—")</td>
-                    <td>@(detalle.Subtotal?.ToString("0.00") ?? "—")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <partial name="_DetalleDespachoHuevoTabla" model="despacho.Detalles" />
 </section>
 @functions {
     private static string ClaseChipEstado(string estado) => estado switch

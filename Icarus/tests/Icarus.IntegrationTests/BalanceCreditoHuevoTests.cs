@@ -108,8 +108,13 @@ public class BalanceCreditoHuevoTests
     }
 
     [Fact]
-    public async Task PedidoSoloSolicitadoSinRecepcionRealNoRestaNada()
+    public async Task PedidoSoloSolicitadoSinRecepcionRealRestaComoComprometidoPendiente()
     {
+        // Un pedido enviado pero todavía sin recepción real ya reserva su
+        // monto congelado contra el crédito (corrección de revisión: sin
+        // esto, envíos concurrentes o sucesivos del mismo cliente no verían
+        // el compromiso del otro y la advertencia de crédito insuficiente
+        // podía perderse).
         var clienteId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
         var pedido = new PedidoAlimento(clienteId, actorId,
@@ -120,6 +125,6 @@ public class BalanceCreditoHuevoTests
 
         var saldo = await SaldoDeAsync(clienteId);
 
-        Assert.Equal(0m, saldo);
+        Assert.Equal(-18000m, saldo);
     }
 }

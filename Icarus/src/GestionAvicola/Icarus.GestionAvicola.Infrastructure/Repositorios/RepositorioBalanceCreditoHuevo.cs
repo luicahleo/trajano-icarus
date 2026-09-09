@@ -10,7 +10,9 @@ namespace Icarus.GestionAvicola.Infrastructure.Repositorios;
 // cálculo usa los campos primitivos (CantidadAmarras, UnidadesSueltas,
 // PrecioProductorCongelado) en vez de las propiedades calculadas del dominio
 // (CantidadHuevos, Subtotal) porque estas últimas no garantizan traducirse a
-// SQL de forma fiable.
+// SQL de forma fiable. DetalleDespachoHuevo.HuevosPorAmarra es un const: EF
+// Core lo traduce como literal en la proyección, no como acceso a miembro en
+// tiempo de ejecución.
 public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) : IRepositorioBalanceCreditoHuevo
 {
     public async Task<decimal> ObtenerSaldoDisponibleAsync(
@@ -24,16 +26,36 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
             .SelectMany(d => d.Detalles)
             .Where(det => det.PrecioProductorCongelado != null)
             .SumAsync(det =>
-                (det.CantidadAmarras * 180 + det.UnidadesSueltas) * det.PrecioProductorCongelado!.Value,
+                (det.CantidadAmarras * DetalleDespachoHuevo.HuevosPorAmarra + det.UnidadesSueltas)
+                    * det.PrecioProductorCongelado!.Value,
                 cancellationToken);
 
-        var egresos = await db.PedidosAlimento
+        var recibidoReal = await db.PedidosAlimento
             .Where(p => p.ClienteId == clienteId
                 && (p.Estado == EstadoPedidoAlimento.RecibidoConforme
                     || p.Estado == EstadoPedidoAlimento.RecibidoConDiferencias))
             .Select(p => p.Recepcion!.TotalRecibido)
             .SumAsync(cancellationToken);
 
-        return ingresos - egresos;
+        // Comprometido pendiente: pedidos ya enviados que todavía no llegaron
+        // a recepción real, con su monto congelado al envío. Sin esto, dos
+        // envíos concurrentes del mismo cliente (o varios envíos seguidos
+        // antes de que CAISY reciba el primero) verían el mismo saldo y
+        // ninguno dispararía la advertencia aunque juntos superen el
+        // crédito disponible. EnviarPedidoAlimentoHandler ya serializa los
+        // envíos concurrentes del mismo cliente con
+        // ContarEnviadosEnSemanaBloqueandoAsync (UPDLOCK+HOLDLOCK) antes de
+        // llegar a este cálculo, así que el segundo envío en llegar ya ve el
+        // primero comprometido aquí — no hace falta un lock propio.
+        var comprometidoPendiente = await db.PedidosAlimento
+            .Where(p => p.ClienteId == clienteId
+                && (p.Estado == EstadoPedidoAlimento.Solicitado
+                    || p.Estado == EstadoPedidoAlimento.Aceptado
+                    || p.Estado == EstadoPedidoAlimento.Despachado))
+            .SelectMany(p => p.Detalles)
+            .Where(d => d.SubtotalSolicitado != null)
+            .SumAsync(d => d.SubtotalSolicitado!.Value, cancellationToken);
+
+        return ingresos - recibidoReal - comprometidoPendiente;
     }
 }

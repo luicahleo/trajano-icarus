@@ -6,6 +6,12 @@ namespace Icarus.GestionAvicola.Domain;
 // PublicacionPrecioHuevoId quedan nulos en Borrador; Despachar los fija.
 public sealed class DetalleDespachoHuevo : Entity
 {
+    // Unidad de despacho a CAISY (glosario de dominio): una amarra son 180
+    // huevos. Constante pública porque RepositorioBalanceCreditoHuevo la
+    // necesita en una proyección SQL que no puede depender de CantidadHuevos
+    // (propiedad calculada, no traducible de forma fiable).
+    public const int HuevosPorAmarra = 180;
+
     private DetalleDespachoHuevo()
     {
     }
@@ -30,7 +36,7 @@ public sealed class DetalleDespachoHuevo : Entity
 
     public int UnidadesSueltas { get; private set; }
 
-    public int CantidadHuevos => CantidadAmarras * 180 + UnidadesSueltas;
+    public int CantidadHuevos => CantidadAmarras * HuevosPorAmarra + UnidadesSueltas;
 
     public decimal? PrecioProductorCongelado { get; private set; }
 

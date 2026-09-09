@@ -1,0 +1,26 @@
+@model IReadOnlyList<DetalleDespachoHuevoApi>
+<table class="tabla">
+    <thead>
+        <tr>
+            <th scope="col">Tamaño</th>
+            <th scope="col">Amarras</th>
+            <th scope="col">Unidades sueltas</th>
+            <th scope="col">Huevos</th>
+            <th scope="col">Precio congelado (Bs/unidad)</th>
+            <th scope="col">Subtotal (Bs)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var detalle in Model)
+        {
+            <tr>
+                <td>@detalle.Tamano</td>
+                <td>@detalle.CantidadAmarras</td>
+                <td>@detalle.UnidadesSueltas</td>
+                <td>@detalle.CantidadHuevos</td>
+                <td>@(detalle.PrecioProductorCongelado?.ToString("0.0000") ?? "—")</td>
+                <td>@(detalle.Subtotal?.ToString("0.00") ?? "—")</td>
+            </tr>
+        }
+    </tbody>
+</table>
