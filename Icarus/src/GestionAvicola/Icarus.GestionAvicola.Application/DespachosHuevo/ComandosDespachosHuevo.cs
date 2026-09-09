@@ -4,6 +4,7 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Granjas;
+using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PreciosHuevo;
 using Icarus.GestionAvicola.Domain;
 using MediatR;
@@ -234,5 +235,43 @@ public sealed class ObtenerDespachoHuevoHandler(IRepositorioDespachosHuevo repos
                     d.Id, d.Tamano.ToString(), d.CantidadAmarras, d.UnidadesSueltas,
                     d.CantidadHuevos, d.PrecioProductorCongelado, d.Subtotal))
                 .ToList());
+    }
+}
+
+// Recepción (spec SP9C): la confirma CAISY sobre un despacho despachado. No
+// hay reconteo por línea: la operación solo cierra el estado, fija la fecha
+// de recepción (fecha de negocio del servidor) y notifica a la bandeja del
+// tenant. Los reintentos chocan con el estado y responden 409 sin duplicar
+// nada.
+public sealed record ConfirmarRecepcionDespachoHuevoCommand(Guid DespachoId)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.despachos-huevo.confirmar-recepcion", new Dictionary<string, DatoRegistroVuelo>());
+}
+
+public sealed class ConfirmarRecepcionDespachoHuevoHandler(
+    IRepositorioDespachosHuevo repositorio,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo,
+    INotificacionesInternasDespachoHuevo notificaciones)
+    : IRequestHandler<ConfirmarRecepcionDespachoHuevoCommand>
+{
+    public async Task Handle(ConfirmarRecepcionDespachoHuevoCommand request, CancellationToken cancellationToken)
+    {
+        var despacho = await repositorio.ObtenerPorIdAsync(request.DespachoId, cancellationToken)
+            ?? throw new NotFoundException("Despacho de huevo", request.DespachoId);
+        if (despacho.Estado != EstadoDespachoHuevo.Despachado)
+            throw new ConflictException("Solo un despacho despachado se puede recibir.");
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+
+        despacho.ConfirmarRecepcion(FechasNegocio.Hoy(), actorId);
+        notificaciones.Agregar(NotificacionInternaDespachoHuevo.ParaRecepcionConfirmada(
+            despacho.Id, despacho.ClienteId));
+        registroVuelo.Decidir("avicola.despachos-huevo.confirmar-recepcion", "recepcion", "aplicada",
+            new Dictionary<string, object?> { ["TotalBs"] = despacho.TotalBs });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }

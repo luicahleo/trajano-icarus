@@ -4,8 +4,10 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
+using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Notificaciones;
+using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
@@ -37,6 +39,10 @@ public class PedidosAlimentoHandlerTests
     private readonly ITransaccionPedidos _transaccion = Substitute.For<ITransaccionPedidos>();
     private readonly INotificacionesInternas _notificaciones =
         Substitute.For<INotificacionesInternas>();
+    private readonly IRepositorioBalanceCreditoHuevo _balanceCreditoHuevo =
+        Substitute.For<IRepositorioBalanceCreditoHuevo>();
+    private readonly INotificacionesInternasDespachoHuevo _notificacionesDespachoHuevo =
+        Substitute.For<INotificacionesInternasDespachoHuevo>();
 
     private readonly OpcionesPedidosAlimento _opciones = new() { MaximoPorSemana = 3 };
 
@@ -51,7 +57,7 @@ public class PedidosAlimentoHandlerTests
 
     private EnviarPedidoAlimentoHandler CrearEnviador() =>
         new(_repositorio, _repositorioPrecios, _opciones, _usuarioActual, _registroVuelo,
-            _unidadTrabajo, _notificaciones);
+            _unidadTrabajo, _notificaciones, _balanceCreditoHuevo, _notificacionesDespachoHuevo);
 
     public PedidosAlimentoHandlerTests()
     {
@@ -60,6 +66,8 @@ public class PedidosAlimentoHandlerTests
         _usuarioActual.ClienteId.Returns(ClienteId);
         _repositorio.IniciarTransaccionAsync(Arg.Any<CancellationToken>())
             .Returns(_transaccion);
+        _balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+            Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(0m);
     }
 
     private static IReadOnlyList<DatosDetallePedido> LineasBolsa(int bolsas = 100) =>
@@ -286,6 +294,49 @@ public class PedidosAlimentoHandlerTests
         await _repositorio.DidNotReceive().ContarEnviadosEnSemanaBloqueandoAsync(
             Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
         await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    // SP9C (spec: "Confirmar recepción y crédito"): la advertencia de crédito
+    // insuficiente no bloquea el envío; solo avisa a la bandeja global de
+    // CAISY cuando el saldo proyectado queda negativo. El saldo se lee antes
+    // del SaveChanges, así que ya excluye el pedido actual.
+    [Fact]
+    public async Task EnviarConSaldoInsuficienteAvisaACaisySinBloquearElEnvio()
+    {
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+        _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(PublicacionVigente());
+        _balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+            ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(0m);
+
+        await CrearEnviador().Handle(
+            new EnviarPedidoAlimentoCommand(pedido.Id), CancellationToken.None);
+
+        Assert.Equal(EstadoPedidoAlimento.Solicitado, pedido.Estado);
+        _notificacionesDespachoHuevo.Received(1).Agregar(Arg.Is<NotificacionInternaDespachoHuevo>(n =>
+            n.Tipo == TipoNotificacionDespachoHuevo.CreditoInsuficiente));
+        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _transaccion.Received(1).ConfirmarAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EnviarConSaldoSuficienteNoAvisaYConfirmaElEnvio()
+    {
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+        _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(PublicacionVigente());
+        _balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+            ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(50000m);
+
+        await CrearEnviador().Handle(
+            new EnviarPedidoAlimentoCommand(pedido.Id), CancellationToken.None);
+
+        Assert.Equal(EstadoPedidoAlimento.Solicitado, pedido.Estado);
+        _notificacionesDespachoHuevo.DidNotReceive()
+            .Agregar(Arg.Any<NotificacionInternaDespachoHuevo>());
+        await _transaccion.Received(1).ConfirmarAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

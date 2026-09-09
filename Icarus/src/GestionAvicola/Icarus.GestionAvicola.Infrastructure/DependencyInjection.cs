@@ -3,6 +3,7 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
 using Icarus.GestionAvicola.Application.BalanceAlimentos;
+using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.DespachosHuevo;
 using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Galpones;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioPublicacionesPreciosHuevo, RepositorioPublicacionesPreciosHuevo>();
         servicios.AddScoped<IRepositorioPedidosAlimento, RepositorioPedidosAlimento>();
         servicios.AddScoped<IRepositorioDespachosHuevo, RepositorioDespachosHuevo>();
+        servicios.AddScoped<IRepositorioBalanceCreditoHuevo, RepositorioBalanceCreditoHuevo>();
         servicios.AddScoped<IRepositorioBalanceAlimentos, RepositorioBalanceAlimentos>();
         servicios.AddScoped<INotificacionesInternas, RepositorioNotificacionesInternas>();
         servicios.AddScoped<INotificacionesInternasDespachoHuevo, RepositorioNotificacionesInternasDespachoHuevo>();

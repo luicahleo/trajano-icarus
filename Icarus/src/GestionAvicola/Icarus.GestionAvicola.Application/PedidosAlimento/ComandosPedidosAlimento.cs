@@ -3,8 +3,10 @@ using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
+using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.Notificaciones;
+using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
 using MediatR;
@@ -303,7 +305,9 @@ public sealed class EnviarPedidoAlimentoHandler(
     ICurrentUser usuarioActual,
     IRegistroVuelo registroVuelo,
     IUnidadTrabajoGestionAvicola unidadTrabajo,
-    INotificacionesInternas notificaciones)
+    INotificacionesInternas notificaciones,
+    IRepositorioBalanceCreditoHuevo balanceCreditoHuevo,
+    INotificacionesInternasDespachoHuevo notificacionesDespachoHuevo)
     : IRequestHandler<EnviarPedidoAlimentoCommand>
 {
     public async Task Handle(EnviarPedidoAlimentoCommand request, CancellationToken cancellationToken)
@@ -338,6 +342,18 @@ public sealed class EnviarPedidoAlimentoHandler(
         notificaciones.Agregar(NotificacionInterna.ParaCaisy(
             esReenvio ? TipoNotificacionPedido.PedidoReenviado : TipoNotificacionPedido.PedidoSolicitado,
             pedido.Id));
+
+        // Advertencia de crédito (spec SP9): no bloquea el envío, solo avisa
+        // a CAISY si el saldo proyectado del cliente queda negativo. El
+        // saldo actual ya excluye este pedido porque todavía no está
+        // Solicitado en la base al momento de leerlo (se lee antes del
+        // SaveChanges de esta misma transacción).
+        var saldoActual = await balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+            pedido.ClienteId, hoy, cancellationToken);
+        if (saldoActual - (pedido.TotalSolicitado ?? 0m) < 0)
+            notificacionesDespachoHuevo.Agregar(
+                NotificacionInternaDespachoHuevo.ParaCreditoInsuficiente(pedido.Id));
+
         registroVuelo.Decidir("avicola.pedidos.enviar", "envio", "aplicada",
             new Dictionary<string, object?>
             {
