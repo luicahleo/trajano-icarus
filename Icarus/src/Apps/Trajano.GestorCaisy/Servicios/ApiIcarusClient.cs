@@ -81,7 +81,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         await contenido.CopyToAsync(memoria, token);
         var bytes = memoria.ToArray();
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionMultipart(bytes, nombreArchivo, accessToken), token);
+            accessToken => PeticionMultipart(bytes, nombreArchivo, accessToken,
+                "precios-alimentos/importar"), token);
         await AsegurarExitoAsync(respuesta, token);
         var borrador = await respuesta.Content.ReadFromJsonAsync<BorradorImportadoApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de importación ilegible");
@@ -127,6 +128,91 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
                 HttpMethod.Get, $"precios-alimentos/{id}/documento-original", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var memoria = new MemoryStream();
+        await respuesta.Content.CopyToAsync(memoria, token);
+        memoria.Position = 0;
+        return memoria;
+    }
+
+    public async Task<IReadOnlyList<PublicacionPrecioHuevoResumenApi>> ListarPublicacionesHuevoAsync(
+        CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, "precios-huevo-caisy/", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content
+                .ReadFromJsonAsync<IReadOnlyList<PublicacionPrecioHuevoResumenApi>>(Json, token)
+            ?? [];
+    }
+
+    public async Task<PublicacionPrecioHuevoDetalleApi> ObtenerPublicacionHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, $"precios-huevo-caisy/{id}", accessToken),
+            token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<PublicacionPrecioHuevoDetalleApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public async Task<Guid> ImportarExcelHuevoAsync(
+        Stream contenido, string nombreArchivo, CancellationToken token = default)
+    {
+        // El Excel se copia a memoria (tope de 5 MB del lado de la API) para
+        // que la renovación de sesión pueda reenviar la misma carga.
+        using var memoria = new MemoryStream();
+        await contenido.CopyToAsync(memoria, token);
+        var bytes = memoria.ToArray();
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionMultipart(bytes, nombreArchivo, accessToken,
+                "precios-huevo-caisy/importar"), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var borrador = await respuesta.Content.ReadFromJsonAsync<BorradorImportadoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de importación ilegible");
+        return borrador.Id;
+    }
+
+    public async Task ActualizarBorradorHuevoAsync(
+        ComandoActualizarBorradorHuevoApi comando, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Put,
+                $"precios-huevo-caisy/{comando.PublicacionId}", accessToken, comando), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task PublicarHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Post, $"precios-huevo-caisy/{id}/publicar", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task AnularFuturaHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Post, $"precios-huevo-caisy/{id}/anular", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task DescartarBorradorHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Delete, $"precios-huevo-caisy/{id}", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task<Stream> DescargarDocumentoOriginalHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Get, $"precios-huevo-caisy/{id}/documento-original", accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var memoria = new MemoryStream();
         await respuesta.Content.CopyToAsync(memoria, token);
@@ -355,10 +441,10 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     }
 
     private HttpRequestMessage PeticionMultipart(
-        byte[] bytes, string nombreArchivo, string? accessToken)
+        byte[] bytes, string nombreArchivo, string? accessToken, string ruta)
     {
         var peticion = new HttpRequestMessage(
-            HttpMethod.Post, new Uri(ResolverBase() + "precios-alimentos/importar"));
+            HttpMethod.Post, new Uri(ResolverBase() + ruta));
         if (accessToken is not null)
             peticion.Headers.Authorization = new("Bearer", accessToken);
         var parte = new StreamContent(new MemoryStream(bytes));

@@ -1,0 +1,71 @@
+@model VistaDetallesHuevo
+@{
+    var publicacion = Model.Publicacion;
+    ViewData["Titulo"] = "Eliminar borrador";
+    ViewData["Seccion"] = "precios-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Eliminar borrador</h1>
+        <p class="pagina-cabecera__detalle">
+            Al descartar este borrador dejará de aparecer en el historial y no se
+            podrá recuperar. El documento original no se elimina y la operación
+            queda registrada para la auditoría técnica.
+        </p>
+    </div>
+    <span class="chip chip--@publicacion.Estado.ToLowerInvariant()">@publicacion.Estado</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Borrador a descartar</h2>
+    <dl class="ficha">
+        <div>
+            <dt>Fecha del documento</dt>
+            <dd>@publicacion.FechaNotificacion.ToString("dd/MM/yyyy")</dd>
+        </div>
+        <div>
+            <dt>Vigente desde</dt>
+            <dd>@publicacion.FechaVigencia.ToString("dd/MM/yyyy")</dd>
+        </div>
+        <div>
+            <dt>Servicio por unidad</dt>
+            <dd>@publicacion.Servicio.ToString("0.0000")</dd>
+        </div>
+        <div>
+            <dt>Detalles de precio</dt>
+            <dd>@publicacion.Detalles.Count</dd>
+        </div>
+    </dl>
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Detalles de precio</h2>
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th scope="col">Tamaño</th>
+                <th scope="col">Precio al productor</th>
+                <th scope="col">Precio actual del documento</th>
+                <th scope="col">Precio unitario</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var detalle in publicacion.Detalles)
+            {
+                <tr>
+                    <td>@detalle.Tamano</td>
+                    <td>@detalle.PrecioAlProductor.ToString("0.0000")</td>
+                    <td>@(detalle.PrecioActualDocumento?.ToString("0.0000") ?? "—")</td>
+                    <td>@detalle.PrecioUnitario.ToString("0.0000")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+<section class="tarjeta">
+    <div class="acciones">
+        <form asp-action="Descartar" asp-route-id="@publicacion.Id" method="post">
+            <button type="submit" class="boton boton--secundario">Eliminar borrador</button>
+        </form>
+        <a class="enlace" asp-action="Detalles" asp-route-id="@publicacion.Id">Cancelar y volver al borrador</a>
+    </div>
+</section>

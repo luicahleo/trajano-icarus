@@ -1,0 +1,29 @@
+@{
+    ViewData["Titulo"] = "Importar Excel";
+    ViewData["Seccion"] = "precios-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Importar Excel</h1>
+        <p class="pagina-cabecera__detalle">
+            Cargue el Excel original de la publicación de precio de huevo. Se
+            creará un borrador editable; la publicación exige confirmación
+            explícita y nunca es automática.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <div asp-validation-summary="All" class="alerta alerta--error" role="alert"></div>
+    <form asp-action="Importar" method="post" enctype="multipart/form-data" class="forma">
+        <div class="campo">
+            <label for="archivo">Archivo Excel de la publicación</label>
+            <input type="file" id="archivo" name="archivo" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+            <p class="campo__ayuda">Tamaño máximo: 5 MB. Solo se acepta el documento original (.xlsx).</p>
+        </div>
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Importar</button>
+            <a class="enlace" asp-action="Index">Cancelar</a>
+        </div>
+    </form>
+</section>

@@ -1,0 +1,101 @@
+@model FormularioBorradorHuevoVista
+@{
+    ViewData["Titulo"] = "Editar borrador";
+    ViewData["Seccion"] = "precios-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Editar borrador</h1>
+        <p class="pagina-cabecera__detalle">
+            Ajuste la propuesta extraída del Excel antes de publicar. Solo un
+            borrador es editable; la publicación la sella de forma definitiva.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<form asp-action="Editar" asp-route-id="@Model.PublicacionId" method="post" class="forma">
+    <div asp-validation-summary="ModelOnly" class="alerta alerta--error" role="alert"></div>
+    <section class="tarjeta">
+        <h2>Cabecera</h2>
+        <div class="campos">
+            <div class="campo">
+                <label asp-for="FechaNotificacion">Fecha del documento</label>
+                <input asp-for="FechaNotificacion" type="date" />
+            </div>
+            <div class="campo">
+                <label asp-for="FechaVigencia">Vigente desde</label>
+                <input asp-for="FechaVigencia" type="date" />
+                <p class="campo__ayuda">Puede ser futura: la vigencia aún no afirma que un hecho ocurrió.</p>
+            </div>
+            <div class="campo">
+                <label asp-for="Servicio">Servicio por unidad</label>
+                <input asp-for="Servicio" type="number" step="0.0001" min="0.0001" required />
+            </div>
+        </div>
+    </section>
+    <section class="tarjeta tarjeta--tabla">
+        <h2>Detalles de precio</h2>
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Tamaño</th>
+                    <th scope="col">Precio al productor</th>
+                    <th scope="col">Precio actual del documento</th>
+                    <th scope="col"><span class="solo-lectores">Quitar fila</span></th>
+                </tr>
+            </thead>
+            <tbody id="filas-detalle">
+                @for (var indice = 0; indice < Model.Detalles.Count; indice++)
+                {
+                    <tr data-fila-detalle>
+                        <td>
+                            <select asp-for="Detalles[indice].Tamano">
+                                <option value="Extra">Extra</option>
+                                <option value="Primera">Primera</option>
+                                <option value="Segunda">Segunda</option>
+                                <option value="Tercera">Tercera</option>
+                                <option value="Cuarta">Cuarta</option>
+                                <option value="Quinta">Quinta</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input asp-for="Detalles[indice].PrecioAlProductor" type="number" step="0.0001" min="0.0001" required />
+                        </td>
+                        <td>
+                            <input asp-for="Detalles[indice].PrecioActualDocumento" type="number" step="0.0001" />
+                        </td>
+                        <td>
+                            <button type="button" class="boton boton--neutro" data-quitar-detalle>Quitar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="acciones">
+            <button type="button" id="agregar-detalle" class="boton boton--neutro">Añadir fila</button>
+        </div>
+        <template id="plantilla-detalle">
+            <tr data-fila-detalle>
+                <td>
+                    <select name="Detalles[__i__].Tamano">
+                        <option value="Extra">Extra</option>
+                        <option value="Primera">Primera</option>
+                        <option value="Segunda">Segunda</option>
+                        <option value="Tercera">Tercera</option>
+                        <option value="Cuarta">Cuarta</option>
+                        <option value="Quinta">Quinta</option>
+                    </select>
+                </td>
+                <td><input name="Detalles[__i__].PrecioAlProductor" type="number" step="0.0001" min="0.0001" required /></td>
+                <td><input name="Detalles[__i__].PrecioActualDocumento" type="number" step="0.0001" /></td>
+                <td><button type="button" class="boton boton--neutro" data-quitar-detalle>Quitar</button></td>
+            </tr>
+        </template>
+    </section>
+    <section class="tarjeta">
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Guardar borrador</button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@Model.PublicacionId">Cancelar</a>
+        </div>
+    </section>
+</form>

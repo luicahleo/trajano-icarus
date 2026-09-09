@@ -1,0 +1,56 @@
+@model IReadOnlyList<PublicacionPrecioHuevoResumenApi>
+@{
+    ViewData["Titulo"] = "Precios de huevo";
+    ViewData["Seccion"] = "precios-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Precios de huevo</h1>
+        <p class="pagina-cabecera__detalle">
+            Historial de publicaciones de precio de huevo de CAISY. El precio
+            unitario es el precio al productor más el servicio por unidad.
+        </p>
+    </div>
+    <a asp-action="Importar" class="boton">Importar Excel</a>
+</div>
+<partial name="_Avisos" />
+@if (Model.Count == 0)
+{
+    <section class="tarjeta vacio">
+        <h2>Aún no hay publicaciones</h2>
+        <p>Importe el Excel original de la publicación de precio de huevo para
+           crear el primer borrador editable.</p>
+    </section>
+}
+else
+{
+    <div class="tarjeta tarjeta--tabla">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Documento</th>
+                    <th scope="col">Vigente desde</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Detalles</th>
+                    <th scope="col">Original</th>
+                    <th scope="col"><span class="solo-lectores">Acciones</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var publicacion in Model)
+                {
+                    <tr>
+                        <td>@publicacion.FechaNotificacion.ToString("dd/MM/yyyy")</td>
+                        <td>@publicacion.FechaVigencia.ToString("dd/MM/yyyy")</td>
+                        <td><span class="chip chip--@publicacion.Estado.ToLowerInvariant()">@publicacion.Estado</span></td>
+                        <td>@publicacion.CantidadDetalles</td>
+                        <td>@(publicacion.TieneDocumentoOriginal ? "Sí" : "—")</td>
+                        <td>
+                            <a class="enlace" asp-action="Detalles" asp-route-id="@publicacion.Id">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -120,6 +120,104 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         return Task.FromResult<Stream>(new MemoryStream(ContenidoPdf, writable: false));
     }
 
+    // SP9A: publicaciones de precio de huevo.
+    public Exception? ErrorDeListarHuevo { get; set; }
+    public Exception? ErrorDeObtenerHuevo { get; set; }
+    public Exception? ErrorDePublicarHuevo { get; set; }
+    public Exception? ErrorDeAnularHuevo { get; set; }
+    public Exception? ErrorDeDescartarHuevo { get; set; }
+    public Exception? ErrorDeActualizarHuevo { get; set; }
+    public Exception? ErrorDeImportarHuevo { get; set; }
+    public Exception? ErrorDeDescargarHuevo { get; set; }
+
+    public List<PublicacionPrecioHuevoResumenApi> ResumenesHuevo { get; } = [];
+    public PublicacionPrecioHuevoDetalleApi? DetalleHuevoActual { get; set; }
+    public Guid IdDeImportacionHuevo { get; set; } = Guid.NewGuid();
+    public byte[] ContenidoExcel { get; set; } = "PK\x03\x04 planilla de prueba"u8.ToArray();
+
+    public int VecesListarHuevo { get; private set; }
+    public int VecesObtenerHuevo { get; private set; }
+    public int VecesImportarHuevo { get; private set; }
+    public int VecesActualizarHuevo { get; private set; }
+    public int VecesPublicarHuevo { get; private set; }
+    public int VecesAnularHuevo { get; private set; }
+    public int VecesDescartarHuevo { get; private set; }
+    public int VecesDescargarHuevo { get; private set; }
+
+    public Guid? UltimoPublicadoHuevo { get; private set; }
+    public Guid? UltimoAnuladoHuevo { get; private set; }
+    public Guid? UltimoDescartadoHuevo { get; private set; }
+    public ComandoActualizarBorradorHuevoApi? UltimoComandoHuevo { get; private set; }
+    public byte[]? UltimoExcelImportado { get; private set; }
+
+    public Task<IReadOnlyList<PublicacionPrecioHuevoResumenApi>> ListarPublicacionesHuevoAsync(
+        CancellationToken token = default)
+    {
+        VecesListarHuevo++;
+        if (ErrorDeListarHuevo is not null) throw ErrorDeListarHuevo;
+        return Task.FromResult<IReadOnlyList<PublicacionPrecioHuevoResumenApi>>(ResumenesHuevo);
+    }
+
+    public Task<PublicacionPrecioHuevoDetalleApi> ObtenerPublicacionHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        VecesObtenerHuevo++;
+        if (ErrorDeObtenerHuevo is not null) throw ErrorDeObtenerHuevo;
+        return Task.FromResult(DetalleHuevoActual ?? CrearDetalleHuevo(id, "Borrador"));
+    }
+
+    public Task<Guid> ImportarExcelHuevoAsync(
+        Stream contenido, string nombreArchivo, CancellationToken token = default)
+    {
+        VecesImportarHuevo++;
+        using var memoria = new MemoryStream();
+        contenido.CopyTo(memoria);
+        UltimoExcelImportado = memoria.ToArray();
+        if (ErrorDeImportarHuevo is not null) throw ErrorDeImportarHuevo;
+        return Task.FromResult(IdDeImportacionHuevo);
+    }
+
+    public Task ActualizarBorradorHuevoAsync(
+        ComandoActualizarBorradorHuevoApi comando, CancellationToken token = default)
+    {
+        VecesActualizarHuevo++;
+        UltimoComandoHuevo = comando;
+        if (ErrorDeActualizarHuevo is not null) throw ErrorDeActualizarHuevo;
+        return Task.CompletedTask;
+    }
+
+    public Task PublicarHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        VecesPublicarHuevo++;
+        UltimoPublicadoHuevo = id;
+        if (ErrorDePublicarHuevo is not null) throw ErrorDePublicarHuevo;
+        return Task.CompletedTask;
+    }
+
+    public Task AnularFuturaHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        VecesAnularHuevo++;
+        UltimoAnuladoHuevo = id;
+        if (ErrorDeAnularHuevo is not null) throw ErrorDeAnularHuevo;
+        return Task.CompletedTask;
+    }
+
+    public Task DescartarBorradorHuevoAsync(Guid id, CancellationToken token = default)
+    {
+        VecesDescartarHuevo++;
+        UltimoDescartadoHuevo = id;
+        if (ErrorDeDescartarHuevo is not null) throw ErrorDeDescartarHuevo;
+        return Task.CompletedTask;
+    }
+
+    public Task<Stream> DescargarDocumentoOriginalHuevoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        VecesDescargarHuevo++;
+        if (ErrorDeDescargarHuevo is not null) throw ErrorDeDescargarHuevo;
+        return Task.FromResult<Stream>(new MemoryStream(ContenidoExcel, writable: false));
+    }
+
     public Exception? ErrorDeListarPedidos { get; set; }
     public Exception? ErrorDeObtenerPedido { get; set; }
     public Exception? ErrorDeDecision { get; set; }
@@ -291,5 +389,17 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
                     Guid.NewGuid(), "Preiniciador", "Bolsa", 118.50m, 115.00m, 1, 21),
                 new DetallePrecioApi(
                     Guid.NewGuid(), "PosturaDos", "Granel", 112.75m, 110.25m, null, null),
+            ]);
+
+    public static PublicacionPrecioHuevoDetalleApi CrearDetalleHuevo(
+        Guid id, string estado = "Borrador", string fechaVigencia = "2025-12-01") =>
+        new(
+            id, new(2025, 11, 2), DateOnly.Parse(fechaVigencia, CultureInfo.InvariantCulture), estado,
+            0.50m, Guid.NewGuid(),
+            [
+                new DetallePrecioHuevoApi(
+                    Guid.NewGuid(), "Primera", 0.045m, 0.044m, 0.545m),
+                new DetallePrecioHuevoApi(
+                    Guid.NewGuid(), "Extra", 0.050m, 0.049m, 0.550m),
             ]);
 }

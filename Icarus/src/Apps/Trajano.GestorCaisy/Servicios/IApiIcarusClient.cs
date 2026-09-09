@@ -22,6 +22,29 @@ public interface IApiIcarusClient
 
     Task<Stream> DescargarDocumentoOriginalAsync(Guid id, CancellationToken token = default);
 
+    // Publicaciones de precio de huevo (SP9A): catálogo global en
+    // /precios-huevo-caisy, reservado a GestorRecepcionHuevos. El original se
+    // importa como Excel (.xlsx), no como PDF.
+    Task<IReadOnlyList<PublicacionPrecioHuevoResumenApi>> ListarPublicacionesHuevoAsync(
+        CancellationToken token = default);
+
+    Task<PublicacionPrecioHuevoDetalleApi> ObtenerPublicacionHuevoAsync(
+        Guid id, CancellationToken token = default);
+
+    Task<Guid> ImportarExcelHuevoAsync(
+        Stream contenido, string nombreArchivo, CancellationToken token = default);
+
+    Task ActualizarBorradorHuevoAsync(
+        ComandoActualizarBorradorHuevoApi comando, CancellationToken token = default);
+
+    Task PublicarHuevoAsync(Guid id, CancellationToken token = default);
+
+    Task AnularFuturaHuevoAsync(Guid id, CancellationToken token = default);
+
+    Task DescartarBorradorHuevoAsync(Guid id, CancellationToken token = default);
+
+    Task<Stream> DescargarDocumentoOriginalHuevoAsync(Guid id, CancellationToken token = default);
+
     Task<PaginaPedidosApi> ListarPedidosAsync(
         FiltrosPedidosApi filtros, CancellationToken token = default);
 

@@ -1,0 +1,101 @@
+@model VistaDetallesHuevo
+@{
+    var publicacion = Model.Publicacion;
+    ViewData["Titulo"] = "Publicación de precios de huevo";
+    ViewData["Seccion"] = "precios-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Publicación de precios de huevo</h1>
+        <p class="pagina-cabecera__detalle">
+            Documento del @publicacion.FechaNotificacion.ToString("dd/MM/yyyy") con
+            vigencia desde el @publicacion.FechaVigencia.ToString("dd/MM/yyyy").
+        </p>
+    </div>
+    <span class="chip chip--@publicacion.Estado.ToLowerInvariant()">@publicacion.Estado</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <h2>Resumen</h2>
+    <dl class="ficha">
+        <div>
+            <dt>Fecha del documento</dt>
+            <dd>@publicacion.FechaNotificacion.ToString("dd/MM/yyyy")</dd>
+        </div>
+        <div>
+            <dt>Vigente desde</dt>
+            <dd>@publicacion.FechaVigencia.ToString("dd/MM/yyyy")</dd>
+        </div>
+        <div>
+            <dt>Servicio por unidad</dt>
+            <dd>@publicacion.Servicio.ToString("0.0000")</dd>
+        </div>
+    </dl>
+    <div class="acciones">
+        @if (Model.PuedeEditarse)
+        {
+            <a class="boton" asp-action="Editar" asp-route-id="@publicacion.Id">Editar borrador</a>
+            <a class="boton boton--primario" asp-action="ConfirmarPublicacion" asp-route-id="@publicacion.Id">Publicar</a>
+            <a class="boton boton--secundario" asp-action="ConfirmarDescartar" asp-route-id="@publicacion.Id">Eliminar borrador</a>
+        }
+        @if (Model.PuedeAnularse)
+        {
+            <form asp-action="Anular" asp-route-id="@publicacion.Id" method="post"
+                  data-confirmar="La publicación futura quedará anulada de forma definitiva. ¿Confirma la anulación?">
+                <button type="submit" class="boton boton--secundario">Anular publicación</button>
+            </form>
+        }
+        @if (publicacion.DocumentoOriginalId is not null)
+        {
+            <a class="boton boton--neutro" asp-action="DocumentoOriginal" asp-route-id="@publicacion.Id">Descargar Excel original</a>
+        }
+        @if (Model.PuedeEditarse)
+        {
+            <a class="boton boton--neutro" asp-action="Importar">Importar otro Excel</a>
+        }
+        @if (Model.EsPublicacionEfectiva)
+        {
+            <a class="boton boton--neutro" asp-action="Importar">Importar una publicación corregida</a>
+        }
+        <a class="enlace" asp-action="Index">Volver al historial</a>
+    </div>
+    @if (Model.EsPublicacionEfectiva)
+    {
+        <div class="alerta alerta--aviso" role="note">
+            Esta publicación ya entró en vigor y es inmutable: no se puede editar,
+            borrar ni anular. Si contiene datos incorrectos, importe una publicación
+            corregida y publíquela con su propia fecha de vigencia.
+        </div>
+    }
+</section>
+<section class="tarjeta tarjeta--tabla">
+    <h2>Detalles de precio</h2>
+    @if (publicacion.Detalles.Count == 0)
+    {
+        <p class="vacio__texto">El borrador aún no tiene detalles de precio.</p>
+    }
+    else
+    {
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Tamaño</th>
+                    <th scope="col">Precio al productor</th>
+                    <th scope="col">Precio actual del documento</th>
+                    <th scope="col">Precio unitario</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var detalle in publicacion.Detalles)
+                {
+                    <tr>
+                        <td>@detalle.Tamano</td>
+                        <td>@detalle.PrecioAlProductor.ToString("0.0000")</td>
+                        <td>@(detalle.PrecioActualDocumento?.ToString("0.0000") ?? "—")</td>
+                        <td>@detalle.PrecioUnitario.ToString("0.0000")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>

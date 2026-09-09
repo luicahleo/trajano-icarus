@@ -33,6 +33,28 @@ public sealed record ComandoActualizarBorradorApi(
 // El importador responde con el identificador del borrador creado.
 public sealed record BorradorImportadoApi([property: JsonPropertyName("id")] Guid Id);
 
+// Publicaciones de precio de huevo (SP9A): espejo de los DTO del backend. El
+// precio unitario (al productor + servicio) lo calcula la API; el tamaño viaja
+// como nombre JSON (Extra, Primera, Segunda, Tercera, Cuarta, Quinta).
+public sealed record PublicacionPrecioHuevoResumenApi(
+    Guid Id, DateOnly FechaNotificacion, DateOnly FechaVigencia, string Estado,
+    int CantidadDetalles, bool TieneDocumentoOriginal);
+
+public sealed record DetallePrecioHuevoApi(
+    Guid Id, string Tamano, decimal PrecioAlProductor, decimal? PrecioActualDocumento,
+    decimal PrecioUnitario);
+
+public sealed record PublicacionPrecioHuevoDetalleApi(
+    Guid Id, DateOnly FechaNotificacion, DateOnly FechaVigencia, string Estado,
+    decimal Servicio, Guid? DocumentoOriginalId, IReadOnlyList<DetallePrecioHuevoApi> Detalles);
+
+public sealed record DatosDetalleHuevoApi(
+    string Tamano, decimal PrecioAlProductor, decimal? PrecioActualDocumento = null);
+
+public sealed record ComandoActualizarBorradorHuevoApi(
+    Guid PublicacionId, DateOnly FechaNotificacion, DateOnly FechaVigencia,
+    decimal Servicio, IReadOnlyList<DatosDetalleHuevoApi> Detalles);
+
 // Pedidos de alimento (SP8B): espejo de los DTO de la API para la bandeja
 // global del tenant-caisy con filtros y paginación.
 public sealed record FiltrosPedidosApi(

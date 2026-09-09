@@ -30,17 +30,29 @@
         }
     </header>
     <div class="cuerpo">
-        @if (User.Identity?.IsAuthenticated == true && ReclamosCaisy.TieneGestorPedidoAlimento(User))
+        @if (User.Identity?.IsAuthenticated == true
+            && (ReclamosCaisy.TieneGestorPedidoAlimento(User)
+                || ReclamosCaisy.TieneGestorRecepcionHuevos(User)))
         {
             <nav class="lateral" aria-label="Navegación principal">
-                <a asp-controller="Precios" asp-action="Index"
-                   class="lateral__enlace @(seccion == "precios" ? "lateral__enlace--activo" : "")">
-                    Precios de alimento
-                </a>
-                <a asp-controller="Pedidos" asp-action="Index"
-                   class="lateral__enlace @(seccion == "pedidos" ? "lateral__enlace--activo" : "")">
-                    Pedidos de alimento
-                </a>
+                @if (ReclamosCaisy.TieneGestorPedidoAlimento(User))
+                {
+                    <a asp-controller="Precios" asp-action="Index"
+                       class="lateral__enlace @(seccion == "precios" ? "lateral__enlace--activo" : "")">
+                        Precios de alimento
+                    </a>
+                    <a asp-controller="Pedidos" asp-action="Index"
+                       class="lateral__enlace @(seccion == "pedidos" ? "lateral__enlace--activo" : "")">
+                        Pedidos de alimento
+                    </a>
+                }
+                @if (ReclamosCaisy.TieneGestorRecepcionHuevos(User))
+                {
+                    <a asp-controller="PreciosHuevo" asp-action="Index"
+                       class="lateral__enlace @(seccion == "precios-huevo" ? "lateral__enlace--activo" : "")">
+                        Precios de huevo
+                    </a>
+                }
             </nav>
         }
         <main id="contenido-principal" class="contenido">
