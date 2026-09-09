@@ -8,10 +8,11 @@ describe('obtenerEnlacesNavegacion', () => {
     ).toEqual(['Clientes', 'Vacunación']);
   });
 
-  test('incluye pedidos y gestión avícola para el cliente', () => {
+  test('incluye pedidos, despachos y gestión avícola para el cliente', () => {
     expect(obtenerEnlacesNavegacion('Cliente', false).map(({ etiqueta }) => etiqueta)).toEqual([
       'Trabajadores',
       'Pedidos de alimento',
+      'Despachos de huevo',
       'Gestión Avícola',
     ]);
   });
@@ -24,6 +25,9 @@ describe('obtenerEnlacesNavegacion', () => {
     expect(obtenerEnlacesNavegacion('Trabajador', false, true).map(({ etiqueta }) => etiqueta)).toEqual(
       ['Pedidos de alimento'],
     );
+    expect(
+      obtenerEnlacesNavegacion('Trabajador', false, false, true).map(({ etiqueta }) => etiqueta),
+    ).toEqual(['Despachos de huevo']);
   });
 });
 

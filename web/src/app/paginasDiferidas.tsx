@@ -60,6 +60,21 @@ export const PedidoFormularioPage = lazy(() =>
     default: modulo.PedidoFormularioPage,
   })),
 );
+export const DespachosHuevoPage = lazy(() =>
+  import('../features/despacho-huevo/DespachosHuevoPage').then((modulo) => ({
+    default: modulo.DespachosHuevoPage,
+  })),
+);
+export const DespachoHuevoDetallePage = lazy(() =>
+  import('../features/despacho-huevo/DespachoHuevoDetallePage').then((modulo) => ({
+    default: modulo.DespachoHuevoDetallePage,
+  })),
+);
+export const DespachoHuevoFormularioPage = lazy(() =>
+  import('../features/despacho-huevo/DespachoHuevoFormularioPage').then((modulo) => ({
+    default: modulo.DespachoHuevoFormularioPage,
+  })),
+);
 export const AdminVacunacionPage = lazy(() =>
   import('../features/admin/vacunacion/AdminVacunacionPage').then((modulo) => ({
     default: modulo.AdminVacunacionPage,

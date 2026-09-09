@@ -3,6 +3,7 @@ import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
 import EggRoundedIcon from '@mui/icons-material/EggRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded';
+import SendRoundedIcon from '@mui/icons-material/SendRounded';
 import VaccinesRoundedIcon from '@mui/icons-material/VaccinesRounded';
 import type { Rol } from '../lib/tipos';
 
@@ -32,10 +33,17 @@ const ENLACE_PEDIDOS: EnlaceNavegacion = {
   icono: <LocalShippingRoundedIcon />,
 };
 
+const ENLACE_DESPACHOS: EnlaceNavegacion = {
+  etiqueta: 'Despachos de huevo',
+  ruta: '/despachos',
+  icono: <SendRoundedIcon />,
+};
+
 export function obtenerEnlacesNavegacion(
   rol: Rol | null,
   tieneFuncionalidadAvicola: boolean,
   tienePedidoAlimento = false,
+  tieneDespachoHuevo = false,
 ): EnlaceNavegacion[] {
   const propios = rol ? (ENLACES_POR_ROL[rol] ?? []) : [];
   const avicola =
@@ -44,7 +52,9 @@ export function obtenerEnlacesNavegacion(
       : [];
   const pedidos =
     rol === 'Cliente' || (rol === 'Trabajador' && tienePedidoAlimento) ? [ENLACE_PEDIDOS] : [];
-  return [...propios, ...pedidos, ...avicola];
+  const despachos =
+    rol === 'Cliente' || (rol === 'Trabajador' && tieneDespachoHuevo) ? [ENLACE_DESPACHOS] : [];
+  return [...propios, ...pedidos, ...despachos, ...avicola];
 }
 
 export function obtenerTituloRuta(ruta: string, enlaces: EnlaceNavegacion[]): string {

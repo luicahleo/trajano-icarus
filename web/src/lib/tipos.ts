@@ -9,7 +9,8 @@ export type Funcionalidad =
   | 'Alimentacion'
   | 'Despachos'
   | 'Precios'
-  | 'PedidoAlimento';
+  | 'PedidoAlimento'
+  | 'DespachoHuevo';
 export type FuncionalidadOperativaTrabajador =
   | 'ProduccionHuevos'
   | 'Mortalidad'

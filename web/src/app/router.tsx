@@ -23,6 +23,9 @@ import {
   PedidosAlimentoPage,
   PedidoAlimentoDetallePage,
   PedidoFormularioPage,
+  DespachosHuevoPage,
+  DespachoHuevoDetallePage,
+  DespachoHuevoFormularioPage,
 } from './paginasDiferidas';
 import { RedirigirSegunRol } from './RedirigirSegunRol';
 import { RaizAplicacion } from './RaizAplicacion';
@@ -208,6 +211,54 @@ export const router = createBrowserRouter([
                 <RequiereFuncionalidad funcionalidades={['PedidoAlimento']}>
                   <Suspense fallback={<CargandoRuta />}>
                     <PedidoFormularioPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/despachos',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['DespachoHuevo']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <DespachosHuevoPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/despachos/nuevo',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['DespachoHuevo']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <DespachoHuevoFormularioPage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/despachos/:id',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['DespachoHuevo']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <DespachoHuevoDetallePage />
+                  </Suspense>
+                </RequiereFuncionalidad>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/despachos/:id/editar',
+            element: (
+              <ProtectedRoute>
+                <RequiereFuncionalidad funcionalidades={['DespachoHuevo']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <DespachoHuevoFormularioPage />
                   </Suspense>
                 </RequiereFuncionalidad>
               </ProtectedRoute>

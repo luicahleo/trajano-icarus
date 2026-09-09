@@ -37,6 +37,7 @@ export function AppLayout() {
     rol,
     tieneFuncionalidad('ProduccionHuevos', 'Mortalidad', 'Vacunacion'),
     tieneFuncionalidad('PedidoAlimento'),
+    tieneFuncionalidad('DespachoHuevo'),
   );
   const titulo = obtenerTituloRuta(pathname, enlaces);
 
