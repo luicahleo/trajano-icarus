@@ -27,6 +27,11 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     // de CAISY (ClienteId nulo) y cada consulta del repositorio pasa el
     // alcance explícito.
     public DbSet<NotificacionInterna> NotificacionesInternas => Set<NotificacionInterna>();
+    // Sin filtro de tenant (spec SP9): mismo alcance que NotificacionesInternas
+    // (SP8), con la bandeja global de CAISY (ClienteId nulo) para el crédito
+    // insuficiente de un pedido de alimento.
+    public DbSet<NotificacionInternaDespachoHuevo> NotificacionesInternasDespachoHuevo
+        => Set<NotificacionInternaDespachoHuevo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

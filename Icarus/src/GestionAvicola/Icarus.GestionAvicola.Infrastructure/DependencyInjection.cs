@@ -9,6 +9,7 @@ using Icarus.GestionAvicola.Application.Galpones;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Mortalidad;
 using Icarus.GestionAvicola.Application.Notificaciones;
+using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Application.PreciosHuevo;
@@ -48,6 +49,7 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioDespachosHuevo, RepositorioDespachosHuevo>();
         servicios.AddScoped<IRepositorioBalanceAlimentos, RepositorioBalanceAlimentos>();
         servicios.AddScoped<INotificacionesInternas, RepositorioNotificacionesInternas>();
+        servicios.AddScoped<INotificacionesInternasDespachoHuevo, RepositorioNotificacionesInternasDespachoHuevo>();
         // Límite semanal de pedidos enviados (spec SP8): configurable sin
         // cambiar código y validado al arrancar. El valor se entrega a los
         // handlers ya resuelto (Application no depende de Options).
