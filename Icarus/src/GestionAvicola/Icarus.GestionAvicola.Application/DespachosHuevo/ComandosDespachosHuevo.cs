@@ -218,6 +218,30 @@ public sealed class ListarDespachosHuevoTenantHandler(IRepositorioDespachosHuevo
             .ToList();
 }
 
+// Bandeja global de CAISY (spec SP9C): filtro por estado con paginación,
+// igual que pedidos de alimento. Reutiliza el resumen del tenant: el shape
+// es idéntico y la bandeja es global (sin filtro de tenant en el handler).
+public sealed record ListarDespachosHuevoCaisyQuery(EstadoDespachoHuevo? Estado, int Pagina, int TamanoPagina)
+    : IRequest<PaginaDespachosHuevo>;
+
+public sealed record PaginaDespachosHuevo(IReadOnlyList<DespachoHuevoResumen> Items, int Total);
+
+public sealed class ListarDespachosHuevoCaisyHandler(IRepositorioDespachosHuevo repositorio)
+    : IRequestHandler<ListarDespachosHuevoCaisyQuery, PaginaDespachosHuevo>
+{
+    public async Task<PaginaDespachosHuevo> Handle(
+        ListarDespachosHuevoCaisyQuery request, CancellationToken cancellationToken)
+    {
+        var saltar = (Math.Max(request.Pagina, 1) - 1) * Math.Max(request.TamanoPagina, 1);
+        var (items, total) = await repositorio.ListarPaginadoCaisyAsync(
+            request.Estado, saltar, Math.Max(request.TamanoPagina, 1), cancellationToken);
+        return new PaginaDespachosHuevo(
+            items.Select(d => new DespachoHuevoResumen(
+                d.Id, d.Estado.ToString(), d.FechaDespacho, d.TotalAmarras, d.TotalHuevos, d.TotalBs)).ToList(),
+            total);
+    }
+}
+
 public sealed class ObtenerDespachoHuevoHandler(IRepositorioDespachosHuevo repositorio)
     : IRequestHandler<ObtenerDespachoHuevoQuery, DespachoHuevoDetalle>
 {
