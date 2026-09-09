@@ -20,6 +20,7 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     public DbSet<ItemPlanVacunacion> ItemsPlanVacunacion => Set<ItemPlanVacunacion>();
     public DbSet<TareaVacunacion> TareasVacunacion => Set<TareaVacunacion>();
     public DbSet<NotificacionPreciosAlimentos> NotificacionesPreciosAlimentos => Set<NotificacionPreciosAlimentos>();
+    public DbSet<PublicacionPrecioHuevo> PublicacionesPreciosHuevo => Set<PublicacionPrecioHuevo>();
     public DbSet<PedidoAlimento> PedidosAlimento => Set<PedidoAlimento>();
     // Sin filtro de tenant (spec SP8): el alcance incluye la bandeja global
     // de CAISY (ClienteId nulo) y cada consulta del repositorio pasa el
@@ -43,6 +44,10 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         // Catálogo global de precios (spec SP8): sin filtro de tenant, solo
         // EstaActivo; el acceso se autoriza con la política de CAISY.
         modelBuilder.Entity<NotificacionPreciosAlimentos>().HasQueryFilter(n => n.EstaActivo);
+        // Catálogo global de precios de huevo (spec SP9): sin filtro de
+        // tenant, solo EstaActivo; el acceso se autoriza con la política de
+        // CAISY.
+        modelBuilder.Entity<PublicacionPrecioHuevo>().HasQueryFilter(p => p.EstaActivo);
         // Pedidos compartidos del tenant (spec SP8): cualquier cuenta del
         // tenant los ve; las cuentas sin tenant (CAISY) consultan con
         // repositorios explícitos autorizados por su política.

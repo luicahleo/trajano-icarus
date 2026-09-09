@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <None Update="GestionAvicola\Fixtures\NotificacionPreciosMuestra.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="GestionAvicola\Fixtures\PublicacionPrecioHuevoMuestra.xlsx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,6 +10,7 @@ using Icarus.GestionAvicola.Application.Mortalidad;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
+using Icarus.GestionAvicola.Application.PreciosHuevo;
 using Icarus.GestionAvicola.Application.Produccion;
 using Icarus.GestionAvicola.Application.Vacunacion;
 using Icarus.GestionAvicola.Infrastructure.Documentos;
@@ -41,6 +42,7 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioTareasVacunacion, RepositorioTareasVacunacion>();
         servicios.AddScoped<IImportadorCronogramaVacunacion, ImportadorCronogramaVacunacion>();
         servicios.AddScoped<IRepositorioNotificacionesPrecios, RepositorioNotificacionesPrecios>();
+        servicios.AddScoped<IRepositorioPublicacionesPreciosHuevo, RepositorioPublicacionesPreciosHuevo>();
         servicios.AddScoped<IRepositorioPedidosAlimento, RepositorioPedidosAlimento>();
         servicios.AddScoped<IRepositorioBalanceAlimentos, RepositorioBalanceAlimentos>();
         servicios.AddScoped<INotificacionesInternas, RepositorioNotificacionesInternas>();
@@ -55,6 +57,7 @@ public static class DependencyInjection
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpcionesPedidosAlimento>>().Value);
         servicios.AddScoped<IImportadorNotificacionPreciosPdf, ImportadorNotificacionPreciosPdf>();
         servicios.AddScoped<IImportadorNotificacionPreciosExcel, ImportadorNotificacionPreciosExcel>();
+        servicios.AddScoped<IImportadorPublicacionPrecioHuevoExcel, ImportadorPublicacionPrecioHuevoExcel>();
         servicios.AddScoped<IAlmacenDocumentosPrecios, AlmacenDocumentosLocal>();
         // Volumen privado de respaldos de notas (spec SP8C): límites
         // configurables validados al arrancar; se entregan ya resueltos.
