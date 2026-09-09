@@ -135,4 +135,39 @@ public class DespachoHuevoTests
 
         Assert.Equal("Solo un despacho en borrador se puede enviar.", excepcion.Message);
     }
+
+    [Fact]
+    public void ConfirmarRecepcionSoloDesdeDespachado()
+    {
+        var despacho = BorradorConDosDetalles();
+
+        var excepcion = Assert.Throws<ReglaNegocioException>(() =>
+            despacho.ConfirmarRecepcion(new DateOnly(2026, 11, 6), ActorId));
+
+        Assert.Equal("Solo un despacho despachado se puede recibir.", excepcion.Message);
+    }
+
+    [Fact]
+    public void ConfirmarRecepcionCierraElEstadoYFijaLaFecha()
+    {
+        var despacho = BorradorConDosDetalles();
+        despacho.Despachar(new DateOnly(2026, 11, 5), ActorId, PreciosPara(despacho, Guid.NewGuid()), Documento());
+
+        despacho.ConfirmarRecepcion(new DateOnly(2026, 11, 6), ActorId);
+
+        Assert.Equal(EstadoDespachoHuevo.Recibido, despacho.Estado);
+        Assert.Equal(new DateOnly(2026, 11, 6), despacho.FechaRecepcion);
+        Assert.Equal(2, despacho.Historial.Count);
+    }
+
+    [Fact]
+    public void ConfirmarRecepcionDosVecesFalla()
+    {
+        var despacho = BorradorConDosDetalles();
+        despacho.Despachar(new DateOnly(2026, 11, 5), ActorId, PreciosPara(despacho, Guid.NewGuid()), Documento());
+        despacho.ConfirmarRecepcion(new DateOnly(2026, 11, 6), ActorId);
+
+        Assert.Throws<ReglaNegocioException>(() =>
+            despacho.ConfirmarRecepcion(new DateOnly(2026, 11, 7), ActorId));
+    }
 }

@@ -30,4 +30,20 @@ public sealed class RepositorioDespachosHuevo(GestionAvicolaDbContext db) : IRep
     public async Task<IReadOnlyList<DespachoHuevo>> ListarDelTenantAsync(
         CancellationToken cancellationToken = default) =>
         await db.DespachosHuevo.Include(d => d.Detalles).ToListAsync(cancellationToken);
+
+    public async Task<(IReadOnlyList<DespachoHuevo> Items, int Total)> ListarPaginadoCaisyAsync(
+        EstadoDespachoHuevo? estado, int saltar, int tomar,
+        CancellationToken cancellationToken = default)
+    {
+        var consulta = db.DespachosHuevo.Include(d => d.Detalles).AsNoTracking();
+        if (estado is { } e)
+            consulta = consulta.Where(d => d.Estado == e);
+        var total = await consulta.CountAsync(cancellationToken);
+        var items = await consulta
+            .OrderByDescending(d => d.FechaDespacho)
+            .ThenByDescending(d => d.Id)
+            .Skip(saltar).Take(tomar)
+            .ToListAsync(cancellationToken);
+        return (items, total);
+    }
 }

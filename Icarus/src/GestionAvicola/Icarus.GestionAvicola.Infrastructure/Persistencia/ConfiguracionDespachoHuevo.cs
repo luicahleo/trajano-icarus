@@ -10,6 +10,7 @@ public sealed class ConfiguracionDespachoHuevo : IEntityTypeConfiguration<Despac
     {
         builder.ToTable("despachos_huevo");
         builder.Property(d => d.FechaDespacho).HasColumnType("date");
+        builder.Property(d => d.FechaRecepcion).HasColumnType("date");
         builder.Property(d => d.Estado).HasConversion<int>();
         builder.Property(d => d.Version).IsRowVersion();
 

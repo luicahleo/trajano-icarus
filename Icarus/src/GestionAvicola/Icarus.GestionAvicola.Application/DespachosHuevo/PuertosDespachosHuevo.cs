@@ -22,4 +22,12 @@ public interface IRepositorioDespachosHuevo
 
     Task<IReadOnlyList<DespachoHuevo>> ListarDelTenantAsync(
         CancellationToken cancellationToken = default);
+
+    // Bandeja global de CAISY (spec SP9C): filtro por estado con paginación,
+    // igual que pedidos de alimento. El filtro de tenant del DbContext deja
+    // ver los despachos de todos los tenants a las cuentas sin tenant y la
+    // política de CAISY autoriza el acceso.
+    Task<(IReadOnlyList<DespachoHuevo> Items, int Total)> ListarPaginadoCaisyAsync(
+        EstadoDespachoHuevo? estado, int saltar, int tomar,
+        CancellationToken cancellationToken = default);
 }

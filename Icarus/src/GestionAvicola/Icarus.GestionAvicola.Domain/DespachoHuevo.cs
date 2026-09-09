@@ -47,6 +47,8 @@ public sealed class DespachoHuevo : AggregateRoot
 
     public DateOnly? FechaDespacho { get; private set; }
 
+    public DateOnly? FechaRecepcion { get; private set; }
+
     public DocumentoDespachoHuevo? DocumentoNota => _documentoNota;
 
     public IReadOnlyCollection<DetalleDespachoHuevo> Detalles => _detalles.AsReadOnly();
@@ -97,6 +99,19 @@ public sealed class DespachoHuevo : AggregateRoot
         Estado = EstadoDespachoHuevo.Despachado;
         FechaDespacho = fechaDespacho;
         RegistrarTransicion(EstadoDespachoHuevo.Borrador, EstadoDespachoHuevo.Despachado, actorId);
+    }
+
+    // Confirmación de CAISY (spec SP9): sin recuento por línea — el
+    // transportista solo verifica visualmente, no hay reconteo formal en el
+    // sistema. El monto ya quedó congelado al despachar; esta operación solo
+    // cierra el estado y fija la fecha de recepción (fecha de negocio del
+    // servidor, la resuelve el llamador).
+    public void ConfirmarRecepcion(DateOnly fechaRecepcion, Guid actorId)
+    {
+        AsegurarEstado(EstadoDespachoHuevo.Despachado, "Solo un despacho despachado se puede recibir.");
+        Estado = EstadoDespachoHuevo.Recibido;
+        FechaRecepcion = fechaRecepcion;
+        RegistrarTransicion(EstadoDespachoHuevo.Despachado, EstadoDespachoHuevo.Recibido, actorId);
     }
 
     private void AsegurarEstado(EstadoDespachoHuevo esperado, string mensaje)
