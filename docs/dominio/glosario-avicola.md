@@ -82,6 +82,20 @@ Catálogo global gestionado por el Gestor CAISY con la funcionalidad
 | Precio actual del documento | Columna «Precio Actual» del Excel de CAISY: control informativo contra la publicación vigente. A diferencia de alimento, **no bloquea** la publicación. |
 | Precio unitario | `Precio al productor + Servicio`, calculado al consultar (nunca se persiste). Es el dato que el recibo y el crédito de SP9C consumirán. |
 
+## Despacho de huevo (SP9B)
+
+Flujo del tenant hacia CAISY, definido en el spec del subproyecto 9
+(`docs/superpowers/specs/2026-09-09-sp9-despacho-huevos-design.md`).
+Lo prepara el Cliente o un Trabajador con la funcionalidad `DespachoHuevo`,
+deliberadamente online (se despacha con conectividad, en el momento de cargar
+el camión).
+
+| Término | Definición |
+|---|---|
+| Despacho de huevo | Registro del tenant con líneas por tamaño (amarras y unidades sueltas, siempre menos de 180 por línea; un tamaño aparece una sola vez). Solo el borrador se edita o se borra lógicamente. Estados `Borrador` → `Despachado` (→ `Recibido` en SP9C). No descuenta ni valida contra la producción diaria: ésta solo alimenta la eficiencia. |
+| Envío del despacho | Operación única: el servidor fija la fecha de negocio de Bolivia, congela el `Precio al productor` vigente de cada línea con su publicación y exige la foto de la nota de entrega en la misma operación. Si falta el precio vigente de una línea, el envío falla completo y el borrador queda intacto. |
+| Nota de entrega del despacho | Foto de la nota que el emisor sube al enviar (a diferencia de alimento, donde la sube el receptor al recibir). Un solo documento por despacho, inmutable, con original privado y copia de visualización, en el mismo almacén privado que los documentos de los pedidos de alimento. |
+
 ## Unidades
 
 | Término | Definición |
