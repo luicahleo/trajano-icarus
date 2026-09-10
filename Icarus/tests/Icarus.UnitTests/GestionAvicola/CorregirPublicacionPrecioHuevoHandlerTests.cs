@@ -118,6 +118,36 @@ public class CorregirPublicacionPrecioHuevoHandlerTests
     }
 
     [Fact]
+    public async Task UnMotivoLargoNoDesbordaElMetaDeLaNotificacion()
+    {
+        var erronea = PublicacionVigente(0.75m);
+        var correctiva = new PublicacionPrecioHuevo(
+            FechaNotificacion, FechaVigencia, 0.05m, [new DatosDetallePrecioHuevo(TamanoHuevo.Extra, 0.85m)]);
+        var despacho = DespachoRecibidoQueUso(erronea.Id, Guid.NewGuid());
+        _repositorioPrecios.ObtenerPorIdAsync(erronea.Id, Arg.Any<CancellationToken>()).Returns(erronea);
+        _repositorioPrecios.ObtenerPorIdAsync(correctiva.Id, Arg.Any<CancellationToken>()).Returns(correctiva);
+        _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(erronea);
+        _repositorioDespachos.ListarRecibidosPorPublicacionAsync(erronea.Id, Arg.Any<CancellationToken>())
+            .Returns([despacho]);
+        // El validator admite hasta 500 caracteres de motivo, pero
+        // NotificacionInternaDespachoHuevo.Meta es nvarchar(500): el texto
+        // compuesto «monto — motivo» debe truncar el motivo para no
+        // desbordar la columna en el SaveChanges.
+        var motivo = new string('x', 500);
+        var capturadas = new List<NotificacionInternaDespachoHuevo>();
+        _notificaciones.When(n => n.Agregar(Arg.Any<NotificacionInternaDespachoHuevo>()))
+            .Do(llamada => capturadas.Add(llamada.Arg<NotificacionInternaDespachoHuevo>()));
+
+        await CrearHandler().Handle(
+            new CorregirPublicacionPrecioHuevoVigenteCommand(erronea.Id, correctiva.Id, motivo),
+            CancellationToken.None);
+
+        var meta = Assert.Single(capturadas).Meta;
+        Assert.True(meta!.Length <= 500);
+        Assert.Contains(motivo[..100], meta, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LaCorrectivaConVigenciaFuturaSeRechaza()
     {
         var erronea = PublicacionVigente(0.75m);

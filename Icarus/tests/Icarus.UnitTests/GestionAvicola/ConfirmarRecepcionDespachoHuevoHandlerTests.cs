@@ -130,4 +130,41 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
         Assert.Equal(publicacionCorrectiva.Id, linea.PublicacionPrecioHuevoId);
         Assert.Equal(EstadoDespachoHuevo.Recibido, despacho.Estado);
     }
+
+    [Fact]
+    public async Task RecibirUnDespachoCuyaCadenaTerminaEnBorradorNoRecongela()
+    {
+        var publicacionOriginal = new PublicacionPrecioHuevo(
+            new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 5), 0.05m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.70m)]);
+        publicacionOriginal.Publicar();
+        // La cadena termina en una correctiva todavía en borrador: la
+        // reconciliación no puede recongelar contra una publicación que no
+        // está Publicada; la línea conserva su precio congelado original
+        // (con su riesgo, pero recongelar a un borrador sería peor).
+        var correctivaBorrador = new PublicacionPrecioHuevo(
+            new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 1), 0.05m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.90m)]);
+        publicacionOriginal.CorregirVigente(correctivaBorrador.Id, "Correctiva aún en revisión.");
+
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
+        despacho.Despachar(FechasNegocio.Hoy(), Guid.NewGuid(),
+            [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, 0.75m, publicacionOriginal.Id)],
+            new DatosDocumentoNota(
+                Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 1024, 512, "hash-sha256", "nota.jpg"));
+        _repositorio.ObtenerPorIdAsync(despacho.Id, Arg.Any<CancellationToken>()).Returns(despacho);
+        _repositorioPrecios.ObtenerPorIdAsync(publicacionOriginal.Id, Arg.Any<CancellationToken>())
+            .Returns(publicacionOriginal);
+        _repositorioPrecios.ObtenerPorIdAsync(correctivaBorrador.Id, Arg.Any<CancellationToken>())
+            .Returns(correctivaBorrador);
+
+        await CrearHandler().Handle(
+            new ConfirmarRecepcionDespachoHuevoCommand(despacho.Id), CancellationToken.None);
+
+        var linea = despacho.Detalles.Single();
+        Assert.Equal(0.75m, linea.PrecioUnitarioCongelado);
+        Assert.Equal(publicacionOriginal.Id, linea.PublicacionPrecioHuevoId);
+        Assert.Equal(EstadoDespachoHuevo.Recibido, despacho.Estado);
+    }
 }

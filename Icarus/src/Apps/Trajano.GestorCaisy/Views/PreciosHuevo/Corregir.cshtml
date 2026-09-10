@@ -50,6 +50,13 @@
         </table>
     }
 </section>
+@if (Model.Previa.TamanosSinPrecioCorrectivo is { Count: > 0 } tamanos)
+{
+    <div class="alerta alerta--aviso" role="note">
+        Estos tamaños quedaron sin precio correctivo y conservan el precio erróneo:
+        @string.Join(", ", tamanos).
+    </div>
+}
 <section class="tarjeta">
     <form asp-action="Corregir" asp-route-id="@Model.Correctiva.Id" method="post">
         <div class="campos">

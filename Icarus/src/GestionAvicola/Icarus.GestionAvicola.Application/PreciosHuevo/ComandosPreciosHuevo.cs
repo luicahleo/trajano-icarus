@@ -284,7 +284,9 @@ public sealed record PrevisualizarCorreccionPrecioHuevoQuery(Guid PublicacionErr
 public sealed record AjusteCorreccionPrecioHuevoResumen(Guid DespachoHuevoId, DateOnly? FechaRecepcion, decimal Monto);
 
 public sealed record VistaPreviaCorreccionPrecioHuevo(
-    IReadOnlyList<AjusteCorreccionPrecioHuevoResumen> Ajustes, decimal Total);
+    IReadOnlyList<AjusteCorreccionPrecioHuevoResumen> Ajustes,
+    IReadOnlyList<string> TamanosSinPrecioCorrectivo,
+    decimal Total);
 
 public sealed record CorregirPublicacionPrecioHuevoVigenteCommand(
     Guid PublicacionErroneaId, Guid PublicacionCorrectivaId, string Motivo)
@@ -328,7 +330,20 @@ public sealed class PrevisualizarCorreccionPrecioHuevoHandler(
                 d.Id, d.FechaRecepcion, CalcularDiferencia(d, erronea, correctiva)))
             .Where(a => a.Monto != 0)
             .ToList();
-        return new VistaPreviaCorreccionPrecioHuevo(ajustes, ajustes.Sum(a => a.Monto));
+        // Tamaños de líneas congeladas con la errónea que la correctiva no
+        // cubre (misma condición del continue de CalcularDiferencia): quedan
+        // con el precio erróneo sin compensación y el gestor debe verlos
+        // antes de confirmar.
+        var tamanosCorrectivos = correctiva.Detalles.Select(d => d.Tamano).ToHashSet();
+        var tamanosSinPrecioCorrectivo = despachos
+            .SelectMany(d => d.Detalles)
+            .Where(l => l.PublicacionPrecioHuevoId == erronea.Id && !tamanosCorrectivos.Contains(l.Tamano))
+            .Select(l => l.Tamano.ToString())
+            .Distinct()
+            .OrderBy(t => t, StringComparer.Ordinal)
+            .ToList();
+        return new VistaPreviaCorreccionPrecioHuevo(
+            ajustes, tamanosSinPrecioCorrectivo, ajustes.Sum(a => a.Monto));
     }
 
     // Compartido con CorregirPublicacionPrecioHuevoVigenteHandler para que la
@@ -400,8 +415,11 @@ public sealed class CorregirPublicacionPrecioHuevoVigenteHandler(
             repositorioAjustes.Agregar(ajuste);
             notificaciones.Agregar(NotificacionInternaDespachoHuevo.ParaAjusteCredito(
                 despacho.Id, despacho.ClienteId,
+                // Meta es nvarchar(500) y el motivo admite hasta 500
+                // caracteres: se trunca para que el texto compuesto nunca
+                // desborde la columna en el SaveChanges.
                 string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"{monto:0.00} Bs — {request.Motivo}")));
+                    $"{monto:0.00} Bs — {request.Motivo[..Math.Min(request.Motivo.Length, 470)]}")));
             ajustados++;
         }
 

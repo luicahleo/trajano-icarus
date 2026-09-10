@@ -58,7 +58,11 @@ public sealed record ComandoActualizarBorradorHuevoApi(
 public sealed record AjusteCorreccionHuevoResumenApi(Guid DespachoHuevoId, DateOnly? FechaRecepcion, decimal Monto);
 
 public sealed record VistaPreviaCorreccionHuevoApi(
-    IReadOnlyList<AjusteCorreccionHuevoResumenApi> Ajustes, decimal Total);
+    IReadOnlyList<AjusteCorreccionHuevoResumenApi> Ajustes, decimal Total,
+    // Tamaños de líneas congeladas con la errónea que la correctiva no cubre:
+    // quedan con el precio erróneo sin compensación. Anulable para no romper
+    // respuestas de una API que aún no lo envía.
+    IReadOnlyList<string>? TamanosSinPrecioCorrectivo = null);
 
 public sealed record ComandoCorregirVigenteHuevoApi(Guid PublicacionErroneaId, Guid PublicacionCorrectivaId, string Motivo);
 

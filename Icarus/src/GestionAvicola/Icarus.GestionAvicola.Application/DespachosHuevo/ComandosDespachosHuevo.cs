@@ -309,7 +309,10 @@ public sealed class ConfirmarRecepcionDespachoHuevoHandler(
     // línea fue corregida mientras el despacho seguía en tránsito, la línea
     // se recongela contra la publicación activa al final de la cadena de
     // correcciones, antes de sellar la recepción. Un despacho ya Recibido
-    // nunca pasa por acá — su camino de corrección es AjusteCreditoHuevo.
+    // nunca pasa por acá — su camino de corrección es AjusteCreditoHuevo. La
+    // publicación final debe estar Publicada: si la cadena termina en un
+    // Borrador o Anulada, recongelar copiaría un precio que todavía no tiene
+    // efecto (o que ya no existe), así que la línea conserva su congelado.
     private async Task ReconciliarPreciosCorregidosAsync(DespachoHuevo despacho, CancellationToken cancellationToken)
     {
         foreach (var linea in despacho.Detalles)
@@ -324,7 +327,8 @@ public sealed class ConfirmarRecepcionDespachoHuevoHandler(
             {
                 publicacion = await repositorioPrecios.ObtenerPorIdAsync(siguienteId, cancellationToken);
             }
-            if (publicacion is null || publicacion.Id == idOriginal)
+            if (publicacion is null || publicacion.Id == idOriginal
+                || publicacion.Estado != EstadoPublicacionPrecioHuevo.Publicada)
                 continue;
             var precio = publicacion.Detalles.SingleOrDefault(d => d.Tamano == linea.Tamano);
             if (precio is null)
