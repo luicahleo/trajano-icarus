@@ -38,8 +38,12 @@ public class CorregirPublicacionPrecioHuevoHandlerTests
     private readonly IUnidadTrabajoGestionAvicola _unidadTrabajo =
         Substitute.For<IUnidadTrabajoGestionAvicola>();
 
-    public CorregirPublicacionPrecioHuevoHandlerTests() =>
+    public CorregirPublicacionPrecioHuevoHandlerTests()
+    {
         _usuarioActual.UsuarioId.Returns(Guid.NewGuid());
+        _repositorioPrecios.IniciarTransaccionAsync(Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<ITransaccionPreciosHuevo>());
+    }
 
     private CorregirPublicacionPrecioHuevoVigenteHandler CrearHandler() => new(
         _repositorioPrecios, _repositorioDespachos, _repositorioAjustes, _notificaciones,
@@ -93,7 +97,10 @@ public class CorregirPublicacionPrecioHuevoHandlerTests
         _notificaciones.Received(1).Agregar(Arg.Is<NotificacionInternaDespachoHuevo>(n =>
             n.Tipo == TipoNotificacionDespachoHuevo.AjusteCredito &&
             n.DespachoHuevoId == despacho.Id && n.ClienteId == clienteId));
-        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        // La corrección se persiste en dos SaveChanges ordenados dentro de la
+        // misma transacción explícita (spec SP9D addendum): primero la
+        // errónea sale de Publicada, después entra la correctiva.
+        await _unidadTrabajo.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

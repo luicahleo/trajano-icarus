@@ -396,14 +396,27 @@ public sealed class CorregirPublicacionPrecioHuevoVigenteHandler(
             throw new ConflictException("Solo se puede corregir la publicación vigente.");
         if (correctiva.FechaVigencia > hoy)
             throw new ValidationException("La publicación correctiva no puede tener vigencia futura.");
-        if (await repositorioPrecios.ExistePublicadaConVigenciaIgualAsync(
-                correctiva.FechaVigencia, correctiva.Id, cancellationToken))
-            throw new ConflictException("Ya existe una publicación activa con esa vigencia.");
 
         var despachos = await repositorioDespachos.ListarRecibidosPorPublicacionAsync(erronea.Id, cancellationToken);
 
-        correctiva.Publicar();
+        // La correctiva puede compartir la FechaVigencia de la errónea (una
+        // corrección de tipeo no cambia cuándo debía regir el precio). El
+        // índice único filtrado [Estado]=1 AND [EstaActivo]=1 en FechaVigencia
+        // no tolera ni un instante con las dos filas en Estado Publicada
+        // dentro del mismo lote de SaveChanges — SQL Server no difiere esa
+        // validación hasta el commit. Por eso la errónea se corrige y se
+        // guarda PRIMERO, en su propio SaveChanges: al salir de Publicada
+        // deja de matchear el filtro antes de que la correctiva intente
+        // entrar. Ambos SaveChanges comparten una transacción explícita: si
+        // el segundo falla, el primero también se revierte.
+        await using var transaccion = await repositorioPrecios.IniciarTransaccionAsync(cancellationToken);
         erronea.CorregirVigente(correctiva.Id, request.Motivo);
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+
+        if (await repositorioPrecios.ExistePublicadaConVigenciaIgualAsync(
+                correctiva.FechaVigencia, correctiva.Id, cancellationToken))
+            throw new ConflictException("Ya existe una publicación activa con esa vigencia.");
+        correctiva.Publicar();
 
         var ajustados = 0;
         foreach (var despacho in despachos)
@@ -426,5 +439,6 @@ public sealed class CorregirPublicacionPrecioHuevoVigenteHandler(
         registroVuelo.Decidir("avicola.precios-huevo.corregir-vigente", "correccion", "aplicada",
             new Dictionary<string, object?> { ["DespachosAjustados"] = ajustados });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
+        await transaccion.ConfirmarAsync(cancellationToken);
     }
 }

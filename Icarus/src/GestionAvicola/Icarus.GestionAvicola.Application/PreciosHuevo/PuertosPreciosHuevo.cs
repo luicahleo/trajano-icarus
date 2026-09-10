@@ -32,6 +32,19 @@ public interface IRepositorioPublicacionesPreciosHuevo
 
     Task<IReadOnlyList<PublicacionPrecioHuevo>> ListarHistorialAsync(
         CancellationToken cancellationToken = default);
+
+    // Transacción explícita para operaciones que ordenan varios SaveChanges
+    // (spec SP9D, corrección de la vigente): mismo patrón que
+    // IRepositorioPedidosAlimento.IniciarTransaccionAsync.
+    Task<ITransaccionPreciosHuevo> IniciarTransaccionAsync(
+        CancellationToken cancellationToken = default);
+}
+
+// Transacción de precios de huevo: Confirmar hace commit; no confirmar y
+// disponer revierte.
+public interface ITransaccionPreciosHuevo : IAsyncDisposable
+{
+    Task ConfirmarAsync(CancellationToken cancellationToken = default);
 }
 
 // Importador determinista del Excel original (spec SP9): devuelve la propuesta

@@ -2,6 +2,7 @@ using Icarus.GestionAvicola.Application.PreciosHuevo;
 using Icarus.GestionAvicola.Domain;
 using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Icarus.GestionAvicola.Infrastructure.Repositorios;
 
@@ -46,4 +47,23 @@ public sealed class RepositorioPublicacionesPreciosHuevo(GestionAvicolaDbContext
             .OrderByDescending(p => p.FechaVigencia)
             .ThenByDescending(p => p.FechaNotificacion)
             .ToListAsync(cancellationToken);
+
+    public async Task<ITransaccionPreciosHuevo> IniciarTransaccionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var transaccion = await db.Database.BeginTransactionAsync(cancellationToken);
+        return new TransaccionPreciosHuevo(transaccion);
+    }
+
+    // Envuelve la transacción de EF: mismo patrón que TransaccionPedidos en
+    // RepositorioPedidosAlimento. Confirmar hace commit; no confirmar y
+    // disponer revierte.
+    private sealed class TransaccionPreciosHuevo(IDbContextTransaction transaccion)
+        : ITransaccionPreciosHuevo
+    {
+        public async Task ConfirmarAsync(CancellationToken cancellationToken = default) =>
+            await transaccion.CommitAsync(cancellationToken);
+
+        public async ValueTask DisposeAsync() => await transaccion.DisposeAsync();
+    }
 }
