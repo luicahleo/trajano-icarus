@@ -35,6 +35,15 @@ public sealed class NotificacionInternaDespachoHuevo : Entity
     public static NotificacionInternaDespachoHuevo ParaCreditoInsuficiente(Guid pedidoAlimentoId) =>
         new(TipoNotificacionDespachoHuevo.CreditoInsuficiente, null, null, pedidoAlimentoId.ToString());
 
+    // Ajuste de crédito por corrección de una publicación vigente (spec
+    // SP9D): a diferencia de CreditoInsuficiente, sí tiene DespachoHuevoId
+    // (el despacho que originó el ajuste) y ClienteId relleno — es del
+    // tenant afectado, no de la bandeja global de CAISY. Meta lleva el monto
+    // y el motivo en texto, misma convención que CreditoInsuficiente.
+    public static NotificacionInternaDespachoHuevo ParaAjusteCredito(
+        Guid despachoHuevoId, Guid clienteId, string meta) =>
+        new(TipoNotificacionDespachoHuevo.AjusteCredito, despachoHuevoId, clienteId, meta);
+
     public TipoNotificacionDespachoHuevo Tipo { get; private set; }
 
     public Guid? DespachoHuevoId { get; private set; }

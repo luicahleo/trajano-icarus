@@ -115,6 +115,18 @@ public sealed class DespachoHuevo : AggregateRoot
         RegistrarTransicion(EstadoDespachoHuevo.Despachado, EstadoDespachoHuevo.Recibido, actorId);
     }
 
+    // Recongela una línea cuando la publicación que la fijó fue corregida
+    // antes de que este despacho llegara a recepción (spec SP9D). Solo
+    // Despachado: un despacho ya Recibido nunca se recalcula, se compensa
+    // con un AjusteCreditoHuevo en su lugar (ver ComandosPreciosHuevo).
+    public void RecongelarLinea(TamanoHuevo tamano, decimal precioUnitario, Guid publicacionPrecioHuevoId)
+    {
+        AsegurarEstado(EstadoDespachoHuevo.Despachado, "Solo un despacho despachado permite recongelar un precio.");
+        var linea = _detalles.SingleOrDefault(d => d.Tamano == tamano)
+            ?? throw new ReglaNegocioException("El despacho no tiene una línea para ese tamaño.");
+        linea.CongelarPrecio(precioUnitario, publicacionPrecioHuevoId);
+    }
+
     private void AsegurarEstado(EstadoDespachoHuevo esperado, string mensaje)
     {
         if (Estado != esperado)

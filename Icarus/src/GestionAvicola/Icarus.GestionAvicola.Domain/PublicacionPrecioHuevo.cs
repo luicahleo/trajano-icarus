@@ -47,6 +47,13 @@ public sealed class PublicacionPrecioHuevo : AggregateRoot
 
     public Guid? DocumentoOriginalId { get; private set; }
 
+    // Publicación que reemplaza a esta por corrección (spec SP9D); distinto
+    // del reemplazo normal por vencimiento, que no se enlaza. Solo se llena
+    // vía CorregirVigente.
+    public Guid? PublicacionCorrectivaId { get; private set; }
+
+    public string? Motivo { get; private set; }
+
     public decimal Servicio { get; private set; }
 
     public IReadOnlyCollection<DetallePrecioHuevo> Detalles => _detalles.AsReadOnly();
@@ -90,6 +97,22 @@ public sealed class PublicacionPrecioHuevo : AggregateRoot
         if (FechaVigencia <= hoy)
             throw new ReglaNegocioException("Una publicación ya efectiva no se puede anular.");
         Estado = EstadoPublicacionPrecioHuevo.Anulada;
+    }
+
+    // Corrección de una publicación ya vigente (spec SP9D): a diferencia de
+    // AnularFutura, no exige que la vigencia sea futura — el llamador (SP9D,
+    // ComandosPreciosHuevo) ya validó que esta es la publicación vigente y
+    // que la correctiva no tiene vigencia futura, algo que este método no
+    // puede verificar por sí solo porque requiere cargar el otro agregado.
+    public void CorregirVigente(Guid publicacionCorrectivaId, string motivo)
+    {
+        if (Estado != EstadoPublicacionPrecioHuevo.Publicada)
+            throw new ReglaNegocioException("Solo una publicación vigente se puede corregir.");
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw new ReglaNegocioException("La corrección debe declarar un motivo.");
+        Estado = EstadoPublicacionPrecioHuevo.Corregida;
+        PublicacionCorrectivaId = publicacionCorrectivaId;
+        Motivo = motivo;
     }
 
     private void AsegurarEditable(string mensaje)

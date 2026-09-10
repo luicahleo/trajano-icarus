@@ -170,4 +170,30 @@ public class DespachoHuevoTests
         Assert.Throws<ReglaNegocioException>(() =>
             despacho.ConfirmarRecepcion(new DateOnly(2026, 11, 7), ActorId));
     }
+
+    [Fact]
+    public void RecongelarLineaSoloAplicaAUnDespachado()
+    {
+        var despacho = BorradorConDosDetalles();
+
+        var excepcion = Assert.Throws<ReglaNegocioException>(() =>
+            despacho.RecongelarLinea(TamanoHuevo.Extra, 0.90m, Guid.NewGuid()));
+
+        Assert.Equal("Solo un despacho despachado permite recongelar un precio.", excepcion.Message);
+    }
+
+    [Fact]
+    public void RecongelarLineaActualizaPrecioYPublicacion()
+    {
+        var despacho = BorradorConDosDetalles();
+        despacho.Despachar(new DateOnly(2026, 11, 5), ActorId,
+            PreciosPara(despacho, Guid.NewGuid()), Documento());
+        var publicacionCorrectiva = Guid.NewGuid();
+
+        despacho.RecongelarLinea(TamanoHuevo.Extra, 0.95m, publicacionCorrectiva);
+
+        var linea = despacho.Detalles.Single(d => d.Tamano == TamanoHuevo.Extra);
+        Assert.Equal(0.95m, linea.PrecioUnitarioCongelado);
+        Assert.Equal(publicacionCorrectiva, linea.PublicacionPrecioHuevoId);
+    }
 }

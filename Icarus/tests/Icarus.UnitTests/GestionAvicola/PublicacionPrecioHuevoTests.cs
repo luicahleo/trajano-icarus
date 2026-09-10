@@ -155,4 +155,46 @@ public class PublicacionPrecioHuevoTests
         Assert.Equal("Solo un borrador se puede descartar.", excepcion.Message);
         Assert.True(publicada.EstaActivo);
     }
+
+    [Fact]
+    public void UnaPublicacionVigenteSePuedeCorregirYQuedaEnlazada()
+    {
+        var publicacion = BorradorConSeisDetalles();
+        publicacion.Publicar();
+        var correctivaId = Guid.NewGuid();
+
+        publicacion.CorregirVigente(correctivaId, "Precio al productor cargado con error de digitación.");
+
+        Assert.Equal(EstadoPublicacionPrecioHuevo.Corregida, publicacion.Estado);
+        Assert.Equal(correctivaId, publicacion.PublicacionCorrectivaId);
+        Assert.Equal("Precio al productor cargado con error de digitación.", publicacion.Motivo);
+    }
+
+    [Fact]
+    public void SoloUnaPublicadaSePuedeCorregir()
+    {
+        var borrador = new PublicacionPrecioHuevo(FechaNotificacion, FechaVigencia, 0.057m);
+        var anulada = BorradorConSeisDetalles();
+        anulada.Publicar();
+        anulada.AnularFutura(anulada.FechaVigencia.AddDays(-1));
+        var yaCorregida = BorradorConSeisDetalles();
+        yaCorregida.Publicar();
+        yaCorregida.CorregirVigente(Guid.NewGuid(), "primer motivo");
+
+        Assert.Throws<ReglaNegocioException>(() => borrador.CorregirVigente(Guid.NewGuid(), "motivo"));
+        Assert.Throws<ReglaNegocioException>(() => anulada.CorregirVigente(Guid.NewGuid(), "motivo"));
+        Assert.Throws<ReglaNegocioException>(() => yaCorregida.CorregirVigente(Guid.NewGuid(), "motivo"));
+    }
+
+    [Fact]
+    public void CorregirExigeUnMotivo()
+    {
+        var publicacion = BorradorConSeisDetalles();
+        publicacion.Publicar();
+
+        var excepcion = Assert.Throws<ReglaNegocioException>(() =>
+            publicacion.CorregirVigente(Guid.NewGuid(), "  "));
+
+        Assert.Equal("La corrección debe declarar un motivo.", excepcion.Message);
+    }
 }

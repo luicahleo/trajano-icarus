@@ -6,4 +6,5 @@ public enum TipoNotificacionDespachoHuevo
 {
     DespachoRecibido = 0,
     CreditoInsuficiente = 1,
+    AjusteCredito = 2,
 }
