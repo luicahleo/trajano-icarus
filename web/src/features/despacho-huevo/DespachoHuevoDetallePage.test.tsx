@@ -148,7 +148,7 @@ describe('DespachoHuevoDetallePage', () => {
     expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Borrar borrador' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Despachar a CAISY' })).not.toBeInTheDocument();
-    expect(screen.getByText('Bs 0,85')).toBeInTheDocument();
+    expect(screen.getByText('Bs 0,8500')).toBeInTheDocument();
     const envio = fetchMock.mock.calls.some(([arg]) => {
       const req = arg as Request;
       return req.method === 'POST' && req.url.endsWith('/api/despachos-huevo/h1/despachar');
@@ -210,7 +210,7 @@ describe('DespachoHuevoDetallePage', () => {
     expect(await screen.findByText('Despachado')).toBeInTheDocument();
     expect(screen.getByText('05/09/2026')).toBeInTheDocument();
     expect(screen.getAllByText('Bs 790,50').length).toBeGreaterThan(0);
-    expect(screen.getByText('Bs 0,85')).toBeInTheDocument();
+    expect(screen.getByText('Bs 0,8500')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument();
   });
 });

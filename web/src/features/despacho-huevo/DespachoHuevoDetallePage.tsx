@@ -30,6 +30,7 @@ import {
   ETIQUETAS_TAMANO,
   formatoFecha,
   formatoMoneda,
+  formatoPrecioUnitario,
   HUEVOS_POR_AMARRA,
 } from './constantes';
 
@@ -238,7 +239,7 @@ export function DespachoHuevoDetallePage() {
                 <TableCell align="right">
                   {detalle.precioUnitarioCongelado === null
                     ? '—'
-                    : formatoMoneda(detalle.precioUnitarioCongelado)}
+                    : formatoPrecioUnitario(detalle.precioUnitarioCongelado)}
                 </TableCell>
                 <TableCell align="right">
                   {detalle.subtotal === null ? '—' : formatoMoneda(detalle.subtotal)}

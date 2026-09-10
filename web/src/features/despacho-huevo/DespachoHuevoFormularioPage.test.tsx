@@ -98,6 +98,8 @@ describe('DespachoHuevoFormularioPage', () => {
     expect(screen.getByText('Total amarras: 2')).toBeInTheDocument();
     expect(screen.getByText('Total huevos: 390')).toBeInTheDocument();
     expect(screen.getByText(/331,50/)).toBeInTheDocument();
+    // El precio por huevo se muestra con los 4 decimales de la publicación.
+    expect(screen.getByText('Precio por huevo: Bs 0,8500')).toBeInTheDocument();
     await usuario.click(screen.getByRole('button', { name: 'Crear borrador' }));
     const creacion = fetchMock.mock.calls.find(([arg]) => {
       const req = arg as Request;

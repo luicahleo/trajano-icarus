@@ -35,3 +35,14 @@ export function formatoMoneda(valor: number): string {
     maximumFractionDigits: 2,
   }).format(valor);
 }
+
+// Precio por unidad de huevo: siempre 4 decimales, igual que la publicación
+// de CAISY, para que el cliente pueda reproducir el cálculo a mano.
+export function formatoPrecioUnitario(valor: number): string {
+  return new Intl.NumberFormat('es-BO', {
+    style: 'currency',
+    currency: 'BOB',
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(valor);
+}

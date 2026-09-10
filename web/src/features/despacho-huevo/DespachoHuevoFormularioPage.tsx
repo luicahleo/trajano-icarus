@@ -27,6 +27,7 @@ import {
   ETIQUETAS_TAMANO,
   formatoFecha,
   formatoMoneda,
+  formatoPrecioUnitario,
   HUEVOS_POR_AMARRA,
   MAX_UNIDADES_SUELTAS,
 } from './constantes';
@@ -237,7 +238,7 @@ export function DespachoHuevoFormularioPage() {
                 <Typography variant="body2" sx={{ pt: 3 }}>
                   {precioDe(linea.tamano) === null
                     ? 'Sin precio vigente'
-                    : `Precio por huevo: ${formatoMoneda(precioDe(linea.tamano)!)}`}
+                    : `Precio por huevo: ${formatoPrecioUnitario(precioDe(linea.tamano)!)}`}
                 </Typography>
                 <IconButton
                   aria-label="Quitar línea"
