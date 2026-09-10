@@ -220,6 +220,38 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         return memoria;
     }
 
+    public async Task<PublicacionPrecioHuevoDetalleApi?> ObtenerPublicacionVigenteHuevoAsync(
+        CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, "precios-huevo-caisy/vigente", accessToken), token);
+        if (respuesta.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<PublicacionPrecioHuevoDetalleApi>(Json, token);
+    }
+
+    public async Task<VistaPreviaCorreccionHuevoApi> PrevisualizarCorreccionHuevoAsync(
+        Guid erroneaId, Guid correctivaId, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get,
+                $"precios-huevo-caisy/corregir/previsualizar?erronea={erroneaId}&correctiva={correctivaId}",
+                accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<VistaPreviaCorreccionHuevoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public async Task CorregirVigenteHuevoAsync(
+        Guid erroneaId, Guid correctivaId, string motivo, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post, "precios-huevo-caisy/corregir", accessToken,
+                new ComandoCorregirVigenteHuevoApi(erroneaId, correctivaId, motivo)), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
     public async Task<PaginaPedidosApi> ListarPedidosAsync(
         FiltrosPedidosApi filtros, CancellationToken token = default)
     {

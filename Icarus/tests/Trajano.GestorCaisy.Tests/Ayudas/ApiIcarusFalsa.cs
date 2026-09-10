@@ -129,6 +129,19 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
     public Exception? ErrorDeActualizarHuevo { get; set; }
     public Exception? ErrorDeImportarHuevo { get; set; }
     public Exception? ErrorDeDescargarHuevo { get; set; }
+    public Exception? ErrorDeVigenteHuevo { get; set; }
+    public Exception? ErrorDePrevisualizarCorreccionHuevo { get; set; }
+    public Exception? ErrorDeCorregirHuevo { get; set; }
+
+    public PublicacionPrecioHuevoDetalleApi? VigenteHuevo { get; set; }
+    public VistaPreviaCorreccionHuevoApi PreviaCorreccionHuevo { get; set; } = new([], 0m);
+
+    public int VecesObtenerVigenteHuevo { get; private set; }
+    public int VecesPrevisualizarCorreccionHuevo { get; private set; }
+    public int VecesCorregirHuevo { get; private set; }
+
+    public (Guid Erronea, Guid Correctiva)? UltimaPrevisualizacionHuevo { get; private set; }
+    public ComandoCorregirVigenteHuevoApi? UltimoComandoCorregirHuevo { get; private set; }
 
     public List<PublicacionPrecioHuevoResumenApi> ResumenesHuevo { get; } = [];
     public PublicacionPrecioHuevoDetalleApi? DetalleHuevoActual { get; set; }
@@ -216,6 +229,32 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         VecesDescargarHuevo++;
         if (ErrorDeDescargarHuevo is not null) throw ErrorDeDescargarHuevo;
         return Task.FromResult<Stream>(new MemoryStream(ContenidoExcel, writable: false));
+    }
+
+    public Task<PublicacionPrecioHuevoDetalleApi?> ObtenerPublicacionVigenteHuevoAsync(
+        CancellationToken token = default)
+    {
+        VecesObtenerVigenteHuevo++;
+        if (ErrorDeVigenteHuevo is not null) throw ErrorDeVigenteHuevo;
+        return Task.FromResult(VigenteHuevo);
+    }
+
+    public Task<VistaPreviaCorreccionHuevoApi> PrevisualizarCorreccionHuevoAsync(
+        Guid erroneaId, Guid correctivaId, CancellationToken token = default)
+    {
+        VecesPrevisualizarCorreccionHuevo++;
+        UltimaPrevisualizacionHuevo = (erroneaId, correctivaId);
+        if (ErrorDePrevisualizarCorreccionHuevo is not null) throw ErrorDePrevisualizarCorreccionHuevo;
+        return Task.FromResult(PreviaCorreccionHuevo);
+    }
+
+    public Task CorregirVigenteHuevoAsync(
+        Guid erroneaId, Guid correctivaId, string motivo, CancellationToken token = default)
+    {
+        VecesCorregirHuevo++;
+        UltimoComandoCorregirHuevo = new ComandoCorregirVigenteHuevoApi(erroneaId, correctivaId, motivo);
+        if (ErrorDeCorregirHuevo is not null) throw ErrorDeCorregirHuevo;
+        return Task.CompletedTask;
     }
 
     public Exception? ErrorDeListarPedidos { get; set; }

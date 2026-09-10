@@ -55,6 +55,13 @@ public sealed record ComandoActualizarBorradorHuevoApi(
     Guid PublicacionId, DateOnly FechaNotificacion, DateOnly FechaVigencia,
     decimal Servicio, IReadOnlyList<DatosDetalleHuevoApi> Detalles);
 
+public sealed record AjusteCorreccionHuevoResumenApi(Guid DespachoHuevoId, DateOnly? FechaRecepcion, decimal Monto);
+
+public sealed record VistaPreviaCorreccionHuevoApi(
+    IReadOnlyList<AjusteCorreccionHuevoResumenApi> Ajustes, decimal Total);
+
+public sealed record ComandoCorregirVigenteHuevoApi(Guid PublicacionErroneaId, Guid PublicacionCorrectivaId, string Motivo);
+
 // Pedidos de alimento (SP8B): espejo de los DTO de la API para la bandeja
 // global del tenant-caisy con filtros y paginación.
 public sealed record FiltrosPedidosApi(

@@ -45,6 +45,14 @@ public interface IApiIcarusClient
 
     Task<Stream> DescargarDocumentoOriginalHuevoAsync(Guid id, CancellationToken token = default);
 
+    Task<PublicacionPrecioHuevoDetalleApi?> ObtenerPublicacionVigenteHuevoAsync(CancellationToken token = default);
+
+    Task<VistaPreviaCorreccionHuevoApi> PrevisualizarCorreccionHuevoAsync(
+        Guid erroneaId, Guid correctivaId, CancellationToken token = default);
+
+    Task CorregirVigenteHuevoAsync(
+        Guid erroneaId, Guid correctivaId, string motivo, CancellationToken token = default);
+
     Task<PaginaPedidosApi> ListarPedidosAsync(
         FiltrosPedidosApi filtros, CancellationToken token = default);
 
