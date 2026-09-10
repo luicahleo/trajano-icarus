@@ -30,4 +30,10 @@ public interface IRepositorioDespachosHuevo
     Task<(IReadOnlyList<DespachoHuevo> Items, int Total)> ListarPaginadoCaisyAsync(
         EstadoDespachoHuevo? estado, int saltar, int tomar,
         CancellationToken cancellationToken = default);
+
+    // Despachos ya recibidos que congelaron una línea con esta publicación
+    // (spec SP9D): usado tanto por la vista previa de una corrección como
+    // por el comando que la aplica.
+    Task<IReadOnlyList<DespachoHuevo>> ListarRecibidosPorPublicacionAsync(
+        Guid publicacionId, CancellationToken cancellationToken = default);
 }

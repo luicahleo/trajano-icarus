@@ -48,6 +48,7 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioPublicacionesPreciosHuevo, RepositorioPublicacionesPreciosHuevo>();
         servicios.AddScoped<IRepositorioPedidosAlimento, RepositorioPedidosAlimento>();
         servicios.AddScoped<IRepositorioDespachosHuevo, RepositorioDespachosHuevo>();
+        servicios.AddScoped<IRepositorioAjustesCreditoHuevo, RepositorioAjustesCreditoHuevo>();
         servicios.AddScoped<IRepositorioBalanceCreditoHuevo, RepositorioBalanceCreditoHuevo>();
         servicios.AddScoped<IRepositorioBalanceAlimentos, RepositorioBalanceAlimentos>();
         servicios.AddScoped<INotificacionesInternas, RepositorioNotificacionesInternas>();

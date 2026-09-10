@@ -18,6 +18,7 @@ public sealed class ConfiguracionPublicacionPrecioHuevo
         builder.Property(p => p.Servicio).HasColumnType("decimal(10,4)");
         builder.Property(p => p.Estado).HasConversion<int>();
         builder.Property(p => p.Version).IsRowVersion();
+        builder.Property(p => p.Motivo).HasMaxLength(500);
 
         // Dos publicaciones activas no comparten vigencia (spec SP9). El
         // filtro usa el valor persistido de Estado: Publicada = 1.

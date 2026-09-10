@@ -127,4 +127,22 @@ public class BalanceCreditoHuevoTests
 
         Assert.Equal(-18000m, saldo);
     }
+
+    [Fact]
+    public async Task UnAjusteDeCreditoSumaAlSaldoSinDesfase()
+    {
+        var clienteId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+        // FechaRecepcion = hoy: dentro del desfase de 14 días, así que el
+        // despacho en sí no aporta nada al saldo (aísla la contribución del
+        // ajuste, que no tiene desfase).
+        var despacho = DespachoRecibido(clienteId, actorId, FechasNegocio.Hoy());
+        var ajuste = new AjusteCreditoHuevo(
+            clienteId, despacho.Id, Guid.NewGuid(), Guid.NewGuid(), 150m, "Corrección de precio", actorId);
+        await SembrarAsync(despacho, ajuste);
+
+        var saldo = await SaldoDeAsync(clienteId);
+
+        Assert.Equal(150m, saldo);
+    }
 }

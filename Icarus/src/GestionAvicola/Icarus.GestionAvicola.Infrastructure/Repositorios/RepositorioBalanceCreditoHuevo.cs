@@ -56,6 +56,12 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
             .Where(d => d.SubtotalSolicitado != null)
             .SumAsync(d => d.SubtotalSolicitado!.Value, cancellationToken);
 
-        return ingresos - recibidoReal - comprometidoPendiente;
+        // Ajustes de corrección (spec SP9D): compensan un error real, no un
+        // ingreso sujeto al desfase de dos semanas de ReglasCreditoHuevo.
+        var ajustes = await db.AjustesCreditoHuevo
+            .Where(a => a.ClienteId == clienteId)
+            .SumAsync(a => a.Monto, cancellationToken);
+
+        return ingresos - recibidoReal - comprometidoPendiente + ajustes;
     }
 }

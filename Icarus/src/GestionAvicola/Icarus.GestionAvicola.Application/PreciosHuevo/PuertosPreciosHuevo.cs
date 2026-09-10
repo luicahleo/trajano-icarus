@@ -50,3 +50,11 @@ public sealed record ErrorImportacionPrecioHuevo(int? Fila, string Mensaje);
 
 public sealed record ResultadoImportacionPrecioHuevo(
     DatosPublicacionPrecioHuevo? Propuesta, IReadOnlyList<ErrorImportacionPrecioHuevo> Errores);
+
+// Ajustes de crédito generados al corregir una publicación vigente (spec
+// SP9D). Solo se agregan, nunca se consultan por id desde este puerto: el
+// saldo se lee agregado en RepositorioBalanceCreditoHuevo.
+public interface IRepositorioAjustesCreditoHuevo
+{
+    void Agregar(AjusteCreditoHuevo ajuste);
+}

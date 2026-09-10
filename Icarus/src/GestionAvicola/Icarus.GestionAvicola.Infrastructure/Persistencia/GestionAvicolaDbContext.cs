@@ -32,6 +32,10 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
     // insuficiente de un pedido de alimento.
     public DbSet<NotificacionInternaDespachoHuevo> NotificacionesInternasDespachoHuevo
         => Set<NotificacionInternaDespachoHuevo>();
+    // Ajustes de crédito por corrección de precio de huevo (spec SP9D):
+    // mismo alcance de tenant que DespachoHuevo — las cuentas sin tenant
+    // (CAISY) los ven todos, cada tenant solo los suyos.
+    public DbSet<AjusteCreditoHuevo> AjustesCreditoHuevo => Set<AjusteCreditoHuevo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,5 +68,10 @@ public sealed class GestionAvicolaDbContext : DbContext, IUnidadTrabajoGestionAv
         // ven enteros y el acceso se autoriza con su política.
         modelBuilder.Entity<DespachoHuevo>().HasQueryFilter(d =>
             d.EstaActivo && (_clienteIdActual == null || d.ClienteId == _clienteIdActual));
+        // Ajustes de crédito de huevo (spec SP9D): mismo filtro de tenant
+        // que los despachos; sin EstaActivo porque el ajuste es inmutable,
+        // nunca se desactiva.
+        modelBuilder.Entity<AjusteCreditoHuevo>().HasQueryFilter(a =>
+            _clienteIdActual == null || a.ClienteId == _clienteIdActual);
     }
 }

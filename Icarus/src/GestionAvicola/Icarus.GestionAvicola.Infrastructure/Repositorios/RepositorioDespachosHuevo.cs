@@ -46,4 +46,12 @@ public sealed class RepositorioDespachosHuevo(GestionAvicolaDbContext db) : IRep
             .ToListAsync(cancellationToken);
         return (items, total);
     }
+
+    public async Task<IReadOnlyList<DespachoHuevo>> ListarRecibidosPorPublicacionAsync(
+        Guid publicacionId, CancellationToken cancellationToken = default) =>
+        await db.DespachosHuevo
+            .Include(d => d.Detalles)
+            .Where(d => d.Estado == EstadoDespachoHuevo.Recibido
+                && d.Detalles.Any(det => det.PublicacionPrecioHuevoId == publicacionId))
+            .ToListAsync(cancellationToken);
 }
