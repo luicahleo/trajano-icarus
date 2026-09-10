@@ -1690,3 +1690,208 @@ git add Icarus/src/Apps/Trajano.GestorCaisy/Models/PreciosHuevoVistas.cs \
   Icarus/tests/Trajano.GestorCaisy.Tests/Controladores/PreciosHuevoControllerTests.cs
 git commit -m "feat(gestor-caisy): pantalla de correccion de precio de huevo y boton eliminar"
 ```
+
+---
+
+### Task 7 (addendum de revisión): permitir corregir con una correctiva de la misma vigencia
+
+**Contexto:** la revisión final de la implementación (Tasks 1-6, ya
+commiteadas) encontró que corregir con una publicación correctiva que
+comparte la `FechaVigencia` de la errónea — el caso más común de una
+corrección de tipeo, donde la fecha real nunca estuvo mal — siempre fallaba
+con 409, y además el índice único filtrado
+`[Estado]=1 AND [EstaActivo]=1` sobre `FechaVigencia` podía violarse de forma
+intermitente (~3/5 veces en la reproducción) porque SQL Server no difiere la
+validación de un índice único hasta el commit: si dentro del mismo
+`SaveChangesAsync` el `INSERT` de la correctiva (Estado=1) se ejecuta antes
+que el `UPDATE` de la errónea (que la saca de Estado=1), las dos filas
+coexisten un instante con la misma vigencia y el mismo estado. Decisión
+tomada al revisar el hallazgo: permitir la misma vigencia (es el caso sano),
+forzando el orden con dos `SaveChangesAsync` en una transacción explícita —
+mismo patrón que ya usa `RepositorioPedidosAlimento`/`EnviarPedidoAlimentoHandler`
+(`IniciarTransaccionAsync` + `ITransaccionPedidos`).
+
+Ya existe en el árbol de trabajo (sin commitear) un test de reproducción en
+`Icarus/tests/Icarus.IntegrationTests/CorreccionPrecioHuevoTests.cs` que
+ejercita el comando completo por HTTP con una correctiva de la misma
+vigencia — consérvalo, es el test en rojo de esta tarea. El fix de una línea
+que había junto a él en `ComandosPreciosHuevo.cs` (cambiar
+`excluyendoId: correctiva.Id` por `erronea.Id`) ya fue revertido porque solo
+resolvía el síntoma de la aplicación, no la carrera de SQL: no lo repongas,
+está reemplazado por el Step 2 de abajo.
+
+**Files:**
+- Modify: `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application/PreciosHuevo/PuertosPreciosHuevo.cs`
+- Modify: `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Infrastructure/Repositorios/RepositorioPublicacionesPreciosHuevo.cs`
+- Modify: `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application/PreciosHuevo/ComandosPreciosHuevo.cs`
+- Keep (ya existe sin commitear): `Icarus/tests/Icarus.IntegrationTests/CorreccionPrecioHuevoTests.cs`
+
+**Interfaces:**
+- Produces: `IRepositorioPublicacionesPreciosHuevo.IniciarTransaccionAsync(CancellationToken)
+  : Task<ITransaccionPreciosHuevo>`; `ITransaccionPreciosHuevo : IAsyncDisposable`
+  con `ConfirmarAsync(CancellationToken)`.
+
+- [ ] **Step 1: Confirmar que el test de reproducción está en rojo (falla intermitente)**
+
+Run (Docker activo), varias veces seguidas para exponer la intermitencia:
+
+```bash
+for i in 1 2 3 4 5; do dotnet test Icarus/tests/Icarus.IntegrationTests --filter CorreccionPrecioHuevoTests; done
+```
+
+Expected: al menos una corrida falla (409 de la aplicación, o una excepción
+de violación de índice único de SQL Server). Si las cinco corridas pasan de
+casualidad, no asumas que está arreglado — el Step 2 corrige la causa de raíz
+igual.
+
+- [ ] **Step 2: Transacción explícita en el puerto y el repositorio**
+
+En `PuertosPreciosHuevo.cs`, agregar a la interfaz `IRepositorioPublicacionesPreciosHuevo`:
+
+```csharp
+    Task<ITransaccionPreciosHuevo> IniciarTransaccionAsync(
+        CancellationToken cancellationToken = default);
+```
+
+Y, después del cierre de esa interfaz, agregar:
+
+```csharp
+public interface ITransaccionPreciosHuevo : IAsyncDisposable
+{
+    Task ConfirmarAsync(CancellationToken cancellationToken = default);
+}
+```
+
+En `RepositorioPublicacionesPreciosHuevo.cs`, agregar el `using
+Microsoft.EntityFrameworkCore.Storage;` a los `using` del archivo, y dentro
+de la clase:
+
+```csharp
+    public async Task<ITransaccionPreciosHuevo> IniciarTransaccionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var transaccion = await db.Database.BeginTransactionAsync(cancellationToken);
+        return new TransaccionPreciosHuevo(transaccion);
+    }
+
+    // Envuelve la transacción de EF: mismo patrón que TransaccionPedidos en
+    // RepositorioPedidosAlimento. Confirmar hace commit; no confirmar y
+    // disponer revierte.
+    private sealed class TransaccionPreciosHuevo(IDbContextTransaction transaccion)
+        : ITransaccionPreciosHuevo
+    {
+        public async Task ConfirmarAsync(CancellationToken cancellationToken = default) =>
+            await transaccion.CommitAsync(cancellationToken);
+
+        public async ValueTask DisposeAsync() => await transaccion.DisposeAsync();
+    }
+```
+
+- [ ] **Step 3: Reordenar `CorregirPublicacionPrecioHuevoVigenteHandler`**
+
+En `ComandosPreciosHuevo.cs`, reemplazar el método `Handle` completo de
+`CorregirPublicacionPrecioHuevoVigenteHandler` por:
+
+```csharp
+    public async Task Handle(CorregirPublicacionPrecioHuevoVigenteCommand request, CancellationToken cancellationToken)
+    {
+        var erronea = await repositorioPrecios.ObtenerPorIdAsync(request.PublicacionErroneaId, cancellationToken)
+            ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionErroneaId);
+        var correctiva = await repositorioPrecios.ObtenerPorIdAsync(request.PublicacionCorrectivaId, cancellationToken)
+            ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionCorrectivaId);
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+
+        var hoy = FechasNegocio.Hoy();
+        var vigenteActual = await repositorioPrecios.ObtenerVigenteAsync(hoy, cancellationToken);
+        if (vigenteActual is null || vigenteActual.Id != erronea.Id)
+            throw new ConflictException("Solo se puede corregir la publicación vigente.");
+        if (correctiva.FechaVigencia > hoy)
+            throw new ValidationException("La publicación correctiva no puede tener vigencia futura.");
+
+        var despachos = await repositorioDespachos.ListarRecibidosPorPublicacionAsync(erronea.Id, cancellationToken);
+
+        // La correctiva puede compartir la FechaVigencia de la errónea (una
+        // corrección de tipeo no cambia cuándo debía regir el precio). El
+        // índice único filtrado [Estado]=1 AND [EstaActivo]=1 en FechaVigencia
+        // no tolera ni un instante con las dos filas en Estado Publicada
+        // dentro del mismo lote de SaveChanges — SQL Server no difiere esa
+        // validación hasta el commit. Por eso la errónea se corrige y se
+        // guarda PRIMERO, en su propio SaveChanges: al salir de Publicada dej
+        // a de matchear el filtro antes de que la correctiva intente entrar.
+        // Ambos SaveChanges comparten una transacción explícita: si el
+        // segundo falla, el primero también se revierte.
+        await using var transaccion = await repositorioPrecios.IniciarTransaccionAsync(cancellationToken);
+        erronea.CorregirVigente(correctiva.Id, request.Motivo);
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+
+        if (await repositorioPrecios.ExistePublicadaConVigenciaIgualAsync(
+                correctiva.FechaVigencia, correctiva.Id, cancellationToken))
+            throw new ConflictException("Ya existe una publicación activa con esa vigencia.");
+        correctiva.Publicar();
+
+        var ajustados = 0;
+        foreach (var despacho in despachos)
+        {
+            var monto = PrevisualizarCorreccionPrecioHuevoHandler.CalcularDiferencia(despacho, erronea, correctiva);
+            if (monto == 0) continue;
+            var ajuste = new AjusteCreditoHuevo(
+                despacho.ClienteId, despacho.Id, erronea.Id, correctiva.Id, monto, request.Motivo, actorId);
+            repositorioAjustes.Agregar(ajuste);
+            notificaciones.Agregar(NotificacionInternaDespachoHuevo.ParaAjusteCredito(
+                despacho.Id, despacho.ClienteId,
+                string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"{monto:0.00} Bs — {request.Motivo[..Math.Min(request.Motivo.Length, 470)]}")));
+            ajustados++;
+        }
+
+        registroVuelo.Decidir("avicola.precios-huevo.corregir-vigente", "correccion", "aplicada",
+            new Dictionary<string, object?> { ["DespachosAjustados"] = ajustados });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+        await transaccion.ConfirmarAsync(cancellationToken);
+    }
+```
+
+Nota: si `ObtenerVigenteAsync`/`ExistePublicadaConVigenciaIgualAsync`
+lanzan una excepción después de abrir la transacción, el `await using` la
+revierte solo al salir del método (no hace falta un `catch` explícito).
+
+- [ ] **Step 4: Correr el test de reproducción en rojo→verde, varias veces**
+
+Run (Docker activo):
+
+```bash
+for i in 1 2 3 4 5 6 7 8 9 10; do dotnet test Icarus/tests/Icarus.IntegrationTests --filter CorreccionPrecioHuevoTests || break; done
+```
+
+Expected: las 10 corridas PASAN. Si alguna falla, no está resuelto — revisar
+antes de seguir.
+
+- [ ] **Step 5: Correr toda la suite de integración y unitaria**
+
+Run: `dotnet test Icarus/tests/Icarus.IntegrationTests`
+Run: `dotnet test Icarus/tests/Icarus.UnitTests --filter CorregirPublicacionPrecioHuevo`
+Expected: PASS — las pruebas unitarias de `CorregirPublicacionPrecioHuevoVigenteHandler`
+(Task 3) usan mocks sin `IniciarTransaccionAsync` real, así que agregar el
+`await using` exige stubear `_repositorioPrecios.IniciarTransaccionAsync(...)`
+en `CorregirPublicacionPrecioHuevoHandlerTests.cs`: agregar en el
+constructor de pruebas (junto a `_usuarioActual.UsuarioId.Returns(...)`)
+
+```csharp
+        _repositorioPrecios.IniciarTransaccionAsync(Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<ITransaccionPreciosHuevo>());
+```
+
+- [ ] **Step 6: Puerta de calidad completa y commit**
+
+Run: `./verify.ps1` (o `./verify.sh`)
+Expected: todos los gates en verde.
+
+```bash
+git add Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application/PreciosHuevo/PuertosPreciosHuevo.cs \
+  Icarus/src/GestionAvicola/Icarus.GestionAvicola.Infrastructure/Repositorios/RepositorioPublicacionesPreciosHuevo.cs \
+  Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application/PreciosHuevo/ComandosPreciosHuevo.cs \
+  Icarus/tests/Icarus.IntegrationTests/CorreccionPrecioHuevoTests.cs \
+  Icarus/tests/Icarus.UnitTests/GestionAvicola/CorregirPublicacionPrecioHuevoHandlerTests.cs
+git commit -m "fix(avicola): permitir corregir precio de huevo con la misma vigencia sin colision de indice"
+```
