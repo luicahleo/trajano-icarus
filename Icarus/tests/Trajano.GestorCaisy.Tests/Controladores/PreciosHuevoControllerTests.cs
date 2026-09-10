@@ -391,6 +391,102 @@ public class PreciosHuevoControllerTests
         Assert.IsType<NotFoundResult>(resultado);
     }
 
+    [Fact]
+    public async Task CorregirMuestraLaVistaPreviaContraLaVigente()
+    {
+        var vigenteId = Guid.NewGuid();
+        var correctivaId = Guid.NewGuid();
+        _api.DetalleHuevoActual = ApiIcarusFalsa.CrearDetalleHuevo(correctivaId, "Borrador");
+        _api.VigenteHuevo = ApiIcarusFalsa.CrearDetalleHuevo(vigenteId, "Publicada", fechaVigencia: "2025-01-01");
+        _api.PreviaCorreccionHuevo = new VistaPreviaCorreccionHuevoApi(
+            [new AjusteCorreccionHuevoResumenApi(Guid.NewGuid(), new DateOnly(2025, 11, 10), 12.50m)], 12.50m);
+
+        var vista = await _controlador.Corregir(correctivaId, default);
+
+        var modelo = Assert.IsType<VistaCorregirHuevo>(((ViewResult)vista).Model);
+        Assert.Equal(vigenteId, modelo.Vigente.Id);
+        Assert.Equal(correctivaId, modelo.Correctiva.Id);
+        Assert.Equal(12.50m, modelo.Previa.Total);
+        Assert.Equal(1, _api.VecesPrevisualizarCorreccionHuevo);
+    }
+
+    [Fact]
+    public async Task CorregirDeUnaNoBorradorRedirigeADetalles()
+    {
+        var id = Guid.NewGuid();
+        _api.DetalleHuevoActual = ApiIcarusFalsa.CrearDetalleHuevo(id, "Publicada");
+
+        var resultado = await _controlador.Corregir(id, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosHuevoController.Detalles), redireccion.ActionName);
+    }
+
+    [Fact]
+    public async Task CorregirSinPublicacionVigenteRedirigeADetalles()
+    {
+        var id = Guid.NewGuid();
+        _api.DetalleHuevoActual = ApiIcarusFalsa.CrearDetalleHuevo(id, "Borrador");
+        _api.VigenteHuevo = null;
+
+        var resultado = await _controlador.Corregir(id, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosHuevoController.Detalles), redireccion.ActionName);
+    }
+
+    [Fact]
+    public async Task ConfirmarCorregirInvocaAlClienteYRedirigeConExito()
+    {
+        var id = Guid.NewGuid();
+        var vigenteId = Guid.NewGuid();
+        _api.VigenteHuevo = ApiIcarusFalsa.CrearDetalleHuevo(vigenteId, "Publicada", fechaVigencia: "2025-01-01");
+
+        var resultado = await _controlador.Corregir(
+            id, new FormularioCorregirHuevoVista { CorrectivaId = id, Motivo = "Precio mal digitado." }, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosHuevoController.Detalles), redireccion.ActionName);
+        Assert.Equal(
+            new ComandoCorregirVigenteHuevoApi(vigenteId, id, "Precio mal digitado."),
+            _api.UltimoComandoCorregirHuevo);
+        Assert.NotNull(_controlador.TempData["Exito"]);
+    }
+
+    [Fact]
+    public async Task ConfirmarCorregirConErrorDeNegocioRegresaAlFormularioConElMensaje()
+    {
+        var id = Guid.NewGuid();
+        var vigenteId = Guid.NewGuid();
+        _api.VigenteHuevo = ApiIcarusFalsa.CrearDetalleHuevo(vigenteId, "Publicada", fechaVigencia: "2025-01-01");
+        _api.DetalleHuevoActual = ApiIcarusFalsa.CrearDetalleHuevo(id, "Borrador");
+        _api.ErrorDeCorregirHuevo = new ErrorApiException(409, "Conflicto con el estado actual");
+
+        var resultado = await _controlador.Corregir(
+            id, new FormularioCorregirHuevoVista { CorrectivaId = id, Motivo = "Precio mal digitado." }, default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosHuevoController.Corregir), redireccion.ActionName);
+        Assert.Contains("Conflicto", _controlador.TempData["Error"]?.ToString());
+    }
+
+    [Fact]
+    public async Task ConfirmarCorregirSinMotivoReconstruyeLaVistaPrevia()
+    {
+        var id = Guid.NewGuid();
+        var vigenteId = Guid.NewGuid();
+        _api.VigenteHuevo = ApiIcarusFalsa.CrearDetalleHuevo(vigenteId, "Publicada", fechaVigencia: "2025-01-01");
+        _api.DetalleHuevoActual = ApiIcarusFalsa.CrearDetalleHuevo(id, "Borrador");
+        _controlador.ModelState.AddModelError("Motivo", "El motivo es obligatorio.");
+
+        var resultado = await _controlador.Corregir(
+            id, new FormularioCorregirHuevoVista { CorrectivaId = id, Motivo = string.Empty }, default);
+
+        var modelo = Assert.IsType<VistaCorregirHuevo>(((ViewResult)resultado).Model);
+        Assert.Equal(id, modelo.Correctiva.Id);
+        Assert.Equal(0, _api.VecesCorregirHuevo);
+    }
+
     private static IFormFile CrearArchivo(byte[] bytes, string nombre, string tipo)
     {
         var memoria = new MemoryStream(bytes);

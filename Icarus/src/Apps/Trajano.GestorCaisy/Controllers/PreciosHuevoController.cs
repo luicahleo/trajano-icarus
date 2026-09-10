@@ -155,6 +155,48 @@ public sealed class PreciosHuevoController(IApiIcarusClient api) : Controller
         }
     }
 
+    [HttpGet("{id:guid}/Corregir")]
+    public async Task<IActionResult> Corregir(Guid id, CancellationToken token)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest();
+        var correctiva = await api.ObtenerPublicacionHuevoAsync(id, token);
+        if (correctiva.Estado != "Borrador")
+            return RedirectToAction(nameof(Detalles), new { id });
+        var vigente = await api.ObtenerPublicacionVigenteHuevoAsync(token);
+        if (vigente is null)
+            return RedirectToAction(nameof(Detalles), new { id });
+        var previa = await api.PrevisualizarCorreccionHuevoAsync(vigente.Id, id, token);
+        return View(new VistaCorregirHuevo(vigente, correctiva, previa, new FormularioCorregirHuevoVista { CorrectivaId = id }));
+    }
+
+    [HttpPost("{id:guid}/Corregir")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Corregir(Guid id, FormularioCorregirHuevoVista formulario, CancellationToken token)
+    {
+        formulario.CorrectivaId = id;
+        var vigente = await api.ObtenerPublicacionVigenteHuevoAsync(token);
+        if (vigente is null)
+            return RedirectToAction(nameof(Detalles), new { id });
+        if (!ModelState.IsValid)
+        {
+            var correctivaInvalida = await api.ObtenerPublicacionHuevoAsync(id, token);
+            var previaInvalida = await api.PrevisualizarCorreccionHuevoAsync(vigente.Id, id, token);
+            return View(new VistaCorregirHuevo(vigente, correctivaInvalida, previaInvalida, formulario));
+        }
+        try
+        {
+            await api.CorregirVigenteHuevoAsync(vigente.Id, id, formulario.Motivo, token);
+            TempData["Exito"] = "La publicación se corrigió y los ajustes de crédito quedaron aplicados.";
+            return RedirectToAction(nameof(Detalles), new { id });
+        }
+        catch (ErrorApiException error) when (error.Estado is 400 or 409)
+        {
+            TempData["Error"] = error.MensajeParaLaInterfaz();
+            return RedirectToAction(nameof(Corregir), new { id });
+        }
+    }
+
     [HttpPost("{id:guid}/Anular")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Anular(Guid id, CancellationToken token)

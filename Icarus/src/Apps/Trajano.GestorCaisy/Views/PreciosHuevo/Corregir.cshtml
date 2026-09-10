@@ -1,0 +1,70 @@
+@model VistaCorregirHuevo
+@{
+    ViewData["Titulo"] = "Corregir publicación de precio de huevo";
+    ViewData["Seccion"] = "precios-huevo";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Corregir publicación de precio de huevo</h1>
+        <p class="pagina-cabecera__detalle">
+            La publicación vigente desde el @Model.Vigente.FechaVigencia.ToString("dd/MM/yyyy")
+            quedará reemplazada por este borrador. Los despachos ya recibidos que usaron el
+            precio erróneo reciben un ajuste de crédito; los que todavía están en tránsito se
+            recongelan automáticamente al confirmarse su recepción.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta tarjeta--tabla">
+    <h2>Despachos ya recibidos que se ajustarán</h2>
+    @if (Model.Previa.Ajustes.Count == 0)
+    {
+        <p class="vacio__texto">Ningún despacho recibido usó el precio erróneo: no hay ajustes que aplicar.</p>
+    }
+    else
+    {
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Despacho</th>
+                    <th scope="col">Fecha de recepción</th>
+                    <th scope="col">Ajuste (Bs)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ajuste in Model.Previa.Ajustes)
+                {
+                    <tr>
+                        <td>@ajuste.DespachoHuevoId</td>
+                        <td>@(ajuste.FechaRecepcion?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td>@ajuste.Monto.ToString("0.00")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2">Total</td>
+                    <td>@Model.Previa.Total.ToString("0.00")</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+</section>
+<section class="tarjeta">
+    <form asp-action="Corregir" asp-route-id="@Model.Correctiva.Id" method="post">
+        <div class="campos">
+            <div class="campo">
+                <label for="Motivo">Motivo de la corrección (obligatorio)</label>
+                <textarea id="Motivo" name="Motivo" rows="4" maxlength="500" required>@Model.Formulario.Motivo</textarea>
+                <span asp-validation-for="Formulario.Motivo" class="campo__ayuda"></span>
+            </div>
+        </div>
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario"
+                    data-confirmar="La publicación vigente quedará corregida de forma definitiva y los ajustes se aplicarán. ¿Confirma la corrección?">
+                Confirmar corrección
+            </button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@Model.Correctiva.Id">Cancelar</a>
+        </div>
+    </form>
+</section>

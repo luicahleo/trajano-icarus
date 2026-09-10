@@ -37,12 +37,13 @@
             <a class="boton" asp-action="Editar" asp-route-id="@publicacion.Id">Editar borrador</a>
             <a class="boton boton--primario" asp-action="ConfirmarPublicacion" asp-route-id="@publicacion.Id">Publicar</a>
             <a class="boton boton--secundario" asp-action="ConfirmarDescartar" asp-route-id="@publicacion.Id">Eliminar borrador</a>
+            <a class="boton boton--neutro" asp-action="Corregir" asp-route-id="@publicacion.Id">Corregir la publicación vigente con este borrador</a>
         }
         @if (Model.PuedeAnularse)
         {
             <form asp-action="Anular" asp-route-id="@publicacion.Id" method="post"
-                  data-confirmar="La publicación futura quedará anulada de forma definitiva. ¿Confirma la anulación?">
-                <button type="submit" class="boton boton--secundario">Anular publicación</button>
+                  data-confirmar="La publicación futura se eliminará de forma definitiva. ¿Confirma la eliminación?">
+                <button type="submit" class="boton boton--secundario">Eliminar publicación</button>
             </form>
         }
         @if (publicacion.DocumentoOriginalId is not null)
@@ -63,8 +64,11 @@
     {
         <div class="alerta alerta--aviso" role="note">
             Esta publicación ya entró en vigor y es inmutable: no se puede editar,
-            borrar ni anular. Si contiene datos incorrectos, importe una publicación
-            corregida y publíquela con su propia fecha de vigencia.
+            borrar ni anular directamente. Si contiene datos incorrectos, importe una
+            publicación corregida (Excel) y, desde el borrador resultante, use la opción
+            "Corregir la publicación vigente con este borrador": aplica los ajustes de
+            crédito de los despachos ya recibidos y recongela los que todavía están en
+            tránsito.
         </div>
     }
 </section>

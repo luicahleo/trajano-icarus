@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Trajano.GestorCaisy.Servicios;
 
@@ -55,4 +56,20 @@ public sealed class FormularioBorradorHuevoVista
     public decimal Servicio { get; set; }
 
     public List<FilaDetalleHuevoVista> Detalles { get; set; } = [];
+}
+
+public sealed record VistaCorregirHuevo(
+    PublicacionPrecioHuevoDetalleApi Vigente,
+    PublicacionPrecioHuevoDetalleApi Correctiva,
+    VistaPreviaCorreccionHuevoApi Previa,
+    FormularioCorregirHuevoVista Formulario);
+
+public sealed class FormularioCorregirHuevoVista
+{
+    [JsonRequired]
+    public Guid CorrectivaId { get; set; }
+
+    [Required(ErrorMessage = "El motivo es obligatorio.")]
+    [StringLength(500, ErrorMessage = "El motivo no puede superar los 500 caracteres.")]
+    public string Motivo { get; set; } = string.Empty;
 }
