@@ -11,7 +11,7 @@ namespace Icarus.IntegrationTests;
 // SP9C Task 4 (spec: "Confirmar recepción y crédito"): el crédito disponible
 // no se persiste como saldo, se calcula por consulta contra SQL Server: se
 // suman los despachos de huevo Recibido con recepción de hace más de 14 días
-// (precio al productor congelado por cantidad) y se restan los pedidos de
+// (precio unitario congelado por cantidad) y se restan los pedidos de
 // alimento realmente recibidos (RecibidoConforme / RecibidoConDiferencias).
 // Cada prueba siembra su propio tenant para no depender del orden en la base
 // compartida de la colección.

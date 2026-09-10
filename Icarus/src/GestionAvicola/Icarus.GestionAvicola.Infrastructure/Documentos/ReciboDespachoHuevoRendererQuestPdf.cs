@@ -54,7 +54,7 @@ public sealed class ReciboDespachoHuevoRendererQuestPdf : IReciboDespachoHuevoRe
                             tabla.Cell().Text(linea.Tamano.ToString());
                             tabla.Cell().Text($"{linea.CantidadAmarras} + {linea.UnidadesSueltas}");
                             tabla.Cell().Text(linea.CantidadHuevos.ToString());
-                            tabla.Cell().Text(linea.PrecioProductorCongelado?.ToString("0.0000") ?? "—");
+                            tabla.Cell().Text(linea.PrecioUnitarioCongelado?.ToString("0.0000") ?? "—");
                             tabla.Cell().Text(linea.Subtotal?.ToString("0.00") ?? "—");
                         }
                     });

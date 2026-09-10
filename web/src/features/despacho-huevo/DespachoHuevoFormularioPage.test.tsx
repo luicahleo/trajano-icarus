@@ -18,7 +18,7 @@ const despachoBorrador = {
       cantidadAmarras: 2,
       unidadesSueltas: 30,
       cantidadHuevos: 390,
-      precioProductorCongelado: null,
+      precioUnitarioCongelado: null,
       subtotal: null,
     },
   ],
@@ -90,13 +90,14 @@ describe('DespachoHuevoFormularioPage', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
-    // Resumen en vivo: 2 amarras × 180 + 30 sueltas = 390 huevos × Bs 0,80.
+    // Resumen en vivo: 2 amarras × 180 + 30 sueltas = 390 huevos × Bs 0,85
+    // (precio unitario: productor + servicio).
     const amarras = await screen.findByLabelText('Amarras');
     await usuario.type(amarras, '2');
     await usuario.type(screen.getByLabelText('Unidades sueltas'), '30');
     expect(screen.getByText('Total amarras: 2')).toBeInTheDocument();
     expect(screen.getByText('Total huevos: 390')).toBeInTheDocument();
-    expect(screen.getByText(/312,00/)).toBeInTheDocument();
+    expect(screen.getByText(/331,50/)).toBeInTheDocument();
     await usuario.click(screen.getByRole('button', { name: 'Crear borrador' }));
     const creacion = fetchMock.mock.calls.find(([arg]) => {
       const req = arg as Request;

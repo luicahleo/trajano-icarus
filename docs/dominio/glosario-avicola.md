@@ -78,9 +78,9 @@ Catálogo global gestionado por el Gestor CAISY con la funcionalidad
 | Publicación de precio de huevo | Publicación global de CAISY (sin tenant) con vigencia desde una fecha, un único valor de servicio por publicación y un precio por cada tamaño de huevo. Ciclo de estados `Borrador` → `Publicada` (o `Anulada` si aún no entró en vigor); publicada es inmutable. Sigue vigente hasta la entrada en vigor de otra publicación posterior. Se captura exclusivamente importando el Excel de CAISY (el documento real ya llega en ese formato). |
 | Tamaño de huevo | Clasificación del huevo de la tabla de CAISY: `Extra`, `Primera`, `Segunda`, `Tercera`, `Cuarta`, `Quinta`. Un tamaño tiene un solo precio por publicación. |
 | Servicio | Valor único por publicación (no por tamaño), confirmado contra el documento real de CAISY: la boleta de recepción usa el mismo servicio para las seis filas. El importador rechaza el archivo si las filas difieren. |
-| Precio al productor | El monto que se congela en los despachos (SP9B) a la fecha de éstos. Es el precio oficial por tamaño; llega con 4 decimales (p. ej. `0.7957`). |
+| Precio al productor | El precio oficial por tamaño que llega con 4 decimales (p. ej. `0.7957`). Es la base sobre la que se calcula el precio unitario. |
 | Precio actual del documento | Columna «Precio Actual» del Excel de CAISY: control informativo contra la publicación vigente. A diferencia de alimento, **no bloquea** la publicación. |
-| Precio unitario | `Precio al productor + Servicio`, calculado al consultar (nunca se persiste). Es el dato que el recibo y el crédito de SP9C consumirán. |
+| Precio unitario | `Precio al productor + Servicio`. Es el monto que se congela en los despachos (SP9B) a la fecha de éstos y el dato que el recibo y el crédito de SP9C consumen. |
 
 ## Despacho de huevo (SP9B)
 
@@ -93,7 +93,7 @@ el camión).
 | Término | Definición |
 |---|---|
 | Despacho de huevo | Registro del tenant con líneas por tamaño (amarras y unidades sueltas, siempre menos de 180 por línea; un tamaño aparece una sola vez). Solo el borrador se edita o se borra lógicamente. Estados `Borrador` → `Despachado` (→ `Recibido` en SP9C). No descuenta ni valida contra la producción diaria: ésta solo alimenta la eficiencia. |
-| Envío del despacho | Operación única: el servidor fija la fecha de negocio de Bolivia, congela el `Precio al productor` vigente de cada línea con su publicación y exige la foto de la nota de entrega en la misma operación. Si falta el precio vigente de una línea, el envío falla completo y el borrador queda intacto. |
+| Envío del despacho | Operación única: el servidor fija la fecha de negocio de Bolivia, congela el `Precio unitario` (productor + servicio) vigente de cada línea con su publicación y exige la foto de la nota de entrega en la misma operación. Si falta el precio vigente de una línea, el envío falla completo y el borrador queda intacto. |
 | Nota de entrega del despacho | Foto de la nota que el emisor sube al enviar (a diferencia de alimento, donde la sube el receptor al recibir). Un solo documento por despacho, inmutable, con original privado y copia de visualización, en el mismo almacén privado que los documentos de los pedidos de alimento. |
 
 ## Recepción, recibo y crédito de huevo (SP9C)

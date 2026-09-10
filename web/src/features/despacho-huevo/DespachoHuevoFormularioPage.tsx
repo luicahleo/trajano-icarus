@@ -79,7 +79,7 @@ export function DespachoHuevoFormularioPage() {
   }
 
   const precioDe = useMemo(() => {
-    const indice = new Map((precios?.detalles ?? []).map((d) => [d.tamano, d.precioAlProductor]));
+    const indice = new Map((precios?.detalles ?? []).map((d) => [d.tamano, d.precioUnitario]));
     return (tamano: string): number | null => indice.get(tamano) ?? null;
   }, [precios]);
 

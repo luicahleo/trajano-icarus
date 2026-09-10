@@ -89,7 +89,7 @@ export function DespachoHuevoDetallePage() {
 
   const precioEstimadoDe = useMemo(() => {
     const indice = new Map(
-      (preciosVigentes?.detalles ?? []).map((d) => [d.tamano, d.precioAlProductor]),
+      (preciosVigentes?.detalles ?? []).map((d) => [d.tamano, d.precioUnitario]),
     );
     return (tamano: string): number | null => indice.get(tamano) ?? null;
   }, [preciosVigentes]);
@@ -234,11 +234,11 @@ export function DespachoHuevoDetallePage() {
                 <TableCell align="right">{detalle.cantidadAmarras}</TableCell>
                 <TableCell align="right">{detalle.unidadesSueltas}</TableCell>
                 <TableCell align="right">{detalle.cantidadHuevos}</TableCell>
-                {/* El precio se congela al despachar: en borrador no se muestra. */}
+                {/* El precio unitario se congela al despachar: en borrador no se muestra. */}
                 <TableCell align="right">
-                  {detalle.precioProductorCongelado === null
+                  {detalle.precioUnitarioCongelado === null
                     ? '—'
-                    : formatoMoneda(detalle.precioProductorCongelado)}
+                    : formatoMoneda(detalle.precioUnitarioCongelado)}
                 </TableCell>
                 <TableCell align="right">
                   {detalle.subtotal === null ? '—' : formatoMoneda(detalle.subtotal)}

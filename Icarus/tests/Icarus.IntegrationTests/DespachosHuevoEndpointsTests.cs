@@ -335,7 +335,7 @@ public class DespachosHuevoEndpointsTests
         Assert.Equal("Publicada", cuerpoVigente.GetProperty("estado").GetString());
         var precios = cuerpoVigente.GetProperty("detalles").EnumerateArray()
             .ToDictionary(d => d.GetProperty("tamano").GetString()!,
-                d => d.GetProperty("precioAlProductor").GetDecimal());
+                d => d.GetProperty("precioUnitario").GetDecimal());
 
         var id = await CrearBorradorAsync(cliente, tokenCliente);
         var envio = await cliente.SendAsync(Pedido(
@@ -349,8 +349,8 @@ public class DespachosHuevoEndpointsTests
         var detalles = detalle.GetProperty("detalles").EnumerateArray().ToList();
         var extra = detalles.Single(d => d.GetProperty("tamano").GetString() == "Extra");
         var primera = detalles.Single(d => d.GetProperty("tamano").GetString() == "Primera");
-        Assert.Equal(precios["Extra"], extra.GetProperty("precioProductorCongelado").GetDecimal());
-        Assert.Equal(precios["Primera"], primera.GetProperty("precioProductorCongelado").GetDecimal());
+        Assert.Equal(precios["Extra"], extra.GetProperty("precioUnitarioCongelado").GetDecimal());
+        Assert.Equal(precios["Primera"], primera.GetProperty("precioUnitarioCongelado").GetDecimal());
         Assert.Equal(360 * precios["Extra"], extra.GetProperty("subtotal").GetDecimal());
         Assert.Equal(270 * precios["Primera"], primera.GetProperty("subtotal").GetDecimal());
         Assert.Equal(360 * precios["Extra"] + 270 * precios["Primera"],

@@ -29,7 +29,7 @@ export interface DetalleDespachoHuevo {
   cantidadAmarras: number;
   unidadesSueltas: number;
   cantidadHuevos: number;
-  precioProductorCongelado: number | null;
+  precioUnitarioCongelado: number | null;
   subtotal: number | null;
 }
 
@@ -75,7 +75,8 @@ export const borrarDespacho = (id: string) =>
   peticion<void>({ ruta: `/despachos-huevo/${id}`, metodo: 'DELETE' });
 
 // Despachar (spec SP9B): foto obligatoria de la nota de entrega en la misma
-// operación; el backend congela el precio al productor vigente por tamaño.
+// operación; el backend congela el precio unitario vigente (productor +
+// servicio) por tamaño.
 export const despacharDespacho = (id: string, archivo: File) => {
   const formData = new FormData();
   formData.append('archivo', archivo, archivo.name);

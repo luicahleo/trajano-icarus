@@ -2,7 +2,7 @@ using Icarus.BuildingBlocks.Domain;
 
 namespace Icarus.GestionAvicola.Domain;
 
-// Línea del despacho por tamaño (spec SP9). PrecioProductorCongelado y
+// Línea del despacho por tamaño (spec SP9). PrecioUnitarioCongelado y
 // PublicacionPrecioHuevoId quedan nulos en Borrador; Despachar los fija.
 public sealed class DetalleDespachoHuevo : Entity
 {
@@ -38,17 +38,17 @@ public sealed class DetalleDespachoHuevo : Entity
 
     public int CantidadHuevos => CantidadAmarras * HuevosPorAmarra + UnidadesSueltas;
 
-    public decimal? PrecioProductorCongelado { get; private set; }
+    public decimal? PrecioUnitarioCongelado { get; private set; }
 
     public Guid? PublicacionPrecioHuevoId { get; private set; }
 
-    public decimal? Subtotal => PrecioProductorCongelado is { } precio
+    public decimal? Subtotal => PrecioUnitarioCongelado is { } precio
         ? CantidadHuevos * precio
         : null;
 
-    internal void CongelarPrecio(decimal precioAlProductor, Guid publicacionPrecioHuevoId)
+    internal void CongelarPrecio(decimal precioUnitario, Guid publicacionPrecioHuevoId)
     {
-        PrecioProductorCongelado = precioAlProductor;
+        PrecioUnitarioCongelado = precioUnitario;
         PublicacionPrecioHuevoId = publicacionPrecioHuevoId;
     }
 }

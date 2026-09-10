@@ -18,7 +18,7 @@ const despachoBorrador = {
       cantidadAmarras: 5,
       unidadesSueltas: 30,
       cantidadHuevos: 930,
-      precioProductorCongelado: null,
+      precioUnitarioCongelado: null,
       subtotal: null,
     },
   ],
@@ -30,7 +30,7 @@ const despachoDespachado = {
   fechaDespacho: '2026-09-05',
   totalAmarras: 5,
   totalHuevos: 930,
-  totalBs: 744,
+  totalBs: 790.5,
   detalles: [
     {
       id: 'l1',
@@ -38,8 +38,8 @@ const despachoDespachado = {
       cantidadAmarras: 5,
       unidadesSueltas: 30,
       cantidadHuevos: 930,
-      precioProductorCongelado: 0.8,
-      subtotal: 744,
+      precioUnitarioCongelado: 0.85,
+      subtotal: 790.5,
     },
   ],
 };
@@ -139,16 +139,16 @@ describe('DespachoHuevoDetallePage', () => {
     await usuario.click(boton);
     // La confirmación muestra el total estimado con el precio vigente.
     expect(screen.getAllByText(/no se puede revertir/i).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText(/744,00/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/790,50/)).length).toBeGreaterThan(0);
     // El GET vuelve con el estado despachado después de la confirmación.
     despachado = true;
     await usuario.click(screen.getByRole('button', { name: 'Confirmar' }));
     // Tras despachar se ven amarras, huevos y Bs, y ya no se puede editar.
-    expect((await screen.findAllByText('Bs 744,00')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Bs 790,50')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Borrar borrador' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Despachar a CAISY' })).not.toBeInTheDocument();
-    expect(screen.getByText('Bs 0,80')).toBeInTheDocument();
+    expect(screen.getByText('Bs 0,85')).toBeInTheDocument();
     const envio = fetchMock.mock.calls.some(([arg]) => {
       const req = arg as Request;
       return req.method === 'POST' && req.url.endsWith('/api/despachos-huevo/h1/despachar');
@@ -209,8 +209,8 @@ describe('DespachoHuevoDetallePage', () => {
     renderPagina();
     expect(await screen.findByText('Despachado')).toBeInTheDocument();
     expect(screen.getByText('05/09/2026')).toBeInTheDocument();
-    expect(screen.getAllByText('Bs 744,00').length).toBeGreaterThan(0);
-    expect(screen.getByText('Bs 0,80')).toBeInTheDocument();
+    expect(screen.getAllByText('Bs 790,50').length).toBeGreaterThan(0);
+    expect(screen.getByText('Bs 0,85')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument();
   });
 });

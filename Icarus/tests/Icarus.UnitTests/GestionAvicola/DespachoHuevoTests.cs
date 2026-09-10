@@ -121,7 +121,7 @@ public class DespachoHuevoTests
 
         Assert.Equal("Falta precio vigente para una línea del despacho.", excepcion.Message);
         Assert.Equal(EstadoDespachoHuevo.Borrador, despacho.Estado);
-        Assert.Null(despacho.Detalles.First().PrecioProductorCongelado);
+        Assert.Null(despacho.Detalles.First().PrecioUnitarioCongelado);
     }
 
     [Fact]

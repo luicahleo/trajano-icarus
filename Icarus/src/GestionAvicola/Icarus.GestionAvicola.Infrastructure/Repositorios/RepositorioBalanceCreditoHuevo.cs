@@ -8,7 +8,7 @@ namespace Icarus.GestionAvicola.Infrastructure.Repositorios;
 // Cálculo directo contra el DbContext (spec SP9): cruza DespachoHuevo y
 // PedidoAlimento/RecepcionPedidoAlimento, dos agregados del mismo módulo. El
 // cálculo usa los campos primitivos (CantidadAmarras, UnidadesSueltas,
-// PrecioProductorCongelado) en vez de las propiedades calculadas del dominio
+// PrecioUnitarioCongelado) en vez de las propiedades calculadas del dominio
 // (CantidadHuevos, Subtotal) porque estas últimas no garantizan traducirse a
 // SQL de forma fiable. DetalleDespachoHuevo.HuevosPorAmarra es un const: EF
 // Core lo traduce como literal en la proyección, no como acceso a miembro en
@@ -24,10 +24,10 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
             .Where(d => d.ClienteId == clienteId && d.Estado == EstadoDespachoHuevo.Recibido
                 && d.FechaRecepcion != null && d.FechaRecepcion <= fechaCorte)
             .SelectMany(d => d.Detalles)
-            .Where(det => det.PrecioProductorCongelado != null)
+            .Where(det => det.PrecioUnitarioCongelado != null)
             .SumAsync(det =>
                 (det.CantidadAmarras * DetalleDespachoHuevo.HuevosPorAmarra + det.UnidadesSueltas)
-                    * det.PrecioProductorCongelado!.Value,
+                    * det.PrecioUnitarioCongelado!.Value,
                 cancellationToken);
 
         var recibidoReal = await db.PedidosAlimento

@@ -135,7 +135,7 @@ public sealed record PaginaDespachosHuevoApi(
 
 public sealed record DetalleDespachoHuevoApi(
     Guid Id, string Tamano, int CantidadAmarras, int UnidadesSueltas,
-    int CantidadHuevos, decimal? PrecioProductorCongelado, decimal? Subtotal);
+    int CantidadHuevos, decimal? PrecioUnitarioCongelado, decimal? Subtotal);
 
 public sealed record DespachoHuevoDetalleApi(
     Guid Id, string Estado, DateOnly? FechaDespacho, int TotalAmarras,

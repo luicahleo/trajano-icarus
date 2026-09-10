@@ -63,7 +63,7 @@ public sealed record ObtenerDespachoHuevoQuery(Guid DespachoId) : IRequest<Despa
 
 public sealed record DetalleDespachoHuevoResumen(
     Guid Id, string Tamano, int CantidadAmarras, int UnidadesSueltas, int CantidadHuevos,
-    decimal? PrecioProductorCongelado, decimal? Subtotal);
+    decimal? PrecioUnitarioCongelado, decimal? Subtotal);
 
 public sealed record DespachoHuevoDetalle(
     Guid Id, string Estado, DateOnly? FechaDespacho, int TotalAmarras, int TotalHuevos,
@@ -172,8 +172,11 @@ public sealed class DespacharDespachoHuevoHandler(
         var hoy = FechasNegocio.Hoy();
         var vigente = await repositorioPrecios.ObtenerVigenteAsync(hoy, cancellationToken)
             ?? throw new ValidationException("No hay una publicación de precios de huevo vigente.");
+        // El despacho se valora al precio unitario (productor + servicio), el
+        // monto que CAISY reconoce por huevo (glosario: recibo y crédito).
         var precios = vigente.Detalles
-            .Select(d => new DatosPrecioDespachoHuevo(d.Tamano, d.PrecioAlProductor, vigente.Id))
+            .Select(d => new DatosPrecioDespachoHuevo(
+                d.Tamano, d.PrecioAlProductor + vigente.Servicio, vigente.Id))
             .ToList();
 
         var guardado = await almacen.GuardarAsync(request.Contenido, cancellationToken);
@@ -257,7 +260,7 @@ public sealed class ObtenerDespachoHuevoHandler(IRepositorioDespachosHuevo repos
                 .OrderBy(d => d.Tamano)
                 .Select(d => new DetalleDespachoHuevoResumen(
                     d.Id, d.Tamano.ToString(), d.CantidadAmarras, d.UnidadesSueltas,
-                    d.CantidadHuevos, d.PrecioProductorCongelado, d.Subtotal))
+                    d.CantidadHuevos, d.PrecioUnitarioCongelado, d.Subtotal))
                 .ToList());
     }
 }

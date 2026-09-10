@@ -81,9 +81,10 @@ public sealed class DespachoHuevo : AggregateRoot
     }
 
     // Envío a CAISY (spec SP9): el servidor fija la fecha de negocio, congela
-    // el precio al productor vigente de cada línea con cantidad y exige la
-    // foto de la nota de entrega en la misma operación. Si falta precio para
-    // una línea, el envío falla completo y el borrador queda intacto.
+    // el precio unitario vigente (productor + servicio) de cada línea con
+    // cantidad y exige la foto de la nota de entrega en la misma operación.
+    // Si falta precio para una línea, el envío falla completo y el borrador
+    // queda intacto.
     public void Despachar(
         DateOnly fechaDespacho, Guid actorId,
         IReadOnlyList<DatosPrecioDespachoHuevo> precios, DatosDocumentoNota documento)
@@ -95,7 +96,7 @@ public sealed class DespachoHuevo : AggregateRoot
             documento.TamanoBytes, documento.TamanoVistaBytes,
             documento.HashSha256, documento.NombreSeguro);
         foreach (var linea in _detalles)
-            linea.CongelarPrecio(congelados[linea.Tamano].PrecioAlProductor, congelados[linea.Tamano].PublicacionPrecioHuevoId);
+            linea.CongelarPrecio(congelados[linea.Tamano].PrecioUnitario, congelados[linea.Tamano].PublicacionPrecioHuevoId);
         Estado = EstadoDespachoHuevo.Despachado;
         FechaDespacho = fechaDespacho;
         RegistrarTransicion(EstadoDespachoHuevo.Borrador, EstadoDespachoHuevo.Despachado, actorId);
@@ -152,4 +153,4 @@ public sealed class DespachoHuevo : AggregateRoot
 public sealed record DatosDetalleDespachoHuevo(TamanoHuevo Tamano, int CantidadAmarras, int UnidadesSueltas);
 
 public sealed record DatosPrecioDespachoHuevo(
-    TamanoHuevo Tamano, decimal PrecioAlProductor, Guid PublicacionPrecioHuevoId);
+    TamanoHuevo Tamano, decimal PrecioUnitario, Guid PublicacionPrecioHuevoId);

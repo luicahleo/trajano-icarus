@@ -133,9 +133,11 @@ public class DespachosHuevoHandlerTests
         Assert.Equal(EstadoDespachoHuevo.Despachado, despacho.Estado);
         Assert.NotNull(despacho.FechaDespacho);
         var linea = Assert.Single(despacho.Detalles);
-        Assert.Equal(12.50m, linea.PrecioProductorCongelado);
+        // El despacho se valora al precio unitario (productor + servicio):
+        // 12.50 + 0.40 = 12.90.
+        Assert.Equal(12.90m, linea.PrecioUnitarioCongelado);
         Assert.Equal(publicacion.Id, linea.PublicacionPrecioHuevoId);
-        Assert.Equal(390 * 12.50m, linea.Subtotal);
+        Assert.Equal(390 * 12.90m, linea.Subtotal);
         Assert.NotNull(despacho.DocumentoNota);
         await _almacen.Received(1).GuardarAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>());
         await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());

@@ -10,7 +10,7 @@ public sealed class ConfiguracionDetalleDespachoHuevo : IEntityTypeConfiguration
     {
         builder.ToTable("detalles_despacho_huevo");
         builder.Property(d => d.Tamano).HasConversion<int>();
-        builder.Property(d => d.PrecioProductorCongelado).HasColumnType("decimal(10,4)");
+        builder.Property(d => d.PrecioUnitarioCongelado).HasColumnType("decimal(10,4)");
 
         builder.HasIndex("DespachoHuevoId", nameof(DetalleDespachoHuevo.Tamano)).IsUnique();
     }
