@@ -6,10 +6,12 @@ using Icarus.GestionAvicola.Application;
 using Icarus.GestionAvicola.Application.DespachosHuevo;
 using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
+using Icarus.GestionAvicola.Application.PreciosHuevo;
 using Icarus.GestionAvicola.Domain;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
+using FechasNegocio = Icarus.GestionAvicola.Application.DespachosHuevo.FechasNegocio;
 
 namespace Icarus.UnitTests.GestionAvicola;
 
@@ -20,6 +22,8 @@ namespace Icarus.UnitTests.GestionAvicola;
 public class ConfirmarRecepcionDespachoHuevoHandlerTests
 {
     private readonly IRepositorioDespachosHuevo _repositorio = Substitute.For<IRepositorioDespachosHuevo>();
+    private readonly IRepositorioPublicacionesPreciosHuevo _repositorioPrecios =
+        Substitute.For<IRepositorioPublicacionesPreciosHuevo>();
     private readonly ICurrentUser _usuarioActual = Substitute.For<ICurrentUser>();
     private readonly IRegistroVuelo _registroVuelo =
         new RegistroVuelo(NullLogger<RegistroVuelo>.Instance);
@@ -34,7 +38,7 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
     }
 
     private ConfirmarRecepcionDespachoHuevoHandler CrearHandler() =>
-        new(_repositorio, _usuarioActual, _registroVuelo, _unidadTrabajo, _notificaciones);
+        new(_repositorio, _repositorioPrecios, _usuarioActual, _registroVuelo, _unidadTrabajo, _notificaciones);
 
     private static DespachoHuevo CrearDespachado()
     {
@@ -92,5 +96,38 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CrearHandler().Handle(
                 new ConfirmarRecepcionDespachoHuevoCommand(Guid.NewGuid()), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RecibirUnDespachoCuyaPublicacionFueCorregidaRecongelaAntesDeConfirmar()
+    {
+        var publicacionOriginal = new PublicacionPrecioHuevo(
+            new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 5), 0.05m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.70m)]);
+        publicacionOriginal.Publicar();
+        var publicacionCorrectiva = new PublicacionPrecioHuevo(
+            new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 1), 0.05m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.90m)]);
+        publicacionCorrectiva.Publicar();
+        publicacionOriginal.CorregirVigente(publicacionCorrectiva.Id, "Precio mal digitado.");
+
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
+        despacho.Despachar(FechasNegocio.Hoy(), Guid.NewGuid(),
+            [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, 0.75m, publicacionOriginal.Id)],
+            new DatosDocumentoNota(Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 1024, 512, "hash-sha256", "nota.jpg"));
+        _repositorio.ObtenerPorIdAsync(despacho.Id, Arg.Any<CancellationToken>()).Returns(despacho);
+        _repositorioPrecios.ObtenerPorIdAsync(publicacionOriginal.Id, Arg.Any<CancellationToken>())
+            .Returns(publicacionOriginal);
+        _repositorioPrecios.ObtenerPorIdAsync(publicacionCorrectiva.Id, Arg.Any<CancellationToken>())
+            .Returns(publicacionCorrectiva);
+
+        await CrearHandler().Handle(
+            new ConfirmarRecepcionDespachoHuevoCommand(despacho.Id), CancellationToken.None);
+
+        var linea = despacho.Detalles.Single();
+        Assert.Equal(0.95m, linea.PrecioUnitarioCongelado);
+        Assert.Equal(publicacionCorrectiva.Id, linea.PublicacionPrecioHuevoId);
+        Assert.Equal(EstadoDespachoHuevo.Recibido, despacho.Estado);
     }
 }

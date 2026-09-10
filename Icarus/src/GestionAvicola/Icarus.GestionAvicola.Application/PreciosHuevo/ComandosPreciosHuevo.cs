@@ -3,6 +3,8 @@ using FluentValidation.Results;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
+using Icarus.GestionAvicola.Application.DespachosHuevo;
+using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
 using MediatR;
@@ -274,4 +276,137 @@ internal static class MapeadorPreciosHuevo
                     d.Id, d.Tamano.ToString(), d.PrecioAlProductor, d.PrecioActualDocumento,
                     d.PrecioAlProductor + publicacion.Servicio))
                 .ToList());
+}
+
+public sealed record PrevisualizarCorreccionPrecioHuevoQuery(Guid PublicacionErroneaId, Guid PublicacionCorrectivaId)
+    : IRequest<VistaPreviaCorreccionPrecioHuevo>;
+
+public sealed record AjusteCorreccionPrecioHuevoResumen(Guid DespachoHuevoId, DateOnly? FechaRecepcion, decimal Monto);
+
+public sealed record VistaPreviaCorreccionPrecioHuevo(
+    IReadOnlyList<AjusteCorreccionPrecioHuevoResumen> Ajustes, decimal Total);
+
+public sealed record CorregirPublicacionPrecioHuevoVigenteCommand(
+    Guid PublicacionErroneaId, Guid PublicacionCorrectivaId, string Motivo)
+    : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.precios-huevo.corregir-vigente",
+        new Dictionary<string, DatoRegistroVuelo> { ["DespachosAjustados"] = DatoRegistroVuelo.Entero });
+}
+
+public sealed class CorregirPublicacionPrecioHuevoVigenteValidator
+    : AbstractValidator<CorregirPublicacionPrecioHuevoVigenteCommand>
+{
+    public CorregirPublicacionPrecioHuevoVigenteValidator()
+    {
+        RuleFor(c => c.PublicacionErroneaId).NotEmpty();
+        RuleFor(c => c.PublicacionCorrectivaId).NotEmpty();
+        RuleFor(c => c.Motivo).NotEmpty().MaximumLength(500);
+    }
+}
+
+// Vista previa (spec SP9D): solo lectura, no publica ni corrige nada — el
+// gestor la usa para decidir si confirma. Calcula la diferencia con los
+// precios de la correctiva tal cual está (aunque todavía sea un borrador).
+public sealed class PrevisualizarCorreccionPrecioHuevoHandler(
+    IRepositorioPublicacionesPreciosHuevo repositorioPrecios,
+    IRepositorioDespachosHuevo repositorioDespachos)
+    : IRequestHandler<PrevisualizarCorreccionPrecioHuevoQuery, VistaPreviaCorreccionPrecioHuevo>
+{
+    public async Task<VistaPreviaCorreccionPrecioHuevo> Handle(
+        PrevisualizarCorreccionPrecioHuevoQuery request, CancellationToken cancellationToken)
+    {
+        var erronea = await repositorioPrecios.ObtenerPorIdAsync(request.PublicacionErroneaId, cancellationToken)
+            ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionErroneaId);
+        var correctiva = await repositorioPrecios.ObtenerPorIdAsync(request.PublicacionCorrectivaId, cancellationToken)
+            ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionCorrectivaId);
+
+        var despachos = await repositorioDespachos.ListarRecibidosPorPublicacionAsync(erronea.Id, cancellationToken);
+        var ajustes = despachos
+            .Select(d => new AjusteCorreccionPrecioHuevoResumen(
+                d.Id, d.FechaRecepcion, CalcularDiferencia(d, erronea, correctiva)))
+            .Where(a => a.Monto != 0)
+            .ToList();
+        return new VistaPreviaCorreccionPrecioHuevo(ajustes, ajustes.Sum(a => a.Monto));
+    }
+
+    // Compartido con CorregirPublicacionPrecioHuevoVigenteHandler para que la
+    // vista previa y la aplicación real calculen exactamente lo mismo.
+    internal static decimal CalcularDiferencia(
+        DespachoHuevo despacho, PublicacionPrecioHuevo erronea, PublicacionPrecioHuevo correctiva)
+    {
+        var preciosCorrectivos = correctiva.Detalles
+            .ToDictionary(d => d.Tamano, d => d.PrecioAlProductor + correctiva.Servicio);
+        var total = 0m;
+        foreach (var linea in despacho.Detalles)
+        {
+            if (linea.PublicacionPrecioHuevoId != erronea.Id) continue;
+            if (!preciosCorrectivos.TryGetValue(linea.Tamano, out var precioCorrecto)) continue;
+            var cantidad = linea.CantidadAmarras * DetalleDespachoHuevo.HuevosPorAmarra + linea.UnidadesSueltas;
+            total += (precioCorrecto - (linea.PrecioUnitarioCongelado ?? 0m)) * cantidad;
+        }
+        return total;
+    }
+}
+
+// Corrección (spec SP9D): publica la correctiva, corrige la errónea y
+// aplica un ajuste + notificación por cada despacho Recibido con diferencia
+// distinta de cero. Solo se puede corregir la publicación que está
+// realmente vigente hoy — no cualquier Publicada del historial — para no
+// reconciliar despachos que ya estaban correctamente valorados a su propia
+// fecha.
+public sealed class CorregirPublicacionPrecioHuevoVigenteHandler(
+    IRepositorioPublicacionesPreciosHuevo repositorioPrecios,
+    IRepositorioDespachosHuevo repositorioDespachos,
+    IRepositorioAjustesCreditoHuevo repositorioAjustes,
+    INotificacionesInternasDespachoHuevo notificaciones,
+    ICurrentUser usuarioActual,
+    IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    : IRequestHandler<CorregirPublicacionPrecioHuevoVigenteCommand>
+{
+    public async Task Handle(CorregirPublicacionPrecioHuevoVigenteCommand request, CancellationToken cancellationToken)
+    {
+        var erronea = await repositorioPrecios.ObtenerPorIdAsync(request.PublicacionErroneaId, cancellationToken)
+            ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionErroneaId);
+        var correctiva = await repositorioPrecios.ObtenerPorIdAsync(request.PublicacionCorrectivaId, cancellationToken)
+            ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionCorrectivaId);
+        var actorId = usuarioActual.UsuarioId
+            ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+
+        var hoy = FechasNegocio.Hoy();
+        var vigenteActual = await repositorioPrecios.ObtenerVigenteAsync(hoy, cancellationToken);
+        if (vigenteActual is null || vigenteActual.Id != erronea.Id)
+            throw new ConflictException("Solo se puede corregir la publicación vigente.");
+        if (correctiva.FechaVigencia > hoy)
+            throw new ValidationException("La publicación correctiva no puede tener vigencia futura.");
+        if (await repositorioPrecios.ExistePublicadaConVigenciaIgualAsync(
+                correctiva.FechaVigencia, correctiva.Id, cancellationToken))
+            throw new ConflictException("Ya existe una publicación activa con esa vigencia.");
+
+        var despachos = await repositorioDespachos.ListarRecibidosPorPublicacionAsync(erronea.Id, cancellationToken);
+
+        correctiva.Publicar();
+        erronea.CorregirVigente(correctiva.Id, request.Motivo);
+
+        var ajustados = 0;
+        foreach (var despacho in despachos)
+        {
+            var monto = PrevisualizarCorreccionPrecioHuevoHandler.CalcularDiferencia(despacho, erronea, correctiva);
+            if (monto == 0) continue;
+            var ajuste = new AjusteCreditoHuevo(
+                despacho.ClienteId, despacho.Id, erronea.Id, correctiva.Id, monto, request.Motivo, actorId);
+            repositorioAjustes.Agregar(ajuste);
+            notificaciones.Agregar(NotificacionInternaDespachoHuevo.ParaAjusteCredito(
+                despacho.Id, despacho.ClienteId,
+                string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"{monto:0.00} Bs — {request.Motivo}")));
+            ajustados++;
+        }
+
+        registroVuelo.Decidir("avicola.precios-huevo.corregir-vigente", "correccion", "aplicada",
+            new Dictionary<string, object?> { ["DespachosAjustados"] = ajustados });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
 }

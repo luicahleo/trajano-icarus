@@ -279,6 +279,7 @@ public sealed record ConfirmarRecepcionDespachoHuevoCommand(Guid DespachoId)
 
 public sealed class ConfirmarRecepcionDespachoHuevoHandler(
     IRepositorioDespachosHuevo repositorio,
+    IRepositorioPublicacionesPreciosHuevo repositorioPrecios,
     ICurrentUser usuarioActual,
     IRegistroVuelo registroVuelo,
     IUnidadTrabajoGestionAvicola unidadTrabajo,
@@ -294,11 +295,41 @@ public sealed class ConfirmarRecepcionDespachoHuevoHandler(
         var actorId = usuarioActual.UsuarioId
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
 
+        await ReconciliarPreciosCorregidosAsync(despacho, cancellationToken);
+
         despacho.ConfirmarRecepcion(FechasNegocio.Hoy(), actorId);
         notificaciones.Agregar(NotificacionInternaDespachoHuevo.ParaRecepcionConfirmada(
             despacho.Id, despacho.ClienteId));
         registroVuelo.Decidir("avicola.despachos-huevo.confirmar-recepcion", "recepcion", "aplicada",
             new Dictionary<string, object?> { ["TotalBs"] = despacho.TotalBs });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+
+    // Reconciliación perezosa (spec SP9D): si la publicación que congeló una
+    // línea fue corregida mientras el despacho seguía en tránsito, la línea
+    // se recongela contra la publicación activa al final de la cadena de
+    // correcciones, antes de sellar la recepción. Un despacho ya Recibido
+    // nunca pasa por acá — su camino de corrección es AjusteCreditoHuevo.
+    private async Task ReconciliarPreciosCorregidosAsync(DespachoHuevo despacho, CancellationToken cancellationToken)
+    {
+        foreach (var linea in despacho.Detalles)
+        {
+            if (linea.PublicacionPrecioHuevoId is not { } publicacionId)
+                continue;
+            var idOriginal = publicacionId;
+            var publicacion = await repositorioPrecios.ObtenerPorIdAsync(publicacionId, cancellationToken);
+            while (publicacion is not null
+                && publicacion.Estado == EstadoPublicacionPrecioHuevo.Corregida
+                && publicacion.PublicacionCorrectivaId is { } siguienteId)
+            {
+                publicacion = await repositorioPrecios.ObtenerPorIdAsync(siguienteId, cancellationToken);
+            }
+            if (publicacion is null || publicacion.Id == idOriginal)
+                continue;
+            var precio = publicacion.Detalles.SingleOrDefault(d => d.Tamano == linea.Tamano);
+            if (precio is null)
+                continue;
+            despacho.RecongelarLinea(linea.Tamano, precio.PrecioAlProductor + publicacion.Servicio, publicacion.Id);
+        }
     }
 }
