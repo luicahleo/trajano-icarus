@@ -49,8 +49,8 @@
         @if (Model.PuedeAnularse)
         {
             <form asp-action="Anular" asp-route-id="@notificacion.Id" method="post"
-                  data-confirmar="La publicación futura quedará anulada de forma definitiva. ¿Confirma la anulación?">
-                <button type="submit" class="boton boton--secundario">Anular publicación</button>
+                  data-confirmar="La publicación futura se eliminará de forma definitiva. ¿Confirma la eliminación?">
+                <button type="submit" class="boton boton--secundario">Eliminar publicación</button>
             </form>
         }
         @if (notificacion.DocumentoOriginalId is not null)
