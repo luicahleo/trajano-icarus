@@ -26,7 +26,6 @@ import {
 import {
   ETIQUETAS_TAMANO,
   formatoFecha,
-  formatoMoneda,
   formatoPrecioUnitario,
   HUEVOS_POR_AMARRA,
   MAX_UNIDADES_SUELTAS,
@@ -268,7 +267,10 @@ export function DespachoHuevoFormularioPage() {
           <Typography variant="subtitle1">Total amarras: {totalAmarras}</Typography>
           <Typography variant="subtitle1">Total huevos: {totalHuevos}</Typography>
           <Typography variant="subtitle1">
-            Total estimado: {totalBs === null ? 'sin precios vigentes para todos los tamaños' : formatoMoneda(totalBs)}
+            Total estimado:{' '}
+            {totalBs === null
+              ? 'sin precios vigentes para todos los tamaños'
+              : formatoPrecioUnitario(totalBs)}
           </Typography>
 
           <Stack direction="row" spacing={1}>

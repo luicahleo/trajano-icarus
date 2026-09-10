@@ -4,6 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PedidoFormularioPage } from './PedidoFormularioPage';
 
+// AuthContext real es pesado para este test: se mockea useAuth. Por defecto
+// Cliente, que es el rol que ve el crédito de huevo.
+const authMock = vi.fn(() => ({ tieneRol: (...roles: string[]) => roles.includes('Cliente') }));
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => authMock(),
+}));
+
 const pedidoBorrador = {
   id: 'p1',
   clienteId: 'c1',
@@ -110,6 +117,32 @@ describe('PedidoFormularioPage', () => {
       { tipoAlimento: 'PosturaUno', presentacion: 'Bolsa', cantidad: 100 },
     ]);
     expect(await screen.findByText('Detalle del pedido')).toBeInTheDocument();
+  });
+
+  test('el Cliente ve el crédito por despachos de huevo, incluso negativo', async () => {
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: -45.5 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    expect(
+      await screen.findByText('Crédito por despachos de huevo: -Bs 45,50'),
+    ).toBeInTheDocument();
+  });
+
+  test('el Trabajador no ve el crédito por despachos de huevo', async () => {
+    authMock.mockReturnValueOnce({ tieneRol: () => false });
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: 45.5 }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    await screen.findByText(/Precio por 40 kg:/);
+    expect(screen.queryByText(/Crédito por despachos de huevo/)).not.toBeInTheDocument();
   });
 
   test('rechaza granel por debajo de los mínimos sin llamar a la API', async () => {

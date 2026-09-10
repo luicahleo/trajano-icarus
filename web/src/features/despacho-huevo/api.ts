@@ -91,3 +91,13 @@ export const despacharDespacho = (id: string, archivo: File) => {
 // conocer el precio vigente antes de despachar: 404 cuando no hay vigente.
 export const obtenerPrecioHuevoVigente = () =>
   peticion<PrecioHuevoVigente>({ ruta: '/despachos-huevo/precios-vigentes' });
+
+export interface BalanceCreditoHuevo {
+  saldoDisponible: number;
+}
+
+// Crédito disponible por despachos de huevo (spec SP9): informativo para
+// decidir cuánto alimento pedir. El backend lo resuelve por ClienteId de la
+// sesión (SP9).
+export const obtenerBalanceCreditoHuevo = () =>
+  peticion<BalanceCreditoHuevo>({ ruta: '/despachos-huevo/credito' });

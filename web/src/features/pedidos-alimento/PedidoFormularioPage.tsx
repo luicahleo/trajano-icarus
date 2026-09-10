@@ -17,7 +17,9 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
+import { useAuth } from '../auth/AuthContext';
 import { listarGalpones, listarGranjas } from '../avicola/api';
+import { obtenerBalanceCreditoHuevo } from '../despacho-huevo/api';
 import {
   crearPedido,
   editarPedido,
@@ -46,6 +48,8 @@ export function PedidoFormularioPage() {
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { tieneRol } = useAuth();
+  const esCliente = tieneRol('Cliente');
 
   const [presentacion, setPresentacion] = useState<'Bolsa' | 'Granel'>('Bolsa');
   const [lineas, setLineas] = useState<LineaFormulario[]>([
@@ -62,6 +66,14 @@ export function PedidoFormularioPage() {
   const { data: precios, isError: errorPrecios } = useQuery({
     queryKey: ['pedidos-alimento', 'precios-vigentes'],
     queryFn: obtenerPrecioVigente,
+  });
+
+  // Crédito por despachos de huevo (spec SP9): solo informativo para el
+  // Cliente al decidir cuánto pedir; el Trabajador no lo ve.
+  const { data: credito } = useQuery({
+    queryKey: ['despachos-huevo', 'credito'],
+    queryFn: obtenerBalanceCreditoHuevo,
+    enabled: esCliente,
   });
 
   const { data: granjas } = useQuery({
@@ -190,6 +202,14 @@ export function PedidoFormularioPage() {
             <Typography variant="body2" color="text.secondary">
               Notificación de precios vigente desde el {formatoFecha(precios.vigenteDesde)}{' '}
               (notificada el {formatoFecha(precios.fechaDocumento)}).
+            </Typography>
+          )}
+          {esCliente && credito && (
+            <Typography
+              variant="body2"
+              color={credito.saldoDisponible < 0 ? 'error' : 'text.secondary'}
+            >
+              Crédito por despachos de huevo: {formatoMoneda(credito.saldoDisponible)}
             </Typography>
           )}
           {esEdicion && pedido && pedido.estado !== 'Borrador' && (
