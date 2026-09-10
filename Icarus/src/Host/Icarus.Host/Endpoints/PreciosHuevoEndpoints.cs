@@ -43,6 +43,18 @@ public static class PreciosHuevoEndpoints
             return vigente is null ? Results.NotFound() : Results.Ok(vigente);
         });
 
+        grupo.MapGet("/corregir/previsualizar", async (Guid erronea, Guid correctiva,
+            ISender mediator, CancellationToken cancellationToken) =>
+            Results.Ok(await mediator.Send(
+                new PrevisualizarCorreccionPrecioHuevoQuery(erronea, correctiva), cancellationToken)));
+
+        grupo.MapPost("/corregir", async (CorregirPublicacionPrecioHuevoVigenteCommand comando,
+            ISender mediator, CancellationToken cancellationToken) =>
+        {
+            await mediator.Send(comando, cancellationToken);
+            return Results.NoContent();
+        });
+
         grupo.MapGet("/{id:guid}", async Task<IResult> (
             Guid id, ISender mediator, CancellationToken cancellationToken) =>
             Results.Ok(await mediator.Send(new ObtenerPublicacionPrecioHuevoQuery(id), cancellationToken)));
