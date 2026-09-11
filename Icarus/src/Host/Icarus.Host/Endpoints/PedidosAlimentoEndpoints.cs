@@ -5,6 +5,7 @@ using System.Text.Json;
 using FluentValidation;
 using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
+using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
@@ -192,6 +193,16 @@ public static class PedidosAlimentoEndpoints
             var bytes = await mediator.Send(new ObtenerReciboPedidoPdfQuery(id), cancellationToken);
             return Results.File(bytes, "application/pdf", "recibo.pdf");
         });
+
+        // Crédito por despachos de huevo del cliente de este pedido (spec
+        // 2026-09-11-credito-huevo-vista-caisy-design): el gestor lo necesita
+        // para decidir. Cuelga del pedido, no del cliente, así que la
+        // funcionalidad que ya exige el grupo (GestorPedidoAlimento) es la
+        // correcta y no hace falta ningún ClienteId en la ruta.
+        caisy.MapGet("/{id:guid}/credito", async (Guid id, ISender mediator,
+            CancellationToken cancellationToken) =>
+            Results.Ok(await mediator.Send(
+                new ObtenerCreditoHuevoDePedidoCaisyQuery(id), cancellationToken)));
 
         // Descarga autorizada (spec SP8C): vista inline, original solo como
         // adjunto. El filtro de alcance hace 404 para documentos ajenos.

@@ -91,7 +91,8 @@ public class PedidosAlimentoEndpointsTests
         return await respuesta.Content.ReadFromJsonAsync<JsonElement>();
     }
 
-    private async Task<(HttpClient Cliente, string Token)> CrearCuentaCaisyConFuncion()
+    private async Task<(HttpClient Cliente, string Token)> CrearCuentaCaisyConFuncion(
+        string funcionalidad = "GestorPedidoAlimento")
     {
         var anonimo = _factory.CreateClient();
         var tokenAdmin = await LoginComo(anonimo, SemillaIdentidad.EmailAdmin);
@@ -101,7 +102,7 @@ public class PedidosAlimentoEndpointsTests
             {
                 email = emailCaisy,
                 contrasena = "Clave-Caisy-123",
-                funcionalidades = new[] { "GestorPedidoAlimento" },
+                funcionalidades = new[] { funcionalidad },
             })));
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
         var token = await LoginComo(anonimo, emailCaisy, "Clave-Caisy-123");
@@ -593,5 +594,91 @@ public class PedidosAlimentoEndpointsTests
         var detalle = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
         Assert.Equal("Borrador", detalle.GetProperty("estado").GetString());
         Assert.Equal(0, detalle.GetProperty("historial").GetArrayLength());
+    }
+
+    // Vista de CAISY del crédito (spec 2026-09-11-credito-huevo-vista-caisy):
+    // el cliente sale del pedido, así que la ruta no lleva ningún ClienteId.
+    // El tenant de prueba no tiene despachos de huevo sembrados, así que sus
+    // ingresos y ajustes son cero y el saldo es exactamente el negativo de lo
+    // comprometido por este pedido. No se fija el precio en la aserción: el
+    // monto se contrasta contra el total solicitado que informa la API, que
+    // es el mismo snapshot congelado al envío.
+    [Fact]
+    public async Task ElCreditoDelPedidoDevuelveLasTresCifrasCoherentes()
+    {
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        await ImportarYPublicarAsync(caisy, tokenCaisy);
+        var id = await CrearBorradorAsync(cliente, tokenCliente);
+        Assert.Equal(HttpStatusCode.NoContent, await EnviarAsync(cliente, tokenCliente, id));
+        var detalle = await ObtenerDetalleAsync(cliente, tokenCliente, id);
+        var totalSolicitado = detalle.GetProperty("totalSolicitado").GetDecimal();
+
+        var respuesta = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{id}/credito", tokenCaisy));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(totalSolicitado, cuerpo.GetProperty("montoDelPedido").GetDecimal());
+        Assert.Equal(-totalSolicitado, cuerpo.GetProperty("saldoDisponible").GetDecimal());
+        Assert.Equal(0m, cuerpo.GetProperty("saldoSinEstePedido").GetDecimal());
+        Assert.True(cuerpo.GetProperty("pedidoComputadoEnElSaldo").GetBoolean());
+        Assert.Empty(cuerpo.GetProperty("ajustes").EnumerateArray());
+    }
+
+    // Un borrador no pesa en el saldo: no entra en ningún componente del
+    // cálculo, así que las dos cifras derivadas quedan neutras.
+    [Fact]
+    public async Task ElCreditoDeUnBorradorInformaQueNoPesaEnElSaldo()
+    {
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        var id = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var respuesta = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{id}/credito", tokenCaisy));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0m, cuerpo.GetProperty("montoDelPedido").GetDecimal());
+        Assert.Equal(0m, cuerpo.GetProperty("saldoDisponible").GetDecimal());
+        Assert.False(cuerpo.GetProperty("pedidoComputadoEnElSaldo").GetBoolean());
+    }
+
+    // El crédito de CAISY es financiero y exclusivo de las dos partes de la
+    // relación comercial: solo una cuenta GestorCaisy con la funcionalidad
+    // GestorPedidoAlimento lo consulta por esta ruta. El Cliente tiene su
+    // propio endpoint (/despachos-huevo/credito) y el Trabajador no tiene
+    // ninguno.
+    [Fact]
+    public async Task ElCreditoDelPedidoSoloLoVeCaisyConGestorPedidoAlimento()
+    {
+        var (cliente, tokenCliente, clienteId) = await CrearClienteConGestionAvicolaAsync();
+        var tokenTrabajador = await CrearTrabajadorConFuncionAsync(
+            cliente, tokenCliente, clienteId, "PedidoAlimento");
+        var (_, tokenOtraFuncion) = await CrearCuentaCaisyConFuncion("GestorRecepcionHuevos");
+        var id = await CrearBorradorAsync(cliente, tokenCliente);
+        var ruta = $"/api/pedidos-alimento-caisy/{id}/credito";
+
+        var sinToken = await cliente.GetAsync(ruta);
+        var comoCliente = await cliente.SendAsync(Pedido(HttpMethod.Get, ruta, tokenCliente));
+        var comoTrabajador = await cliente.SendAsync(Pedido(HttpMethod.Get, ruta, tokenTrabajador));
+        var comoOtraFuncion = await cliente.SendAsync(Pedido(HttpMethod.Get, ruta, tokenOtraFuncion));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, sinToken.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, comoCliente.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, comoTrabajador.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, comoOtraFuncion.StatusCode);
+    }
+
+    [Fact]
+    public async Task ElCreditoDeUnPedidoInexistenteDevuelve404()
+    {
+        var (cliente, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{Guid.NewGuid()}/credito", tokenCaisy));
+
+        Assert.Equal(HttpStatusCode.NotFound, respuesta.StatusCode);
     }
 }
