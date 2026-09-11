@@ -21,7 +21,10 @@ public sealed class ListarNotificacionesDespachoHuevoHandler(
 {
     public async Task<IReadOnlyList<NotificacionDespachoHuevoResumen>> Handle(
         ListarNotificacionesDespachoHuevoQuery request, CancellationToken cancellationToken) =>
-        (await repositorio.ListarAsync(usuarioActual.ClienteId, cancellationToken))
+        (await repositorio.ListarAsync(
+                usuarioActual.ClienteId,
+                VisibilidadNotificacionesDespachoHuevo.Para(usuarioActual.Rol),
+                cancellationToken))
             .OrderByDescending(n => n.FechaUtc)
             .ThenByDescending(n => n.Id)
             .Select(n => new NotificacionDespachoHuevoResumen(
@@ -35,7 +38,10 @@ public sealed class ContarNotificacionesDespachoHuevoNoLeidasHandler(
 {
     public Task<int> Handle(
         ContarNotificacionesDespachoHuevoNoLeidasQuery request, CancellationToken cancellationToken) =>
-        repositorio.ContarNoLeidasAsync(usuarioActual.ClienteId, cancellationToken);
+        repositorio.ContarNoLeidasAsync(
+            usuarioActual.ClienteId,
+            VisibilidadNotificacionesDespachoHuevo.Para(usuarioActual.Rol),
+            cancellationToken);
 }
 
 public sealed class MarcarNotificacionDespachoHuevoLeidaHandler(

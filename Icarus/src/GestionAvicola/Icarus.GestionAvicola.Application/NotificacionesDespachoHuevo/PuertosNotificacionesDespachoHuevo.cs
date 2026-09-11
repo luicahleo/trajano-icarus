@@ -9,9 +9,17 @@ public interface INotificacionesInternasDespachoHuevo
     Task<NotificacionInternaDespachoHuevo?> ObtenerPorIdAsync(
         Guid id, CancellationToken cancellationToken = default);
 
+    // tiposVisibles llega resuelto por rol desde
+    // VisibilidadNotificacionesDespachoHuevo y se aplica en SQL (spec SP9F):
+    // el listado y el contador filtran por lo mismo, así que no pueden
+    // desincronizarse ni traer filas que el usuario no puede ver.
     Task<IReadOnlyList<NotificacionInternaDespachoHuevo>> ListarAsync(
-        Guid? clienteId, CancellationToken cancellationToken = default);
+        Guid? clienteId,
+        IReadOnlyCollection<TipoNotificacionDespachoHuevo> tiposVisibles,
+        CancellationToken cancellationToken = default);
 
     Task<int> ContarNoLeidasAsync(
-        Guid? clienteId, CancellationToken cancellationToken = default);
+        Guid? clienteId,
+        IReadOnlyCollection<TipoNotificacionDespachoHuevo> tiposVisibles,
+        CancellationToken cancellationToken = default);
 }

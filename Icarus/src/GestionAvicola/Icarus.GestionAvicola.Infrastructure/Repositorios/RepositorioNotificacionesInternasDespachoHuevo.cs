@@ -15,14 +15,24 @@ public sealed class RepositorioNotificacionesInternasDespachoHuevo(GestionAvicol
         Guid id, CancellationToken cancellationToken = default) =>
         await db.NotificacionesInternasDespachoHuevo.SingleOrDefaultAsync(n => n.Id == id, cancellationToken);
 
+    // El filtro de tipo se traduce a un IN sobre una columna int
+    // (HasConversion<int> en la configuración de EF) y se aplica sobre un
+    // conjunto ya acotado por el índice (ClienteId, FechaUtc): no justifica
+    // un índice propio.
     public async Task<IReadOnlyList<NotificacionInternaDespachoHuevo>> ListarAsync(
-        Guid? clienteId, CancellationToken cancellationToken = default) =>
+        Guid? clienteId,
+        IReadOnlyCollection<TipoNotificacionDespachoHuevo> tiposVisibles,
+        CancellationToken cancellationToken = default) =>
         await db.NotificacionesInternasDespachoHuevo
-            .Where(n => n.ClienteId == clienteId)
+            .Where(n => n.ClienteId == clienteId && tiposVisibles.Contains(n.Tipo))
             .ToListAsync(cancellationToken);
 
     public async Task<int> ContarNoLeidasAsync(
-        Guid? clienteId, CancellationToken cancellationToken = default) =>
+        Guid? clienteId,
+        IReadOnlyCollection<TipoNotificacionDespachoHuevo> tiposVisibles,
+        CancellationToken cancellationToken = default) =>
         await db.NotificacionesInternasDespachoHuevo
-            .CountAsync(n => n.ClienteId == clienteId && !n.Leida, cancellationToken);
+            .CountAsync(
+                n => n.ClienteId == clienteId && !n.Leida && tiposVisibles.Contains(n.Tipo),
+                cancellationToken);
 }
