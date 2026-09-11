@@ -59,10 +59,7 @@ export function formatoFecha(iso: string): string {
   return dia && mes && anio ? `${dia}/${mes}/${anio}` : iso;
 }
 
-export function formatoMoneda(valor: number): string {
-  return new Intl.NumberFormat('es-BO', {
-    style: 'currency',
-    currency: 'BOB',
-    maximumFractionDigits: 2,
-  }).format(valor);
-}
+// Los formatos de dinero viven en lib/formatos.ts, compartidos con
+// despacho-huevo: el saldo de crédito y el precio por huevo son la misma
+// cifra vista desde dos features y no pueden divergir en decimales.
+export { formatoMoneda, formatoMonedaExacta } from '../../lib/formatos';

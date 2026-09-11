@@ -28,21 +28,7 @@ export function formatoFecha(iso: string): string {
   return dia && mes && anio ? `${dia}/${mes}/${anio}` : iso;
 }
 
-export function formatoMoneda(valor: number): string {
-  return new Intl.NumberFormat('es-BO', {
-    style: 'currency',
-    currency: 'BOB',
-    maximumFractionDigits: 2,
-  }).format(valor);
-}
-
-// Precio por unidad de huevo: siempre 4 decimales, igual que la publicación
-// de CAISY, para que el cliente pueda reproducir el cálculo a mano.
-export function formatoPrecioUnitario(valor: number): string {
-  return new Intl.NumberFormat('es-BO', {
-    style: 'currency',
-    currency: 'BOB',
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
-  }).format(valor);
-}
+// Los formatos de dinero viven en lib/formatos.ts, compartidos con
+// pedidos-alimento. El precio por unidad de huevo conserva su nombre de
+// dominio: son los 4 decimales exactos de la publicación de CAISY.
+export { formatoMoneda, formatoMonedaExacta as formatoPrecioUnitario } from '../../lib/formatos';
