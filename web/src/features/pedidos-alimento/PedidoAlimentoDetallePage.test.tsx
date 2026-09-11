@@ -198,6 +198,34 @@ describe('PedidoAlimentoDetallePage', () => {
     expect(envios).toBe(1);
   });
 
+  test('enviar con credito insuficiente pide confirmar y reintenta con el flag', async () => {
+    const usuario = userEvent.setup();
+    const cuerpos: unknown[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      if (ruta === 'POST /api/pedidos-alimento/p1/enviar') {
+        cuerpos.push(await req.json());
+        return cuerpos.length === 1 ? respuesta(409, { title: 'Crédito insuficiente' }) : respuesta(204);
+      }
+      if (ruta === 'GET /api/pedidos-alimento/p1') return respuesta(200, pedidoBorradorDevuelto);
+      if (ruta === 'GET /api/despachos-huevo/credito') return respuesta(200, { saldoDisponible: -5000 });
+      return respuesta(404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    await usuario.click(await screen.findByRole('button', { name: 'Enviar a CAISY' }));
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar envío' }));
+
+    expect(await screen.findByText(/va a dejar tu crédito/i)).toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Enviar de todas formas' }));
+
+    expect(cuerpos).toEqual([
+      { confirmarCreditoInsuficiente: false },
+      { confirmarCreditoInsuficiente: true },
+    ]);
+  });
+
   test('un borrador nuevo estima los precios vigentes y permite el primer envío', async () => {
     const usuario = userEvent.setup();
     let envios = 0;

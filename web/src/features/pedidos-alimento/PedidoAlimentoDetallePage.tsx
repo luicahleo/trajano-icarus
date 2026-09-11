@@ -25,6 +25,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
+import { ApiError } from '../../lib/http';
+import { obtenerBalanceCreditoHuevo } from '../despacho-huevo/api';
 import {
   borrarPedido,
   enviarPedido,
@@ -73,11 +75,18 @@ async function comprimirImagen(archivo: File): Promise<File> {
 // Detalle del pedido (spec SP8): precios congelados al enviar, historial
 // completo de transiciones con motivos, y acciones solo en borrador. Abrir o
 // leer el pedido nunca cambia su estado.
+// Debe coincidir exactamente con el `title` que arma el backend para
+// CreditoInsuficienteRequiereConfirmacionException (spec SP9E) — es el único
+// mecanismo disponible hoy para distinguir este 409 de otros sin extender
+// ApiError con campos específicos de un único caso de uso.
+const TITULO_CREDITO_INSUFICIENTE = 'Crédito insuficiente';
+
 export function PedidoAlimentoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmarEnvio, setConfirmarEnvio] = useState(false);
+  const [requiereConfirmacionCredito, setRequiereConfirmacionCredito] = useState(false);
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [confirmarRecepcion, setConfirmarRecepcion] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +110,15 @@ export function PedidoAlimentoDetallePage() {
     queryFn: obtenerPrecioVigente,
   });
 
+  // Saldo actual del cliente, consultado solo cuando el primer intento de
+  // envío ya avisó que hace falta confirmar (spec SP9E): evita duplicar en
+  // el frontend el mismo cálculo que ya hace el backend.
+  const { data: creditoParaConfirmar } = useQuery({
+    queryKey: ['despachos-huevo', 'credito'],
+    queryFn: obtenerBalanceCreditoHuevo,
+    enabled: requiereConfirmacionCredito,
+  });
+
   const precioEstimadoDe = useMemo(() => {
     const indice = new Map(
       (preciosVigentes?.detalles ?? []).map((d) => [
@@ -118,14 +136,27 @@ export function PedidoAlimentoDetallePage() {
     queryClient.invalidateQueries({ queryKey: ['pedidos-alimento'] });
   };
 
+  const cerrarDialogoEnvio = () => {
+    setConfirmarEnvio(false);
+    setRequiereConfirmacionCredito(false);
+  };
+
   const enviar = useMutation({
-    mutationFn: () => enviarPedido(id!),
+    mutationFn: (confirmarCreditoInsuficiente: boolean) =>
+      enviarPedido(id!, confirmarCreditoInsuficiente),
     onSuccess: () => {
       setConfirmarEnvio(false);
+      setRequiereConfirmacionCredito(false);
       setError(null);
       refrescar();
     },
-    onError: (e) => setError(e instanceof Error ? e.message : 'No se pudo enviar el pedido.'),
+    onError: (e) => {
+      if (e instanceof ApiError && e.code === TITULO_CREDITO_INSUFICIENTE) {
+        setRequiereConfirmacionCredito(true);
+        return;
+      }
+      setError(e instanceof Error ? e.message : 'No se pudo enviar el pedido.');
+    },
   });
 
   const borrar = useMutation({
@@ -487,7 +518,7 @@ export function PedidoAlimentoDetallePage() {
         onConfirmar={() => recibir.mutate()}
       />
 
-      <Dialog open={confirmarEnvio} onClose={() => setConfirmarEnvio(false)}>
+      <Dialog open={confirmarEnvio} onClose={cerrarDialogoEnvio}>
         <DialogTitle>Enviar pedido a CAISY</DialogTitle>
         <DialogContent>
           <DialogContentText component="div">
@@ -503,16 +534,24 @@ export function PedidoAlimentoDetallePage() {
                   : `${formatoMoneda(totalParaEnviar)}${esEstimado ? ' (estimado, se congela al enviar)' : ''}`}
               </strong>
             </Typography>
+            {requiereConfirmacionCredito && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Este pedido va a dejar tu crédito por despachos de huevo en{' '}
+                {formatoMoneda((creditoParaConfirmar?.saldoDisponible ?? 0) - (totalParaEnviar ?? 0))}{' '}
+                negativo (saldo actual {formatoMoneda(creditoParaConfirmar?.saldoDisponible ?? 0)}, este
+                pedido {formatoMoneda(totalParaEnviar ?? 0)}). ¿Confirmás el envío igual?
+              </Alert>
+            )}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmarEnvio(false)}>Cancelar</Button>
+          <Button onClick={cerrarDialogoEnvio}>Cancelar</Button>
           <Button
             variant="contained"
-            onClick={() => enviar.mutate()}
+            onClick={() => enviar.mutate(requiereConfirmacionCredito)}
             disabled={enviar.isPending || totalParaEnviar === null}
           >
-            Confirmar envío
+            {requiereConfirmacionCredito ? 'Enviar de todas formas' : 'Confirmar envío'}
           </Button>
         </DialogActions>
       </Dialog>
