@@ -64,13 +64,22 @@ describe('api pedidos de alimento', () => {
     expect(solicitud(f).method).toBe('DELETE');
   });
 
-  test('enviarPedido hace POST al envío', async () => {
+  test('enviarPedido hace POST al envío sin confirmar por defecto', async () => {
     const f: ReturnType<typeof vi.fn> = vi.fn(async () => sinCuerpo());
     vi.stubGlobal('fetch', f);
     await enviarPedido('p1');
     const q = solicitud(f);
     expect(q.method).toBe('POST');
     expect(q.url).toContain('/api/pedidos-alimento/p1/enviar');
+    expect(await q.json()).toEqual({ confirmarCreditoInsuficiente: false });
+  });
+
+  test('enviarPedido manda el flag cuando se confirma', async () => {
+    const f: ReturnType<typeof vi.fn> = vi.fn(async () => sinCuerpo());
+    vi.stubGlobal('fetch', f);
+    await enviarPedido('p1', true);
+    const q = solicitud(f);
+    expect(await q.json()).toEqual({ confirmarCreditoInsuficiente: true });
   });
 
   test('recibirPedido envia multipart con la foto y las lineas', async () => {

@@ -112,8 +112,12 @@ export const editarPedido = (id: string, datos: DatosPedido) =>
 export const borrarPedido = (id: string) =>
   peticion<void>({ ruta: `/pedidos-alimento/${id}`, metodo: 'DELETE' });
 
-export const enviarPedido = (id: string) =>
-  peticion<void>({ ruta: `/pedidos-alimento/${id}/enviar`, metodo: 'POST' });
+export const enviarPedido = (id: string, confirmarCreditoInsuficiente = false) =>
+  peticion<void>({
+    ruta: `/pedidos-alimento/${id}/enviar`,
+    metodo: 'POST',
+    cuerpo: { confirmarCreditoInsuficiente },
+  });
 
 export interface LineaRecepcionDatos {
   tipoAlimento: string;
