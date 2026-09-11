@@ -112,7 +112,7 @@ public class PedidosAlimentoEndpointsTests
     // función PedidoAlimento): cada prueba de este archivo necesita su propio
     // cupo semanal (spec SP8B), porque las cuentas semilla compartidas lo
     // agotan con otras pruebas de la clase.
-    private async Task<(HttpClient Cliente, string Token)> CrearClienteConGestionAvicolaAsync()
+    private async Task<(HttpClient Cliente, string Token, Guid ClienteId)> CrearClienteConGestionAvicolaAsync()
     {
         var cliente = _factory.CreateClient();
         var tokenAdmin = await LoginComo(cliente, SemillaIdentidad.EmailAdmin);
@@ -132,7 +132,38 @@ public class PedidosAlimentoEndpointsTests
             HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", tokenAdmin,
             JsonContent.Create(new { modulos = new[] { "GestionAvicola" } })));
         Assert.Equal(HttpStatusCode.NoContent, modulos.StatusCode);
-        return (cliente, await LoginComo(cliente, email, "Clave-Cliente-123"));
+        return (cliente, await LoginComo(cliente, email, "Clave-Cliente-123"), clienteId);
+    }
+
+    // Trabajador nuevo bajo el tenant recién creado, con solo la
+    // funcionalidad indicada (spec, ítem 2 del backlog: el Trabajador tiene
+    // el entitlement de módulo pero no debe poder confirmar un envío con
+    // crédito insuficiente).
+    private static async Task<string> CrearTrabajadorConFuncionAsync(
+        HttpClient cliente, string tokenCliente, Guid clienteId, string funcionalidad)
+    {
+        var email = $"pedidos-trabajador-{Guid.NewGuid():N}@icarus.test";
+        var alta = await cliente.SendAsync(Pedido(HttpMethod.Post,
+            $"/api/clientes/{clienteId}/trabajadores", tokenCliente,
+            JsonContent.Create(new
+            {
+                nombre = "Trabajador de Prueba",
+                documentoIdentidad = $"9{Random.Shared.Next(10000000, 99999999)}",
+                cargo = "Operario",
+                fechaIngreso = "2026-01-15",
+                email,
+                contrasena = "Clave-Trabajador-123",
+            })));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var trabajadorId = (await alta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+
+        var asignar = await cliente.SendAsync(Pedido(HttpMethod.Put,
+            $"/api/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades", tokenCliente,
+            JsonContent.Create(new { funcionalidades = new[] { funcionalidad } })));
+        Assert.Equal(HttpStatusCode.NoContent, asignar.StatusCode);
+
+        return await LoginComo(cliente, email, "Clave-Trabajador-123");
     }
 
     // Importa el PDF de muestra y lo publica con una vigencia propia: queda
@@ -512,7 +543,7 @@ public class PedidosAlimentoEndpointsTests
     [Fact]
     public async Task EnviarSinConfirmarConCreditoInsuficienteExigeConfirmacionYElReintentoLoAcepta()
     {
-        var (cliente, tokenCliente) = await CrearClienteConGestionAvicolaAsync();
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
         var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
         await ImportarYPublicarAsync(caisy, tokenCaisy);
         var pedidoId = await CrearBorradorAsync(cliente, tokenCliente);
@@ -538,5 +569,29 @@ public class PedidosAlimentoEndpointsTests
         var transicion = detalleEnviado.GetProperty("historial").EnumerateArray().Single();
         Assert.Contains("crédito insuficiente",
             transicion.GetProperty("motivo").GetString()!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Segunda brecha de rol cerrada por el mismo ítem del backlog: aunque el
+    // Trabajador tenga la funcionalidad PedidoAlimento (entitlement de
+    // módulo), no puede confirmar un envío con crédito insuficiente —
+    // llamando la API directo, saltando la UI que ya no le ofrece ese botón.
+    [Fact]
+    public async Task UnTrabajadorNoPuedeConfirmarElEnvioConCreditoInsuficiente()
+    {
+        var (cliente, tokenCliente, clienteId) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        await ImportarYPublicarAsync(caisy, tokenCaisy);
+        var pedidoId = await CrearBorradorAsync(cliente, tokenCliente);
+        var tokenTrabajador = await CrearTrabajadorConFuncionAsync(
+            cliente, tokenCliente, clienteId, "PedidoAlimento");
+
+        var intento = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{pedidoId}/enviar", tokenTrabajador,
+            JsonContent.Create(new { confirmarCreditoInsuficiente = true })));
+
+        Assert.Equal(HttpStatusCode.Forbidden, intento.StatusCode);
+        var detalle = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
+        Assert.Equal("Borrador", detalle.GetProperty("estado").GetString());
+        Assert.Equal(0, detalle.GetProperty("historial").GetArrayLength());
     }
 }

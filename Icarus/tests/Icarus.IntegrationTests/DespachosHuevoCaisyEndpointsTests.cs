@@ -3,7 +3,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ClosedXML.Excel;
+using Icarus.GestionAvicola.Domain;
+using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Icarus.Identity.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using SkiaSharp;
 using Xunit;
 
@@ -144,6 +147,60 @@ public class DespachosHuevoCaisyEndpointsTests
             })));
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
         return await LoginComo(anonimo, emailCaisy, "Clave-Caisy-123");
+    }
+
+    // Tenant nuevo con el módulo GestionAvicola (habilita DespachoHuevo para
+    // el Cliente): mismo patrón que PedidosAlimentoEndpointsTests.cs,
+    // duplicado a propósito para mantener cada archivo de pruebas
+    // autocontenido (convención ya usada en el resto de esta clase).
+    private async Task<(HttpClient Cliente, string Token, Guid ClienteId)> CrearClienteConGestionAvicolaAsync()
+    {
+        var cliente = _factory.CreateClient();
+        var tokenAdmin = await LoginComo(cliente, SemillaIdentidad.EmailAdmin);
+        var email = $"despachos-credito-cliente-{Guid.NewGuid():N}@icarus.test";
+        var alta = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/clientes", tokenAdmin,
+            JsonContent.Create(new
+            {
+                razonSocial = "Granja de Prueba S.A.C.",
+                identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}",
+                email,
+                contrasena = "Clave-Cliente-123",
+            })));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var clienteId = (await alta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+        var modulos = await cliente.SendAsync(Pedido(
+            HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", tokenAdmin,
+            JsonContent.Create(new { modulos = new[] { "GestionAvicola" } })));
+        Assert.Equal(HttpStatusCode.NoContent, modulos.StatusCode);
+        return (cliente, await LoginComo(cliente, email, "Clave-Cliente-123"), clienteId);
+    }
+
+    private static async Task<string> CrearTrabajadorConFuncionAsync(
+        HttpClient cliente, string tokenCliente, Guid clienteId, string funcionalidad)
+    {
+        var email = $"despachos-credito-trabajador-{Guid.NewGuid():N}@icarus.test";
+        var alta = await cliente.SendAsync(Pedido(HttpMethod.Post,
+            $"/api/clientes/{clienteId}/trabajadores", tokenCliente,
+            JsonContent.Create(new
+            {
+                nombre = "Trabajador de Prueba",
+                documentoIdentidad = $"9{Random.Shared.Next(10000000, 99999999)}",
+                cargo = "Operario",
+                fechaIngreso = "2026-01-15",
+                email,
+                contrasena = "Clave-Trabajador-123",
+            })));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var trabajadorId = (await alta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+
+        var asignar = await cliente.SendAsync(Pedido(HttpMethod.Put,
+            $"/api/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades", tokenCliente,
+            JsonContent.Create(new { funcionalidades = new[] { funcionalidad } })));
+        Assert.Equal(HttpStatusCode.NoContent, asignar.StatusCode);
+
+        return await LoginComo(cliente, email, "Clave-Trabajador-123");
     }
 
     // Importa el XLSX de muestra y lo publica con una vigencia propia en el
@@ -396,5 +453,55 @@ public class DespachosHuevoCaisyEndpointsTests
         sondeoIgualCaisy.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etagCaisy));
         var respuestaIgualCaisy = await cliente.SendAsync(sondeoIgualCaisy);
         Assert.Equal(HttpStatusCode.NotModified, respuestaIgualCaisy.StatusCode);
+    }
+
+    // Segunda brecha de rol cerrada por el mismo ítem del backlog: el
+    // endpoint en sí (no solo la pantalla) rechaza a cualquier cuenta que no
+    // sea Cliente, aunque tenga el entitlement de módulo DespachoHuevo.
+    [Fact]
+    public async Task UnTrabajadorNoPuedeConsultarElCreditoDelTenant()
+    {
+        var (cliente, tokenCliente, clienteId) = await CrearClienteConGestionAvicolaAsync();
+        var tokenTrabajador = await CrearTrabajadorConFuncionAsync(
+            cliente, tokenCliente, clienteId, "DespachoHuevo");
+
+        var respuesta = await cliente.SendAsync(
+            Pedido(HttpMethod.Get, "/api/despachos-huevo/credito", tokenTrabajador));
+
+        Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
+    }
+
+    // Desglose visible del crédito (spec, ítem 2 del backlog): sin ajustes
+    // la respuesta trae una lista vacía; con un ajuste persistido para ese
+    // cliente, aparece con su motivo.
+    [Fact]
+    public async Task ElCreditoDelClienteIncluyeLosAjustesConMotivo()
+    {
+        var (cliente, tokenCliente, clienteId) = await CrearClienteConGestionAvicolaAsync();
+
+        var sinAjustes = await cliente.SendAsync(
+            Pedido(HttpMethod.Get, "/api/despachos-huevo/credito", tokenCliente));
+        Assert.Equal(HttpStatusCode.OK, sinAjustes.StatusCode);
+        var cuerpoSinAjustes = await sinAjustes.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, cuerpoSinAjustes.GetProperty("ajustes").GetArrayLength());
+
+        var ajuste = new AjusteCreditoHuevo(
+            clienteId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 45m,
+            "Corrección de precio Extra.", Guid.NewGuid());
+        using (var alcance = _factory.Services.CreateScope())
+        {
+            var db = alcance.ServiceProvider.GetRequiredService<GestionAvicolaDbContext>();
+            db.Add(ajuste);
+            await db.SaveChangesAsync();
+        }
+
+        var conAjustes = await cliente.SendAsync(
+            Pedido(HttpMethod.Get, "/api/despachos-huevo/credito", tokenCliente));
+        Assert.Equal(HttpStatusCode.OK, conAjustes.StatusCode);
+        var cuerpo = await conAjustes.Content.ReadFromJsonAsync<JsonElement>();
+        var elementoAjuste = Assert.Single(cuerpo.GetProperty("ajustes").EnumerateArray());
+        Assert.Equal(45m, elementoAjuste.GetProperty("monto").GetDecimal());
+        Assert.Equal(
+            "Corrección de precio Extra.", elementoAjuste.GetProperty("motivo").GetString());
     }
 }
