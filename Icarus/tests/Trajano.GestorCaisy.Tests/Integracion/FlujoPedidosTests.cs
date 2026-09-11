@@ -331,4 +331,24 @@ public class FlujoPedidosTests
         Assert.Contains("Crédito no disponible por ahora.", html);
         Assert.Contains($"/Pedidos/{id}/Aceptar", html);
     }
+
+    [Fact]
+    public async Task AceptarYDespacharMuestranElCreditoDelCliente()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(
+            -5000m, 14120m, 9120m, true, []);
+
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        var htmlAceptar = await cliente.GetStringAsync($"/Pedidos/{id}/Aceptar");
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado");
+        var htmlDespachar = await cliente.GetStringAsync($"/Pedidos/{id}/Despachar");
+
+        Assert.Contains("Crédito por despachos de huevo", htmlAceptar);
+        Assert.Contains("9120.00", htmlAceptar);
+        Assert.Contains("Crédito por despachos de huevo", htmlDespachar);
+        Assert.Contains("9120.00", htmlDespachar);
+    }
 }

@@ -13,6 +13,7 @@
     </div>
 </div>
 <partial name="_Avisos" />
+<partial name="_CreditoHuevo" model="new BloqueCreditoVista(Model.Credito)" />
 <section class="tarjeta">
     <form asp-action="Aceptar" asp-route-id="@Model.Id" method="post">
         <div class="campos">

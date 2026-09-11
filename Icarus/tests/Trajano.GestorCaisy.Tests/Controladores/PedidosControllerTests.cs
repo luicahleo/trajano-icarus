@@ -362,4 +362,63 @@ public class PedidosControllerTests
         var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
         Assert.Null(modelo.Credito);
     }
+
+    [Fact]
+    public async Task AceptarLlevaElCreditoAlFormulario()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
+
+        var vista = await _controlador.ConfirmarAceptacion(id, default);
+
+        var modelo = Assert.IsType<FormularioEntregaVista>(((ViewResult)vista).Model);
+        Assert.Equal(-5000m, modelo.Credito!.SaldoDisponible);
+    }
+
+    [Fact]
+    public async Task DespacharLlevaElCreditoAlFormulario()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado");
+        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
+
+        var vista = await _controlador.ConfirmarDespacho(id, default);
+
+        var modelo = Assert.IsType<FormularioDespachoVista>(((ViewResult)vista).Model);
+        Assert.Equal(9120m, modelo.Credito!.SaldoSinEstePedido);
+    }
+
+    // El bloque no puede desaparecer a mitad de la decisión: el re-render
+    // por error de validación lo vuelve a cargar.
+    [Fact]
+    public async Task ElReRenderPorFechaPasadaConservaElCredito()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
+
+        var vista = await _controlador.Aceptar(id, new FormularioEntregaVista
+        {
+            Id = id,
+            FechaEntregaEstimada = FechasDeOficina.Hoy().AddDays(-1),
+        }, default);
+
+        var modelo = Assert.IsType<FormularioEntregaVista>(((ViewResult)vista).Model);
+        Assert.Equal(-5000m, modelo.Credito!.SaldoDisponible);
+        Assert.False(_controlador.ModelState.IsValid);
+    }
+
+    [Fact]
+    public async Task SiElCreditoFallaLaPantallaDeAceptacionSigueRenderizando()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.ErrorDeObtenerCredito = new ErrorApiException(500, "Error interno");
+
+        var vista = await _controlador.ConfirmarAceptacion(id, default);
+
+        var modelo = Assert.IsType<FormularioEntregaVista>(((ViewResult)vista).Model);
+        Assert.Null(modelo.Credito);
+    }
 }

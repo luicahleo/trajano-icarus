@@ -170,5 +170,8 @@ public sealed record BandejaNotificacionesDespachoHuevoApi(
 public sealed record AjusteCreditoHuevoApi(Guid Id, decimal Monto, string Motivo, DateOnly Fecha);
 
 public sealed record CreditoHuevoPedidoApi(
-    decimal SaldoDisponible, decimal MontoDelPedido, decimal SaldoSinEstePedido,
-    bool PedidoComputadoEnElSaldo, IReadOnlyList<AjusteCreditoHuevoApi> Ajustes);
+    [property: JsonRequired] decimal SaldoDisponible,
+    [property: JsonRequired] decimal MontoDelPedido,
+    [property: JsonRequired] decimal SaldoSinEstePedido,
+    [property: JsonRequired] bool PedidoComputadoEnElSaldo,
+    IReadOnlyList<AjusteCreditoHuevoApi> Ajustes);

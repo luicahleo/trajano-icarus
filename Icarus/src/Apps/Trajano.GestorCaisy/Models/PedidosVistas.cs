@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Trajano.GestorCaisy.Servicios;
 
 namespace Trajano.GestorCaisy.Models;
@@ -47,7 +48,7 @@ public sealed class FormularioMotivoVista
     public string Motivo { get; set; } = string.Empty;
 }
 
-public sealed class FormularioEntregaVista
+public sealed class FormularioEntregaVista : IFormularioConCredito
 {
     [JsonRequired]
     public Guid Id { get; set; }
@@ -55,6 +56,9 @@ public sealed class FormularioEntregaVista
     [Required(ErrorMessage = "La fecha de entrega estimada es obligatoria.")]
     [JsonRequired]
     public DateOnly FechaEntregaEstimada { get; set; }
+
+    [BindNever]
+    public CreditoHuevoPedidoApi? Credito { get; set; }
 }
 
 // Línea editable del formulario de despacho (SP8C): la cantidad solicitada se
@@ -73,7 +77,7 @@ public sealed class LineaDespachoVista
 
 // Formulario del despacho (SP8C/SP8D): nota manual y líneas entregadas. La
 // foto del receptor no se sube acá: viaja con la confirmación de recepción.
-public sealed class FormularioDespachoVista
+public sealed class FormularioDespachoVista : IFormularioConCredito
 {
     [JsonRequired]
     public Guid Id { get; set; }
@@ -90,6 +94,18 @@ public sealed class FormularioDespachoVista
 
     [JsonRequired]
     public List<LineaDespachoVista> Lineas { get; set; } = [];
+
+    [BindNever]
+    public CreditoHuevoPedidoApi? Credito { get; set; }
+}
+
+// Los formularios de decisión muestran el crédito como dato de referencia,
+// nunca como campo enviado: no se envuelven en un modelo contenedor porque
+// eso cambiaría el prefijo de los campos del POST. Hay precedente de dato de
+// solo referencia dentro de un formulario: LineaDespachoVista.CantidadSolicitada.
+public interface IFormularioConCredito
+{
+    CreditoHuevoPedidoApi? Credito { get; set; }
 }
 
 // Modelo del partial del crédito. Envuelve un valor anulable en vez de
