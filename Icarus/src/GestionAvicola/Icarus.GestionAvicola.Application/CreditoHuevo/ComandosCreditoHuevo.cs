@@ -19,8 +19,12 @@ public sealed class ObtenerBalanceCreditoHuevoHandler(
     {
         var clienteId = usuarioActual.ClienteId
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
+        if (usuarioActual.Rol != "Cliente")
+            throw new CreditoHuevoRequiereRolClienteException(
+                "El crédito por despachos de huevo es exclusivo del Cliente.");
         var saldo = await repositorio.ObtenerSaldoDisponibleAsync(
             clienteId, DespachosHuevo.FechasNegocio.Hoy(), cancellationToken);
-        return new BalanceCreditoHuevoResumen(saldo, []);
+        var ajustes = await repositorio.ObtenerAjustesAsync(clienteId, cancellationToken);
+        return new BalanceCreditoHuevoResumen(saldo, ajustes);
     }
 }
