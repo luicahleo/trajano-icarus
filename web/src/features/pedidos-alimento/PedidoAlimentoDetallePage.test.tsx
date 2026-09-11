@@ -234,6 +234,34 @@ describe('PedidoAlimentoDetallePage', () => {
     ]);
   });
 
+  test('el diálogo de confirmación muestra el crédito con cuatro decimales', async () => {
+    const usuario = userEvent.setup();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      if (ruta === 'POST /api/pedidos-alimento/p1/enviar')
+        return respuesta(409, { title: 'Crédito insuficiente' });
+      if (ruta === 'GET /api/pedidos-alimento/p1') return respuesta(200, pedidoBorradorDevuelto);
+      if (ruta === 'GET /api/despachos-huevo/credito')
+        return respuesta(200, { saldoDisponible: -5000, ajustes: [] });
+      return respuesta(404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    await usuario.click(await screen.findByRole('button', { name: 'Enviar a CAISY' }));
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar envío' }));
+
+    // El saldo y el resultado van con cuatro decimales (son crédito de huevo);
+    // el total del pedido se queda en dos, que es lo exacto para precios de
+    // alimento. textContent y no findByText: la frase está partida en varios
+    // nodos y acá interesa la cifra, no la estructura.
+    const aviso = await screen.findByText(/va a dejar tu crédito/i);
+    const texto = aviso.textContent?.replace(/\s/g, ' ') ?? '';
+    expect(texto).toContain('en -Bs 31.475,0000 negativo');
+    expect(texto).toContain('saldo actual -Bs 5.000,0000');
+    expect(texto).toContain('este pedido Bs 26.475,00');
+  });
+
   test('el diálogo de confirmación muestra las correcciones aplicadas al crédito', async () => {
     const usuario = userEvent.setup();
     const cuerpos: unknown[] = [];

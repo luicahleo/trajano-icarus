@@ -46,6 +46,7 @@ import {
   ETIQUETAS_TIPO_ALIMENTO,
   formatoFecha,
   formatoMoneda,
+  formatoMonedaExacta,
 } from './constantes';
 
 // Compresión client-side (spec SP8D): pensada para conectividad rural, no
@@ -540,10 +541,16 @@ export function PedidoAlimentoDetallePage() {
             </Typography>
             {esCliente && requiereConfirmacionCredito && (
               <Alert severity="warning" sx={{ mt: 2 }}>
+                {/* El crédito de huevo va con cuatro decimales (sale de precios
+                    por huevo de cuatro decimales) y el total del pedido con dos,
+                    que es lo exacto para los precios de alimento. */}
                 Este pedido va a dejar tu crédito por despachos de huevo en{' '}
-                {formatoMoneda((creditoParaConfirmar?.saldoDisponible ?? 0) - (totalParaEnviar ?? 0))}{' '}
-                negativo (saldo actual {formatoMoneda(creditoParaConfirmar?.saldoDisponible ?? 0)}, este
-                pedido {formatoMoneda(totalParaEnviar ?? 0)}). ¿Confirmás el envío igual?
+                {formatoMonedaExacta(
+                  (creditoParaConfirmar?.saldoDisponible ?? 0) - (totalParaEnviar ?? 0),
+                )}{' '}
+                negativo (saldo actual{' '}
+                {formatoMonedaExacta(creditoParaConfirmar?.saldoDisponible ?? 0)}, este pedido{' '}
+                {formatoMoneda(totalParaEnviar ?? 0)}). ¿Confirmás el envío igual?
                 <AjustesCreditoHuevo ajustes={creditoParaConfirmar?.ajustes ?? []} />
               </Alert>
             )}

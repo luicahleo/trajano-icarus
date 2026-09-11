@@ -127,9 +127,36 @@ describe('PedidoFormularioPage', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
+    // Cuatro decimales, igual que el precio por huevo del que sale el saldo:
+    // con dos, un cliente que rehaga la cuenta a mano no la hace cerrar.
     expect(
-      await screen.findByText('Crédito por despachos de huevo: -Bs 45,50'),
+      await screen.findByText('Crédito por despachos de huevo: -Bs 45,5000'),
     ).toBeInTheDocument();
+  });
+
+  test('un saldo negativo se marca con la palabra "Negativo", no solo con color', async () => {
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: -45.5, ajustes: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    expect(await screen.findByText('Negativo')).toBeInTheDocument();
+  });
+
+  test('un saldo a favor no lleva la marca de negativo', async () => {
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: 45.5, ajustes: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    expect(
+      await screen.findByText('Crédito por despachos de huevo: Bs 45,5000'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Negativo')).not.toBeInTheDocument();
   });
 
   test('el Cliente ve las correcciones aplicadas al crédito, con motivo', async () => {
@@ -143,7 +170,9 @@ describe('PedidoFormularioPage', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
-    expect(await screen.findByText(/Corrección de precio Extra\./)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Corrección de precio Extra\. \(Bs 45,0000\)/),
+    ).toBeInTheDocument();
   });
 
   test('el Trabajador no ve el crédito por despachos de huevo', async () => {

@@ -1,6 +1,7 @@
 import { Stack, Typography } from '@mui/material';
+import { formatoMonedaExacta } from '../../lib/formatos';
 import type { AjusteCreditoHuevo } from './api';
-import { formatoFecha, formatoMoneda } from './constantes';
+import { formatoFecha } from './constantes';
 
 interface Props {
   ajustes: AjusteCreditoHuevo[];
@@ -19,7 +20,7 @@ export function AjustesCreditoHuevo({ ajustes }: Props) {
       </Typography>
       {ajustes.map((a) => (
         <Typography key={a.id} variant="body2" color={a.monto < 0 ? 'error' : 'text.secondary'}>
-          {formatoFecha(a.fecha)} — {a.motivo} ({formatoMoneda(a.monto)})
+          {formatoFecha(a.fecha)} — {a.motivo} ({formatoMonedaExacta(a.monto)})
         </Typography>
       ))}
     </Stack>

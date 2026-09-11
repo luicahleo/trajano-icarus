@@ -28,7 +28,12 @@ import {
   obtenerPrecioVigente,
   type LineaPedido,
 } from './api';
-import { ETIQUETAS_TIPO_ALIMENTO, formatoFecha, formatoMoneda } from './constantes';
+import {
+  ETIQUETAS_TIPO_ALIMENTO,
+  formatoFecha,
+  formatoMoneda,
+  formatoMonedaExacta,
+} from './constantes';
 
 const TIPOS = Object.keys(ETIQUETAS_TIPO_ALIMENTO);
 
@@ -207,12 +212,20 @@ export function PedidoFormularioPage() {
           )}
           {esCliente && credito && (
             <Box>
-              <Typography
-                variant="body2"
-                color={credito.saldoDisponible < 0 ? 'error' : 'text.secondary'}
-              >
-                Crédito por despachos de huevo: {formatoMoneda(credito.saldoDisponible)}
-              </Typography>
+              {/* El saldo negativo no se distingue solo por color: lleva la
+                  etiqueta textual "Negativo", igual que el bloque de crédito
+                  de GestorCaisy, para que se perciba sin visión de color. */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography
+                  variant="body2"
+                  color={credito.saldoDisponible < 0 ? 'error' : 'text.secondary'}
+                >
+                  Crédito por despachos de huevo: {formatoMonedaExacta(credito.saldoDisponible)}
+                </Typography>
+                {credito.saldoDisponible < 0 && (
+                  <Chip size="small" color="error" label="Negativo" />
+                )}
+              </Stack>
               <AjustesCreditoHuevo ajustes={credito.ajustes} />
             </Box>
           )}
