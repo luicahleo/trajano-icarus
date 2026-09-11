@@ -6,7 +6,10 @@
    2026-09-11-credito-huevo-vista-caisy-design). Tres cifras y no una: el
    saldo disponible ya tiene descontado este pedido cuando está
    comprometido. Un saldo negativo no se distingue solo por color: lleva
-   la etiqueta textual "Negativo". *@
+   la etiqueta textual "Negativo". Cuatro decimales y no dos: el crédito
+   sale de precios por huevo de cuatro decimales, así que redondear haría
+   que la cuenta no cierre, y CAISY tiene que ver la misma cifra que el
+   Cliente en la PWA. *@
 <section class="tarjeta">
     <h2>Crédito por despachos de huevo</h2>
     @if (credito is null)
@@ -21,7 +24,7 @@
             <div>
                 <dt>Saldo disponible</dt>
                 <dd>
-                    @credito.SaldoDisponible.ToString("0.00")
+                    @credito.SaldoDisponible.ToString("0.0000")
                     @if (credito.SaldoDisponible < 0)
                     {
                         <span class="chip chip--rechazado">Negativo</span>
@@ -32,11 +35,11 @@
             {
                 <div>
                     <dt>Este pedido</dt>
-                    <dd>@credito.MontoDelPedido.ToString("0.00")</dd>
+                    <dd>@credito.MontoDelPedido.ToString("0.0000")</dd>
                 </div>
                 <div>
                     <dt>Saldo sin este pedido</dt>
-                    <dd>@credito.SaldoSinEstePedido.ToString("0.00")</dd>
+                    <dd>@credito.SaldoSinEstePedido.ToString("0.0000")</dd>
                 </div>
             }
         </dl>
@@ -68,7 +71,7 @@
                     {
                         <tr>
                             <td>@ajuste.Fecha.ToString("dd/MM/yyyy")</td>
-                            <td>@ajuste.Monto.ToString("0.00")</td>
+                            <td>@ajuste.Monto.ToString("0.0000")</td>
                             <td>@ajuste.Motivo</td>
                         </tr>
                     }

@@ -294,11 +294,15 @@ public class FlujoPedidosTests
         var html = await cliente.GetStringAsync($"/Pedidos/{id}");
 
         Assert.Contains("Crédito por despachos de huevo", html);
-        Assert.Contains("-5000.00", html);
-        Assert.Contains("14120.00", html);
-        Assert.Contains("9120.00", html);
+        // Cuatro decimales: el crédito sale de precios por huevo de cuatro
+        // decimales y CAISY tiene que ver la misma cifra que el Cliente en la
+        // PWA, sin que ninguno de los dos la vea redondeada.
+        Assert.Contains("-5000.0000", html);
+        Assert.Contains("14120.0000", html);
+        Assert.Contains("9120.0000", html);
         Assert.Contains("Negativo", html);
         Assert.Contains("Corrección de precio Extra.", html);
+        Assert.Contains("45.0000", html);
     }
 
     [Fact]
@@ -312,7 +316,7 @@ public class FlujoPedidosTests
 
         var html = await cliente.GetStringAsync($"/Pedidos/{id}");
 
-        Assert.Contains("2500.00", html);
+        Assert.Contains("2500.0000", html);
         Assert.Contains("Este pedido todavía no pesa en el saldo.", html);
         Assert.DoesNotContain("Saldo sin este pedido", html);
     }
@@ -347,8 +351,8 @@ public class FlujoPedidosTests
         var htmlDespachar = await cliente.GetStringAsync($"/Pedidos/{id}/Despachar");
 
         Assert.Contains("Crédito por despachos de huevo", htmlAceptar);
-        Assert.Contains("9120.00", htmlAceptar);
+        Assert.Contains("9120.0000", htmlAceptar);
         Assert.Contains("Crédito por despachos de huevo", htmlDespachar);
-        Assert.Contains("9120.00", htmlDespachar);
+        Assert.Contains("9120.0000", htmlDespachar);
     }
 }
