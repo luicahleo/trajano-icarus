@@ -1,4 +1,6 @@
 using Icarus.BuildingBlocks.Application;
+using Icarus.BuildingBlocks.Domain;
+using Icarus.GestionAvicola.Application;
 using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Domain;
 using NSubstitute;
@@ -123,5 +125,63 @@ public class NotificacionesDespachoHuevoHandlerTests
             Arg.Is<IReadOnlyCollection<TipoNotificacionDespachoHuevo>>(tipos =>
                 !tipos.Contains(TipoNotificacionDespachoHuevo.AjusteCredito)),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ElTrabajadorNoPuedeMarcarLeidaUnaNotificacionFinanciera()
+    {
+        var notificacion = NotificacionInternaDespachoHuevo.ParaAjusteCredito(
+            Guid.NewGuid(), ClienteId, "27.0000 Bs — Precio mal digitado.");
+        _repositorio.ObtenerPorIdAsync(notificacion.Id, Arg.Any<CancellationToken>())
+            .Returns(notificacion);
+        var unidadTrabajo = Substitute.For<IUnidadTrabajoGestionAvicola>();
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            new MarcarNotificacionDespachoHuevoLeidaHandler(
+                    _repositorio, Usuario("Trabajador", ClienteId), unidadTrabajo)
+                .Handle(
+                    new MarcarNotificacionDespachoHuevoLeidaCommand(notificacion.Id),
+                    CancellationToken.None));
+
+        Assert.False(notificacion.Leida);
+        await unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ElTrabajadorSiPuedeMarcarLeidaUnaNotificacionOperativa()
+    {
+        var notificacion = NotificacionInternaDespachoHuevo.ParaRecepcionConfirmada(
+            Guid.NewGuid(), ClienteId);
+        _repositorio.ObtenerPorIdAsync(notificacion.Id, Arg.Any<CancellationToken>())
+            .Returns(notificacion);
+        var unidadTrabajo = Substitute.For<IUnidadTrabajoGestionAvicola>();
+
+        await new MarcarNotificacionDespachoHuevoLeidaHandler(
+                _repositorio, Usuario("Trabajador", ClienteId), unidadTrabajo)
+            .Handle(
+                new MarcarNotificacionDespachoHuevoLeidaCommand(notificacion.Id),
+                CancellationToken.None);
+
+        Assert.True(notificacion.Leida);
+        await unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ElClienteSiPuedeMarcarLeidaUnaNotificacionFinanciera()
+    {
+        var notificacion = NotificacionInternaDespachoHuevo.ParaAjusteCredito(
+            Guid.NewGuid(), ClienteId, "27.0000 Bs — Precio mal digitado.");
+        _repositorio.ObtenerPorIdAsync(notificacion.Id, Arg.Any<CancellationToken>())
+            .Returns(notificacion);
+        var unidadTrabajo = Substitute.For<IUnidadTrabajoGestionAvicola>();
+
+        await new MarcarNotificacionDespachoHuevoLeidaHandler(
+                _repositorio, Usuario("Cliente", ClienteId), unidadTrabajo)
+            .Handle(
+                new MarcarNotificacionDespachoHuevoLeidaCommand(notificacion.Id),
+                CancellationToken.None);
+
+        Assert.True(notificacion.Leida);
+        await unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

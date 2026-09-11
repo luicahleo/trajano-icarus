@@ -56,6 +56,14 @@ public sealed class MarcarNotificacionDespachoHuevoLeidaHandler(
             ?? throw new NotFoundException("Notificación", request.NotificacionId);
         if (notificacion.ClienteId != usuarioActual.ClienteId)
             throw new NotFoundException("Notificación", request.NotificacionId);
+        // Misma regla de visibilidad que el listado (spec SP9F): un tipo que
+        // el rol no puede ver tampoco se puede marcar leída, o un Trabajador
+        // le haría desaparecer al Cliente un AjusteCredito antes de que lo
+        // lea. El 404 genérico no revela que la notificación existe, igual
+        // que el cruce de tenant de la línea anterior.
+        if (!VisibilidadNotificacionesDespachoHuevo.Para(usuarioActual.Rol)
+                .Contains(notificacion.Tipo))
+            throw new NotFoundException("Notificación", request.NotificacionId);
         var actorId = usuarioActual.UsuarioId
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
         notificacion.MarcarLeida(actorId);
