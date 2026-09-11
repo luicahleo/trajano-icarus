@@ -432,7 +432,7 @@ public sealed class CorregirPublicacionPrecioHuevoVigenteHandler(
                 // caracteres: se trunca para que el texto compuesto nunca
                 // desborde la columna en el SaveChanges.
                 string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"{monto:0.00} Bs — {request.Motivo[..Math.Min(request.Motivo.Length, 470)]}")));
+                    $"{monto:0.0000} Bs — {request.Motivo[..Math.Min(request.Motivo.Length, 470)]}")));
             ajustados++;
         }
 

@@ -94,9 +94,15 @@ public class CorregirPublicacionPrecioHuevoHandlerTests
         // 0.15 * 180 = 27.
         _repositorioAjustes.Received(1).Agregar(Arg.Is<AjusteCreditoHuevo>(a =>
             a.ClienteId == clienteId && a.DespachoHuevoId == despacho.Id && a.Monto == 27m));
+        // El Meta lleva el monto con CUATRO decimales (ítem 4 del backlog: el
+        // crédito de huevo se muestra con cuatro en toda la aplicación, y
+        // AjustesCreditoHuevo.tsx usa formatoMonedaExacta para el mismo
+        // monto). La PWA muestra este texto crudo, así que el formato es
+        // contrato de presentación.
         _notificaciones.Received(1).Agregar(Arg.Is<NotificacionInternaDespachoHuevo>(n =>
             n.Tipo == TipoNotificacionDespachoHuevo.AjusteCredito &&
-            n.DespachoHuevoId == despacho.Id && n.ClienteId == clienteId));
+            n.DespachoHuevoId == despacho.Id && n.ClienteId == clienteId &&
+            n.Meta == "27.0000 Bs — Precio mal digitado."));
         // La corrección se persiste en dos SaveChanges ordenados dentro de la
         // misma transacción explícita (spec SP9D addendum): primero la
         // errónea sale de Publicada, después entra la correctiva.
