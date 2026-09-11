@@ -77,6 +77,12 @@ public interface IApiIcarusClient
     // mostrarla en el detalle.
     Task DespacharPedidoAsync(ComandoDespachoApi comando, CancellationToken token = default);
 
+    // El crédito viaja por la ruta del pedido: el cliente lo deriva la API
+    // del propio pedido. Lanza ErrorApiException como el resto; la
+    // degradación cuando no hay crédito es decisión del controller.
+    Task<CreditoHuevoPedidoApi> ObtenerCreditoDePedidoAsync(
+        Guid id, CancellationToken token = default);
+
     Task<(Stream Contenido, string TipoContenido)> DescargarDocumentoNotaAsync(
         Guid id, Guid documentoId, CancellationToken token = default);
 

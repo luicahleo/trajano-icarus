@@ -381,4 +381,43 @@ public class ApiIcarusClientTests
         Assert.Equal(401, error.Estado);
         Assert.Single(_manejador.Peticiones);
     }
+
+    [Fact]
+    public async Task ObtenerCreditoDePedidoPideLaRutaDelPedidoYParseaLasTresCifras()
+    {
+        _manejador.Responder(HttpStatusCode.OK,
+            """
+            {"saldoDisponible":-5000.00,"montoDelPedido":14120.00,
+             "saldoSinEstePedido":9120.00,"pedidoComputadoEnElSaldo":true,
+             "ajustes":[{"id":"11111111-1111-1111-1111-111111111111","monto":45.00,
+                         "motivo":"Corrección de precio Extra.","fecha":"2026-09-01"}]}
+            """);
+        var id = Guid.NewGuid();
+
+        var credito = await _cliente.ObtenerCreditoDePedidoAsync(id);
+
+        Assert.Equal(-5000m, credito.SaldoDisponible);
+        Assert.Equal(14120m, credito.MontoDelPedido);
+        Assert.Equal(9120m, credito.SaldoSinEstePedido);
+        Assert.True(credito.PedidoComputadoEnElSaldo);
+        var ajuste = Assert.Single(credito.Ajustes);
+        Assert.Equal("Corrección de precio Extra.", ajuste.Motivo);
+        Assert.Equal(new DateOnly(2026, 9, 1), ajuste.Fecha);
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Get, peticion.Metodo);
+        Assert.Equal($"{BaseApi}pedidos-alimento-caisy/{id}/credito", peticion.Uri.ToString());
+        Assert.Equal("Bearer token-actual", peticion.Autorizacion);
+    }
+
+    [Fact]
+    public async Task UnErrorDelCreditoLlegaComoErrorApiException()
+    {
+        _manejador.Responder(HttpStatusCode.InternalServerError,
+            """{"title":"Error interno"}""");
+
+        var error = await Assert.ThrowsAsync<ErrorApiException>(
+            () => _cliente.ObtenerCreditoDePedidoAsync(Guid.NewGuid()));
+
+        Assert.Equal(500, error.Estado);
+    }
 }

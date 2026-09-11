@@ -300,6 +300,20 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         return Task.FromResult(PedidoActual ?? CrearPedido(id, "Solicitado"));
     }
 
+    public Exception? ErrorDeObtenerCredito { get; set; }
+    public CreditoHuevoPedidoApi? CreditoDePedido { get; set; }
+    public int VecesObtenerCredito { get; private set; }
+    public Guid? UltimoCreditoPedido { get; private set; }
+
+    public Task<CreditoHuevoPedidoApi> ObtenerCreditoDePedidoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        VecesObtenerCredito++;
+        UltimoCreditoPedido = id;
+        if (ErrorDeObtenerCredito is not null) throw ErrorDeObtenerCredito;
+        return Task.FromResult(CreditoDePedido ?? CrearCredito());
+    }
+
     public Task DevolverPedidoAsync(Guid id, string motivo, CancellationToken token = default)
     {
         VecesDevolver++;
@@ -498,6 +512,17 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         "NOTA-77", new(2025, 11, 1), new(2025, 11, 2), 14100m, 14120m,
         [new LineaEntregaApi("PosturaUno", 80, 80)],
         [new DocumentoNotaApi(Guid.NewGuid(), "nota-frente.jpg", "image/jpeg", 1024)]);
+
+    // Saldo negativo por defecto: es el caso interesante para la decisión de
+    // CAISY. Las cifras coinciden con el pedido de CrearPedido (14 120 de la
+    // única línea congelada).
+    public static CreditoHuevoPedidoApi CrearCredito(
+        decimal saldo = -5000m, decimal montoDelPedido = 14120m, bool computado = true) =>
+        new(saldo, montoDelPedido, saldo + montoDelPedido, computado,
+            [
+                new AjusteCreditoHuevoApi(
+                    Guid.NewGuid(), 45m, "Corrección de precio Extra.", new(2026, 9, 1)),
+            ]);
 
     public static RecepcionPedidoApi CrearRecepcion() => new(
         new(2025, 11, 3), 14120m,

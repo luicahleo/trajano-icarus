@@ -278,6 +278,17 @@ public sealed class ApiIcarusClient : IApiIcarusClient
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
     }
 
+    public async Task<CreditoHuevoPedidoApi> ObtenerCreditoDePedidoAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(
+                HttpMethod.Get, $"pedidos-alimento-caisy/{id}/credito", accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<CreditoHuevoPedidoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
     public Task DevolverPedidoAsync(
         Guid id, string motivo, CancellationToken token = default) =>
         EnviarDecisionPedidoAsync(id, "devolver", motivo, token);

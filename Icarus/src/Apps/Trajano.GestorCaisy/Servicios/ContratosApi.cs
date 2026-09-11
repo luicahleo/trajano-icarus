@@ -160,3 +160,15 @@ public sealed record NotificacionDespachoHuevoApi(
 
 public sealed record BandejaNotificacionesDespachoHuevoApi(
     IReadOnlyList<NotificacionDespachoHuevoApi> Items, int Contador);
+
+// Crédito por despachos de huevo del cliente de un pedido, para la decisión
+// de CAISY (spec 2026-09-11-credito-huevo-vista-caisy-design). Espejo de
+// CreditoHuevoDePedidoCaisy: el saldo ya tiene descontado el pedido cuando
+// está comprometido, y por eso viajan también el monto que aporta y el saldo
+// sin él. Cliente y CAISY ven exactamente la misma información, incluidos los
+// ajustes con su motivo.
+public sealed record AjusteCreditoHuevoApi(Guid Id, decimal Monto, string Motivo, DateOnly Fecha);
+
+public sealed record CreditoHuevoPedidoApi(
+    decimal SaldoDisponible, decimal MontoDelPedido, decimal SaldoSinEstePedido,
+    bool PedidoComputadoEnElSaldo, IReadOnlyList<AjusteCreditoHuevoApi> Ajustes);
