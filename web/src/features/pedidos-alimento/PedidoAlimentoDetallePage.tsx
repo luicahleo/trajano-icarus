@@ -25,7 +25,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
+import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../../lib/http';
+import { AjustesCreditoHuevo } from '../despacho-huevo/AjustesCreditoHuevo';
 import { obtenerBalanceCreditoHuevo } from '../despacho-huevo/api';
 import {
   borrarPedido,
@@ -85,6 +87,8 @@ export function PedidoAlimentoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { tieneRol } = useAuth();
+  const esCliente = tieneRol('Cliente');
   const [confirmarEnvio, setConfirmarEnvio] = useState(false);
   const [requiereConfirmacionCredito, setRequiereConfirmacionCredito] = useState(false);
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
@@ -116,7 +120,7 @@ export function PedidoAlimentoDetallePage() {
   const { data: creditoParaConfirmar } = useQuery({
     queryKey: ['despachos-huevo', 'credito'],
     queryFn: obtenerBalanceCreditoHuevo,
-    enabled: requiereConfirmacionCredito,
+    enabled: requiereConfirmacionCredito && esCliente,
   });
 
   const precioEstimadoDe = useMemo(() => {
@@ -534,25 +538,33 @@ export function PedidoAlimentoDetallePage() {
                   : `${formatoMoneda(totalParaEnviar)}${esEstimado ? ' (estimado, se congela al enviar)' : ''}`}
               </strong>
             </Typography>
-            {requiereConfirmacionCredito && (
+            {esCliente && requiereConfirmacionCredito && (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 Este pedido va a dejar tu crédito por despachos de huevo en{' '}
                 {formatoMoneda((creditoParaConfirmar?.saldoDisponible ?? 0) - (totalParaEnviar ?? 0))}{' '}
                 negativo (saldo actual {formatoMoneda(creditoParaConfirmar?.saldoDisponible ?? 0)}, este
                 pedido {formatoMoneda(totalParaEnviar ?? 0)}). ¿Confirmás el envío igual?
+                <AjustesCreditoHuevo ajustes={creditoParaConfirmar?.ajustes ?? []} />
+              </Alert>
+            )}
+            {!esCliente && requiereConfirmacionCredito && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Este pedido necesita confirmación del Cliente para continuar.
               </Alert>
             )}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={cerrarDialogoEnvio}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={() => enviar.mutate(requiereConfirmacionCredito)}
-            disabled={enviar.isPending || totalParaEnviar === null}
-          >
-            {requiereConfirmacionCredito ? 'Enviar de todas formas' : 'Confirmar envío'}
-          </Button>
+          {(esCliente || !requiereConfirmacionCredito) && (
+            <Button
+              variant="contained"
+              onClick={() => enviar.mutate(requiereConfirmacionCredito)}
+              disabled={enviar.isPending || totalParaEnviar === null}
+            >
+              {requiereConfirmacionCredito ? 'Enviar de todas formas' : 'Confirmar envío'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

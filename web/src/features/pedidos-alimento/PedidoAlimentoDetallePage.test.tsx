@@ -4,6 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PedidoAlimentoDetallePage } from './PedidoAlimentoDetallePage';
 
+// AuthContext real es pesado para este test: se mockea useAuth. Por defecto
+// Cliente, que es el rol que puede ver y confirmar el crédito de huevo.
+const authMock = vi.fn(() => ({ tieneRol: (...roles: string[]) => roles.includes('Cliente') }));
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => authMock(),
+}));
+
 const pedidoBorradorDevuelto = {
   id: 'p1',
   clienteId: 'c1',
@@ -209,7 +216,8 @@ describe('PedidoAlimentoDetallePage', () => {
         return cuerpos.length === 1 ? respuesta(409, { title: 'Crédito insuficiente' }) : respuesta(204);
       }
       if (ruta === 'GET /api/pedidos-alimento/p1') return respuesta(200, pedidoBorradorDevuelto);
-      if (ruta === 'GET /api/despachos-huevo/credito') return respuesta(200, { saldoDisponible: -5000 });
+      if (ruta === 'GET /api/despachos-huevo/credito')
+        return respuesta(200, { saldoDisponible: -5000, ajustes: [] });
       return respuesta(404);
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -224,6 +232,64 @@ describe('PedidoAlimentoDetallePage', () => {
       { confirmarCreditoInsuficiente: false },
       { confirmarCreditoInsuficiente: true },
     ]);
+  });
+
+  test('el diálogo de confirmación muestra las correcciones aplicadas al crédito', async () => {
+    const usuario = userEvent.setup();
+    const cuerpos: unknown[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      if (ruta === 'POST /api/pedidos-alimento/p1/enviar') {
+        cuerpos.push(await req.json());
+        return cuerpos.length === 1 ? respuesta(409, { title: 'Crédito insuficiente' }) : respuesta(204);
+      }
+      if (ruta === 'GET /api/pedidos-alimento/p1') return respuesta(200, pedidoBorradorDevuelto);
+      if (ruta === 'GET /api/despachos-huevo/credito') {
+        return respuesta(200, {
+          saldoDisponible: -5000,
+          ajustes: [{ id: 'a1', monto: 45, motivo: 'Corrección de precio Extra.', fecha: '2026-09-01' }],
+        });
+      }
+      return respuesta(404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    await usuario.click(await screen.findByRole('button', { name: 'Enviar a CAISY' }));
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar envío' }));
+
+    expect(await screen.findByText(/Corrección de precio Extra\./)).toBeInTheDocument();
+  });
+
+  test('un Trabajador no ve montos ni puede confirmar un envío con crédito insuficiente', async () => {
+    // mockReturnValue (no "once"): el componente vuelve a llamar useAuth()
+    // en cada re-render (hay varios durante este test, por los clics y las
+    // queries que resuelven), así que la sobreescritura tiene que persistir
+    // durante todo el test, no solo la primera llamada.
+    authMock.mockReturnValue({ tieneRol: () => false });
+    const usuario = userEvent.setup();
+    const rutasLlamadas: string[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      rutasLlamadas.push(ruta);
+      if (ruta === 'POST /api/pedidos-alimento/p1/enviar') {
+        return respuesta(409, { title: 'Crédito insuficiente' });
+      }
+      if (ruta === 'GET /api/pedidos-alimento/p1') return respuesta(200, pedidoBorradorDevuelto);
+      return respuesta(404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    await usuario.click(await screen.findByRole('button', { name: 'Enviar a CAISY' }));
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar envío' }));
+
+    expect(
+      await screen.findByText('Este pedido necesita confirmación del Cliente para continuar.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enviar de todas formas' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/va a dejar tu crédito/i)).not.toBeInTheDocument();
+    expect(rutasLlamadas).not.toContain('GET /api/despachos-huevo/credito');
   });
 
   test('un borrador nuevo estima los precios vigentes y permite el primer envío', async () => {
