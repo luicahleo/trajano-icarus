@@ -35,6 +35,7 @@ public sealed class ExceptionHandlingMiddleware
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Recurso no encontrado"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflicto con el estado actual"),
+            ForbiddenException => (StatusCodes.Status403Forbidden, "Acción no permitida"),
             ValidationException => (StatusCodes.Status400BadRequest, "Solicitud inválida"),
             DomainException => (StatusCodes.Status400BadRequest, "Error de negocio"),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "No autorizado"),

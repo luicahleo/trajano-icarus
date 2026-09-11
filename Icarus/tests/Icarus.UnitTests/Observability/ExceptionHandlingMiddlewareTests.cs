@@ -63,6 +63,13 @@ public class ExceptionHandlingMiddlewareTests
     }
 
     [Fact]
+    public async Task ForbiddenExceptionDevuelve403()
+    {
+        var (status, _) = await Ejecutar(new ForbiddenException("prohibido"));
+        Assert.Equal(StatusCodes.Status403Forbidden, status);
+    }
+
+    [Fact]
     public async Task ValidationExceptionDevuelve400ConErroresPorCampo()
     {
         var fallas = new[] { new ValidationFailure("Nombre", "obligatorio") };

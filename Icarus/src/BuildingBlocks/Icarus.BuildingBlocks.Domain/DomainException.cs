@@ -39,6 +39,17 @@ public class ConflictException : DomainException
     public ConflictException(string mensaje, Exception interna) : base(mensaje, interna) { }
 }
 
+// 403: la sesión es válida pero el rol actual no puede realizar esta acción
+// (distinto de UnauthorizedAccessException, que es sesión inválida/401).
+public class ForbiddenException : DomainException
+{
+    public ForbiddenException() { }
+
+    public ForbiddenException(string mensaje) : base(mensaje) { }
+
+    public ForbiddenException(string mensaje, Exception interna) : base(mensaje, interna) { }
+}
+
 // Cualquier excepción de dominio de cualquier módulo puede implementar esto
 // para pedirle al middleware un título de ProblemDetails distinto del
 // genérico de su clase base (p. ej. distinguir un subtipo de
