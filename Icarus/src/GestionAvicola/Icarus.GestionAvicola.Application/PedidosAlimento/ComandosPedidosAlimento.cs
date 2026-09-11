@@ -37,7 +37,8 @@ public sealed record DesactivarPedidoAlimentoCommand(Guid PedidoId)
         "avicola.pedidos.desactivar", new Dictionary<string, DatoRegistroVuelo>());
 }
 
-public sealed record EnviarPedidoAlimentoCommand(Guid PedidoId)
+public sealed record EnviarPedidoAlimentoCommand(
+    Guid PedidoId, bool ConfirmarCreditoInsuficiente = false)
     : IRequest, IOperacionRegistrable
 {
     public DescriptorOperacionRegistroVuelo Registro { get; } = new(
@@ -297,7 +298,10 @@ public sealed class DesactivarPedidoAlimentoHandler(
 // notificación para la bandeja CAISY. Si falta precio para una línea o no hay
 // publicación vigente, el envío falla completo y el borrador queda intacto.
 // Los dobles clics y reintentos chocan con el estado y responden 409 sin
-// gastar cupo ni repetir la transición ni la notificación.
+// gastar cupo ni repetir la transición ni la notificación. Si el crédito
+// proyectado del cliente queda negativo y el comando no trae confirmación
+// (spec SP9E), también falla completo sin persistir nada — el cliente debe
+// reintentar confirmando explícitamente.
 public sealed class EnviarPedidoAlimentoHandler(
     IRepositorioPedidosAlimento repositorio,
     IRepositorioNotificacionesPrecios repositorioPrecios,
@@ -334,23 +338,47 @@ public sealed class EnviarPedidoAlimentoHandler(
         var precios = vigente.Detalles
             .Select(d => new DatosPrecioEnvio(d.TipoAlimento, d.Presentacion, d.PrecioFinalPor40Kg, vigente.Id))
             .ToList();
+
+        // Crédito (spec SP9E): se evalúa ANTES de mutar el agregado, con la
+        // misma fórmula que EnviarACaisy va a congelar más abajo (precio ×
+        // Equivalentes40Kg), así que el total coincide exactamente con
+        // TotalSolicitado una vez enviado. Si falta precio para algún tipo,
+        // no se evalúa el crédito acá: EnviarACaisy va a fallar más abajo con
+        // su propio mensaje ("Falta precio vigente..."), que debe prevalecer
+        // sobre cualquier mensaje de crédito.
+        var preciosPorTipo = precios.ToDictionary(p => (p.Tipo, p.Presentacion), p => p.PrecioFinalPor40Kg);
+        string? motivoCreditoInsuficiente = null;
+        var haySaldoInsuficiente = false;
+        if (pedido.Detalles.All(d => preciosPorTipo.ContainsKey((d.TipoAlimento, d.Presentacion))))
+        {
+            var totalEsperado = pedido.Detalles.Sum(
+                d => preciosPorTipo[(d.TipoAlimento, d.Presentacion)] * d.Equivalentes40Kg);
+            var saldoActual = await balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+                pedido.ClienteId, hoy, cancellationToken);
+            var saldoResultante = saldoActual - totalEsperado;
+            haySaldoInsuficiente = saldoResultante < 0;
+            if (haySaldoInsuficiente)
+            {
+                if (!request.ConfirmarCreditoInsuficiente)
+                    throw new CreditoInsuficienteRequiereConfirmacionException();
+                motivoCreditoInsuficiente = string.Create(CultureInfo.InvariantCulture,
+                    $"Enviado con crédito insuficiente: saldo {saldoActual}, pedido {totalEsperado}, resultante {saldoResultante}.");
+            }
+        }
+
         // El reenvío tras una devolución avisa a CAISY con su propio tipo: la
         // primera salida del borrador fija FechaPedido y la devolución la
         // conserva (el historial no se carga en este comando).
         var esReenvio = pedido.FechaPedido is not null;
-        pedido.EnviarACaisy(hoy, actorId, precios);
+        pedido.EnviarACaisy(hoy, actorId, precios, motivoCreditoInsuficiente);
         notificaciones.Agregar(NotificacionInterna.ParaCaisy(
             esReenvio ? TipoNotificacionPedido.PedidoReenviado : TipoNotificacionPedido.PedidoSolicitado,
             pedido.Id));
 
-        // Advertencia de crédito (spec SP9): no bloquea el envío, solo avisa
-        // a CAISY si el saldo proyectado del cliente queda negativo. El
-        // saldo actual ya excluye este pedido porque todavía no está
-        // Solicitado en la base al momento de leerlo (se lee antes del
-        // SaveChanges de esta misma transacción).
-        var saldoActual = await balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
-            pedido.ClienteId, hoy, cancellationToken);
-        if (saldoActual - (pedido.TotalSolicitado ?? 0m) < 0)
+        // Notificación pasiva a la bandeja global de CAISY (spec SP9C, sin
+        // cambios de condición ni de contenido): se genera exactamente cuando
+        // el saldo resultante da negativo, confirmado o no.
+        if (haySaldoInsuficiente)
             notificacionesDespachoHuevo.Agregar(
                 NotificacionInternaDespachoHuevo.ParaCreditoInsuficiente(pedido.Id));
 
