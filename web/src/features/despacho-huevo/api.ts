@@ -92,8 +92,16 @@ export const despacharDespacho = (id: string, archivo: File) => {
 export const obtenerPrecioHuevoVigente = () =>
   peticion<PrecioHuevoVigente>({ ruta: '/despachos-huevo/precios-vigentes' });
 
+export interface AjusteCreditoHuevo {
+  id: string;
+  monto: number;
+  motivo: string;
+  fecha: string; // yyyy-MM-dd
+}
+
 export interface BalanceCreditoHuevo {
   saldoDisponible: number;
+  ajustes: AjusteCreditoHuevo[];
 }
 
 // Crédito disponible por despachos de huevo (spec SP9): informativo para

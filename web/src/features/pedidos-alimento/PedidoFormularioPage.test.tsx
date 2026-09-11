@@ -123,7 +123,7 @@ describe('PedidoFormularioPage', () => {
     const fetchMock = fetchSimulado({
       'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
       'GET /api/granjas': respuesta(200, []),
-      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: -45.5 }),
+      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: -45.5, ajustes: [] }),
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
@@ -132,12 +132,26 @@ describe('PedidoFormularioPage', () => {
     ).toBeInTheDocument();
   });
 
+  test('el Cliente ve las correcciones aplicadas al crédito, con motivo', async () => {
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: 45,
+        ajustes: [{ id: 'a1', monto: 45, motivo: 'Corrección de precio Extra.', fecha: '2026-09-01' }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    expect(await screen.findByText(/Corrección de precio Extra\./)).toBeInTheDocument();
+  });
+
   test('el Trabajador no ve el crédito por despachos de huevo', async () => {
     authMock.mockReturnValueOnce({ tieneRol: () => false });
     const fetchMock = fetchSimulado({
       'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
       'GET /api/granjas': respuesta(200, []),
-      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: 45.5 }),
+      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: 45.5, ajustes: [] }),
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();

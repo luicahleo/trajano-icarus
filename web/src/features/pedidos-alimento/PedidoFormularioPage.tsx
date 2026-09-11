@@ -20,6 +20,7 @@ import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { useAuth } from '../auth/AuthContext';
 import { listarGalpones, listarGranjas } from '../avicola/api';
 import { obtenerBalanceCreditoHuevo } from '../despacho-huevo/api';
+import { AjustesCreditoHuevo } from '../despacho-huevo/AjustesCreditoHuevo';
 import {
   crearPedido,
   editarPedido,
@@ -205,12 +206,15 @@ export function PedidoFormularioPage() {
             </Typography>
           )}
           {esCliente && credito && (
-            <Typography
-              variant="body2"
-              color={credito.saldoDisponible < 0 ? 'error' : 'text.secondary'}
-            >
-              Crédito por despachos de huevo: {formatoMoneda(credito.saldoDisponible)}
-            </Typography>
+            <Box>
+              <Typography
+                variant="body2"
+                color={credito.saldoDisponible < 0 ? 'error' : 'text.secondary'}
+              >
+                Crédito por despachos de huevo: {formatoMoneda(credito.saldoDisponible)}
+              </Typography>
+              <AjustesCreditoHuevo ajustes={credito.ajustes} />
+            </Box>
           )}
           {esEdicion && pedido && pedido.estado !== 'Borrador' && (
             <Alert severity="warning">Solo un borrador se puede editar.</Alert>
