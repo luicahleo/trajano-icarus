@@ -68,10 +68,12 @@ public static class PedidosAlimentoEndpoints
             await mediator.Send(new DesactivarPedidoAlimentoCommand(id), cancellationToken);
             return Results.NoContent();
         });
-        tenant.MapPost("/{id:guid}/enviar", async (Guid id, ISender mediator,
-            CancellationToken cancellationToken) =>
+        tenant.MapPost("/{id:guid}/enviar", async (Guid id, EnviarPedidoRequest? cuerpo,
+            ISender mediator, CancellationToken cancellationToken) =>
         {
-            await mediator.Send(new EnviarPedidoAlimentoCommand(id), cancellationToken);
+            await mediator.Send(
+                new EnviarPedidoAlimentoCommand(id, cuerpo?.ConfirmarCreditoInsuficiente ?? false),
+                cancellationToken);
             return Results.NoContent();
         });
         // Recepción por línea con foto obligatoria (spec SP8D): el tenant
@@ -261,6 +263,8 @@ public static class PedidosAlimentoEndpoints
     private sealed record GuardarPedidoRequest(IReadOnlyList<LineaPedidoRequest> Detalles);
 
     private sealed record MotivoRequest(string Motivo);
+
+    private sealed record EnviarPedidoRequest(bool ConfirmarCreditoInsuficiente = false);
 
     private sealed record FechaEntregaRequest(DateOnly FechaEntregaEstimada);
 
