@@ -29,6 +29,13 @@ public class BalanceCreditoHuevoTests
         return await repositorio.ObtenerSaldoDisponibleAsync(clienteId, FechasNegocio.Hoy());
     }
 
+    private async Task<IReadOnlyList<AjusteCreditoHuevoResumen>> AjustesDeAsync(Guid clienteId)
+    {
+        using var alcance = _factory.Services.CreateScope();
+        var repositorio = alcance.ServiceProvider.GetRequiredService<IRepositorioBalanceCreditoHuevo>();
+        return await repositorio.ObtenerAjustesAsync(clienteId);
+    }
+
     private async Task SembrarAsync(params object[] entidades)
     {
         using var alcance = _factory.Services.CreateScope();
@@ -144,5 +151,42 @@ public class BalanceCreditoHuevoTests
         var saldo = await SaldoDeAsync(clienteId);
 
         Assert.Equal(150m, saldo);
+    }
+
+    // Desglose visible del crédito (spec, ítem 2 del backlog): la lista de
+    // ajustes es un método aparte de ObtenerSaldoDisponibleAsync — el saldo
+    // sigue siendo un solo número y no se toca.
+    [Fact]
+    public async Task ObtenerAjustesDevuelveSoloLosDelClienteOrdenadosPorFechaDescendente()
+    {
+        var clienteId = Guid.NewGuid();
+        var otroClienteId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+
+        // Dos SembrarAsync separados: CreadoEnUtc se fija en el constructor
+        // del agregado (DateTime.UtcNow) y el round-trip a SQL entre ambas
+        // siembras garantiza un timestamp estrictamente mayor para el
+        // segundo, sin depender de la resolución del reloj del proceso.
+        var masAntiguo = new AjusteCreditoHuevo(
+            clienteId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            45m, "Corrección de precio Extra.", actorId);
+        await SembrarAsync(masAntiguo);
+
+        var masReciente = new AjusteCreditoHuevo(
+            clienteId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            -10m, "Corrección de precio Primera.", actorId);
+        var deOtroCliente = new AjusteCreditoHuevo(
+            otroClienteId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            5m, "Ajeno.", actorId);
+        await SembrarAsync(masReciente, deOtroCliente);
+
+        var ajustes = await AjustesDeAsync(clienteId);
+
+        Assert.Equal(2, ajustes.Count);
+        Assert.Equal(masReciente.Id, ajustes[0].Id);
+        Assert.Equal(-10m, ajustes[0].Monto);
+        Assert.Equal("Corrección de precio Primera.", ajustes[0].Motivo);
+        Assert.Equal(masAntiguo.Id, ajustes[1].Id);
+        Assert.DoesNotContain(ajustes, a => a.Id == deOtroCliente.Id);
     }
 }

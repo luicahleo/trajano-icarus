@@ -9,6 +9,13 @@ public interface IRepositorioBalanceCreditoHuevo
 {
     Task<decimal> ObtenerSaldoDisponibleAsync(
         Guid clienteId, DateOnly hoy, CancellationToken cancellationToken = default);
+
+    // Desglose visible del crédito: solo los ajustes de corrección, el único
+    // componente que representa una sorpresa real para el cliente (spec,
+    // ítem 2 del backlog). No toca ObtenerSaldoDisponibleAsync, el camino
+    // crítico de SP9E.
+    Task<IReadOnlyList<AjusteCreditoHuevoResumen>> ObtenerAjustesAsync(
+        Guid clienteId, CancellationToken cancellationToken = default);
 }
 
 public static class ReglasCreditoHuevo
@@ -36,4 +43,19 @@ public sealed class CreditoInsuficienteRequiereConfirmacionException
         : base(mensaje, interna) { }
 
     public string Titulo => "Crédito insuficiente";
+}
+
+// Regla de negocio: el crédito de huevo (saldo, ajustes y confirmación de
+// envío con crédito insuficiente) es exclusivo del Cliente, nunca del
+// Trabajador — aunque tenga el entitlement de módulo (spec, ítem 2 del
+// backlog). Un solo tipo para los dos puntos que la disparan:
+// ObtenerBalanceCreditoHuevoHandler y EnviarPedidoAlimentoHandler.
+public sealed class CreditoHuevoRequiereRolClienteException : ForbiddenException
+{
+    public CreditoHuevoRequiereRolClienteException() { }
+
+    public CreditoHuevoRequiereRolClienteException(string mensaje) : base(mensaje) { }
+
+    public CreditoHuevoRequiereRolClienteException(string mensaje, Exception interna)
+        : base(mensaje, interna) { }
 }

@@ -64,4 +64,22 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
 
         return ingresos - recibidoReal - comprometidoPendiente + ajustes;
     }
+
+    // Materializa las filas (columnas simples, sin cómputo) y recién después
+    // convierte CreadoEnUtc a DateOnly en memoria: DateOnly.FromDateTime
+    // dentro de un Select traducido a SQL es una fuente de errores de
+    // traducción de EF Core en otras partes de este mismo archivo (ver
+    // comentario de clase), así que se evita a propósito.
+    public async Task<IReadOnlyList<AjusteCreditoHuevoResumen>> ObtenerAjustesAsync(
+        Guid clienteId, CancellationToken cancellationToken = default)
+    {
+        var ajustes = await db.AjustesCreditoHuevo
+            .Where(a => a.ClienteId == clienteId)
+            .OrderByDescending(a => a.CreadoEnUtc)
+            .ToListAsync(cancellationToken);
+        return ajustes
+            .Select(a => new AjusteCreditoHuevoResumen(
+                a.Id, a.Monto, a.Motivo, DateOnly.FromDateTime(a.CreadoEnUtc)))
+            .ToList();
+    }
 }
