@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -347,6 +348,13 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         }
         catch (HttpRequestException)
         {
+            return null;
+        }
+        catch (JsonException)
+        {
+            // Un 200 con cuerpo ilegible no pasa por AsegurarExitoAsync:
+            // respuesta truncada, o un campo con [JsonRequired] que la API
+            // deje de enviar. Degrada igual que el resto.
             return null;
         }
     }

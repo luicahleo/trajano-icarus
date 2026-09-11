@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -361,6 +362,24 @@ public class PedidosControllerTests
 
         var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
         Assert.Null(modelo.Credito);
+    }
+
+    // Un 200 con cuerpo ilegible (respuesta truncada, o un campo requerido
+    // que la API deje de enviar) no pasa por AsegurarExitoAsync: llega como
+    // JsonException. Sin degradarla, un bloque informativo tiraría abajo la
+    // pantalla donde CAISY decide.
+    [Fact]
+    public async Task SiElCuerpoDelCreditoEsIlegibleElDetalleSigueRenderizandoSinCredito()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.ErrorDeObtenerCredito = new JsonException("Cuerpo ilegible.");
+
+        var vista = await _controlador.Detalles(id, default);
+
+        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
+        Assert.Null(modelo.Credito);
+        Assert.True(modelo.PuedeProcesarse);
     }
 
     [Fact]
