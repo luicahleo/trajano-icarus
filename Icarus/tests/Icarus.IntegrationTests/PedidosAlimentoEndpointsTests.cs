@@ -70,9 +70,18 @@ public class PedidosAlimentoEndpointsTests
         return Guid.Parse(cuerpo.GetProperty("id").GetString()!);
     }
 
-    private static async Task<HttpStatusCode> EnviarAsync(HttpClient cliente, string token, Guid id) =>
+    // El default confirma crédito insuficiente (spec SP9E): sin ningún
+    // despacho de huevo sembrado, el saldo real de cualquier cliente de
+    // prueba es 0, así que cualquier pedido con total > 0 dispara el
+    // chequeo. Los tests de este archivo versan sobre cupo semanal y
+    // transiciones, no sobre crédito, así que no deben verse afectados; el
+    // único test que sí prueba crédito llama al endpoint directo, sin este
+    // helper, para controlar el flag explícitamente.
+    private static async Task<HttpStatusCode> EnviarAsync(
+        HttpClient cliente, string token, Guid id, bool confirmarCreditoInsuficiente = true) =>
         (await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{id}/enviar", token))).StatusCode;
+            HttpMethod.Post, $"/api/pedidos-alimento/{id}/enviar", token,
+            JsonContent.Create(new { confirmarCreditoInsuficiente })))).StatusCode;
 
     private static async Task<JsonElement> ObtenerDetalleAsync(HttpClient cliente, string token, Guid id)
     {
@@ -97,6 +106,33 @@ public class PedidosAlimentoEndpointsTests
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
         var token = await LoginComo(anonimo, emailCaisy, "Clave-Caisy-123");
         return (anonimo, token);
+    }
+
+    // Crea un tenant nuevo con el módulo GestionAvicola (que habilita la
+    // función PedidoAlimento): cada prueba de este archivo necesita su propio
+    // cupo semanal (spec SP8B), porque las cuentas semilla compartidas lo
+    // agotan con otras pruebas de la clase.
+    private async Task<(HttpClient Cliente, string Token)> CrearClienteConGestionAvicolaAsync()
+    {
+        var cliente = _factory.CreateClient();
+        var tokenAdmin = await LoginComo(cliente, SemillaIdentidad.EmailAdmin);
+        var email = $"pedidos-cliente-{Guid.NewGuid():N}@icarus.test";
+        var alta = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/clientes", tokenAdmin,
+            JsonContent.Create(new
+            {
+                razonSocial = "Granja de Prueba S.A.C.",
+                identificadorFiscal = $"2{Random.Shared.Next(100000000, 999999999)}",
+                email,
+                contrasena = "Clave-Cliente-123",
+            })));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var clienteId = (await alta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+        var modulos = await cliente.SendAsync(Pedido(
+            HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", tokenAdmin,
+            JsonContent.Create(new { modulos = new[] { "GestionAvicola" } })));
+        Assert.Equal(HttpStatusCode.NoContent, modulos.StatusCode);
+        return (cliente, await LoginComo(cliente, email, "Clave-Cliente-123"));
     }
 
     // Importa el PDF de muestra y lo publica con una vigencia propia: queda
@@ -468,5 +504,39 @@ public class PedidosAlimentoEndpointsTests
             $"/api/pedidos-alimento/notificaciones?since={DateTime.UtcNow.AddMinutes(5):O}", tokenC1));
         var cuerpoFuturo = await sondeoFuturo.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(0, cuerpoFuturo.GetProperty("items").GetArrayLength());
+    }
+
+    // SP9E (spec: "Confirmación explícita al enviar un pedido con crédito de
+    // huevo insuficiente"): sin ningún despacho de huevo recibido, el saldo
+    // del cliente es 0 y cualquier pedido con total > 0 exige confirmación.
+    [Fact]
+    public async Task EnviarSinConfirmarConCreditoInsuficienteExigeConfirmacionYElReintentoLoAcepta()
+    {
+        var (cliente, tokenCliente) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        await ImportarYPublicarAsync(caisy, tokenCaisy);
+        var pedidoId = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var primerIntento = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{pedidoId}/enviar", tokenCliente,
+            JsonContent.Create(new { confirmarCreditoInsuficiente = false })));
+        Assert.Equal(HttpStatusCode.Conflict, primerIntento.StatusCode);
+        var cuerpoError = await primerIntento.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Crédito insuficiente", cuerpoError.GetProperty("title").GetString());
+
+        var detalleSinEnviar = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
+        Assert.Equal("Borrador", detalleSinEnviar.GetProperty("estado").GetString());
+        Assert.Equal(0, detalleSinEnviar.GetProperty("historial").GetArrayLength());
+
+        var reintento = await cliente.SendAsync(Pedido(
+            HttpMethod.Post, $"/api/pedidos-alimento/{pedidoId}/enviar", tokenCliente,
+            JsonContent.Create(new { confirmarCreditoInsuficiente = true })));
+        Assert.Equal(HttpStatusCode.NoContent, reintento.StatusCode);
+
+        var detalleEnviado = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
+        Assert.Equal("Solicitado", detalleEnviado.GetProperty("estado").GetString());
+        var transicion = detalleEnviado.GetProperty("historial").EnumerateArray().Single();
+        Assert.Contains("crédito insuficiente",
+            transicion.GetProperty("motivo").GetString()!, StringComparison.OrdinalIgnoreCase);
     }
 }
