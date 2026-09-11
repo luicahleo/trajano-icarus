@@ -5,6 +5,8 @@ import {
   despacharDespacho,
   editarDespacho,
   listarDespachos,
+  listarNotificacionesDespachoHuevo,
+  marcarNotificacionDespachoHuevoLeida,
   obtenerDespacho,
   obtenerPrecioHuevoVigente,
 } from './api';
@@ -81,5 +83,20 @@ describe('api despachos de huevo', () => {
     vi.stubGlobal('fetch', f);
     await obtenerPrecioHuevoVigente();
     expect(solicitud(f).url).toContain('/api/despachos-huevo/precios-vigentes');
+  });
+
+  test('listarNotificacionesDespachoHuevo consulta la bandeja del tenant', async () => {
+    const f: ReturnType<typeof vi.fn> = vi.fn(async () => r(200, { items: [], contador: 0 }));
+    vi.stubGlobal('fetch', f);
+    await listarNotificacionesDespachoHuevo();
+    expect(solicitud(f).url).toContain('/api/despachos-huevo/notificaciones');
+  });
+
+  test('marcarNotificacionDespachoHuevoLeida hace POST sobre la notificación', async () => {
+    const f: ReturnType<typeof vi.fn> = vi.fn(async () => sinCuerpo());
+    vi.stubGlobal('fetch', f);
+    await marcarNotificacionDespachoHuevoLeida('n1');
+    expect(solicitud(f).method).toBe('POST');
+    expect(solicitud(f).url).toContain('/api/despachos-huevo/notificaciones/n1/marcar-leida');
   });
 });

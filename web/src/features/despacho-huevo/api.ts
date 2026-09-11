@@ -109,3 +109,27 @@ export interface BalanceCreditoHuevo {
 // sesión (SP9).
 export const obtenerBalanceCreditoHuevo = () =>
   peticion<BalanceCreditoHuevo>({ ruta: '/despachos-huevo/credito' });
+
+// Bandeja de novedades del tenant (spec SP9F): los endpoints ya existían
+// desde SP9C y hasta ahora ninguna pantalla los consumía. El backend filtra
+// por rol qué tipos devuelve, así que acá no hay que decidir nada: se muestra
+// lo que llega. `contador` viene del backend ya filtrado.
+export interface NotificacionDespachoHuevo {
+  id: string;
+  tipo: string;
+  despachoHuevoId: string | null;
+  fechaUtc: string;
+  leida: boolean;
+  meta: string | null;
+}
+
+export const listarNotificacionesDespachoHuevo = () =>
+  peticion<{ items: NotificacionDespachoHuevo[]; contador: number }>({
+    ruta: '/despachos-huevo/notificaciones',
+  });
+
+export const marcarNotificacionDespachoHuevoLeida = (id: string) =>
+  peticion<void>({
+    ruta: `/despachos-huevo/notificaciones/${id}/marcar-leida`,
+    metodo: 'POST',
+  });

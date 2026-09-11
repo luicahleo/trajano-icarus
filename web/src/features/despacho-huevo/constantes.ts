@@ -28,6 +28,23 @@ export function formatoFecha(iso: string): string {
   return dia && mes && anio ? `${dia}/${mes}/${anio}` : iso;
 }
 
+// Mensajes de la bandeja de novedades (spec SP9F). Mismo patrón que
+// mensajeNotificacion en pedidos-alimento/constantes.ts. El detalle del
+// ajuste viaja en `meta` como texto plano y la página lo muestra crudo: no
+// hace falta parsearlo.
+export function mensajeNotificacionDespachoHuevo(tipo: string): string {
+  switch (tipo) {
+    case 'DespachoRecibido':
+      return 'CAISY confirmó la recepción de un despacho de huevo.';
+    case 'AjusteCredito':
+      return 'Se ajustó tu crédito de huevo por una corrección de precio.';
+    case 'CreditoInsuficiente':
+      return 'Se envió un pedido de alimento con crédito de huevo insuficiente.';
+    default:
+      return 'Hubo una novedad en un despacho de huevo.';
+  }
+}
+
 // Los formatos de dinero viven en lib/formatos.ts, compartidos con
 // pedidos-alimento. El precio por unidad de huevo conserva su nombre de
 // dominio: son los 4 decimales exactos de la publicación de CAISY.
