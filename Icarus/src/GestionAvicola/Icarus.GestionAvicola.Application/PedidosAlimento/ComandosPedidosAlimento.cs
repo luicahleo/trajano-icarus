@@ -361,6 +361,9 @@ public sealed class EnviarPedidoAlimentoHandler(
             {
                 if (!request.ConfirmarCreditoInsuficiente)
                     throw new CreditoInsuficienteRequiereConfirmacionException();
+                if (usuarioActual.Rol != "Cliente")
+                    throw new CreditoHuevoRequiereRolClienteException(
+                        "Solo el Cliente puede confirmar el envío con crédito insuficiente.");
                 motivoCreditoInsuficiente = string.Create(CultureInfo.InvariantCulture,
                     $"Enviado con crédito insuficiente: saldo {saldoActual}, pedido {totalEsperado}, resultante {saldoResultante}.");
             }

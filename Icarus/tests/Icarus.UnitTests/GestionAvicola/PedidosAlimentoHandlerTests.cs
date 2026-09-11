@@ -64,6 +64,7 @@ public class PedidosAlimentoHandlerTests
         _usuarioActual.EstaAutenticado.Returns(true);
         _usuarioActual.UsuarioId.Returns(UsuarioId);
         _usuarioActual.ClienteId.Returns(ClienteId);
+        _usuarioActual.Rol.Returns("Cliente");
         _repositorio.IniciarTransaccionAsync(Arg.Any<CancellationToken>())
             .Returns(_transaccion);
         // Saldo suficiente por defecto: los tests que no versan sobre crédito
@@ -350,6 +351,32 @@ public class PedidosAlimentoHandlerTests
         Assert.Contains("crédito insuficiente", transicion.Motivo, StringComparison.OrdinalIgnoreCase);
         await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await _transaccion.Received(1).ConfirmarAsync(Arg.Any<CancellationToken>());
+    }
+
+    // Segunda brecha de rol cerrada por el mismo ítem (spec, backlog #2): la
+    // política del endpoint es por entitlement de módulo, no por rol, así
+    // que sin este chequeo un Trabajador con PedidoAlimento podría confirmar
+    // un envío que deja el crédito del cliente en negativo.
+    [Fact]
+    public async Task UnTrabajadorNoPuedeConfirmarElEnvioConCreditoInsuficiente()
+    {
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
+        _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(PublicacionVigente());
+        _balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+            ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(0m);
+        _usuarioActual.Rol.Returns("Trabajador");
+
+        await Assert.ThrowsAsync<CreditoHuevoRequiereRolClienteException>(() =>
+            CrearEnviador().Handle(
+                new EnviarPedidoAlimentoCommand(pedido.Id, ConfirmarCreditoInsuficiente: true),
+                CancellationToken.None));
+
+        Assert.Equal(EstadoPedidoAlimento.Borrador, pedido.Estado);
+        Assert.Empty(pedido.Historial);
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _transaccion.DidNotReceive().ConfirmarAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
