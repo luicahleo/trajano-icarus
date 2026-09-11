@@ -31,7 +31,7 @@ public sealed class ExceptionHandlingMiddleware
 
     private async Task EscribirProblemDetails(HttpContext context, Exception ex)
     {
-        var (status, titulo) = ex switch
+        var (status, tituloGenerico) = ex switch
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Recurso no encontrado"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflicto con el estado actual"),
@@ -40,6 +40,7 @@ public sealed class ExceptionHandlingMiddleware
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "No autorizado"),
             _ => (StatusCodes.Status500InternalServerError, "Error interno"),
         };
+        var titulo = ex is IExcepcionConTituloPropio conTituloPropio ? conTituloPropio.Titulo : tituloGenerico;
 
         string? errorId = null;
         if (status >= StatusCodes.Status500InternalServerError)

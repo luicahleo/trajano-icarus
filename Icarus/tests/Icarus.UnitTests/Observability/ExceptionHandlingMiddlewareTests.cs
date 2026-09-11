@@ -26,6 +26,28 @@ public class ExceptionHandlingMiddlewareTests
         return (contexto.Response.StatusCode, cuerpo.RootElement.Clone());
     }
 
+    private sealed class ExcepcionDePruebaConTituloPropioException : ConflictException, IExcepcionConTituloPropio
+    {
+        public ExcepcionDePruebaConTituloPropioException() { }
+
+        public ExcepcionDePruebaConTituloPropioException(string mensaje) : base(mensaje) { }
+
+        public ExcepcionDePruebaConTituloPropioException(string mensaje, Exception interna)
+            : base(mensaje, interna) { }
+
+        public string Titulo => "Título específico de prueba";
+    }
+
+    [Fact]
+    public async Task UnaExcepcionConTituloPropioSobreescribeElTituloGenerico()
+    {
+        var (status, cuerpo) = await Ejecutar(
+            new ExcepcionDePruebaConTituloPropioException("mensaje interno de la excepcion de prueba"));
+
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal("Título específico de prueba", cuerpo.GetProperty("title").GetString());
+    }
+
     [Fact]
     public async Task NotFoundExceptionDevuelve404()
     {

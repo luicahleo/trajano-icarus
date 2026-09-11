@@ -30,11 +30,21 @@ public sealed class NotFoundException : DomainException
     public Guid EntidadId { get; }
 }
 
-public sealed class ConflictException : DomainException
+public class ConflictException : DomainException
 {
     public ConflictException() { }
 
     public ConflictException(string mensaje) : base(mensaje) { }
 
     public ConflictException(string mensaje, Exception interna) : base(mensaje, interna) { }
+}
+
+// Cualquier excepción de dominio de cualquier módulo puede implementar esto
+// para pedirle al middleware un título de ProblemDetails distinto del
+// genérico de su clase base (p. ej. distinguir un subtipo de
+// ConflictException). Building Blocks define el contrato; el middleware
+// nunca conoce el tipo concreto de ningún módulo vertical.
+public interface IExcepcionConTituloPropio
+{
+    string Titulo { get; }
 }
