@@ -53,6 +53,10 @@ public class NotificacionesInternasTests
         _usuarioCaisy.EstaAutenticado.Returns(true);
         _usuarioCaisy.UsuarioId.Returns(GestorCaisyId);
         _usuarioCaisy.ClienteId.Returns((Guid?)null);
+        // Saldo suficiente por defecto (spec SP9E): estas pruebas versan sobre
+        // notificaciones, no sobre crédito, y no deben toparse con el chequeo.
+        _balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
+            Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(1_000_000m);
     }
 
     private EnviarPedidoAlimentoHandler CrearEnviador(ICurrentUser usuario) =>
