@@ -316,4 +316,50 @@ public class PedidosControllerTests
 
         Assert.IsType<NotFoundResult>(resultado);
     }
+
+    [Fact]
+    public async Task DetallesLlevaElCreditoDelClienteAlModelo()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
+
+        var vista = await _controlador.Detalles(id, default);
+
+        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
+        Assert.Equal(-5000m, modelo.Credito!.SaldoDisponible);
+        Assert.Equal(9120m, modelo.Credito.SaldoSinEstePedido);
+        Assert.Equal(id, _api.UltimoCreditoPedido);
+        Assert.Equal(1, _api.VecesObtenerCredito);
+    }
+
+    // El crédito es informativo (spec SP9E y
+    // 2026-09-11-credito-huevo-vista-caisy): una falla del cálculo no puede
+    // paralizar la decisión sobre el pedido.
+    [Fact]
+    public async Task SiElCreditoFallaElDetalleSigueRenderizandoSinCredito()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.ErrorDeObtenerCredito = new ErrorApiException(500, "Error interno");
+
+        var vista = await _controlador.Detalles(id, default);
+
+        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
+        Assert.Null(modelo.Credito);
+        Assert.True(modelo.PuedeProcesarse);
+    }
+
+    [Fact]
+    public async Task SiLaRedFallaElDetalleSigueRenderizandoSinCredito()
+    {
+        var id = Guid.NewGuid();
+        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        _api.ErrorDeObtenerCredito = new HttpRequestException("La API no responde.");
+
+        var vista = await _controlador.Detalles(id, default);
+
+        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
+        Assert.Null(modelo.Credito);
+    }
 }

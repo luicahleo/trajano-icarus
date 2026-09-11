@@ -48,7 +48,8 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
             pedido,
             PuedeProcesarse: pedido.Estado == "Solicitado",
             PuedeActualizarEntrega: pedido.Estado == "Aceptado",
-            PuedeDespacharse: pedido.Estado == "Aceptado"));
+            PuedeDespacharse: pedido.Estado == "Aceptado",
+            Credito: await CreditoDelPedidoONullAsync(id, token)));
     }
 
     // Despacho (SP8C "Despacho, nota y recepción"): pantalla con el resumen de
@@ -325,5 +326,28 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
             TempData["Error"] = error.MensajeParaLaInterfaz();
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    // El crédito es informativo: si el cálculo no está disponible, la
+    // pantalla carga igual y la decisión sigue habilitada (spec
+    // 2026-09-11-credito-huevo-vista-caisy-design). No se degrada
+    // TaskCanceledException: una cancelación real del token significa que la
+    // petición se abortó y no hay pantalla que renderizar. Sin logs: el
+    // saldo es dato financiero del cliente (anti-PII).
+    private async Task<CreditoHuevoPedidoApi?> CreditoDelPedidoONullAsync(
+        Guid id, CancellationToken token)
+    {
+        try
+        {
+            return await api.ObtenerCreditoDePedidoAsync(id, token);
+        }
+        catch (ErrorApiException)
+        {
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 }

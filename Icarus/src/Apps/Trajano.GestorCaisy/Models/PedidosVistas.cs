@@ -32,7 +32,10 @@ public sealed record VistaPedidoDetalle(
     PedidoDetalleApi Pedido,
     bool PuedeProcesarse,
     bool PuedeActualizarEntrega,
-    bool PuedeDespacharse);
+    bool PuedeDespacharse,
+    // Nulo cuando la consulta de crédito falló: el bloque avisa y la
+    // decisión sigue habilitada (spec 2026-09-11-credito-huevo-vista-caisy).
+    CreditoHuevoPedidoApi? Credito = null);
 
 public sealed class FormularioMotivoVista
 {
@@ -88,3 +91,8 @@ public sealed class FormularioDespachoVista
     [JsonRequired]
     public List<LineaDespachoVista> Lineas { get; set; } = [];
 }
+
+// Modelo del partial del crédito. Envuelve un valor anulable en vez de
+// pasarle null al partial: así el modelo del partial nunca es nulo y el
+// propio partial decide qué mostrar.
+public sealed record BloqueCreditoVista(CreditoHuevoPedidoApi? Credito);

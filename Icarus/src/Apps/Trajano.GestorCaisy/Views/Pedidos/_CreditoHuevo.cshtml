@@ -1,0 +1,79 @@
+@model BloqueCreditoVista
+@{
+    var credito = Model.Credito;
+}
+@* Crédito por despachos de huevo del cliente del pedido (spec
+   2026-09-11-credito-huevo-vista-caisy-design). Tres cifras y no una: el
+   saldo disponible ya tiene descontado este pedido cuando está
+   comprometido. Un saldo negativo no se distingue solo por color: lleva
+   la etiqueta textual "Negativo". *@
+<section class="tarjeta">
+    <h2>Crédito por despachos de huevo</h2>
+    @if (credito is null)
+    {
+        <p class="vacio__texto">
+            Crédito no disponible por ahora. La decisión sobre el pedido sigue habilitada.
+        </p>
+    }
+    else
+    {
+        <dl class="ficha">
+            <div>
+                <dt>Saldo disponible</dt>
+                <dd>
+                    @credito.SaldoDisponible.ToString("0.00")
+                    @if (credito.SaldoDisponible < 0)
+                    {
+                        <span class="chip chip--rechazado">Negativo</span>
+                    }
+                </dd>
+            </div>
+            @if (credito.PedidoComputadoEnElSaldo)
+            {
+                <div>
+                    <dt>Este pedido</dt>
+                    <dd>@credito.MontoDelPedido.ToString("0.00")</dd>
+                </div>
+                <div>
+                    <dt>Saldo sin este pedido</dt>
+                    <dd>@credito.SaldoSinEstePedido.ToString("0.00")</dd>
+                </div>
+            }
+        </dl>
+        @if (credito.PedidoComputadoEnElSaldo)
+        {
+            <p class="pagina-cabecera__detalle">
+                El saldo disponible ya tiene descontado este pedido.
+            </p>
+        }
+        else
+        {
+            <p class="pagina-cabecera__detalle">
+                Este pedido todavía no pesa en el saldo.
+            </p>
+        }
+        @if (credito.Ajustes.Count > 0)
+        {
+            <h3>Ajustes de corrección</h3>
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Monto</th>
+                        <th scope="col">Motivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ajuste in credito.Ajustes)
+                    {
+                        <tr>
+                            <td>@ajuste.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@ajuste.Monto.ToString("0.00")</td>
+                            <td>@ajuste.Motivo</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</section>

@@ -276,4 +276,59 @@ public class FlujoPedidosTests
         Assert.Contains("14120.00", html);
         Assert.Contains("-2", html);
     }
+
+    [Fact]
+    public async Task DetallesMuestraElCreditoDelClienteConLasTresCifras()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(
+            -5000m, 14120m, 9120m, true,
+            [
+                new AjusteCreditoHuevoApi(
+                    Guid.NewGuid(), 45m, "Corrección de precio Extra.", new(2026, 9, 1)),
+            ]);
+
+        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
+
+        Assert.Contains("Crédito por despachos de huevo", html);
+        Assert.Contains("-5000.00", html);
+        Assert.Contains("14120.00", html);
+        Assert.Contains("9120.00", html);
+        Assert.Contains("Negativo", html);
+        Assert.Contains("Corrección de precio Extra.", html);
+    }
+
+    [Fact]
+    public async Task DetallesConUnBorradorAclaraQueElPedidoNoPesaEnElSaldo()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Borrador");
+        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(2500m, 0m, 2500m, false, []);
+
+        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
+
+        Assert.Contains("2500.00", html);
+        Assert.Contains("Este pedido todavía no pesa en el saldo.", html);
+        Assert.DoesNotContain("Saldo sin este pedido", html);
+    }
+
+    [Fact]
+    public async Task DetallesConElCreditoCaidoAvisaYMantieneLasAcciones()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        aplicacion.Api.ErrorDeObtenerCredito = new ErrorApiException(500, "Error interno");
+
+        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
+
+        Assert.Contains("Crédito no disponible por ahora.", html);
+        Assert.Contains($"/Pedidos/{id}/Aceptar", html);
+    }
 }
