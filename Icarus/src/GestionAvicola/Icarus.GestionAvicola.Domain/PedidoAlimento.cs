@@ -104,9 +104,11 @@ public sealed class PedidoAlimento : AggregateRoot
     // Envío a CAISY (spec SP8): el servidor fija la fecha de negocio, congela
     // el precio vigente de todas las líneas dentro de la misma transacción y
     // registra la transición. Si falta precio para una línea, falla completo y
-    // el borrador queda intacto.
+    // el borrador queda intacto. El motivo opcional (spec SP9E) es el aviso de
+    // crédito insuficiente cuando el cliente confirmó el envío igual.
     public void EnviarACaisy(
-        DateOnly fechaPedido, Guid actorId, IReadOnlyList<DatosPrecioEnvio> precios)
+        DateOnly fechaPedido, Guid actorId, IReadOnlyList<DatosPrecioEnvio> precios,
+        string? motivo = null)
     {
         AsegurarEstado(EstadoPedidoAlimento.Borrador, "Solo un pedido en borrador se puede enviar.");
         AsegurarCantidadesGranel();
@@ -117,7 +119,7 @@ public sealed class PedidoAlimento : AggregateRoot
             linea.CongelarPrecio(
                 congelados[linea.TipoAlimento].PrecioFinalPor40Kg,
                 congelados[linea.TipoAlimento].NotificacionPreciosAlimentosId);
-        RegistrarTransicion(EstadoPedidoAlimento.Borrador, EstadoPedidoAlimento.Solicitado, actorId);
+        RegistrarTransicion(EstadoPedidoAlimento.Borrador, EstadoPedidoAlimento.Solicitado, actorId, motivo);
     }
 
     // Devolución para corrección (spec SP8): decisión no terminal, exige

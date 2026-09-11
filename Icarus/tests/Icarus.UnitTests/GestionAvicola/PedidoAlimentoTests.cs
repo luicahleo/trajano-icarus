@@ -128,6 +128,20 @@ public class PedidoAlimentoTests
     }
 
     [Fact]
+    public void EnviarACaisyConMotivoLoRegistraEnLaTransicion()
+    {
+        var pedido = BorradorDeBolsas(100);
+
+        pedido.EnviarACaisy(Hoy, CreadoPor, [Precio(TipoAlimento.PosturaUno)],
+            "Enviado con crédito insuficiente: saldo 0, pedido 18000, resultante -18000.");
+
+        var transicion = Assert.Single(pedido.Historial);
+        Assert.Equal(
+            "Enviado con crédito insuficiente: saldo 0, pedido 18000, resultante -18000.",
+            transicion.Motivo);
+    }
+
+    [Fact]
     public void EnviarGranelExigeDosToneladasPorLinea()
     {
         var pedido = BorradorDeGranel(1, 5);
