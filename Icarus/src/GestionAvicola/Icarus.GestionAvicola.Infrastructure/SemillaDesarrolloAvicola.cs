@@ -1,3 +1,4 @@
+using System.Globalization;
 using Icarus.GestionAvicola.Application.Documentos;
 using Icarus.GestionAvicola.Domain;
 using Icarus.GestionAvicola.Infrastructure.Persistencia;
@@ -344,10 +345,15 @@ public static class SemillaDesarrolloAvicola
         db.AjustesCreditoHuevo.Add(new AjusteCreditoHuevo(
             tenant.ClienteId, conPrecioErroneo, PublicacionErroneaId, PublicacionCorrectivaId,
             monto, motivo, tenant.ActorId));
+        // Mismo formato exacto que produce
+        // CorregirPublicacionPrecioHuevoVigenteHandler: cuatro decimales,
+        // cultura invariante y separador « Bs — ». Si la semilla usara otro
+        // formato, la notificación se vería distinta de una real y el
+        // escenario mentiría justo donde se lo quiere inspeccionar.
         db.NotificacionesInternasDespachoHuevo.Add(
             NotificacionInternaDespachoHuevo.ParaAjusteCredito(
                 conPrecioErroneo, tenant.ClienteId,
-                $"{monto} | {motivo}"));
+                string.Create(CultureInfo.InvariantCulture, $"{monto:0.0000} Bs — {motivo}")));
     }
 
     private static async Task AgregarDespachoRecibidoAsync(
