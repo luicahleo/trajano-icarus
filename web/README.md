@@ -61,12 +61,53 @@ e `infra/pcX/Caddyfile`.
 
 Sistema cerrado (roles): `admin@icarus.test`, `soporte@icarus.test`,
 `cliente@icarus.test`, `trabajador@icarus.test`. La contraseña es
-`Semilla-Dev-1234` (configuración `Semilla:ContrasenaPrueba` de
+`Admin123456!` (configuración `Semilla:ContrasenaPrueba` de
 `appsettings.Development.json`, la misma que usa el compose con
 `ASPNETCORE_ENVIRONMENT=Development`).
 
 El cliente semilla «Granja Demo S.A.C.» tiene el módulo `GestionAvicola` y un
 trabajador demo (datos ficticios).
+
+#### Escenario de crédito de huevo (solo Development)
+
+Además de lo anterior, en `Development` —nunca en `Testing`— se siembra la
+cadena de crédito completa: precios de huevo y de alimento, despachos dentro y
+fuera de la ventana de catorce días, pedidos en todos sus estados, un ajuste por
+corrección y sus notificaciones. Cada tenant juega un papel distinto para poder
+compararlos entre sí:
+
+| Cuenta | Trabajador | Saldo | Para qué sirve |
+|---|---|---|---|
+| `cliente@icarus.test` | `trabajador@icarus.test` | Positivo holgado | Flujo sano de punta a punta |
+| `c1@icarus.test` | `t1@icarus.test` | Negativo | Chip «Negativo» y notificación de saldo negativo |
+| `c2@icarus.test` | `t2@icarus.test` | Positivo corto | Confirmación de crédito insuficiente al enviar un pedido |
+| `c3@icarus.test` | `t3@icarus.test` | Positivo con movimiento | Desglose completo y ajuste por corrección |
+| `c4@icarus.test` | `t4@icarus.test` | Cero | Estados vacíos de las pantallas |
+
+Los trabajadores `t2`, `t3` y `t4` tienen todas las funcionalidades. Los de la
+base común conservan solo `ProduccionHuevos` porque las pruebas de entitlement
+dependen de esa limitación.
+
+También se siembran las dos cuentas de oficina de CAISY, así que ya no hace
+falta correr `crear-usuario-caisy.ps1` ni
+`crear-usuario-gestor-recepcion-huevos.ps1` en local:
+
+| Cuenta | Funcionalidad | Para qué |
+|---|---|---|
+| `gpa@icarus.test` | `GestorPedidoAlimento` | Precios de alimento y bandeja de pedidos entrantes |
+| `grh@icarus.test` | `GestorRecepcionHuevos` | Precios de huevo y recepción de despachos |
+
+Para arrancar con la base completamente limpia y todo esto ya sembrado:
+
+```powershell
+.\iniciar-pc.ps1 -Perfil pc1 -RecrearDatos -ConfirmarBorradoDatos
+```
+
+Los dos parámetros van juntos: `-RecrearDatos` sin `-ConfirmarBorradoDatos`
+falla a propósito, porque elimina la base y los volúmenes locales.
+
+Detalle y decisiones:
+`docs/superpowers/specs/2026-09-12-semilla-escenario-credito-huevo-design.md`.
 
 ## Observabilidad
 

@@ -1,6 +1,11 @@
 # Alta de una cuenta CAISY con la funcionalidad GestorRecepcionHuevos (spec
 # SP9) en cualquier entorno de Trajano-Icarus: stack PC local, VPS, etc.
 #
+# EN DESARROLLO YA NO HACE FALTA: la semilla crea grh@icarus.test
+# (GestorRecepcionHuevos) al arrancar en ASPNETCORE_ENVIRONMENT=Development,
+# incluido el stack PC. Este script sigue siendo la vía para la VPS y para
+# cualquier entorno donde la semilla de desarrollo no corre.
+#
 # GestorRecepcionHuevos es la función de oficina que publica precios de
 # huevo y confirma la recepción de despachos desde Trajano.GestorCaisy
 # (`/PreciosHuevo` y `/RecepcionesHuevo`); es independiente de

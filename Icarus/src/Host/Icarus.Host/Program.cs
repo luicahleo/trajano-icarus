@@ -156,7 +156,7 @@ if (ejecutarMigraciones)
     {
         await SemillaIdentidad.SembrarAsync(
             alcance.ServiceProvider,
-            app.Configuration["Semilla:ContrasenaPrueba"] ?? "Solo-Desarrollo-123");
+            app.Configuration["Semilla:ContrasenaPrueba"] ?? "Admin123456!");
         // Los ids fijos vienen de SemillaIdentidad: el claim clienteId de las
         // cuentas semilla debe coincidir con el cliente sembrado.
         await SemillaClientes.SembrarAsync(
@@ -164,6 +164,37 @@ if (ejecutarMigraciones)
             SemillaIdentidad.ClienteDemoId, SemillaIdentidad.TrabajadorDemoId,
             SemillaIdentidad.ClienteC1Id, SemillaIdentidad.TrabajadorT1Id);
         await SemillaGestionAvicola.SembrarAsync(alcance.ServiceProvider, SemillaIdentidad.ClienteDemoId);
+
+        // Capa exclusiva de Development: tenants extra y toda la cadena de
+        // crédito de huevo (spec 2026-09-12-semilla-escenario-credito-huevo).
+        // Deliberadamente FUERA de Testing: las publicaciones de precio son
+        // recursos globales con índice único por vigencia y la base de las
+        // pruebas de integración es compartida, así que sembrarlas ahí
+        // tumbaría varias pruebas de precios y de pedidos.
+        if (app.Environment.IsDevelopment())
+        {
+            await SemillaIdentidad.SembrarDesarrolloAsync(
+                alcance.ServiceProvider,
+                app.Configuration["Semilla:ContrasenaPrueba"] ?? "Admin123456!");
+            await SemillaClientes.SembrarDesarrolloAsync(
+                alcance.ServiceProvider,
+                SemillaIdentidad.ClienteC2Id, SemillaIdentidad.TrabajadorT2Id,
+                SemillaIdentidad.ClienteC3Id, SemillaIdentidad.TrabajadorT3Id,
+                SemillaIdentidad.ClienteC4Id, SemillaIdentidad.TrabajadorT4Id);
+            await SemillaDesarrolloAvicola.SembrarAsync(alcance.ServiceProvider,
+            [
+                new TenantDesarrollo(SemillaIdentidad.ClienteDemoId,
+                    SemillaIdentidad.TrabajadorDemoId, PapelCreditoDesarrollo.PositivoHolgado),
+                new TenantDesarrollo(SemillaIdentidad.ClienteC1Id,
+                    SemillaIdentidad.TrabajadorT1Id, PapelCreditoDesarrollo.Negativo),
+                new TenantDesarrollo(SemillaIdentidad.ClienteC2Id,
+                    SemillaIdentidad.TrabajadorT2Id, PapelCreditoDesarrollo.Insuficiente),
+                new TenantDesarrollo(SemillaIdentidad.ClienteC3Id,
+                    SemillaIdentidad.TrabajadorT3Id, PapelCreditoDesarrollo.ConMovimiento),
+                new TenantDesarrollo(SemillaIdentidad.ClienteC4Id,
+                    SemillaIdentidad.TrabajadorT4Id, PapelCreditoDesarrollo.Vacio),
+            ]);
+        }
     }
     else
     {

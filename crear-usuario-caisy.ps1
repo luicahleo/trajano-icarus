@@ -1,6 +1,11 @@
 # Alta de una cuenta CAISY (rol GestorCaisy + funcionalidades) en cualquier
 # entorno de Trajano-Icarus: stack PC local, VPS, etc.
 #
+# EN DESARROLLO YA NO HACE FALTA: la semilla crea gpa@icarus.test
+# (GestorPedidoAlimento) al arrancar en ASPNETCORE_ENVIRONMENT=Development,
+# incluido el stack PC. Este script sigue siendo la vía para la VPS y para
+# cualquier entorno donde la semilla de desarrollo no corre.
+#
 # Las cuentas CAISY solo las crea el Administrador de plataforma y nunca desde
 # la aplicación de oficina (spec SP8). Este script hace el login del admin,
 # llama a POST /api/usuarios-caisy y reporta el resultado. No guarda

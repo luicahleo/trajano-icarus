@@ -55,7 +55,7 @@ services:
       TZ: "America/La_Paz"
       Migraciones__EjecutarAlArranque: "true"
       ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
-      Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Semilla-Dev-1234}"
+      Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Admin123456!}"
       Seq__Url: "http://seq:80"
       Seq__ApiKey: "${SEQ_API_KEY:-}"
       # Volumen privado de respaldos de notas (spec SP8C): fuera del web root

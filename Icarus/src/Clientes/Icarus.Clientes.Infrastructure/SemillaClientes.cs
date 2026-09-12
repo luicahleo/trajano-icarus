@@ -58,4 +58,51 @@ public static class SemillaClientes
 
         await db.SaveChangesAsync();
     }
+
+    // Tenants extra del escenario de desarrollo (spec
+    // 2026-09-12-semilla-escenario-credito-huevo): SOLO bajo IsDevelopment().
+    // A diferencia de los tenants de la base común, sus trabajadores reciben
+    // TODAS las funcionalidades: son para probar el módulo completo a mano.
+    // Los trabajadores de la base común conservan solo ProduccionHuevos porque
+    // las pruebas de entitlement dependen de esa limitación.
+    public static async Task SembrarDesarrolloAsync(
+        IServiceProvider servicios,
+        Guid clienteC2Id, Guid trabajadorT2Id,
+        Guid clienteC3Id, Guid trabajadorT3Id,
+        Guid clienteC4Id, Guid trabajadorT4Id)
+    {
+        var db = servicios.GetRequiredService<ClientesDbContext>();
+
+        await AgregarSiNoExiste(db, clienteC2Id, trabajadorT2Id,
+            "Cliente Dos S.R.L.", "900000003", "Trabajador Dos", "90000003");
+        await AgregarSiNoExiste(db, clienteC3Id, trabajadorT3Id,
+            "Cliente Tres S.R.L.", "900000004", "Trabajador Tres", "90000004");
+        await AgregarSiNoExiste(db, clienteC4Id, trabajadorT4Id,
+            "Cliente Cuatro S.R.L.", "900000005", "Trabajador Cuatro", "90000005");
+
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task AgregarSiNoExiste(
+        ClientesDbContext db, Guid clienteId, Guid trabajadorId,
+        string razonSocial, string identificadorFiscal,
+        string nombreTrabajador, string documentoTrabajador)
+    {
+        if (await db.Clientes.IgnoreQueryFilters().AnyAsync(c => c.Id == clienteId))
+            return;
+
+        var cliente = new Cliente(clienteId, razonSocial, identificadorFiscal);
+        cliente.DefinirModulos(Modulos.GestionAvicola);
+        db.Clientes.Add(cliente);
+
+        var trabajador = new Trabajador(
+            trabajadorId, clienteId, nombreTrabajador, documentoTrabajador,
+            "Operario", new DateOnly(2026, 3, 2));
+        trabajador.DefinirFuncionalidades(TodasLasFuncionalidades);
+        db.Trabajadores.Add(trabajador);
+    }
+
+    private static Funcionalidades TodasLasFuncionalidades =>
+        Enum.GetValues<Funcionalidades>()
+            .Aggregate(Funcionalidades.Ninguno, (acumulado, valor) => acumulado | valor);
 }

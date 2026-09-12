@@ -53,7 +53,7 @@ services:
       # Cadena de conexión apuntando al servicio sqlserver dentro de la red de compose.
       ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
       # Contraseña de las cuentas semilla (paridad con Caserito, SeedUsuariosDesarrollo).
-      Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Semilla-Dev-1234}"
+      Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Admin123456!}"
       # Dentro del contenedor localhost no es el host: Seq se alcanza por la red
       # de compose; la API key es opcional (el Seq local no exige auth).
       Seq__Url: "http://seq:80"

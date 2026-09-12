@@ -20,6 +20,12 @@ public sealed class IdentityFactory : WebApplicationFactory<Program>, IAsyncLife
     private readonly MsSqlContainer _contenedor =
         new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
+    // Cadena del MISMO contenedor compartido: las pruebas que necesitan una
+    // base aislada (para no contaminar la base que comparte la suite) crean
+    // otra base en este servidor en vez de levantar un SQL Server propio, que
+    // es justo lo que IntegracionCollection existe para evitar.
+    public string CadenaConexion => _contenedor.GetConnectionString();
+
     public async Task InitializeAsync() => await _contenedor.StartAsync();
 
     // El WebApplicationFactory base expone DisposeAsync() -> ValueTask (de
