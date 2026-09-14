@@ -1,4 +1,7 @@
 import { peticion, peticionBlob } from '../../lib/http';
+import { consultaPaginada } from '../../lib/paginacion';
+import type { Pagina, PeticionPaginada } from '../../lib/paginacion';
+import type { Granja } from '../../lib/tipos';
 
 // SP8B: los pedidos son deliberadamente online (spec) — sin cola offline, sin
 // IndexedDB ni precalentado. Sin red la feature falla de forma explícita.
@@ -15,6 +18,10 @@ export interface DatosPedido {
 
 export interface PedidoResumen {
   id: string;
+  folio: string;
+  numero: number;
+  granjaId: string;
+  creadoPorTrabajadorId: string | null;
   estado: string;
   presentacion: string;
   fechaPedido: string | null;
@@ -98,7 +105,29 @@ export interface PedidoDetalle {
   recepcion: RecepcionPedido | null;
 }
 
-export const listarPedidos = () => peticion<PedidoResumen[]>({ ruta: '/pedidos-alimento' });
+// Filtros del listado del tenant (spec 2026-09-14). El autor no existe en la
+// bandeja de CAISY: CAISY no ve personas.
+export interface FiltrosPedidos {
+  granjaId?: string;
+  estado?: string;
+  presentacion?: string;
+  desde?: string;
+  hasta?: string;
+  creadoPorTrabajadorId?: string;
+  numero?: string;
+}
+
+export const listarPedidos = (
+  paginacion: PeticionPaginada,
+  filtros: Record<string, string | undefined> = {},
+) =>
+  peticion<Pagina<PedidoResumen>>({
+    ruta: `/pedidos-alimento?${consultaPaginada(paginacion, filtros)}`,
+  });
+
+// Granjas del tenant para el filtro por granja (el listado es online, sin
+// caché offline: la bandeja de pedidos es deliberadamente online).
+export const listarGranjas = () => peticion<Granja[]>({ ruta: '/granjas' });
 
 export const obtenerPedido = (id: string) =>
   peticion<PedidoDetalle>({ ruta: `/pedidos-alimento/${id}` });

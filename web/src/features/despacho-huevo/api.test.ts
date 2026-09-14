@@ -25,8 +25,9 @@ describe('api despachos de huevo', () => {
   test('listarDespachos consulta la bandeja del tenant', async () => {
     const f: ReturnType<typeof vi.fn> = vi.fn(async () => r(200, []));
     vi.stubGlobal('fetch', f);
-    await listarDespachos();
+    await listarDespachos({ pagina: 1, tamanoPagina: 20 });
     expect(solicitud(f).url).toContain('/api/despachos-huevo');
+    expect(solicitud(f).url).toContain('pagina=1');
   });
 
   test('obtenerDespacho consulta el detalle', async () => {

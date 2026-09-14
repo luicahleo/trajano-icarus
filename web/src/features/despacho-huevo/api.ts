@@ -1,4 +1,7 @@
 import { peticion } from '../../lib/http';
+import { consultaPaginada } from '../../lib/paginacion';
+import type { Pagina, PeticionPaginada } from '../../lib/paginacion';
+import type { Granja } from '../../lib/tipos';
 
 // SP9B: los despachos son deliberadamente online (spec), igual que los pedidos
 // de alimento: sin cola offline, sin IndexedDB ni precalentado. Sin red la
@@ -16,6 +19,10 @@ export interface DatosDespacho {
 
 export interface DespachoHuevoResumen {
   id: string;
+  folio: string;
+  numero: number;
+  granjaId: string;
+  creadoPorTrabajadorId: string | null;
   estado: string;
   fechaDespacho: string | null;
   totalAmarras: number;
@@ -60,7 +67,26 @@ export interface PrecioHuevoVigente {
   detalles: DetallePrecioHuevoVigente[];
 }
 
-export const listarDespachos = () => peticion<DespachoHuevoResumen[]>({ ruta: '/despachos-huevo' });
+// Filtros del listado del tenant (spec 2026-09-14): sin presentación, que no
+// existe en el despacho de huevo. El autor no viaja a CAISY.
+export interface FiltrosDespachos {
+  granjaId?: string;
+  estado?: string;
+  desde?: string;
+  hasta?: string;
+  creadoPorTrabajadorId?: string;
+  numero?: string;
+}
+
+export const listarDespachos = (
+  paginacion: PeticionPaginada,
+  filtros: Record<string, string | undefined> = {},
+) =>
+  peticion<Pagina<DespachoHuevoResumen>>({
+    ruta: `/despachos-huevo?${consultaPaginada(paginacion, filtros)}`,
+  });
+
+export const listarGranjas = () => peticion<Granja[]>({ ruta: '/granjas' });
 
 export const obtenerDespacho = (id: string) =>
   peticion<DespachoHuevoDetalle>({ ruta: `/despachos-huevo/${id}` });

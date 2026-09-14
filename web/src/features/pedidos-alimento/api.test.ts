@@ -29,8 +29,9 @@ describe('api pedidos de alimento', () => {
   test('listarPedidos consulta la bandeja del tenant', async () => {
     const f: ReturnType<typeof vi.fn> = vi.fn(async () => r(200, []));
     vi.stubGlobal('fetch', f);
-    await listarPedidos();
+    await listarPedidos({ pagina: 1, tamanoPagina: 20 });
     expect(solicitud(f).url).toContain('/api/pedidos-alimento');
+    expect(solicitud(f).url).toContain('pagina=1');
   });
 
   test('obtenerPedido consulta el detalle', async () => {

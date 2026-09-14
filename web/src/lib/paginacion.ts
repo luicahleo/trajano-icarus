@@ -20,3 +20,19 @@ export const TAMANO_PAGINA_POR_DEFECTO = 20;
 export function contarPaginas(total: number, tamanoPagina: number): number {
   return Math.max(1, Math.ceil(total / Math.max(tamanoPagina, 1)));
 }
+
+// Query string común de los listados filtrables: página, tamaño y solo los
+// filtros con valor (vacío significa «sin filtrar»).
+export function consultaPaginada(
+  peticion: PeticionPaginada,
+  filtros: Record<string, string | undefined> = {},
+): string {
+  const parametros = new URLSearchParams({
+    pagina: String(peticion.pagina),
+    tamanoPagina: String(peticion.tamanoPagina),
+  });
+  for (const [clave, valor] of Object.entries(filtros)) {
+    if (valor) parametros.set(clave, valor);
+  }
+  return parametros.toString();
+}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -15,12 +16,19 @@ import {
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DoneAllRoundedIcon from '@mui/icons-material/DoneAllRounded';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { BarraFiltros } from '../../app/ui/BarraFiltros';
+import type { DeclaracionFiltro, ValoresFiltros } from '../../app/ui/BarraFiltros';
+import { ControlesPaginacion } from '../../app/ui/ControlesPaginacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { TablaDatos } from '../../app/ui/TablaDatos';
 import type { Columna } from '../../app/ui/TablaDatos';
+import { TAMANO_PAGINA_POR_DEFECTO } from '../../lib/paginacion';
+import { useAuth } from '../auth/AuthContext';
+import { listarTrabajadores } from '../trabajadores/api';
 import {
   listarDespachos,
+  listarGranjas,
   listarNotificacionesDespachoHuevo,
   marcarNotificacionDespachoHuevoLeida,
   type DespachoHuevoResumen,
@@ -34,24 +42,43 @@ import {
 } from './constantes';
 
 // Bandeja compartida del tenant (spec SP9B): todos los usuarios del tenant con
-// la funcionalidad ven los mismos despachos. Deliberadamente online.
+// la funcionalidad ven los mismos despachos. Deliberadamente online. Desde
+// 2026-09-14 filtra, pagina y muestra el folio y el autor resuelto en el
+// cliente (el backend manda el id, nunca el nombre).
 export function DespachosHuevoPage() {
-  const { data: despachos, isLoading, isError } = useQuery({
-    queryKey: ['despachos-huevo'],
-    queryFn: listarDespachos,
-  });
-
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { clienteId } = useAuth();
+
+  const [pagina, setPagina] = useState(1);
+  const [filtros, setFiltros] = useState<ValoresFiltros>({});
+
+  const {
+    data: resultado,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['despachos-huevo', pagina, filtros],
+    queryFn: () =>
+      listarDespachos({ pagina, tamanoPagina: TAMANO_PAGINA_POR_DEFECTO }, filtros),
+  });
+
+  const { data: granjas } = useQuery({
+    queryKey: ['despachos-huevo', 'granjas'],
+    queryFn: listarGranjas,
+  });
+
+  // El nombre del autor vive en Clientes: GestionAvicola tiene prohibido
+  // depender de ese módulo. El cruce se hace acá con la lista cacheada de
+  // Trabajadores, no una consulta por fila.
+  const { data: trabajadores } = useQuery({
+    queryKey: ['despachos-huevo', 'trabajadores', clienteId],
+    queryFn: () => listarTrabajadores(clienteId!),
+    enabled: clienteId !== null,
+  });
 
   // La bandeja de novedades ya se llenaba desde SP9C y ninguna pantalla la
-  // mostraba (spec SP9F). El backend filtra por rol qué tipos devuelve: el
-  // Trabajador no recibe los financieros.
-  //
-  // Deliberadamente sin `isError`: si la consulta falla, `notificaciones`
-  // queda undefined, `sinLeer` vacío y el bloque no se renderiza, así que la
-  // tabla de despachos —lo principal de la pantalla— sigue viva. La
-  // degradación sale del patrón, no de código defensivo.
+  // mostraba (spec SP9F). El backend filtra por rol qué tipos devuelve.
   const { data: notificaciones } = useQuery({
     queryKey: ['despachos-huevo', 'notificaciones'],
     queryFn: listarNotificacionesDespachoHuevo,
@@ -65,7 +92,52 @@ export function DespachosHuevoPage() {
 
   const sinLeer = (notificaciones?.items ?? []).filter((n) => !n.leida);
 
+  const aplicarFiltros = (valores: ValoresFiltros) => {
+    setFiltros(valores);
+    setPagina(1);
+  };
+
+  const restablecerFiltros = () => {
+    setFiltros({});
+    setPagina(1);
+  };
+
+  const nombreAutor = (id: string | null) =>
+    id
+      ? (trabajadores?.find((t) => t.id === id)?.nombre ?? 'Autor no disponible')
+      : 'Cliente';
+
+  const declaraciones: DeclaracionFiltro[] = [
+    {
+      clave: 'granjaId',
+      etiqueta: 'Granja',
+      tipo: 'seleccion',
+      opciones: (granjas ?? []).map((g) => ({ valor: g.id, etiqueta: g.nombre })),
+    },
+    {
+      clave: 'estado',
+      etiqueta: 'Estado',
+      tipo: 'seleccion',
+      opciones: Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) => ({
+        valor,
+        etiqueta,
+      })),
+    },
+    { clave: 'desde', etiqueta: 'Desde', tipo: 'fecha' },
+    { clave: 'hasta', etiqueta: 'Hasta', tipo: 'fecha' },
+    { clave: 'numero', etiqueta: 'Folio', tipo: 'texto' },
+  ];
+  if ((trabajadores?.length ?? 0) > 0) {
+    declaraciones.push({
+      clave: 'creadoPorTrabajadorId',
+      etiqueta: 'Autor',
+      tipo: 'seleccion',
+      opciones: (trabajadores ?? []).map((t) => ({ valor: t.id, etiqueta: t.nombre })),
+    });
+  }
+
   const columnas: Columna<DespachoHuevoResumen>[] = [
+    { clave: 'folio', encabezado: 'Folio', render: (d) => d.folio },
     {
       clave: 'estado',
       encabezado: 'Estado',
@@ -84,6 +156,7 @@ export function DespachosHuevoPage() {
     },
     { clave: 'amarras', encabezado: 'Amarras', alinear: 'right', render: (d) => d.totalAmarras },
     { clave: 'huevos', encabezado: 'Huevos', alinear: 'right', render: (d) => d.totalHuevos },
+    { clave: 'autor', encabezado: 'Autor', render: (d) => nombreAutor(d.creadoPorTrabajadorId) },
     {
       clave: 'total',
       encabezado: 'Total',
@@ -166,12 +239,26 @@ export function DespachosHuevoPage() {
             </Paper>
           )}
 
+          <BarraFiltros
+            filtros={declaraciones}
+            valores={filtros}
+            onAplicar={aplicarFiltros}
+            onRestablecer={restablecerFiltros}
+          />
+
           <TablaDatos
             columnas={columnas}
-            filas={despachos ?? []}
+            filas={resultado?.items ?? []}
             claveDeFila={(d) => d.id}
             mensajeVacio="No hay despachos todavía. Creá el primero."
             etiqueta="Despachos de huevo"
+          />
+
+          <ControlesPaginacion
+            numeroPagina={resultado?.numeroPagina ?? 1}
+            total={resultado?.total ?? 0}
+            tamanoPagina={resultado?.tamanoPagina ?? TAMANO_PAGINA_POR_DEFECTO}
+            onCambiarPagina={setPagina}
           />
 
           <Divider />

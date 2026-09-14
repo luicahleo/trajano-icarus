@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -16,11 +17,18 @@ import {
 import DoneAllRoundedIcon from '@mui/icons-material/DoneAllRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { BarraFiltros } from '../../app/ui/BarraFiltros';
+import type { DeclaracionFiltro, ValoresFiltros } from '../../app/ui/BarraFiltros';
+import { ControlesPaginacion } from '../../app/ui/ControlesPaginacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { TablaDatos } from '../../app/ui/TablaDatos';
 import type { Columna } from '../../app/ui/TablaDatos';
+import { TAMANO_PAGINA_POR_DEFECTO } from '../../lib/paginacion';
+import { useAuth } from '../auth/AuthContext';
+import { listarTrabajadores } from '../trabajadores/api';
 import {
+  listarGranjas,
   listarNotificaciones,
   listarPedidos,
   marcarNotificacionLeida,
@@ -35,15 +43,46 @@ import {
   mensajeNotificacion,
 } from './constantes';
 
+const PRESENTACIONES = [
+  { valor: 'Bolsa', etiqueta: 'Bolsa' },
+  { valor: 'Granel', etiqueta: 'Granel' },
+];
+
 // Bandeja compartida del tenant (spec SP8): todos los usuarios del tenant con
-// la función ven los mismos pedidos. Deliberadamente online.
+// la función ven los mismos pedidos. Deliberadamente online. Desde
+// 2026-09-14 filtra, pagina y muestra el folio y el autor resuelto en el
+// cliente (el backend manda el id, nunca el nombre).
 export function PedidosAlimentoPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { clienteId } = useAuth();
 
-  const { data: pedidos, isLoading, isError } = useQuery({
-    queryKey: ['pedidos-alimento'],
-    queryFn: listarPedidos,
+  const [pagina, setPagina] = useState(1);
+  const [filtros, setFiltros] = useState<ValoresFiltros>({});
+
+  const {
+    data: resultado,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['pedidos-alimento', pagina, filtros],
+    queryFn: () =>
+      listarPedidos({ pagina, tamanoPagina: TAMANO_PAGINA_POR_DEFECTO }, filtros),
+  });
+
+  const { data: granjas } = useQuery({
+    queryKey: ['pedidos-alimento', 'granjas'],
+    queryFn: listarGranjas,
+  });
+
+  // El nombre del autor vive en Clientes: GestionAvicola tiene prohibido
+  // depender de ese módulo, así que el cruce se hace acá con la lista que esta
+  // misma app ya consume en la pantalla de Trabajadores — una consulta
+  // cacheada, no una por fila.
+  const { data: trabajadores } = useQuery({
+    queryKey: ['pedidos-alimento', 'trabajadores', clienteId],
+    queryFn: () => listarTrabajadores(clienteId!),
+    enabled: clienteId !== null,
   });
 
   const { data: cupo } = useQuery({ queryKey: ['pedidos-alimento', 'cupo'], queryFn: obtenerCupo });
@@ -59,7 +98,56 @@ export function PedidosAlimentoPage() {
       queryClient.invalidateQueries({ queryKey: ['pedidos-alimento', 'notificaciones'] }),
   });
 
+  const aplicarFiltros = (valores: ValoresFiltros) => {
+    setFiltros(valores);
+    setPagina(1);
+  };
+
+  const restablecerFiltros = () => {
+    setFiltros({});
+    setPagina(1);
+  };
+
+  // Un id que no aparece en la lista (trabajador dado de baja) muestra «Autor
+  // no disponible»: nunca un error ni una fila rota.
+  const nombreAutor = (id: string | null) =>
+    id
+      ? (trabajadores?.find((t) => t.id === id)?.nombre ?? 'Autor no disponible')
+      : 'Cliente';
+
+  const declaraciones: DeclaracionFiltro[] = [
+    {
+      clave: 'granjaId',
+      etiqueta: 'Granja',
+      tipo: 'seleccion',
+      opciones: (granjas ?? []).map((g) => ({ valor: g.id, etiqueta: g.nombre })),
+    },
+    {
+      clave: 'estado',
+      etiqueta: 'Estado',
+      tipo: 'seleccion',
+      opciones: Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) => ({
+        valor,
+        etiqueta,
+      })),
+    },
+    { clave: 'presentacion', etiqueta: 'Presentación', tipo: 'seleccion', opciones: PRESENTACIONES },
+    { clave: 'desde', etiqueta: 'Desde', tipo: 'fecha' },
+    { clave: 'hasta', etiqueta: 'Hasta', tipo: 'fecha' },
+    { clave: 'numero', etiqueta: 'Folio', tipo: 'texto' },
+  ];
+  // El filtro por autor solo se ofrece cuando hay trabajadores que listar.
+  if ((trabajadores?.length ?? 0) > 0) {
+    declaraciones.push({
+      clave: 'creadoPorTrabajadorId',
+      etiqueta: 'Autor',
+      tipo: 'seleccion',
+      opciones: (trabajadores ?? []).map((t) => ({ valor: t.id, etiqueta: t.nombre })),
+    });
+  }
+
   const columnas: Columna<PedidoResumen>[] = [
+    { clave: 'folio', encabezado: 'Folio', render: (p) => p.folio },
     {
       clave: 'estado',
       encabezado: 'Estado',
@@ -78,12 +166,12 @@ export function PedidosAlimentoPage() {
     },
     { clave: 'lineas', encabezado: 'Líneas', render: (p) => p.cantidadLineas },
     { clave: 'presentacion', encabezado: 'Presentación', render: (p) => p.presentacion },
+    { clave: 'autor', encabezado: 'Autor', render: (p) => nombreAutor(p.creadoPorTrabajadorId) },
     {
       clave: 'total',
       encabezado: 'Total solicitado',
       alinear: 'right',
-      render: (p) =>
-        p.totalSolicitado === null ? '—' : formatoMoneda(p.totalSolicitado),
+      render: (p) => (p.totalSolicitado === null ? '—' : formatoMoneda(p.totalSolicitado)),
     },
     {
       clave: 'entrega',
@@ -169,12 +257,26 @@ export function PedidosAlimentoPage() {
             </Paper>
           )}
 
+          <BarraFiltros
+            filtros={declaraciones}
+            valores={filtros}
+            onAplicar={aplicarFiltros}
+            onRestablecer={restablecerFiltros}
+          />
+
           <TablaDatos
             columnas={columnas}
-            filas={pedidos ?? []}
+            filas={resultado?.items ?? []}
             claveDeFila={(p) => p.id}
             mensajeVacio="No hay pedidos todavía. Creá el primero."
             etiqueta="Pedidos de alimento"
+          />
+
+          <ControlesPaginacion
+            numeroPagina={resultado?.numeroPagina ?? 1}
+            total={resultado?.total ?? 0}
+            tamanoPagina={resultado?.tamanoPagina ?? TAMANO_PAGINA_POR_DEFECTO}
+            onCambiarPagina={setPagina}
           />
 
           <Divider />

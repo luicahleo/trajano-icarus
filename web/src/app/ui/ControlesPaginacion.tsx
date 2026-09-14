@@ -22,7 +22,7 @@ export function ControlesPaginacion({
   const totalPaginas = contarPaginas(total, tamanoPagina);
 
   return (
-    <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-end">
+    <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
       <Button
         size="small"
         startIcon={<ChevronLeftRoundedIcon />}
