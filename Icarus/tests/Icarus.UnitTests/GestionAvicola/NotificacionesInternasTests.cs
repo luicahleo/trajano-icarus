@@ -6,7 +6,6 @@ using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.Notificaciones;
-using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
 using Icarus.GestionAvicola.Domain;
@@ -36,8 +35,6 @@ public class NotificacionesInternasTests
         Substitute.For<INotificacionesInternas>();
     private readonly IRepositorioBalanceCreditoHuevo _balanceCreditoHuevo =
         Substitute.For<IRepositorioBalanceCreditoHuevo>();
-    private readonly INotificacionesInternasDespachoHuevo _notificacionesDespachoHuevo =
-        Substitute.For<INotificacionesInternasDespachoHuevo>();
     private readonly ICurrentUser _usuarioTenant = Substitute.For<ICurrentUser>();
     private readonly ICurrentUser _usuarioCaisy = Substitute.For<ICurrentUser>();
     private readonly IRegistroVuelo _registroVuelo =
@@ -62,7 +59,7 @@ public class NotificacionesInternasTests
     private EnviarPedidoAlimentoHandler CrearEnviador(ICurrentUser usuario) =>
         new(_repositorio, _repositorioPrecios, new OpcionesPedidosAlimento(),
             usuario, _registroVuelo, _unidadTrabajo, _notificaciones,
-            _balanceCreditoHuevo, _notificacionesDespachoHuevo);
+            _balanceCreditoHuevo);
 
     private DevolverPedidoAlimentoHandler CrearDevolvedor() =>
         new(_repositorio, _usuarioCaisy, _registroVuelo, _unidadTrabajo, _notificaciones);

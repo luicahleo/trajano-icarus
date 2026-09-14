@@ -57,7 +57,7 @@ public class PedidosAlimentoHandlerTests
 
     private EnviarPedidoAlimentoHandler CrearEnviador() =>
         new(_repositorio, _repositorioPrecios, _opciones, _usuarioActual, _registroVuelo,
-            _unidadTrabajo, _notificaciones, _balanceCreditoHuevo, _notificacionesDespachoHuevo);
+            _unidadTrabajo, _notificaciones, _balanceCreditoHuevo);
 
     public PedidosAlimentoHandlerTests()
     {
@@ -300,38 +300,13 @@ public class PedidosAlimentoHandlerTests
         await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
-    // SP9E (spec: "Confirmación explícita al enviar un pedido con crédito de
-    // huevo insuficiente"): el primer intento sin confirmar se rechaza antes
-    // de mutar el pedido ni gastar cupo — el cliente debe confirmar a
-    // sabiendas. El saldo se lee antes de mutar el agregado, así que ya
-    // excluye el pedido actual.
+    // Corrección 2026-09-14: el envío NO depende del saldo. Sin bloqueo, sin
+    // confirmación y sin alerta a CAISY. Queda solo la marca en el historial
+    // del pedido, y sin cifras: ese historial lo lee CAISY en su vista de
+    // Detalles, así que cualquier número ahí sería la misma fuga que esta
+    // corrección cierra por el frente.
     [Fact]
-    public async Task EnviarSinConfirmarConSaldoInsuficienteExigeConfirmacion()
-    {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
-        _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
-        _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(PublicacionVigente());
-        _balanceCreditoHuevo.ObtenerSaldoDisponibleAsync(
-            ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(0m);
-
-        await Assert.ThrowsAsync<CreditoInsuficienteRequiereConfirmacionException>(() =>
-            CrearEnviador().Handle(
-                new EnviarPedidoAlimentoCommand(pedido.Id), CancellationToken.None));
-
-        Assert.Equal(EstadoPedidoAlimento.Borrador, pedido.Estado);
-        Assert.Empty(pedido.Historial);
-        _notificacionesDespachoHuevo.DidNotReceive()
-            .Agregar(Arg.Any<NotificacionInternaDespachoHuevo>());
-        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _transaccion.DidNotReceive().ConfirmarAsync(Arg.Any<CancellationToken>());
-    }
-
-    // SP9E: confirmando explícitamente, el envío procede igual, la bandeja
-    // global de CAISY se sigue avisando (sin cambios desde SP9C) y además
-    // queda el motivo en el propio historial del pedido.
-    [Fact]
-    public async Task EnviarConfirmandoSaldoInsuficienteAvisaACaisyYDejaMotivoEnHistorial()
+    public async Task EnviarConSaldoInsuficienteProcedeYDejaLaMarcaSinCifras()
     {
         var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
@@ -341,24 +316,23 @@ public class PedidosAlimentoHandlerTests
             ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(0m);
 
         await CrearEnviador().Handle(
-            new EnviarPedidoAlimentoCommand(pedido.Id, ConfirmarCreditoInsuficiente: true),
-            CancellationToken.None);
+            new EnviarPedidoAlimentoCommand(pedido.Id), CancellationToken.None);
 
         Assert.Equal(EstadoPedidoAlimento.Solicitado, pedido.Estado);
-        _notificacionesDespachoHuevo.Received(1).Agregar(Arg.Is<NotificacionInternaDespachoHuevo>(n =>
-            n.Tipo == TipoNotificacionDespachoHuevo.CreditoInsuficiente));
         var transicion = Assert.Single(pedido.Historial);
-        Assert.Contains("crédito insuficiente", transicion.Motivo, StringComparison.OrdinalIgnoreCase);
-        await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        Assert.Equal("Enviado con crédito insuficiente.", transicion.Motivo);
+        Assert.DoesNotContain("saldo", transicion.Motivo!, StringComparison.OrdinalIgnoreCase);
+        _notificacionesDespachoHuevo.DidNotReceive()
+            .Agregar(Arg.Any<NotificacionInternaDespachoHuevo>());
         await _transaccion.Received(1).ConfirmarAsync(Arg.Any<CancellationToken>());
     }
 
-    // Segunda brecha de rol cerrada por el mismo ítem (spec, backlog #2): la
-    // política del endpoint es por entitlement de módulo, no por rol, así
-    // que sin este chequeo un Trabajador con PedidoAlimento podría confirmar
-    // un envío que deja el crédito del cliente en negativo.
+    // El Trabajador puede pedir alimento: enviar es una operación operativa.
+    // La decisión financiera que antes exigía rol Cliente ya no existe, y el
+    // Trabajador sigue sin poder VER el saldo (eso lo cierra
+    // ObtenerBalanceCreditoHuevoHandler, que no cambia).
     [Fact]
-    public async Task UnTrabajadorNoPuedeConfirmarElEnvioConCreditoInsuficiente()
+    public async Task UnTrabajadorEnviaIgualConSaldoInsuficiente()
     {
         var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
@@ -368,15 +342,11 @@ public class PedidosAlimentoHandlerTests
             ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(0m);
         _usuarioActual.Rol.Returns("Trabajador");
 
-        await Assert.ThrowsAsync<CreditoHuevoRequiereRolClienteException>(() =>
-            CrearEnviador().Handle(
-                new EnviarPedidoAlimentoCommand(pedido.Id, ConfirmarCreditoInsuficiente: true),
-                CancellationToken.None));
+        await CrearEnviador().Handle(
+            new EnviarPedidoAlimentoCommand(pedido.Id), CancellationToken.None);
 
-        Assert.Equal(EstadoPedidoAlimento.Borrador, pedido.Estado);
-        Assert.Empty(pedido.Historial);
-        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _transaccion.DidNotReceive().ConfirmarAsync(Arg.Any<CancellationToken>());
+        Assert.Equal(EstadoPedidoAlimento.Solicitado, pedido.Estado);
+        await _transaccion.Received(1).ConfirmarAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

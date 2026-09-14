@@ -23,11 +23,11 @@ public static class ReglasCreditoHuevo
     public const int DiasDisponibilidadCredito = 14;
 }
 
-// Exige confirmación explícita del cliente antes de enviar un pedido que
-// dejaría su crédito por despachos de huevo en negativo (spec SP9E). Hereda
-// de ConflictException (409): la decisión final de aceptar el pedido sigue
-// siendo de CAISY al aceptar/rechazar, así que esto no es un bloqueo duro
-// sin salida — solo exige el paso consciente de confirmar.
+// RETIRADA por la corrección 2026-09-14: el envío de un pedido de alimento ya
+// no depende del saldo, así que nadie lanza esta excepción. Se conserva, sin
+// borrar, por decisión explícita del usuario. Nota: su mensaje por defecto
+// llevaba voseo («Confirmá»), prohibido en este proyecto — si alguna vez se
+// revive, reescribirlo en español neutro.
 public sealed class CreditoInsuficienteRequiereConfirmacionException
     : ConflictException, IExcepcionConTituloPropio
 {
@@ -45,11 +45,12 @@ public sealed class CreditoInsuficienteRequiereConfirmacionException
     public string Titulo => "Crédito insuficiente";
 }
 
-// Regla de negocio: el crédito de huevo (saldo, ajustes y confirmación de
-// envío con crédito insuficiente) es exclusivo del Cliente, nunca del
-// Trabajador — aunque tenga el entitlement de módulo (spec, ítem 2 del
-// backlog). Un solo tipo para los dos puntos que la disparan:
-// ObtenerBalanceCreditoHuevoHandler y EnviarPedidoAlimentoHandler.
+// Regla de negocio: el crédito de huevo (saldo y ajustes) es exclusivo del
+// Cliente, nunca del Trabajador — aunque tenga el entitlement de módulo
+// (spec, ítem 2 del backlog). Un solo tipo para los dos puntos que la
+// disparan:
+// ObtenerBalanceCreditoHuevoHandler y (desde la corrección 2026-09-14)
+// ObtenerCreditoHuevoDePedidoCaisyHandler.
 public sealed class CreditoHuevoRequiereRolClienteException : ForbiddenException
 {
     public CreditoHuevoRequiereRolClienteException() { }
