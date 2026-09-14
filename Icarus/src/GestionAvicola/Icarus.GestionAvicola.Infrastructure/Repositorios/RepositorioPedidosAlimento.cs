@@ -76,7 +76,11 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
             DateOnly? desde, DateOnly? hasta, int? numero,
             int saltar, int tomar, CancellationToken cancellationToken = default)
     {
-        var consulta = db.PedidosAlimento.Include(p => p.Detalles).AsNoTracking();
+        // CAISY ve el pedido desde que el tenant lo envía (spec 2026-09-14).
+        // Va antes del filtro por estado a propósito: si estuviera dentro del
+        // if, un ?estado=Borrador volvería a exponer la lista completa.
+        var consulta = db.PedidosAlimento.Include(p => p.Detalles).AsNoTracking()
+            .Where(p => p.Estado != EstadoPedidoAlimento.Borrador);
         if (estado is { } e)
             consulta = consulta.Where(p => p.Estado == e);
         if (presentacion is { } pr)

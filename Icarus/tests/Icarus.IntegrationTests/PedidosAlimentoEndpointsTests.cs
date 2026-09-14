@@ -271,15 +271,23 @@ public class PedidosAlimentoEndpointsTests
     [Fact]
     public async Task LaBandejaCaisyFiltraYPagina()
     {
-        var cliente = _factory.CreateClient();
-        var tokenCliente = await LoginComo(cliente, SemillaIdentidad.EmailCliente);
+        // Tenant propio con granja y cupo intacto: las cuentas semilla
+        // compartidas agotan su cupo semanal en otras pruebas.
+        var (cliente, tokenCliente, _, _) = await CrearClienteConGestionAvicolaAsync();
         var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        await ImportarYPublicarAsync(caisy, tokenCaisy);
+
+        // Enviados, no borradores: CAISY solo ve lo que el tenant le mandó.
         var ids = new List<Guid>();
         for (var i = 0; i < 3; i++)
-            ids.Add(await CrearBorradorAsync(cliente, tokenCliente));
+        {
+            var id = await CrearBorradorAsync(cliente, tokenCliente);
+            Assert.Equal(HttpStatusCode.NoContent, await EnviarAsync(cliente, tokenCliente, id));
+            ids.Add(id);
+        }
 
         var pagina = await caisy.SendAsync(Pedido(
-            HttpMethod.Get, "/api/pedidos-alimento-caisy?estado=Borrador&pagina=1&tamanoPagina=2",
+            HttpMethod.Get, "/api/pedidos-alimento-caisy?estado=Solicitado&pagina=1&tamanoPagina=2",
             tokenCaisy));
         Assert.Equal(HttpStatusCode.OK, pagina.StatusCode);
         var cuerpo = await pagina.Content.ReadFromJsonAsync<JsonElement>();
@@ -287,7 +295,7 @@ public class PedidosAlimentoEndpointsTests
         Assert.Equal(2, cuerpo.GetProperty("items").GetArrayLength());
         Assert.All(cuerpo.GetProperty("items").EnumerateArray(), item =>
         {
-            Assert.Equal("Borrador", item.GetProperty("estado").GetString());
+            Assert.Equal("Solicitado", item.GetProperty("estado").GetString());
             Assert.NotEqual(Guid.Empty, Guid.Parse(item.GetProperty("clienteId").GetString()!));
         });
 
@@ -297,7 +305,7 @@ public class PedidosAlimentoEndpointsTests
         Assert.True((await porPresentacion.Content.ReadFromJsonAsync<JsonElement>())
             .GetProperty("total").GetInt32() >= 3);
 
-        // La bandeja es global: CAISY abre el detalle de un pedido ajeno.
+        // La bandeja es global: CAISY abre el detalle de un pedido ajeno ya enviado.
         var detalle = await caisy.SendAsync(Pedido(
             HttpMethod.Get, $"/api/pedidos-alimento-caisy/{ids[0]}", tokenCaisy));
         Assert.Equal(HttpStatusCode.OK, detalle.StatusCode);
@@ -305,6 +313,36 @@ public class PedidosAlimentoEndpointsTests
         var estadoInvalido = await caisy.SendAsync(Pedido(
             HttpMethod.Get, "/api/pedidos-alimento-caisy?estado=Inexistente", tokenCaisy));
         Assert.Equal(HttpStatusCode.BadRequest, estadoInvalido.StatusCode);
+    }
+
+    // El borrador es trabajo en curso del tenant: CAISY no lo ve ni en la
+    // bandeja sin filtro ni pidiéndolo por estado.
+    [Fact]
+    public async Task LaBandejaCaisyNoMuestraBorradoresDelTenant()
+    {
+        var (cliente, tokenCliente, _, _) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        var borrador = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var sinFiltro = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento-caisy?pagina=1&tamanoPagina=100", tokenCaisy));
+        Assert.Equal(HttpStatusCode.OK, sinFiltro.StatusCode);
+        var cuerpoSinFiltro = await sinFiltro.Content.ReadFromJsonAsync<JsonElement>();
+        var idsVisibles = cuerpoSinFiltro.GetProperty("items").EnumerateArray()
+            .Select(p => Guid.Parse(p.GetProperty("id").GetString()!))
+            .ToList();
+        Assert.DoesNotContain(borrador, idsVisibles);
+        Assert.DoesNotContain(cuerpoSinFiltro.GetProperty("items").EnumerateArray(),
+            p => p.GetProperty("estado").GetString() == "Borrador");
+
+        // Pedir el estado explícitamente no reabre la puerta.
+        var porEstado = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento-caisy?estado=Borrador&pagina=1&tamanoPagina=100",
+            tokenCaisy));
+        Assert.Equal(HttpStatusCode.OK, porEstado.StatusCode);
+        var cuerpoPorEstado = await porEstado.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, cuerpoPorEstado.GetProperty("total").GetInt32());
+        Assert.Equal(0, cuerpoPorEstado.GetProperty("items").GetArrayLength());
     }
 
     [Fact]
