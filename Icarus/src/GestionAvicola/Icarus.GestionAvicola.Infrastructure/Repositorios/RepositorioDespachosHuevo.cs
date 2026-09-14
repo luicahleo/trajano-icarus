@@ -58,7 +58,11 @@ public sealed class RepositorioDespachosHuevo(GestionAvicolaDbContext db) : IRep
             EstadoDespachoHuevo? estado, string? granja, DateOnly? desde, DateOnly? hasta,
             int? numero, int saltar, int tomar, CancellationToken cancellationToken = default)
     {
-        var consulta = db.DespachosHuevo.Include(d => d.Detalles).AsNoTracking();
+        // CAISY ve el despacho desde que el tenant lo envía (spec 2026-09-14).
+        // Va antes del filtro por estado a propósito: si estuviera dentro del
+        // if, un ?estado=Borrador volvería a exponer la lista completa.
+        var consulta = db.DespachosHuevo.Include(d => d.Detalles).AsNoTracking()
+            .Where(d => d.Estado != EstadoDespachoHuevo.Borrador);
         if (estado is { } e)
             consulta = consulta.Where(d => d.Estado == e);
         if (!string.IsNullOrWhiteSpace(granja))

@@ -289,28 +289,36 @@ public class DespachosHuevoCaisyEndpointsTests
     [Fact]
     public async Task LaBandejaCaisyListaFiltraPorEstadoYPagina()
     {
-        var cliente = _factory.CreateClient();
-        var tokenCliente = await LoginComo(cliente, SemillaIdentidad.EmailCliente);
+        // Tenant propio con granja: las cuentas semilla compartidas pueden tener
+        // despachos de otras pruebas de la colección.
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var granja = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/granjas", tokenCliente,
+            JsonContent.Create(new { nombre = "Granja de Prueba" })));
+        Assert.Equal(HttpStatusCode.Created, granja.StatusCode);
         var tokenCaisy = await CrearCuentaCaisyAsync("GestorRecepcionHuevos");
         await ImportarYPublicarHuevoAsync(cliente, tokenCaisy);
 
+        // Los tres se despachan: CAISY solo ve lo que salió del borrador.
         var ids = new List<Guid>();
         for (var i = 0; i < 3; i++)
-            ids.Add(await CrearBorradorAsync(cliente, tokenCliente));
-        await DespacharAsync(cliente, tokenCliente, ids[0]);
+        {
+            var id = await CrearBorradorAsync(cliente, tokenCliente);
+            await DespacharAsync(cliente, tokenCliente, id);
+            ids.Add(id);
+        }
 
         var primera = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, "/api/despachos-huevo-caisy?estado=Borrador&pagina=1&tamanoPagina=2",
+            HttpMethod.Get, "/api/despachos-huevo-caisy?estado=Despachado&pagina=1&tamanoPagina=2",
             tokenCaisy));
         Assert.Equal(HttpStatusCode.OK, primera.StatusCode);
         var cuerpoPrimera = await primera.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(cuerpoPrimera.GetProperty("total").GetInt32() >= 2);
+        Assert.True(cuerpoPrimera.GetProperty("total").GetInt32() >= 3);
         var itemsPrimera = cuerpoPrimera.GetProperty("items").EnumerateArray().ToList();
         Assert.Equal(2, itemsPrimera.Count);
-        Assert.All(itemsPrimera, d => Assert.Equal("Borrador", d.GetProperty("estado").GetString()));
+        Assert.All(itemsPrimera, d => Assert.Equal("Despachado", d.GetProperty("estado").GetString()));
 
         var segunda = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, "/api/despachos-huevo-caisy?estado=Borrador&pagina=2&tamanoPagina=2",
+            HttpMethod.Get, "/api/despachos-huevo-caisy?estado=Despachado&pagina=2&tamanoPagina=2",
             tokenCaisy));
         Assert.Equal(HttpStatusCode.OK, segunda.StatusCode);
         var cuerpoSegunda = await segunda.Content.ReadFromJsonAsync<JsonElement>();
@@ -319,16 +327,6 @@ public class DespachosHuevoCaisyEndpointsTests
             .ToList();
         Assert.Contains(ids[1], vistos);
         Assert.Contains(ids[2], vistos);
-
-        // El filtro por estado excluye el despacho ya enviado.
-        var despachados = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, "/api/despachos-huevo-caisy?estado=Despachado", tokenCaisy));
-        Assert.Equal(HttpStatusCode.OK, despachados.StatusCode);
-        var cuerpoDespachados = await despachados.Content.ReadFromJsonAsync<JsonElement>();
-        var idsDespachados = cuerpoDespachados.GetProperty("items").EnumerateArray()
-            .Select(d => Guid.Parse(d.GetProperty("id").GetString()!));
-        Assert.Contains(ids[0], idsDespachados);
-        Assert.DoesNotContain(ids[1], idsDespachados);
 
         // Estado inexistente: 400 con mensaje genérico.
         var estadoInvalido = await cliente.SendAsync(Pedido(
@@ -339,6 +337,38 @@ public class DespachosHuevoCaisyEndpointsTests
         var detalle = await ObtenerDetalleCaisyAsync(cliente, tokenCaisy, ids[0]);
         Assert.Equal("Despachado", detalle.GetProperty("estado").GetString());
         Assert.True(detalle.GetProperty("totalBs").GetDecimal() > 0);
+    }
+
+    // El borrador de despacho es trabajo en curso del tenant: CAISY no lo ve
+    // ni en la bandeja sin filtro ni pidiéndolo por estado.
+    [Fact]
+    public async Task LaBandejaCaisyNoMuestraBorradoresDeDespacho()
+    {
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var granja = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/granjas", tokenCliente,
+            JsonContent.Create(new { nombre = "Granja de Prueba" })));
+        Assert.Equal(HttpStatusCode.Created, granja.StatusCode);
+        var tokenCaisy = await CrearCuentaCaisyAsync("GestorRecepcionHuevos");
+        var borrador = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var sinFiltro = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/despachos-huevo-caisy?pagina=1&tamanoPagina=100", tokenCaisy));
+        Assert.Equal(HttpStatusCode.OK, sinFiltro.StatusCode);
+        var cuerpoSinFiltro = await sinFiltro.Content.ReadFromJsonAsync<JsonElement>();
+        var idsVisibles = cuerpoSinFiltro.GetProperty("items").EnumerateArray()
+            .Select(d => Guid.Parse(d.GetProperty("id").GetString()!))
+            .ToList();
+        Assert.DoesNotContain(borrador, idsVisibles);
+        Assert.DoesNotContain(cuerpoSinFiltro.GetProperty("items").EnumerateArray(),
+            d => d.GetProperty("estado").GetString() == "Borrador");
+
+        var porEstado = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/despachos-huevo-caisy?estado=Borrador&pagina=1&tamanoPagina=100",
+            tokenCaisy));
+        Assert.Equal(HttpStatusCode.OK, porEstado.StatusCode);
+        var cuerpoPorEstado = await porEstado.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, cuerpoPorEstado.GetProperty("total").GetInt32());
+        Assert.Equal(0, cuerpoPorEstado.GetProperty("items").GetArrayLength());
     }
 
     [Fact]
