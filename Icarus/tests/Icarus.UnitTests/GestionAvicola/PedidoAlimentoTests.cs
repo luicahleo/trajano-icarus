@@ -13,6 +13,7 @@ namespace Icarus.UnitTests.GestionAvicola;
 public class PedidoAlimentoTests
 {
     private static readonly Guid ClienteId = Guid.NewGuid();
+    private static readonly Guid GranjaId = Guid.NewGuid();
     private static readonly Guid CreadoPor = Guid.NewGuid();
     private static readonly DateOnly Hoy = new(2026, 9, 1);
 
@@ -25,20 +26,20 @@ public class PedidoAlimentoTests
         new(tipo, presentacion, valor, Guid.NewGuid());
 
     private static PedidoAlimento BorradorDeBolsas(int bolsas = 100) =>
-        new(ClienteId, CreadoPor, [Linea(TipoAlimento.PosturaUno, bolsas)]);
+        new(ClienteId, GranjaId, CreadoPor, null, [Linea(TipoAlimento.PosturaUno, bolsas)]);
 
     private static readonly TipoAlimento[] TiposPostura =
         [TipoAlimento.PosturaUno, TipoAlimento.PosturaDos];
 
     private static PedidoAlimento BorradorDeGranel(params int[] toneladas) =>
-        new(ClienteId, CreadoPor,
+        new(ClienteId, GranjaId, CreadoPor, null,
             toneladas.Select((t, i) => Linea(TiposPostura[i], t, PresentacionAlimento.Granel)).ToList());
 
     [Fact]
     public void UnPedidoNaceBorradorEnElTenantConSusLineas()
     {
         var pedido = new PedidoAlimento(
-            ClienteId, CreadoPor,
+            ClienteId, GranjaId, CreadoPor, null,
             [Linea(TipoAlimento.PosturaUno, 100), Linea(TipoAlimento.PosturaDos, 50)]);
 
         Assert.Equal(EstadoPedidoAlimento.Borrador, pedido.Estado);
@@ -54,7 +55,7 @@ public class PedidoAlimentoTests
     public void ElPedidoSoloAdmiteUnaPresentacion()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() => new PedidoAlimento(
-            ClienteId, CreadoPor,
+            ClienteId, GranjaId, CreadoPor, null,
             [Linea(TipoAlimento.PosturaUno, 100), Linea(TipoAlimento.PosturaDos, 3, PresentacionAlimento.Granel)]));
 
         Assert.Equal("El pedido solo admite una presentación.", excepcion.Message);
@@ -64,7 +65,7 @@ public class PedidoAlimentoTests
     public void NoAdmiteLineasDuplicadasDelMismoTipo()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() => new PedidoAlimento(
-            ClienteId, CreadoPor,
+            ClienteId, GranjaId, CreadoPor, null,
             [Linea(TipoAlimento.PosturaUno, 100), Linea(TipoAlimento.PosturaUno, 50)]));
 
         Assert.Equal("Cada tipo de alimento solo puede aparecer una vez en el pedido.", excepcion.Message);
@@ -74,7 +75,7 @@ public class PedidoAlimentoTests
     public void NoAdmiteTiposDeLevanteYPosturaMezclados()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() => new PedidoAlimento(
-            ClienteId, CreadoPor,
+            ClienteId, GranjaId, CreadoPor, null,
             [Linea(TipoAlimento.Iniciador, 100), Linea(TipoAlimento.PosturaUno, 50)]));
 
         Assert.Equal("El pedido no puede mezclar tipos de levante y de postura.", excepcion.Message);
@@ -84,7 +85,7 @@ public class PedidoAlimentoTests
     public void LasCantidadesDebenSerPositivas()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() =>
-            new PedidoAlimento(ClienteId, CreadoPor, [Linea(TipoAlimento.PosturaUno, 0)]));
+            new PedidoAlimento(ClienteId, GranjaId, CreadoPor, null, [Linea(TipoAlimento.PosturaUno, 0)]));
 
         Assert.Equal("La cantidad solicitada debe ser mayor que cero.", excepcion.Message);
     }
@@ -168,7 +169,7 @@ public class PedidoAlimentoTests
     [Fact]
     public void EnviarFallaCompletoSiFaltaPrecioDeUnaLinea()
     {
-        var pedido = new PedidoAlimento(ClienteId, CreadoPor,
+        var pedido = new PedidoAlimento(ClienteId, GranjaId, CreadoPor, null,
             [Linea(TipoAlimento.PosturaUno, 100), Linea(TipoAlimento.PosturaDos, 50)]);
 
         var excepcion = Assert.Throws<ReglaNegocioException>(() =>

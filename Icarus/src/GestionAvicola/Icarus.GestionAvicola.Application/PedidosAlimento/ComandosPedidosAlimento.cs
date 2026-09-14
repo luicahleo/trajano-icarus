@@ -250,7 +250,7 @@ public sealed class CrearPedidoAlimentoHandler(
             ?? throw new UnauthorizedAccessException("Solo una cuenta de tenant puede crear pedidos.");
         var actorId = usuarioActual.UsuarioId
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
-        var pedido = new PedidoAlimento(clienteId, actorId, request.Detalles);
+        var pedido = new PedidoAlimento(clienteId, Guid.Empty, actorId, null, request.Detalles);
         repositorio.Agregar(pedido);
         registroVuelo.Decidir("avicola.pedidos.crear", "creacion", "aplicada",
             new Dictionary<string, object?> { ["Lineas"] = pedido.Detalles.Count });

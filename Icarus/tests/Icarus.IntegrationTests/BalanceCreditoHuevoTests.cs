@@ -55,7 +55,7 @@ public class BalanceCreditoHuevoTests
     private static DespachoHuevo DespachoRecibido(
         Guid clienteId, Guid actorId, DateOnly fechaRecepcion, decimal precio = 12.50m)
     {
-        var despacho = new DespachoHuevo(clienteId, Guid.NewGuid(), actorId,
+        var despacho = new DespachoHuevo(clienteId, Guid.NewGuid(), actorId, null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
         despacho.Despachar(fechaRecepcion, actorId,
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, precio, Guid.NewGuid())],
@@ -67,7 +67,7 @@ public class BalanceCreditoHuevoTests
 
     private static PedidoAlimento PedidoRecibidoConforme(Guid clienteId, Guid actorId, DateOnly hoy)
     {
-        var pedido = new PedidoAlimento(clienteId, actorId,
+        var pedido = new PedidoAlimento(clienteId, Guid.NewGuid(), actorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100)]);
         pedido.EnviarACaisy(hoy, actorId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
@@ -143,7 +143,7 @@ public class BalanceCreditoHuevoTests
     {
         var clienteId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
-        var pedido = new PedidoAlimento(clienteId, actorId,
+        var pedido = new PedidoAlimento(clienteId, Guid.NewGuid(), actorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100)]);
         pedido.EnviarACaisy(FechasNegocio.Hoy(), actorId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);

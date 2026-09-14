@@ -12,7 +12,7 @@ public class ReciboDespachoHuevoHandlerTests
     public async Task ExigeQueElDespachoEsteRecibido()
     {
         var repositorio = Substitute.For<IRepositorioDespachosHuevo>();
-        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 1, 0)]);
         repositorio.ObtenerConHistorialAsync(despacho.Id, Arg.Any<CancellationToken>())
             .Returns(despacho);

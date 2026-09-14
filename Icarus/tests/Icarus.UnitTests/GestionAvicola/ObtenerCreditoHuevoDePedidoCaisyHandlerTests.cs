@@ -45,7 +45,7 @@ public class ObtenerCreditoHuevoDePedidoCaisyHandlerTests
         _pedidos.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
 
     private static PedidoAlimento PedidoBorrador() =>
-        new(ClienteId, ActorId,
+        new(ClienteId, Guid.NewGuid(), ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100)]);
 
     // 100 bolsas = 100 equivalentes de 40 kg a 180 = 18 000 congelados.

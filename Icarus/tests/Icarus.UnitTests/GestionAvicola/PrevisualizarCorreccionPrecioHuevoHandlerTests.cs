@@ -36,7 +36,7 @@ public class PrevisualizarCorreccionPrecioHuevoHandlerTests
 
     private static DespachoHuevo DespachoRecibidoQueUso(Guid publicacionId)
     {
-        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 1, 0)]);
         despacho.Despachar(FechaVigencia, Guid.NewGuid(),
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Extra, 0.75m, publicacionId)],

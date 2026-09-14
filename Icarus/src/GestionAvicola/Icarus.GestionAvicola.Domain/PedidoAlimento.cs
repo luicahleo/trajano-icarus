@@ -20,21 +20,40 @@ public sealed class PedidoAlimento : AggregateRoot
     }
 
     public PedidoAlimento(
-        Guid clienteId, Guid creadoPor, IReadOnlyList<DatosDetallePedido> detalles)
+        Guid clienteId, Guid granjaId, Guid creadoPor, Guid? creadoPorTrabajadorId,
+        IReadOnlyList<DatosDetallePedido> detalles)
     {
         ClienteId = clienteId;
+        GranjaId = granjaId;
         CreadoPor = creadoPor;
+        CreadoPorTrabajadorId = creadoPorTrabajadorId;
         ReemplazarDetalles(detalles);
     }
 
     // Para tests que necesitan ids fijos.
-    public PedidoAlimento(Guid id, Guid clienteId, Guid creadoPor,
-        IReadOnlyList<DatosDetallePedido> detalles)
-        : this(clienteId, creadoPor, detalles) => Id = id;
+    public PedidoAlimento(Guid id, Guid clienteId, Guid granjaId, Guid creadoPor,
+        Guid? creadoPorTrabajadorId, IReadOnlyList<DatosDetallePedido> detalles)
+        : this(clienteId, granjaId, creadoPor, creadoPorTrabajadorId, detalles) => Id = id;
 
     public Guid ClienteId { get; private set; }
 
+    // Granja de origen (spec 2026-09-14). Obligatoria: el handler la resuelve
+    // desde la granja activa del cliente, no la recibe del frontend.
+    public Guid GranjaId { get; private set; }
+
     public Guid CreadoPor { get; private set; }
+
+    // Quién lo creó, como ID y nunca como nombre: este módulo tiene prohibido
+    // depender de Clientes e Identity (ReglasDeModulosTests). Nulo cuando lo
+    // creó el propio Cliente. El nombre lo resuelve la PWA del tenant.
+    public Guid? CreadoPorTrabajadorId { get; private set; }
+
+    // Folio legible. Lo asigna una SEQUENCE de SQL Server al insertar: en
+    // memoria vale 0 hasta que EF lo trae de vuelta. El setter privado es
+    // requerido por EF para materializar el valor generado.
+#pragma warning disable S1144 // Setter técnico para EF
+    public int Numero { get; private set; }
+#pragma warning restore S1144
 
     public EstadoPedidoAlimento Estado { get; private set; }
         = EstadoPedidoAlimento.Borrador;

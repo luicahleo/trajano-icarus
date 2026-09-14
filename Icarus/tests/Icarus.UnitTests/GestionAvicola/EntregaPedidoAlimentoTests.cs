@@ -39,7 +39,7 @@ public class EntregaPedidoAlimentoTests
         IReadOnlyList<(TipoAlimento Tipo, int Cantidad, PresentacionAlimento Presentacion)> lineas,
         Action<PedidoAlimento> preparar)
     {
-        var pedido = new PedidoAlimento(ClienteId, ActorId,
+        var pedido = new PedidoAlimento(ClienteId, Guid.NewGuid(), ActorId, null,
             lineas.Select(l => new DatosDetallePedido(l.Tipo, l.Presentacion, l.Cantidad)).ToList());
         preparar(pedido);
         return pedido;

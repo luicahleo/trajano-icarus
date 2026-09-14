@@ -236,11 +236,11 @@ public static class SemillaDesarrolloAvicola
         await AgregarDespachoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x42), TamanoHuevo.Primera, 20, hoy.AddDays(-32), hoy.AddDays(-30));
 
-        await AgregarPedidoRecibidoAsync(db, almacen, tenant,
+        await AgregarPedidoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x51), 20, 20, hoy.AddDays(-20));
 
         db.PedidosAlimento.Add(new PedidoAlimento(
-            Derivar(tenant.ClienteId, 0x52), tenant.ClienteId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x52), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaDos, PresentacionAlimento.Bolsa, 12)]));
     }
 
@@ -252,7 +252,7 @@ public static class SemillaDesarrolloAvicola
         await AgregarDespachoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x41), TamanoHuevo.Segunda, 5, hoy.AddDays(-32), hoy.AddDays(-30));
 
-        await AgregarPedidoRecibidoAsync(db, almacen, tenant,
+        await AgregarPedidoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x51), 40, 40, hoy.AddDays(-18));
     }
 
@@ -269,7 +269,7 @@ public static class SemillaDesarrolloAvicola
             Derivar(tenant.ClienteId, 0x41), TamanoHuevo.Primera, 15, hoy.AddDays(-37), hoy.AddDays(-35));
 
         var solicitado = new PedidoAlimento(
-            Derivar(tenant.ClienteId, 0x51), tenant.ClienteId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x51), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 25)]);
         // Mismo motivo exacto que produce EnviarPedidoAlimentoHandler: sin
         // cifras, porque este historial lo lee CAISY. Si la semilla usara otro
@@ -308,7 +308,7 @@ public static class SemillaDesarrolloAvicola
 
         // Despachado sin confirmar y un borrador editable.
         var despachado = new DespachoHuevo(
-            Derivar(tenant.ClienteId, 0x44), tenant.ClienteId, granjaId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x44), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Segunda, 6, 40)]);
         despachado.Despachar(hoy.AddDays(-2), tenant.ActorId,
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Segunda, PrecioCongelado(TamanoHuevo.Segunda), PublicacionCorrectivaId)],
@@ -316,16 +316,16 @@ public static class SemillaDesarrolloAvicola
         db.DespachosHuevo.Add(despachado);
 
         db.DespachosHuevo.Add(new DespachoHuevo(
-            Derivar(tenant.ClienteId, 0x45), tenant.ClienteId, granjaId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x45), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Cuarta, 3, 0)]));
 
         // Recepción con diferencias: se solicitaron 15 bolsas, se entregaron
         // 14 y llegaron 13.
-        await AgregarPedidoRecibidoAsync(db, almacen, tenant,
+        await AgregarPedidoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x51), 15, 13, hoy.AddDays(-16), entregadas: 14);
 
         var aceptado = new PedidoAlimento(
-            Derivar(tenant.ClienteId, 0x52), tenant.ClienteId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x52), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 10)]);
         aceptado.EnviarACaisy(hoy.AddDays(-4), tenant.ActorId, PreciosEnvio());
         aceptado.Aceptar(hoy.AddDays(3), hoy, tenant.ActorId);
@@ -334,7 +334,7 @@ public static class SemillaDesarrolloAvicola
             TipoNotificacionPedido.PedidoAceptado, aceptado.Id, tenant.ClienteId));
 
         var rechazado = new PedidoAlimento(
-            Derivar(tenant.ClienteId, 0x53), tenant.ClienteId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x53), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaDos, PresentacionAlimento.Bolsa, 8)]);
         rechazado.EnviarACaisy(hoy.AddDays(-9), tenant.ActorId, PreciosEnvio());
         rechazado.Rechazar("Sin stock de Postura 2 esta semana.", tenant.ActorId);
@@ -343,7 +343,7 @@ public static class SemillaDesarrolloAvicola
             TipoNotificacionPedido.PedidoRechazado, rechazado.Id, tenant.ClienteId));
 
         var devuelto = new PedidoAlimento(
-            Derivar(tenant.ClienteId, 0x54), tenant.ClienteId, tenant.ActorId,
+            Derivar(tenant.ClienteId, 0x54), tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetallePedido(TipoAlimento.Crecimiento, PresentacionAlimento.Bolsa, 6)]);
         devuelto.EnviarACaisy(hoy.AddDays(-7), tenant.ActorId, PreciosEnvio());
         devuelto.DevolverParaCorreccion("Falta detallar la edad del lote.", tenant.ActorId);
@@ -375,7 +375,7 @@ public static class SemillaDesarrolloAvicola
         decimal? precioCongelado = null, Guid? publicacionId = null)
     {
         var despacho = new DespachoHuevo(
-            despachoId, tenant.ClienteId, granjaId, tenant.ActorId,
+            despachoId, tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetalleDespachoHuevo(tamano, amarras, 0)]);
         despacho.Despachar(fechaDespacho, tenant.ActorId,
             [new DatosPrecioDespachoHuevo(
@@ -391,11 +391,11 @@ public static class SemillaDesarrolloAvicola
 
     private static async Task AgregarPedidoRecibidoAsync(
         GestionAvicolaDbContext db, IAlmacenDocumentosPedido almacen, TenantDesarrollo tenant,
-        Guid pedidoId, int bolsasSolicitadas, int bolsasRecibidas, DateOnly fechaPedido,
+        Guid granjaId, Guid pedidoId, int bolsasSolicitadas, int bolsasRecibidas, DateOnly fechaPedido,
         int? entregadas = null)
     {
         var pedido = new PedidoAlimento(
-            pedidoId, tenant.ClienteId, tenant.ActorId,
+            pedidoId, tenant.ClienteId, granjaId, tenant.ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, bolsasSolicitadas)]);
         pedido.EnviarACaisy(fechaPedido, tenant.ActorId, PreciosEnvio());
         pedido.Aceptar(fechaPedido.AddDays(2), fechaPedido, tenant.ActorId);

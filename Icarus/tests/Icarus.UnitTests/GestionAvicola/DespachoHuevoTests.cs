@@ -15,7 +15,7 @@ public class DespachoHuevoTests
         Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 1024, 512, "hash", "nota.jpg");
 
     private static DespachoHuevo BorradorConDosDetalles() =>
-        new(ClienteId, GranjaId, CreadoPor,
+        new(ClienteId, GranjaId, CreadoPor, null,
         [
             new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 2, 0),
             new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 1, 90),
@@ -38,7 +38,7 @@ public class DespachoHuevoTests
     public void NoAdmiteDosLineasConElMismoTamano()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() =>
-            new DespachoHuevo(ClienteId, GranjaId, CreadoPor,
+            new DespachoHuevo(ClienteId, GranjaId, CreadoPor, null,
             [
                 new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 1, 0),
                 new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 2, 0),
@@ -51,7 +51,7 @@ public class DespachoHuevoTests
     public void UnaLineaSinCantidadEsRechazada()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() =>
-            new DespachoHuevo(ClienteId, GranjaId, CreadoPor,
+            new DespachoHuevo(ClienteId, GranjaId, CreadoPor, null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 0, 0)]));
 
         Assert.Equal("Cada línea debe declarar una cantidad mayor que cero.", excepcion.Message);
@@ -61,7 +61,7 @@ public class DespachoHuevoTests
     public void UnidadesSueltasFueraDeRangoSonRechazadas()
     {
         var excepcion = Assert.Throws<ReglaNegocioException>(() =>
-            new DespachoHuevo(ClienteId, GranjaId, CreadoPor,
+            new DespachoHuevo(ClienteId, GranjaId, CreadoPor, null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 1, 180)]));
 
         Assert.Equal("Las unidades sueltas deben estar entre 0 y 179.", excepcion.Message);

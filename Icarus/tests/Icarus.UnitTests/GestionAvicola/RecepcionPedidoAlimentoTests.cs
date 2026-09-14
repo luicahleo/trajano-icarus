@@ -23,7 +23,7 @@ public class RecepcionPedidoAlimentoTests
     private static PedidoAlimento PedidoDespachadoDeBolsas(
         params (TipoAlimento Tipo, int Solicitada, int Entregada)[] lineas)
     {
-        var pedido = new PedidoAlimento(ClienteId, ActorId,
+        var pedido = new PedidoAlimento(ClienteId, Guid.NewGuid(), ActorId, null,
             lineas.Select(l => new DatosDetallePedido(l.Tipo, PresentacionAlimento.Bolsa, l.Solicitada)).ToList());
         pedido.EnviarACaisy(new DateOnly(2026, 8, 28), ActorId,
             lineas.Select(l => new DatosPrecioEnvio(l.Tipo, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())).ToList());
@@ -54,7 +54,7 @@ public class RecepcionPedidoAlimentoTests
     [Fact]
     public void LaRecepcionSoloSeRegistraDesdeUnPedidoDespachado()
     {
-        var pedido = new PedidoAlimento(ClienteId, ActorId,
+        var pedido = new PedidoAlimento(ClienteId, Guid.NewGuid(), ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100)]);
 
         var excepcionBorrador = Assert.Throws<ReglaNegocioException>(() =>
@@ -169,7 +169,7 @@ public class RecepcionPedidoAlimentoTests
     [Fact]
     public void LosEquivalentesRecibidosDependenDeLaPresentacion()
     {
-        var pedido = new PedidoAlimento(ClienteId, ActorId,
+        var pedido = new PedidoAlimento(ClienteId, Guid.NewGuid(), ActorId, null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Granel, 3),
              new DatosDetallePedido(TipoAlimento.PosturaDos, PresentacionAlimento.Granel, 3)]);
         pedido.EnviarACaisy(new DateOnly(2026, 8, 28), ActorId,

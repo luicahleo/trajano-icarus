@@ -120,7 +120,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EditarSoloBorradorYRegistraLineasRecreadas()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
 
         await CrearEditor().Handle(
@@ -135,7 +135,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EditarUnPedidoYaEnviadoDevuelveConflicto()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         pedido.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
@@ -161,7 +161,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task DesactivarSoloBorrador()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
 
         await CrearDesactivador().Handle(
@@ -170,7 +170,7 @@ public class PedidosAlimentoHandlerTests
         Assert.False(pedido.EstaActivo);
         await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
 
-        var enviado = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var enviado = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         enviado.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
         _repositorio.ObtenerPorIdAsync(enviado.Id, Arg.Any<CancellationToken>()).Returns(enviado);
@@ -184,7 +184,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EnviarCongelaPreciosVigentesConFechaDeNegocio()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         var publicacion = PublicacionVigente();
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
@@ -206,7 +206,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task ElCupoSeConsultaEnLaSemanaIsoActualDelTenant()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(PublicacionVigente());
@@ -223,7 +223,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EnviarSinPublicacionVigenteDejaElBorradorIntacto()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns((NotificacionPreciosAlimentos?)null);
@@ -247,7 +247,7 @@ public class PedidosAlimentoHandlerTests
             new(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100),
             new(TipoAlimento.PosturaDos, PresentacionAlimento.Bolsa, 50),
         };
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, lineas);
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, lineas);
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         // La publicación vigente no trae precio para PosturaDos.
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
@@ -266,7 +266,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EnviarConElCupoAgotadoDevuelveConflicto()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         _repositorio.ContarEnviadosEnSemanaBloqueandoAsync(
             ClienteId, Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
@@ -285,7 +285,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EnviarUnPedidoYaEnviadoDevuelveConflictoSinGastarCupo()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         pedido.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
@@ -308,7 +308,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EnviarConSaldoInsuficienteProcedeYDejaLaMarcaSinCifras()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(PublicacionVigente());
@@ -334,7 +334,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task UnTrabajadorEnviaIgualConSaldoInsuficiente()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(PublicacionVigente());
@@ -352,7 +352,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task EnviarConSaldoSuficienteNoAvisaYConfirmaElEnvio()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         _repositorioPrecios.ObtenerVigenteAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(PublicacionVigente());
@@ -398,7 +398,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task ListarDevuelveResumenesDelTenant()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ListarAsync(Arg.Any<CancellationToken>()).Returns([pedido]);
 
         var resumenes = await new ListarPedidosAlimentoHandler(_repositorio).Handle(
@@ -414,7 +414,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task ObtenerDevuelveElDetalleConHistorial()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         pedido.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
         pedido.DevolverParaCorreccion("Revise la cantidad", Guid.NewGuid());
@@ -432,7 +432,7 @@ public class PedidosAlimentoHandlerTests
     // despacho con su nota; la notificación va a la bandeja del tenant y los
     // datos de la nota no salen hacia el registro de vuelo (anti-PII).
     private static PedidoAlimento PedidoAceptado() =>
-        Aceptado(new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa()));
+        Aceptado(new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa()));
 
     private static PedidoAlimento Aceptado(PedidoAlimento pedido)
     {
@@ -469,7 +469,7 @@ public class PedidosAlimentoHandlerTests
     [Fact]
     public async Task DespacharUnPedidoNoAceptadoDevuelveConflicto()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         pedido.EnviarACaisy(FechasNegocio.Hoy(), UsuarioId,
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);

@@ -8,7 +8,7 @@ public class ReciboPedidoRendererQuestPdfTests
 {
     private static PedidoAlimento PedidoDespachadoDeBolsas()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), Guid.NewGuid(),
+        var pedido = new PedidoAlimento(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 100)]);
         pedido.EnviarACaisy(new DateOnly(2026, 9, 1), Guid.NewGuid(),
             [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);

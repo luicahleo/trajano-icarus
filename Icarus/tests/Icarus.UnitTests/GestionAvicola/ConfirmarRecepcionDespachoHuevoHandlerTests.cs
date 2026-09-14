@@ -42,7 +42,7 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
 
     private static DespachoHuevo CrearDespachado()
     {
-        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
         despacho.Despachar(FechasNegocio.Hoy(), Guid.NewGuid(),
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, 12.50m, Guid.NewGuid())],
@@ -72,7 +72,7 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
     [Fact]
     public async Task RecibirUnDespachoNoDespachadoDevuelveConflictoSinGuardar()
     {
-        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
         _repositorio.ObtenerPorIdAsync(despacho.Id, Arg.Any<CancellationToken>()).Returns(despacho);
 
@@ -111,7 +111,7 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
         publicacionCorrectiva.Publicar();
         publicacionOriginal.CorregirVigente(publicacionCorrectiva.Id, "Precio mal digitado.");
 
-        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
         despacho.Despachar(FechasNegocio.Hoy(), Guid.NewGuid(),
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, 0.75m, publicacionOriginal.Id)],
@@ -147,7 +147,7 @@ public class ConfirmarRecepcionDespachoHuevoHandlerTests
             [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.90m)]);
         publicacionOriginal.CorregirVigente(correctivaBorrador.Id, "Correctiva aún en revisión.");
 
-        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        var despacho = new DespachoHuevo(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
         despacho.Despachar(FechasNegocio.Hoy(), Guid.NewGuid(),
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, 0.75m, publicacionOriginal.Id)],

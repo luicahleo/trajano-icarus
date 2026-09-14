@@ -14,6 +14,15 @@ public sealed class ConfiguracionDespachoHuevo : IEntityTypeConfiguration<Despac
         builder.Property(d => d.Estado).HasConversion<int>();
         builder.Property(d => d.Version).IsRowVersion();
 
+        // Folio legible (spec 2026-09-14): misma SEQUENCE por tipo que los
+        // pedidos, con su propia serie para los despachos.
+        builder.Property(d => d.Numero)
+            .HasDefaultValueSql("NEXT VALUE FOR gestion_avicola.secuencia_despachos_huevo")
+            .ValueGeneratedOnAdd();
+        builder.HasIndex(d => d.Numero).IsUnique();
+        builder.HasIndex(d => new { d.ClienteId, d.GranjaId });
+        builder.HasIndex(d => d.CreadoPorTrabajadorId);
+
         builder.HasIndex(d => new { d.ClienteId, d.FechaDespacho });
         builder.HasIndex(d => new { d.Estado, d.ClienteId, d.FechaDespacho });
 

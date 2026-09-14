@@ -82,7 +82,7 @@ public class NotificacionesInternasTests
 
     private PedidoAlimento PedidoEnBorrador()
     {
-        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, UsuarioId, LineasBolsa());
+        var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
         _repositorio.ObtenerPorIdAsync(pedido.Id, Arg.Any<CancellationToken>()).Returns(pedido);
         return pedido;
     }

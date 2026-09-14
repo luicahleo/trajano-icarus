@@ -99,7 +99,7 @@ public class CorreccionPrecioHuevoTests
 
         // Despacho Recibido que usó la errónea: 1 amarra (180 huevos)
         // congelados a 1,40 Bs.
-        var despacho = new DespachoHuevo(clienteId, Guid.NewGuid(), actorId,
+        var despacho = new DespachoHuevo(clienteId, Guid.NewGuid(), actorId, null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Extra, 1, 0)]);
         despacho.Despachar(hoy, actorId,
             [new DatosPrecioDespachoHuevo(TamanoHuevo.Extra, 1.40m, erronea.Id)],
