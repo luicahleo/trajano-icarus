@@ -25,10 +25,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
-import { useAuth } from '../auth/AuthContext';
-import { ApiError } from '../../lib/http';
-import { AjustesCreditoHuevo } from '../despacho-huevo/AjustesCreditoHuevo';
-import { obtenerBalanceCreditoHuevo } from '../despacho-huevo/api';
 import {
   borrarPedido,
   enviarPedido,
@@ -46,7 +42,6 @@ import {
   ETIQUETAS_TIPO_ALIMENTO,
   formatoFecha,
   formatoMoneda,
-  formatoMonedaExacta,
 } from './constantes';
 
 // Compresión client-side (spec SP8D): pensada para conectividad rural, no
@@ -78,20 +73,14 @@ async function comprimirImagen(archivo: File): Promise<File> {
 // Detalle del pedido (spec SP8): precios congelados al enviar, historial
 // completo de transiciones con motivos, y acciones solo en borrador. Abrir o
 // leer el pedido nunca cambia su estado.
-// Debe coincidir exactamente con el `title` que arma el backend para
-// CreditoInsuficienteRequiereConfirmacionException (spec SP9E) — es el único
-// mecanismo disponible hoy para distinguir este 409 de otros sin extender
-// ApiError con campos específicos de un único caso de uso.
-const TITULO_CREDITO_INSUFICIENTE = 'Crédito insuficiente';
-
+// Corrección 2026-09-14: el envío no consulta ni menciona el crédito. El
+// saldo es información privada del Cliente y se muestra donde decide gastar
+// —formulario de pedido y formulario de despacho de huevo—, no como freno.
 export function PedidoAlimentoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { tieneRol } = useAuth();
-  const esCliente = tieneRol('Cliente');
   const [confirmarEnvio, setConfirmarEnvio] = useState(false);
-  const [requiereConfirmacionCredito, setRequiereConfirmacionCredito] = useState(false);
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [confirmarRecepcion, setConfirmarRecepcion] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,15 +104,6 @@ export function PedidoAlimentoDetallePage() {
     queryFn: obtenerPrecioVigente,
   });
 
-  // Saldo actual del cliente, consultado solo cuando el primer intento de
-  // envío ya avisó que hace falta confirmar (spec SP9E): evita duplicar en
-  // el frontend el mismo cálculo que ya hace el backend.
-  const { data: creditoParaConfirmar } = useQuery({
-    queryKey: ['despachos-huevo', 'credito'],
-    queryFn: obtenerBalanceCreditoHuevo,
-    enabled: requiereConfirmacionCredito && esCliente,
-  });
-
   const precioEstimadoDe = useMemo(() => {
     const indice = new Map(
       (preciosVigentes?.detalles ?? []).map((d) => [
@@ -143,23 +123,16 @@ export function PedidoAlimentoDetallePage() {
 
   const cerrarDialogoEnvio = () => {
     setConfirmarEnvio(false);
-    setRequiereConfirmacionCredito(false);
   };
 
   const enviar = useMutation({
-    mutationFn: (confirmarCreditoInsuficiente: boolean) =>
-      enviarPedido(id!, confirmarCreditoInsuficiente),
+    mutationFn: () => enviarPedido(id!),
     onSuccess: () => {
       setConfirmarEnvio(false);
-      setRequiereConfirmacionCredito(false);
       setError(null);
       refrescar();
     },
     onError: (e) => {
-      if (e instanceof ApiError && e.code === TITULO_CREDITO_INSUFICIENTE) {
-        setRequiereConfirmacionCredito(true);
-        return;
-      }
       setError(e instanceof Error ? e.message : 'No se pudo enviar el pedido.');
     },
   });
@@ -539,39 +512,17 @@ export function PedidoAlimentoDetallePage() {
                   : `${formatoMoneda(totalParaEnviar)}${esEstimado ? ' (estimado, se congela al enviar)' : ''}`}
               </strong>
             </Typography>
-            {esCliente && requiereConfirmacionCredito && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                {/* El crédito de huevo va con cuatro decimales (sale de precios
-                    por huevo de cuatro decimales) y el total del pedido con dos,
-                    que es lo exacto para los precios de alimento. */}
-                Este pedido va a dejar tu crédito por despachos de huevo en{' '}
-                {formatoMonedaExacta(
-                  (creditoParaConfirmar?.saldoDisponible ?? 0) - (totalParaEnviar ?? 0),
-                )}{' '}
-                negativo (saldo actual{' '}
-                {formatoMonedaExacta(creditoParaConfirmar?.saldoDisponible ?? 0)}, este pedido{' '}
-                {formatoMoneda(totalParaEnviar ?? 0)}). ¿Confirmás el envío igual?
-                <AjustesCreditoHuevo ajustes={creditoParaConfirmar?.ajustes ?? []} />
-              </Alert>
-            )}
-            {!esCliente && requiereConfirmacionCredito && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                Este pedido necesita confirmación del Cliente para continuar.
-              </Alert>
-            )}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={cerrarDialogoEnvio}>Cancelar</Button>
-          {(esCliente || !requiereConfirmacionCredito) && (
-            <Button
-              variant="contained"
-              onClick={() => enviar.mutate(requiereConfirmacionCredito)}
-              disabled={enviar.isPending || totalParaEnviar === null}
-            >
-              {requiereConfirmacionCredito ? 'Enviar de todas formas' : 'Confirmar envío'}
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            onClick={() => enviar.mutate()}
+            disabled={enviar.isPending || totalParaEnviar === null}
+          >
+            Confirmar envío
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

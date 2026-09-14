@@ -38,6 +38,9 @@ export function mensajeNotificacionDespachoHuevo(tipo: string): string {
       return 'CAISY confirmó la recepción de un despacho de huevo.';
     case 'AjusteCredito':
       return 'Se ajustó tu crédito de huevo por una corrección de precio.';
+    // Retirado como emisión por la corrección 2026-09-14: ya no se genera
+    // ninguna notificación por saldo negativo. La rama se conserva para las
+    // filas históricas que sigan en base.
     case 'CreditoInsuficiente':
       return 'Se envió un pedido de alimento con crédito de huevo insuficiente.';
     default:
