@@ -275,6 +275,8 @@ public static class PedidosAlimentoEndpoints
 
     private sealed record MotivoRequest(string Motivo);
 
+    // `ConfirmarCreditoInsuficiente` quedó INERTE con la corrección
+    // 2026-09-14: se conserva para no romper el contrato del endpoint.
     private sealed record EnviarPedidoRequest(bool ConfirmarCreditoInsuficiente = false);
 
     private sealed record FechaEntregaRequest(DateOnly FechaEntregaEstimada);

@@ -130,10 +130,13 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
     {
         await SemillaDesarrolloAvicola.SembrarAsync(_servicios, Tenants);
 
+        // Corrección 2026-09-14: el saldo ya no descuenta los pedidos en
+        // tránsito, así que Insuficiente y ConMovimiento suben al desaparecer
+        // el componente «comprometido pendiente».
         Assert.Equal(9990m, await SaldoDe(Holgado));
         Assert.Equal(-5985m, await SaldoDe(Negativo));
-        Assert.Equal(315m, await SaldoDe(Insuficiente));
-        Assert.Equal(5085m, await SaldoDe(ConMovimiento));
+        Assert.Equal(3915m, await SaldoDe(Insuficiente));
+        Assert.Equal(6885m, await SaldoDe(ConMovimiento));
         Assert.Equal(0m, await SaldoDe(Vacio));
     }
 

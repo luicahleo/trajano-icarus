@@ -16,11 +16,11 @@ public enum PapelCreditoDesarrollo
     // Flujo sano de punta a punta: despachos cobrados y un pedido recibido.
     PositivoHolgado = 0,
 
-    // Dispara el chip «Negativo» y la notificación de saldo negativo.
+    // Dispara el chip «Negativo» en el crédito del Cliente.
     Negativo = 1,
 
-    // Saldo positivo pero corto: al enviar un pedido salta la confirmación de
-    // crédito insuficiente (SP9E).
+    // Saldo positivo con un pedido solicitado que ya no pesa en el saldo
+    // (corrección 2026-09-14).
     Insuficiente = 2,
 
     // Desglose completo: despachos dentro y fuera de la ventana de catorce
@@ -254,8 +254,8 @@ public static class SemillaDesarrolloAvicola
             Derivar(tenant.ClienteId, 0x51), 40, 40, hoy.AddDays(-18));
     }
 
-    // Ingresos 3915; comprometido pendiente 3600. Saldo 315: alcanza para muy
-    // poco, así que el siguiente envío dispara la confirmación de SP9E.
+    // Ingresos 3915. El pedido solicitado ya no pesa en el saldo (corrección
+    // 2026-09-14), así que el saldo es el ingreso real.
     private static async Task SembrarInsuficienteAsync(
         GestionAvicolaDbContext db, IAlmacenDocumentosPedido almacen,
         TenantDesarrollo tenant, Guid granjaId, DateOnly hoy)
@@ -273,8 +273,8 @@ public static class SemillaDesarrolloAvicola
     }
 
     // Ingresos computables 6075 + 2250 = 8325 (el despacho de hace cinco días
-    // todavía no cuenta), recibido real 2340, comprometido 1800 y ajuste +900.
-    // Saldo 5085.
+    // todavía no cuenta), recibido real 2340 y ajuste +900. El pedido aceptado
+    // ya no pesa en el saldo (corrección 2026-09-14). Saldo 6885.
     private static async Task SembrarConMovimientoAsync(
         GestionAvicolaDbContext db, IAlmacenDocumentosPedido almacen,
         TenantDesarrollo tenant, Guid granjaId, DateOnly hoy)
