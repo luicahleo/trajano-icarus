@@ -7,8 +7,15 @@ public sealed record ObtenerBalanceCreditoHuevoQuery : IRequest<BalanceCreditoHu
 
 public sealed record AjusteCreditoHuevoResumen(Guid Id, decimal Monto, string Motivo, DateOnly Fecha);
 
+// RecibidoReciente y DiasReferencia acompañan al saldo, no lo modifican
+// (corrección 2026-09-14). DiasReferencia viaja al cliente en vez de
+// duplicar el 14 en el frontend: así el texto de la PWA no puede mentir si
+// la constante cambia.
 public sealed record BalanceCreditoHuevoResumen(
-    decimal SaldoDisponible, IReadOnlyList<AjusteCreditoHuevoResumen> Ajustes);
+    decimal SaldoDisponible,
+    decimal RecibidoReciente,
+    int DiasReferencia,
+    IReadOnlyList<AjusteCreditoHuevoResumen> Ajustes);
 
 public sealed class ObtenerBalanceCreditoHuevoHandler(
     IRepositorioBalanceCreditoHuevo repositorio, ICurrentUser usuarioActual)
@@ -22,9 +29,11 @@ public sealed class ObtenerBalanceCreditoHuevoHandler(
         if (usuarioActual.Rol != "Cliente")
             throw new CreditoHuevoRequiereRolClienteException(
                 "El crédito por despachos de huevo es exclusivo del Cliente.");
-        var saldo = await repositorio.ObtenerSaldoDisponibleAsync(
-            clienteId, DespachosHuevo.FechasNegocio.Hoy(), cancellationToken);
+        var hoy = DespachosHuevo.FechasNegocio.Hoy();
+        var saldo = await repositorio.ObtenerSaldoDisponibleAsync(clienteId, hoy, cancellationToken);
+        var reciente = await repositorio.ObtenerRecibidoRecienteAsync(clienteId, hoy, cancellationToken);
         var ajustes = await repositorio.ObtenerAjustesAsync(clienteId, cancellationToken);
-        return new BalanceCreditoHuevoResumen(saldo, ajustes);
+        return new BalanceCreditoHuevoResumen(
+            saldo, reciente, ReglasCreditoHuevo.DiasReferenciaCredito, ajustes);
     }
 }

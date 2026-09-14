@@ -30,6 +30,8 @@ public class ObtenerBalanceCreditoHuevoHandlerTests
     {
         _repositorio.ObtenerSaldoDisponibleAsync(ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(1250m);
+        _repositorio.ObtenerRecibidoRecienteAsync(ClienteId, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(300m);
         var ajustes = new List<AjusteCreditoHuevoResumen>
         {
             new(Guid.NewGuid(), 45m, "Corrección de precio Extra.", new DateOnly(2026, 9, 1)),
@@ -40,6 +42,8 @@ public class ObtenerBalanceCreditoHuevoHandlerTests
             new ObtenerBalanceCreditoHuevoQuery(), CancellationToken.None);
 
         Assert.Equal(1250m, resultado.SaldoDisponible);
+        Assert.Equal(300m, resultado.RecibidoReciente);
+        Assert.Equal(14, resultado.DiasReferencia);
         Assert.Same(ajustes, resultado.Ajustes);
     }
 
@@ -77,5 +81,20 @@ public class ObtenerBalanceCreditoHuevoHandlerTests
         await _repositorio.DidNotReceive().ObtenerSaldoDisponibleAsync(
             Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
         await _repositorio.DidNotReceive().ObtenerAjustesAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    // El recibido reciente sale de los mismos despachos que el saldo: si el
+    // Trabajador no puede ver uno, tampoco el otro. Sin este assert el gate
+    // podría dejar pasar la consulta nueva sin que ningún test lo note.
+    [Fact]
+    public async Task UnTrabajadorTampocoPuedeConsultarElRecibidoReciente()
+    {
+        _usuarioActual.Rol.Returns("Trabajador");
+
+        await Assert.ThrowsAsync<CreditoHuevoRequiereRolClienteException>(() =>
+            CrearHandler().Handle(new ObtenerBalanceCreditoHuevoQuery(), CancellationToken.None));
+
+        await _repositorio.DidNotReceive().ObtenerRecibidoRecienteAsync(
+            Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
     }
 }
