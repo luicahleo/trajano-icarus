@@ -19,8 +19,10 @@ public enum PapelCreditoDesarrollo
     // Dispara el chip «Negativo» en el crédito del Cliente.
     Negativo = 1,
 
-    // Saldo positivo con un pedido solicitado que ya no pesa en el saldo
-    // (corrección 2026-09-14).
+    // Saldo positivo pero menor que su pedido ya enviado: ese pedido salió con
+    // la cuenta en rojo y arrastra la marca «Enviado con crédito insuficiente.»
+    // en su historial, sin cifras (corrección 2026-09-14). El pedido no pesa en
+    // el saldo: sirve para ver la marca, no para bajar el número.
     Insuficiente = 2,
 
     // Desglose completo: despachos dentro y fuera de la ventana de catorce
@@ -254,8 +256,11 @@ public static class SemillaDesarrolloAvicola
             Derivar(tenant.ClienteId, 0x51), 40, 40, hoy.AddDays(-18));
     }
 
-    // Ingresos 3915. El pedido solicitado ya no pesa en el saldo (corrección
-    // 2026-09-14), así que el saldo es el ingreso real.
+    // Ingresos 3915, que es el saldo entero: el pedido solicitado ya no pesa en
+    // él (corrección 2026-09-14). Ese pedido cuesta 4500 —más que el saldo—,
+    // así que salió con la cuenta en rojo y lleva la marca correspondiente. La
+    // marca no es decorativa: SemillaDesarrolloAvicolaTests verifica que sea
+    // verdad comparando saldo contra total del pedido.
     private static async Task SembrarInsuficienteAsync(
         GestionAvicolaDbContext db, IAlmacenDocumentosPedido almacen,
         TenantDesarrollo tenant, Guid granjaId, DateOnly hoy)
@@ -265,8 +270,13 @@ public static class SemillaDesarrolloAvicola
 
         var solicitado = new PedidoAlimento(
             Derivar(tenant.ClienteId, 0x51), tenant.ClienteId, tenant.ActorId,
-            [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 20)]);
-        solicitado.EnviarACaisy(hoy.AddDays(-3), tenant.ActorId, PreciosEnvio());
+            [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 25)]);
+        // Mismo motivo exacto que produce EnviarPedidoAlimentoHandler: sin
+        // cifras, porque este historial lo lee CAISY. Si la semilla usara otro
+        // texto, el escenario se vería distinto de uno real justo donde se lo
+        // quiere inspeccionar.
+        solicitado.EnviarACaisy(hoy.AddDays(-3), tenant.ActorId, PreciosEnvio(),
+            "Enviado con crédito insuficiente.");
         db.PedidosAlimento.Add(solicitado);
         db.NotificacionesInternas.Add(NotificacionInterna.ParaCaisy(
             TipoNotificacionPedido.PedidoSolicitado, solicitado.Id));

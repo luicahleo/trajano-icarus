@@ -140,6 +140,37 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
         Assert.Equal(0m, await SaldoDe(Vacio));
     }
 
+    // Corrección 2026-09-14: enviar un pedido con la cuenta en rojo ya no se
+    // bloquea, solo deja una marca en el historial. Ese historial lo lee CAISY
+    // en su vista de Detalles, así que la marca NO puede llevar cifras. El
+    // tenant Insuficiente siembra el caso para poder verlo sin crear y enviar
+    // un pedido a mano.
+    [Fact]
+    public async Task ElTenantInsuficienteSiembraLaMarcaDeEnvioSinCifras()
+    {
+        await SemillaDesarrolloAvicola.SembrarAsync(_servicios, Tenants);
+
+        var db = _servicios.GetRequiredService<GestionAvicolaDbContext>();
+        var pedido = await db.PedidosAlimento.IgnoreQueryFilters()
+            .Include(p => p.Detalles)
+            .Include(p => p.Historial)
+            .SingleAsync(p => p.ClienteId == Insuficiente.ClienteId
+                && p.Estado == EstadoPedidoAlimento.Solicitado);
+
+        var envio = Assert.Single(pedido.Historial,
+            t => t.EstadoDestino == EstadoPedidoAlimento.Solicitado);
+        Assert.Equal("Enviado con crédito insuficiente.", envio.Motivo);
+        Assert.DoesNotContain("saldo", envio.Motivo!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatch(@"\d", envio.Motivo!);
+
+        // La marca tiene que ser verdad: sin esto la semilla mentiría, que es
+        // justo lo que este escenario existe para evitar.
+        var saldo = await SaldoDe(Insuficiente);
+        var total = pedido.Detalles.Sum(d => d.SubtotalSolicitado ?? 0m);
+        Assert.True(saldo - total < 0,
+            $"La marca miente: saldo {saldo}, pedido {total}, resultante {saldo - total}.");
+    }
+
     [Fact]
     public async Task ElDespachoRecibidoDentroDeLaVentanaDeCatorceDiasNoCuentaTodavia()
     {
