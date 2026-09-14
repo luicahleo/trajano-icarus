@@ -247,6 +247,8 @@ describe('DespachoHuevoFormularioPage', () => {
         'GET /api/despachos-huevo/precios-vigentes': respuesta(200, precioVigente),
         'GET /api/despachos-huevo/credito': respuesta(200, {
           saldoDisponible: -5000,
+          recibidoReciente: 0,
+          diasReferencia: 14,
           ajustes: [
             { id: 'a1', monto: 900, motivo: 'Corrección de precio Extra.', fecha: '2026-09-01' },
           ],
@@ -258,6 +260,26 @@ describe('DespachoHuevoFormularioPage', () => {
     expect(await screen.findByText(/Crédito por despachos de huevo/)).toBeInTheDocument();
     expect(screen.getByText('Negativo')).toBeInTheDocument();
     expect(screen.getByText(/Corrección/)).toBeInTheDocument();
+  });
+
+  // La misma línea secundaria del formulario de pedido: el despacho comparte
+  // el bloque de crédito, así que la referencia también se ve acá.
+  test('muestra cuanto del credito se recibio dentro de la ventana de referencia', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fetchSimulado({
+        'GET /api/despachos-huevo/precios-vigentes': respuesta(200, precioVigente),
+        'GET /api/despachos-huevo/credito': respuesta(200, {
+          saldoDisponible: 8973,
+          recibidoReciente: 2088,
+          diasReferencia: 14,
+          ajustes: [],
+        }),
+      }),
+    );
+    renderPagina();
+
+    expect(await screen.findByText(/se recibieron en los últimos 14 días/i)).toBeInTheDocument();
   });
 
   test('no muestra ni consulta el crédito para el Trabajador', async () => {

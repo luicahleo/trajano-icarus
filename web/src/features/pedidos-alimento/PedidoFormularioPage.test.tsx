@@ -123,7 +123,12 @@ describe('PedidoFormularioPage', () => {
     const fetchMock = fetchSimulado({
       'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
       'GET /api/granjas': respuesta(200, []),
-      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: -45.5, ajustes: [] }),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: -45.5,
+        recibidoReciente: 0,
+        diasReferencia: 14,
+        ajustes: [],
+      }),
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
@@ -138,7 +143,12 @@ describe('PedidoFormularioPage', () => {
     const fetchMock = fetchSimulado({
       'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
       'GET /api/granjas': respuesta(200, []),
-      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: -45.5, ajustes: [] }),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: -45.5,
+        recibidoReciente: 0,
+        diasReferencia: 14,
+        ajustes: [],
+      }),
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
@@ -149,7 +159,12 @@ describe('PedidoFormularioPage', () => {
     const fetchMock = fetchSimulado({
       'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
       'GET /api/granjas': respuesta(200, []),
-      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: 45.5, ajustes: [] }),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: 45.5,
+        recibidoReciente: 0,
+        diasReferencia: 14,
+        ajustes: [],
+      }),
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();
@@ -165,6 +180,8 @@ describe('PedidoFormularioPage', () => {
       'GET /api/granjas': respuesta(200, []),
       'GET /api/despachos-huevo/credito': respuesta(200, {
         saldoDisponible: 45,
+        recibidoReciente: 0,
+        diasReferencia: 14,
         ajustes: [{ id: 'a1', monto: 45, motivo: 'Corrección de precio Extra.', fecha: '2026-09-01' }],
       }),
     });
@@ -175,12 +192,53 @@ describe('PedidoFormularioPage', () => {
     ).toBeInTheDocument();
   });
 
+  test('muestra cuanto del credito se recibio dentro de la ventana de referencia', async () => {
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: 8973,
+        recibidoReciente: 2088,
+        diasReferencia: 14,
+        ajustes: [],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+
+    expect(await screen.findByText(/se recibieron en los últimos 14 días/i)).toBeInTheDocument();
+  });
+
+  test('no muestra la linea de referencia cuando no hay huevo reciente', async () => {
+    const fetchMock = fetchSimulado({
+      'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
+      'GET /api/granjas': respuesta(200, []),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: 8973,
+        recibidoReciente: 0,
+        diasReferencia: 14,
+        ajustes: [],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+
+    // Espera el saldo para asegurar que la consulta de crédito ya resolvió.
+    expect(await screen.findByText(/Crédito por despachos de huevo/)).toBeInTheDocument();
+    expect(screen.queryByText(/últimos 14 días/i)).not.toBeInTheDocument();
+  });
+
   test('el Trabajador no ve el crédito por despachos de huevo', async () => {
     authMock.mockReturnValueOnce({ tieneRol: () => false });
     const fetchMock = fetchSimulado({
       'GET /api/pedidos-alimento/precios-vigentes': respuesta(200, precios),
       'GET /api/granjas': respuesta(200, []),
-      'GET /api/despachos-huevo/credito': respuesta(200, { saldoDisponible: 45.5, ajustes: [] }),
+      'GET /api/despachos-huevo/credito': respuesta(200, {
+        saldoDisponible: 45.5,
+        recibidoReciente: 0,
+        diasReferencia: 14,
+        ajustes: [],
+      }),
     });
     vi.stubGlobal('fetch', fetchMock);
     renderPagina();

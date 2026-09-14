@@ -21,6 +21,7 @@ import { useAuth } from '../auth/AuthContext';
 import { listarGalpones, listarGranjas } from '../avicola/api';
 import { obtenerBalanceCreditoHuevo } from '../despacho-huevo/api';
 import { AjustesCreditoHuevo } from '../despacho-huevo/AjustesCreditoHuevo';
+import { ReferenciaCreditoReciente } from '../despacho-huevo/ReferenciaCreditoReciente';
 import {
   crearPedido,
   editarPedido,
@@ -226,6 +227,10 @@ export function PedidoFormularioPage() {
                   <Chip size="small" color="error" label="Negativo" />
                 )}
               </Stack>
+              <ReferenciaCreditoReciente
+                recibidoReciente={credito.recibidoReciente}
+                diasReferencia={credito.diasReferencia}
+              />
               <AjustesCreditoHuevo ajustes={credito.ajustes} />
             </Box>
           )}

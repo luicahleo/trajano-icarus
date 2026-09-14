@@ -101,6 +101,12 @@ export interface AjusteCreditoHuevo {
 
 export interface BalanceCreditoHuevo {
   saldoDisponible: number;
+  // Parte del saldo recibida dentro de la ventana de referencia. Informativo:
+  // NO se resta del saldo (corrección 2026-09-14).
+  recibidoReciente: number;
+  // Lo manda el backend en vez de fijar 14 acá, para que el texto no mienta
+  // si la constante cambia.
+  diasReferencia: number;
   ajustes: AjusteCreditoHuevo[];
 }
 

@@ -19,6 +19,7 @@ import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { useAuth } from '../auth/AuthContext';
 import { AjustesCreditoHuevo } from './AjustesCreditoHuevo';
+import { ReferenciaCreditoReciente } from './ReferenciaCreditoReciente';
 import {
   crearDespacho,
   editarDespacho,
@@ -205,6 +206,10 @@ export function DespachoHuevoFormularioPage() {
                   <Chip size="small" color="error" label="Negativo" />
                 )}
               </Stack>
+              <ReferenciaCreditoReciente
+                recibidoReciente={credito.recibidoReciente}
+                diasReferencia={credito.diasReferencia}
+              />
               <AjustesCreditoHuevo ajustes={credito.ajustes} />
             </Box>
           )}
