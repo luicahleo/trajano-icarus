@@ -148,7 +148,7 @@ public static class PedidosAlimentoEndpoints
                 cancellationToken)));
         caisy.MapGet("/{id:guid}", async (Guid id, ISender mediator,
             CancellationToken cancellationToken) =>
-            Results.Ok(await mediator.Send(new ObtenerPedidoAlimentoQuery(id), cancellationToken)));
+            Results.Ok(await mediator.Send(new ObtenerPedidoAlimentoCaisyQuery(id), cancellationToken)));
         caisy.MapPost("/{id:guid}/devolver", async (Guid id, MotivoRequest cuerpo, ISender mediator,
             CancellationToken cancellationToken) =>
         {

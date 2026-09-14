@@ -729,4 +729,22 @@ public class PedidosAlimentoEndpointsTests
             .GetProperty("items")[0];
         Assert.Equal(id, itemFolio.GetProperty("id").GetGuid());
     }
+
+    // Si el borrador no se ve en la bandeja, tampoco por URL directa. Responde
+    // 404 y no 403: un 403 confirmaría que el registro existe.
+    [Fact]
+    public async Task ElDetalleCaisyDeUnBorradorResponde404YElTenantLoSigueViendo()
+    {
+        var (cliente, tokenCliente, _, _) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        var borrador = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var vistaCaisy = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{borrador}", tokenCaisy));
+        Assert.Equal(HttpStatusCode.NotFound, vistaCaisy.StatusCode);
+
+        // El dueño sigue viendo su propio borrador: el filtro es solo de CAISY.
+        var vistaTenant = await ObtenerDetalleAsync(cliente, tokenCliente, borrador);
+        Assert.Equal("Borrador", vistaTenant.GetProperty("estado").GetString());
+    }
 }

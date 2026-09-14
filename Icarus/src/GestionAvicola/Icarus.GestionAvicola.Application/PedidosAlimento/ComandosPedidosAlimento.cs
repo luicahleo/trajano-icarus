@@ -109,6 +109,12 @@ public sealed record ListarPedidosAlimentoQuery(
 public sealed record ObtenerPedidoAlimentoQuery(Guid PedidoId)
     : IRequest<PedidoAlimentoDetalle>;
 
+// Detalle para la bandeja global de CAISY (spec 2026-09-14). Existe aparte de
+// ObtenerPedidoAlimentoQuery porque el tenant sí tiene que ver sus borradores
+// y las dos rutas compartían el mismo query.
+public sealed record ObtenerPedidoAlimentoCaisyQuery(Guid PedidoId)
+    : IRequest<PedidoAlimentoDetalle>;
+
 // Cupo semanal visible en la bandeja del tenant (spec SP8): pedidos enviados
 // en la semana ISO actual contra el máximo configurado.
 public sealed record ObtenerCupoPedidosQuery : IRequest<CupoPedidosResumen>;
@@ -751,6 +757,20 @@ public sealed class ObtenerPedidoAlimentoHandler(IRepositorioPedidosAlimento rep
     {
         var pedido = await repositorio.ObtenerConHistorialAsync(request.PedidoId, cancellationToken)
             ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
+        return MapeadorPedidos.MapearDetalle(pedido);
+    }
+}
+
+public sealed class ObtenerPedidoAlimentoCaisyHandler(IRepositorioPedidosAlimento repositorio)
+    : IRequestHandler<ObtenerPedidoAlimentoCaisyQuery, PedidoAlimentoDetalle>
+{
+    public async Task<PedidoAlimentoDetalle> Handle(
+        ObtenerPedidoAlimentoCaisyQuery request, CancellationToken cancellationToken)
+    {
+        var pedido = await repositorio.ObtenerConHistorialAsync(request.PedidoId, cancellationToken);
+        // Un borrador se trata como inexistente: el 404 no revela que está ahí.
+        if (pedido is null || pedido.Estado == EstadoPedidoAlimento.Borrador)
+            throw new NotFoundException("Pedido de alimento", request.PedidoId);
         return MapeadorPedidos.MapearDetalle(pedido);
     }
 }
