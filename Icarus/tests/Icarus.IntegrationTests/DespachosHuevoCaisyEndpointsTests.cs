@@ -536,4 +536,27 @@ public class DespachosHuevoCaisyEndpointsTests
         Assert.Equal(
             "Corrección de precio Extra.", elementoAjuste.GetProperty("motivo").GetString());
     }
+
+    // Si el borrador no se ve en la bandeja, tampoco por URL directa.
+    [Fact]
+    public async Task ElDetalleCaisyDeUnDespachoBorradorResponde404()
+    {
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var granja = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/granjas", tokenCliente,
+            JsonContent.Create(new { nombre = "Granja de Prueba" })));
+        Assert.Equal(HttpStatusCode.Created, granja.StatusCode);
+        var tokenCaisy = await CrearCuentaCaisyAsync("GestorRecepcionHuevos");
+        var borrador = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var vistaCaisy = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/despachos-huevo-caisy/{borrador}", tokenCaisy));
+        Assert.Equal(HttpStatusCode.NotFound, vistaCaisy.StatusCode);
+
+        // El dueño sigue viendo su propio borrador.
+        var vistaTenant = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/despachos-huevo/{borrador}", tokenCliente));
+        Assert.Equal(HttpStatusCode.OK, vistaTenant.StatusCode);
+        var cuerpoTenant = await vistaTenant.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Borrador", cuerpoTenant.GetProperty("estado").GetString());
+    }
 }

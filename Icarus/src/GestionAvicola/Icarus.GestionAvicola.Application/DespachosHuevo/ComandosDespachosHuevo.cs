@@ -263,6 +263,12 @@ public sealed record DespachoHuevoCaisyResumen(
 
 public sealed record PaginaDespachosHuevo(IReadOnlyList<DespachoHuevoCaisyResumen> Items, int Total);
 
+// Detalle para la bandeja global de CAISY (spec 2026-09-14). Existe aparte de
+// ObtenerDespachoHuevoQuery porque el tenant sí tiene que ver sus borradores
+// y las dos rutas compartían el mismo query.
+public sealed record ObtenerDespachoHuevoCaisyQuery(Guid DespachoId)
+    : IRequest<DespachoHuevoDetalle>;
+
 public sealed class ListarDespachosHuevoCaisyHandler(IRepositorioDespachosHuevo repositorio)
     : IRequestHandler<ListarDespachosHuevoCaisyQuery, PaginaDespachosHuevo>
 {
@@ -287,6 +293,29 @@ public sealed class ObtenerDespachoHuevoHandler(IRepositorioDespachosHuevo repos
     {
         var despacho = await repositorio.ObtenerConHistorialAsync(request.DespachoId, cancellationToken)
             ?? throw new NotFoundException("Despacho de huevo", request.DespachoId);
+        return new DespachoHuevoDetalle(
+            despacho.Id, despacho.Estado.ToString(), despacho.FechaDespacho,
+            despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs,
+            despacho.Detalles
+                .OrderBy(d => d.Tamano)
+                .Select(d => new DetalleDespachoHuevoResumen(
+                    d.Id, d.Tamano.ToString(), d.CantidadAmarras, d.UnidadesSueltas,
+                    d.CantidadHuevos, d.PrecioUnitarioCongelado, d.Subtotal))
+                .ToList());
+    }
+}
+
+public sealed class ObtenerDespachoHuevoCaisyHandler(IRepositorioDespachosHuevo repositorio)
+    : IRequestHandler<ObtenerDespachoHuevoCaisyQuery, DespachoHuevoDetalle>
+{
+    public async Task<DespachoHuevoDetalle> Handle(
+        ObtenerDespachoHuevoCaisyQuery request, CancellationToken cancellationToken)
+    {
+        var despacho = await repositorio.ObtenerConHistorialAsync(
+            request.DespachoId, cancellationToken);
+        // Un borrador se trata como inexistente: el 404 no revela que está ahí.
+        if (despacho is null || despacho.Estado == EstadoDespachoHuevo.Borrador)
+            throw new NotFoundException("Despacho de huevo", request.DespachoId);
         return new DespachoHuevoDetalle(
             despacho.Id, despacho.Estado.ToString(), despacho.FechaDespacho,
             despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs,

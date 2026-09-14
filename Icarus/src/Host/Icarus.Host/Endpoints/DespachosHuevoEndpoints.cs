@@ -115,7 +115,7 @@ public static class DespachosHuevoEndpoints
         });
 
         caisy.MapGet("/{id:guid}", async (Guid id, ISender mediator, CancellationToken cancellationToken) =>
-            Results.Ok(await mediator.Send(new ObtenerDespachoHuevoQuery(id), cancellationToken)));
+            Results.Ok(await mediator.Send(new ObtenerDespachoHuevoCaisyQuery(id), cancellationToken)));
 
         caisy.MapPost("/{id:guid}/confirmar-recepcion", async (Guid id, ISender mediator,
             CancellationToken cancellationToken) =>
