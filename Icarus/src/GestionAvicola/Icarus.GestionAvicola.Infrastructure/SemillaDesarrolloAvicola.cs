@@ -47,10 +47,10 @@ public sealed record TenantDesarrollo(Guid ClienteId, Guid ActorId, PapelCredito
 //
 // Tiene que ser semilla y no un script contra la API porque FechasNegocio.Hoy()
 // lee DateTime.UtcNow y no hay abstracción de reloj: por HTTP no se pueden
-// retroceder fechas, y sin retroceder el crédito siempre da cero (solo cuentan
-// los despachos con FechaRecepcion <= hoy - 14). Los agregados sí reciben la
-// fecha como parámetro, así que desde aquí se retrocede respetando los
-// invariantes del dominio.
+// retroceder fechas, y sin retroceder el escenario no tendría historia
+// (despachos, recepciones y ajustes con fecha anterior a hoy). Los agregados
+// sí reciben la fecha como parámetro, así que desde aquí se retrocede
+// respetando los invariantes del dominio.
 //
 // Datos ficticios: ningún dato nominal real (anti-PII).
 public static class SemillaDesarrolloAvicola
@@ -282,9 +282,10 @@ public static class SemillaDesarrolloAvicola
             TipoNotificacionPedido.PedidoSolicitado, solicitado.Id));
     }
 
-    // Ingresos computables 6075 + 2250 = 8325 (el despacho de hace cinco días
-    // todavía no cuenta), recibido real 2340 y ajuste +900. El pedido aceptado
-    // ya no pesa en el saldo (corrección 2026-09-14). Saldo 6885.
+    // Ingresos 6075 + 2250 + 2088 = 10413 (desde la corrección del 2026-09-14
+    // el despacho de hace cinco días también cuenta), recibido real 2340 y
+    // ajuste +900. Saldo 8973, de los cuales 2088 están dentro de la ventana
+    // de referencia de catorce días. El pedido aceptado no pesa en el saldo.
     private static async Task SembrarConMovimientoAsync(
         GestionAvicolaDbContext db, IAlmacenDocumentosPedido almacen,
         TenantDesarrollo tenant, Guid granjaId, DateOnly hoy)
@@ -299,8 +300,9 @@ public static class SemillaDesarrolloAvicola
         await AgregarDespachoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x42), TamanoHuevo.Tercera, 10, hoy.AddDays(-32), hoy.AddDays(-30));
 
-        // Recibido pero todavía dentro de la ventana de catorce días: se ve en
-        // el desglose como pendiente de disponibilidad.
+        // Recibido dentro de la ventana de referencia de catorce días: cuenta
+        // en el saldo como cualquier otro y además se señala aparte. Es el
+        // único caso de la semilla que hace visible esa línea en la PWA.
         await AgregarDespachoRecibidoAsync(db, almacen, tenant, granjaId,
             Derivar(tenant.ClienteId, 0x43), TamanoHuevo.Primera, 8, hoy.AddDays(-6), hoy.AddDays(-5));
 

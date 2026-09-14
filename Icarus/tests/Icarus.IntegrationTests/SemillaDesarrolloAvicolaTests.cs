@@ -99,6 +99,14 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
             tenant.ClienteId, DateOnly.FromDateTime(DateTime.UtcNow));
     }
 
+    private async Task<decimal> RecibidoRecienteDe(TenantDesarrollo tenant)
+    {
+        var db = _servicios.GetRequiredService<GestionAvicolaDbContext>();
+        var repositorio = new RepositorioBalanceCreditoHuevo(db);
+        return await repositorio.ObtenerRecibidoRecienteAsync(
+            tenant.ClienteId, DateOnly.FromDateTime(DateTime.UtcNow));
+    }
+
     [Fact]
     public async Task CadaTenantQuedaConElSignoDeSaldoQueSuPapelDeclara()
     {
@@ -130,14 +138,37 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
     {
         await SemillaDesarrolloAvicola.SembrarAsync(_servicios, Tenants);
 
-        // Corrección 2026-09-14: el saldo ya no descuenta los pedidos en
-        // tránsito, así que Insuficiente y ConMovimiento suben al desaparecer
-        // el componente «comprometido pendiente».
+        // Corrección 2026-09-14 (segunda): el saldo ya no espera catorce días,
+        // así que ConMovimiento sube por su despacho recibido hace cinco días.
+        // Los otros cuatro no se mueven: no tienen despachos dentro de la
+        // ventana.
         Assert.Equal(9990m, await SaldoDe(Holgado));
         Assert.Equal(-5985m, await SaldoDe(Negativo));
         Assert.Equal(3915m, await SaldoDe(Insuficiente));
-        Assert.Equal(6885m, await SaldoDe(ConMovimiento));
+        Assert.Equal(8973m, await SaldoDe(ConMovimiento));
         Assert.Equal(0m, await SaldoDe(Vacio));
+    }
+
+    // ConMovimiento es el único tenant con un despacho dentro de la ventana de
+    // referencia, así que es el único donde la PWA renderiza la línea «de los
+    // cuales ... se recibieron en los últimos 14 días». Sin este test, la
+    // semilla podría perder ese despacho y el escenario desaparecería en
+    // silencio.
+    [Fact]
+    public async Task SoloConMovimientoTieneHuevoDentroDeLaVentanaDeReferencia()
+    {
+        await SemillaDesarrolloAvicola.SembrarAsync(_servicios, Tenants);
+
+        Assert.Equal(2088m, await RecibidoRecienteDe(ConMovimiento));
+        Assert.Equal(0m, await RecibidoRecienteDe(Holgado));
+        Assert.Equal(0m, await RecibidoRecienteDe(Negativo));
+        Assert.Equal(0m, await RecibidoRecienteDe(Insuficiente));
+        Assert.Equal(0m, await RecibidoRecienteDe(Vacio));
+
+        // El reciente es una parte del saldo, nunca un descuento.
+        var saldo = await SaldoDe(ConMovimiento);
+        Assert.True(await RecibidoRecienteDe(ConMovimiento) < saldo,
+            $"El reciente debía ser una parte del saldo {saldo}, no su total.");
     }
 
     // Corrección 2026-09-14: enviar un pedido con la cuenta en rojo ya no se
@@ -171,8 +202,13 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
             $"La marca miente: saldo {saldo}, pedido {total}, resultante {saldo - total}.");
     }
 
+    // Corrección 2026-09-14 (segunda): este test afirmaba que el despacho
+    // dentro de la ventana no contaba hasta catorce días después. Ahora cuenta
+    // como cualquier otro, y el parámetro `hoy` dejó de filtrar el saldo: la
+    // misma consulta con dos fechas de negocio da el mismo número. El importe
+    // recibido dentro de la ventana se reporta aparte, sin restarse.
     [Fact]
-    public async Task ElDespachoRecibidoDentroDeLaVentanaDeCatorceDiasNoCuentaTodavia()
+    public async Task ElDespachoDentroDeLaVentanaDeReferenciaCuentaEnElSaldoYSeReportaAparte()
     {
         await SemillaDesarrolloAvicola.SembrarAsync(_servicios, Tenants);
 
@@ -181,8 +217,7 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
         var corte = hoy.AddDays(-ReglasCreditoHuevo.DiasReferenciaCredito);
 
-        // Despachos ya recibidos pero todavía dentro de la ventana: hoy no
-        // cuentan, y catorce días después sí.
+        // Despachos ya recibidos dentro de la ventana de referencia.
         var recientes = await db.DespachosHuevo.IgnoreQueryFilters()
             .Where(d => d.ClienteId == ConMovimiento.ClienteId
                 && d.Estado == EstadoDespachoHuevo.Recibido
@@ -196,13 +231,16 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
             .Sum(det => det.CantidadHuevos * det.PrecioUnitarioCongelado!.Value);
         Assert.True(importeReciente > 0, "El despacho reciente debía tener precio congelado.");
 
-        // Mismo dato, dos fechas de negocio: la única diferencia posible es
-        // que los despachos recientes entren en la ventana.
+        // El parámetro `hoy` ya no cambia el saldo: el despacho reciente cuenta
+        // hoy y seguirá contando catorce días después.
         var saldoHoy = await repositorio.ObtenerSaldoDisponibleAsync(ConMovimiento.ClienteId, hoy);
         var saldoEnCatorceDias = await repositorio.ObtenerSaldoDisponibleAsync(
             ConMovimiento.ClienteId, hoy.AddDays(ReglasCreditoHuevo.DiasReferenciaCredito));
+        Assert.Equal(saldoHoy, saldoEnCatorceDias);
 
-        Assert.Equal(importeReciente, saldoEnCatorceDias - saldoHoy);
+        // El mismo importe se señala aparte como recibido reciente.
+        Assert.Equal(importeReciente,
+            await repositorio.ObtenerRecibidoRecienteAsync(ConMovimiento.ClienteId, hoy));
     }
 
     [Fact]
