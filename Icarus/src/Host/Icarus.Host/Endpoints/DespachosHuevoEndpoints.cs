@@ -1,3 +1,4 @@
+using Icarus.BuildingBlocks.Application;
 using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
@@ -33,8 +34,18 @@ public static class DespachosHuevoEndpoints
             return Results.Created($"/despachos-huevo/{id}", new { id });
         });
 
-        tenant.MapGet("/", async (ISender mediator, CancellationToken cancellationToken) =>
-            Results.Ok(await mediator.Send(new ListarDespachosHuevoTenantQuery(), cancellationToken)));
+        // Listado del tenant (spec 2026-09-14): filtros por granja, estado,
+        // rango de fechas, autor y folio, con paginación.
+        tenant.MapGet("/", async (ISender mediator, Guid? granjaId, string? estado,
+            DateOnly? desde, DateOnly? hasta, Guid? creadoPorTrabajadorId, int? numero,
+            int? pagina, int? tamanoPagina, CancellationToken cancellationToken) =>
+            Results.Ok(await mediator.Send(
+                new ListarDespachosHuevoTenantQuery(
+                    new FiltrosDespachosTenant(granjaId, estado, desde, hasta,
+                        creadoPorTrabajadorId, numero),
+                    new PeticionPaginada(
+                        pagina ?? 1, tamanoPagina ?? PeticionPaginada.TamanoPorDefecto)),
+                cancellationToken)));
 
         // Precio vigente para la PWA (spec SP9): el catálogo en sí solo lo
         // administra CAISY (`/precios-huevo-caisy`, SP9A), pero el tenant

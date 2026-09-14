@@ -3,7 +3,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ClosedXML.Excel;
+using Icarus.GestionAvicola.Domain;
+using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Icarus.Identity.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using SkiaSharp;
 using Xunit;
 
@@ -262,7 +265,8 @@ public class DespachosHuevoEndpointsTests
 
         var lista = await cliente.SendAsync(Pedido(HttpMethod.Get, "/api/despachos-huevo", tokenCliente));
         Assert.Equal(HttpStatusCode.OK, lista.StatusCode);
-        Assert.Contains((await lista.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray(),
+        Assert.Contains((await lista.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items").EnumerateArray(),
             d => d.GetProperty("id").GetString() == id.ToString());
 
         var borrado = await cliente.SendAsync(
@@ -367,5 +371,140 @@ public class DespachosHuevoEndpointsTests
         var ajeno = await cliente.SendAsync(
             Pedido(HttpMethod.Get, $"/api/despachos-huevo/{id}", tokenC2));
         Assert.Equal(HttpStatusCode.NotFound, ajeno.StatusCode);
+    }
+
+    // Trazabilidad y listados filtrables (spec 2026-09-14): los despachos se
+    // siembran por DbContext para fijar granja, autor y fecha, y se consultan
+    // por HTTP para verificar el contrato de filtros y paginación.
+    private async Task<(HttpClient Cliente, string Token, Guid ClienteId, Guid GranjaId)>
+        CrearClienteConGranjaAsync()
+    {
+        var admin = await LoginComo(_factory.CreateClient(), SemillaIdentidad.EmailAdmin);
+        var cliente = _factory.CreateClient();
+        var email = $"con-granja-{Guid.NewGuid():N}@icarus.test";
+        var alta = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/clientes", admin,
+            JsonContent.Create(new
+            {
+                razonSocial = "Avícola con Granja S.A.C.",
+                identificadorFiscal = $"4{Random.Shared.Next(100000000, 999999999)}",
+                email,
+                contrasena = IdentityFactory.ContrasenaDePrueba,
+            })));
+        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
+        var id = (await alta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var modulos = await cliente.SendAsync(Pedido(
+            HttpMethod.Put, $"/api/clientes/{id}/modulos", admin,
+            JsonContent.Create(new { modulos = new[] { "GestionAvicola" } })));
+        Assert.Equal(HttpStatusCode.NoContent, modulos.StatusCode);
+        var token = await LoginComo(cliente, email);
+
+        var granja = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/granjas", token,
+            JsonContent.Create(new { nombre = "Granja de Prueba" })));
+        Assert.Equal(HttpStatusCode.Created, granja.StatusCode);
+        var granjaId = (await granja.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+        return (cliente, token, id, granjaId);
+    }
+
+    private async Task<(Guid Id, int Numero)> SembrarDespachoAsync(
+        Guid clienteId, Guid granjaId, Guid? creadoPorTrabajadorId,
+        DateOnly? fechaDespacho = null)
+    {
+        using var alcance = _factory.Services.CreateScope();
+        var db = alcance.ServiceProvider.GetRequiredService<GestionAvicolaDbContext>();
+        var despacho = new DespachoHuevo(clienteId, granjaId, Guid.NewGuid(), creadoPorTrabajadorId,
+            [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 1, 0)]);
+        if (fechaDespacho is { } fecha)
+            despacho.Despachar(fecha, Guid.NewGuid(),
+                [new DatosPrecioDespachoHuevo(TamanoHuevo.Primera, 12.50m, Guid.NewGuid())],
+                new DatosDocumentoNota(
+                    Guid.NewGuid(), Guid.NewGuid(), "image/jpeg", 1024, 512, "hash", "nota.jpg"));
+        db.DespachosHuevo.Add(despacho);
+        await db.SaveChangesAsync();
+        return (despacho.Id, despacho.Numero);
+    }
+
+    private static async Task<JsonElement> ListadoTenantAsync(
+        HttpClient cliente, string token, string consulta)
+    {
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/despachos-huevo{consulta}", token));
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        return await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    [Fact]
+    public async Task ElListadoDelTenantDeDespachosPagina()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGranjaAsync();
+        await SembrarDespachoAsync(clienteId, granjaId, null);
+        await SembrarDespachoAsync(clienteId, granjaId, null);
+
+        var cuerpo = await ListadoTenantAsync(cliente, token, "?pagina=2&tamanoPagina=1");
+
+        Assert.Equal(2, cuerpo.GetProperty("total").GetInt32());
+        Assert.Equal(1, cuerpo.GetProperty("items").GetArrayLength());
+        Assert.Equal(2, cuerpo.GetProperty("numeroPagina").GetInt32());
+    }
+
+    [Fact]
+    public async Task FiltraDespachosPorGranja()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGranjaAsync();
+        await SembrarDespachoAsync(clienteId, granjaId, null);
+        await SembrarDespachoAsync(clienteId, Guid.NewGuid(), null);
+
+        var propias = await ListadoTenantAsync(cliente, token, $"?granjaId={granjaId}");
+        var ninguna = await ListadoTenantAsync(cliente, token, $"?granjaId={Guid.NewGuid()}");
+
+        Assert.Equal(1, propias.GetProperty("total").GetInt32());
+        Assert.Equal(granjaId, propias.GetProperty("items")[0].GetProperty("granjaId").GetGuid());
+        Assert.Equal(0, ninguna.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task FiltraDespachosPorRangoDeFechas()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGranjaAsync();
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        await SembrarDespachoAsync(clienteId, granjaId, null, fechaDespacho: hoy.AddDays(-10));
+        await SembrarDespachoAsync(clienteId, granjaId, null, fechaDespacho: hoy);
+
+        var recientes = await ListadoTenantAsync(
+            cliente, token, $"?desde={hoy:yyyy-MM-dd}&hasta={hoy:yyyy-MM-dd}");
+        var todos = await ListadoTenantAsync(cliente, token, "");
+
+        Assert.Equal(1, recientes.GetProperty("total").GetInt32());
+        Assert.Equal(2, todos.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task FiltraDespachosPorAutor()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGranjaAsync();
+        var trabajadorId = Guid.NewGuid();
+        await SembrarDespachoAsync(clienteId, granjaId, trabajadorId);
+        await SembrarDespachoAsync(clienteId, granjaId, null);
+
+        var delTrabajador = await ListadoTenantAsync(
+            cliente, token, $"?creadoPorTrabajadorId={trabajadorId}");
+
+        Assert.Equal(1, delTrabajador.GetProperty("total").GetInt32());
+        Assert.Equal(trabajadorId,
+            delTrabajador.GetProperty("items")[0].GetProperty("creadoPorTrabajadorId").GetGuid());
+    }
+
+    [Fact]
+    public async Task BuscaDespachoPorFolio()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGranjaAsync();
+        var (id, numero) = await SembrarDespachoAsync(clienteId, granjaId, null);
+
+        var cuerpo = await ListadoTenantAsync(cliente, token, $"?numero={numero}");
+
+        Assert.Equal(1, cuerpo.GetProperty("total").GetInt32());
+        var item = cuerpo.GetProperty("items")[0];
+        Assert.Equal(id, item.GetProperty("id").GetGuid());
+        Assert.Equal($"D-{numero:D6}", item.GetProperty("folio").GetString());
     }
 }

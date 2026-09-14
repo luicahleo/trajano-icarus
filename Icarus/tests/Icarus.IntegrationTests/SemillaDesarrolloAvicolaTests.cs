@@ -281,6 +281,20 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
         Assert.Equal(saldoPrimeraVez, await SaldoDe(Holgado));
     }
 
+    // Trazabilidad (spec 2026-09-14): la semilla tiene que ofrecer los dos
+    // casos de autoría, o el filtro por autor no se puede probar a mano.
+    [Fact]
+    public async Task LaSemillaSiembraPedidosDeTrabajadorYDeCliente()
+    {
+        await SemillaDesarrolloAvicola.SembrarAsync(_servicios, Tenants);
+
+        var db = _servicios.GetRequiredService<GestionAvicolaDbContext>();
+        var pedidos = await db.PedidosAlimento.IgnoreQueryFilters().ToListAsync();
+
+        Assert.Contains(pedidos, p => p.CreadoPorTrabajadorId != null);
+        Assert.Contains(pedidos, p => p.CreadoPorTrabajadorId == null);
+    }
+
     [Fact]
     public async Task LosDocumentosDeNotaSembradosSeAbrenDeVerdad()
     {

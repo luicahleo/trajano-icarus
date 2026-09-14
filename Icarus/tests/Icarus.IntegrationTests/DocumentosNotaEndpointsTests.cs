@@ -175,6 +175,11 @@ public class DocumentosNotaEndpointsTests
         var tokenTenant = await LoginComo(cliente, emailTenant);
         var tokenCaisy = await LoginComo(cliente, emailCaisy, "Clave-Caisy-123");
 
+        // Granja activa: desde 2026-09-14 el pedido exige granja de origen.
+        var granja = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/granjas", tokenTenant,
+            JsonContent.Create(new { nombre = "Granja de Prueba" })));
+        Assert.Equal(HttpStatusCode.Created, granja.StatusCode);
+
         // Publicación de la clase (una sola por corrida) para el envío.
         await AsegurarPublicacionDeClaseAsync(cliente, tokenCaisy);
 
@@ -393,9 +398,10 @@ public class DocumentosNotaEndpointsTests
 
     private static async Task<List<Guid>> ListarIdsAsync(HttpClient cliente, string tokenTenant)
     {
-        var lista = await cliente.SendAsync(Pedido(HttpMethod.Get, "/api/pedidos-alimento", tokenTenant));
+        var lista = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento?tamanoPagina=100", tokenTenant));
         var cuerpo = await lista.Content.ReadFromJsonAsync<JsonElement>();
-        return cuerpo.EnumerateArray()
+        return cuerpo.GetProperty("items").EnumerateArray()
             .Select(p => Guid.Parse(p.GetProperty("id").GetString()!))
             .OrderBy(i => i)
             .ToList();

@@ -395,7 +395,7 @@ public static class SemillaDesarrolloAvicola
         int? entregadas = null)
     {
         var pedido = new PedidoAlimento(
-            pedidoId, tenant.ClienteId, granjaId, tenant.ActorId, null,
+            pedidoId, tenant.ClienteId, granjaId, tenant.ActorId, tenant.ActorId,
             [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, bolsasSolicitadas)]);
         pedido.EnviarACaisy(fechaPedido, tenant.ActorId, PreciosEnvio());
         pedido.Aceptar(fechaPedido.AddDays(2), fechaPedido, tenant.ActorId);

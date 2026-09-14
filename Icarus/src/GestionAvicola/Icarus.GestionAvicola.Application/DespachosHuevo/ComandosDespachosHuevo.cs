@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
@@ -54,10 +55,19 @@ public sealed record DespacharDespachoHuevoCommand(
         "avicola.despachos-huevo.despachar", new Dictionary<string, DatoRegistroVuelo>());
 }
 
-public sealed record ListarDespachosHuevoTenantQuery : IRequest<IReadOnlyList<DespachoHuevoResumen>>;
+// Filtros del listado del tenant (spec 2026-09-14): sin presentación, que no
+// existe en el despacho de huevo. CreadoPorTrabajadorId no viaja a CAISY.
+public sealed record FiltrosDespachosTenant(
+    Guid? GranjaId, string? Estado, DateOnly? Desde, DateOnly? Hasta,
+    Guid? CreadoPorTrabajadorId, int? Numero);
+
+public sealed record ListarDespachosHuevoTenantQuery(
+    FiltrosDespachosTenant Filtros, PeticionPaginada Paginacion)
+    : IRequest<Pagina<DespachoHuevoResumen>>;
 
 public sealed record DespachoHuevoResumen(
-    Guid Id, string Estado, DateOnly? FechaDespacho, int TotalAmarras, int TotalHuevos, decimal? TotalBs);
+    Guid Id, string Folio, int Numero, Guid GranjaId, Guid? CreadoPorTrabajadorId,
+    string Estado, DateOnly? FechaDespacho, int TotalAmarras, int TotalHuevos, decimal? TotalBs);
 
 public sealed record ObtenerDespachoHuevoQuery(Guid DespachoId) : IRequest<DespachoHuevoDetalle>;
 
@@ -209,26 +219,47 @@ public sealed class DespacharDespachoHuevoHandler(
     }
 }
 
-public sealed class ListarDespachosHuevoTenantHandler(IRepositorioDespachosHuevo repositorio)
-    : IRequestHandler<ListarDespachosHuevoTenantQuery, IReadOnlyList<DespachoHuevoResumen>>
+public sealed class ListarDespachosHuevoTenantValidator
+    : AbstractValidator<ListarDespachosHuevoTenantQuery>
 {
-    public async Task<IReadOnlyList<DespachoHuevoResumen>> Handle(
-        ListarDespachosHuevoTenantQuery request, CancellationToken cancellationToken) =>
-        (await repositorio.ListarDelTenantAsync(cancellationToken))
-            .OrderByDescending(d => d.FechaDespacho)
-            .ThenByDescending(d => d.Id)
-            .Select(d => new DespachoHuevoResumen(
-                d.Id, d.Estado.ToString(), d.FechaDespacho, d.TotalAmarras, d.TotalHuevos, d.TotalBs))
-            .ToList();
+    public ListarDespachosHuevoTenantValidator()
+    {
+        RuleFor(c => c.Filtros.Estado)
+            .Must(e => e is null || Enum.TryParse<EstadoDespachoHuevo>(e, true, out _))
+            .WithMessage("El estado indicado no existe.");
+    }
+}
+
+public sealed class ListarDespachosHuevoTenantHandler(IRepositorioDespachosHuevo repositorio)
+    : IRequestHandler<ListarDespachosHuevoTenantQuery, Pagina<DespachoHuevoResumen>>
+{
+    public async Task<Pagina<DespachoHuevoResumen>> Handle(
+        ListarDespachosHuevoTenantQuery request, CancellationToken cancellationToken)
+    {
+        var filtros = request.Filtros;
+        var estado = filtros.Estado is null
+            ? (EstadoDespachoHuevo?)null : Enum.Parse<EstadoDespachoHuevo>(filtros.Estado, true);
+        var (items, total) = await repositorio.ListarPaginadoTenantAsync(
+            filtros.GranjaId, estado, filtros.Desde, filtros.Hasta,
+            filtros.CreadoPorTrabajadorId, filtros.Numero,
+            request.Paginacion.Salto, request.Paginacion.TamanoNormalizado, cancellationToken);
+        return new Pagina<DespachoHuevoResumen>(
+            items.Select(MapeadorDespachos.MapearResumen).ToList(),
+            total, request.Paginacion.PaginaNormalizada, request.Paginacion.TamanoNormalizado);
+    }
 }
 
 // Bandeja global de CAISY (spec SP9C): filtro por estado con paginación,
-// igual que pedidos de alimento. Reutiliza el resumen del tenant: el shape
-// es idéntico y la bandeja es global (sin filtro de tenant en el handler).
+// igual que pedidos de alimento. El resumen de CAISY NO lleva autor ni granja:
+// CAISY ve el folio, nunca personas (decisión central de la spec 2026-09-14).
 public sealed record ListarDespachosHuevoCaisyQuery(EstadoDespachoHuevo? Estado, int Pagina, int TamanoPagina)
     : IRequest<PaginaDespachosHuevo>;
 
-public sealed record PaginaDespachosHuevo(IReadOnlyList<DespachoHuevoResumen> Items, int Total);
+public sealed record DespachoHuevoCaisyResumen(
+    Guid Id, string Folio, int Numero, string Estado, DateOnly? FechaDespacho,
+    int TotalAmarras, int TotalHuevos, decimal? TotalBs);
+
+public sealed record PaginaDespachosHuevo(IReadOnlyList<DespachoHuevoCaisyResumen> Items, int Total);
 
 public sealed class ListarDespachosHuevoCaisyHandler(IRepositorioDespachosHuevo repositorio)
     : IRequestHandler<ListarDespachosHuevoCaisyQuery, PaginaDespachosHuevo>
@@ -240,8 +271,7 @@ public sealed class ListarDespachosHuevoCaisyHandler(IRepositorioDespachosHuevo 
         var (items, total) = await repositorio.ListarPaginadoCaisyAsync(
             request.Estado, saltar, Math.Max(request.TamanoPagina, 1), cancellationToken);
         return new PaginaDespachosHuevo(
-            items.Select(d => new DespachoHuevoResumen(
-                d.Id, d.Estado.ToString(), d.FechaDespacho, d.TotalAmarras, d.TotalHuevos, d.TotalBs)).ToList(),
+            items.Select(MapeadorDespachos.MapearResumenCaisy).ToList(),
             total);
     }
 }
@@ -337,4 +367,20 @@ public sealed class ConfirmarRecepcionDespachoHuevoHandler(
             despacho.RecongelarLinea(linea.Tamano, precio.PrecioAlProductor + publicacion.Servicio, publicacion.Id);
         }
     }
+}
+
+internal static class MapeadorDespachos
+{
+    // D-000045. El prefijo es presentación: no se persiste.
+    public static string FolioDe(int numero) =>
+        string.Create(CultureInfo.InvariantCulture, $"D-{numero:D6}");
+
+    public static DespachoHuevoResumen MapearResumen(DespachoHuevo despacho) =>
+        new(despacho.Id, FolioDe(despacho.Numero), despacho.Numero, despacho.GranjaId,
+            despacho.CreadoPorTrabajadorId, despacho.Estado.ToString(), despacho.FechaDespacho,
+            despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs);
+
+    public static DespachoHuevoCaisyResumen MapearResumenCaisy(DespachoHuevo despacho) =>
+        new(despacho.Id, FolioDe(despacho.Numero), despacho.Numero, despacho.Estado.ToString(),
+            despacho.FechaDespacho, despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs);
 }
