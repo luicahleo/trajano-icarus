@@ -5,6 +5,7 @@ using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.Documentos;
+using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PreciosAlimentos;
@@ -239,6 +240,7 @@ public sealed class RegistrarDespachoPedidoValidator
 // con la función PedidoAlimento puede crear; el creador queda como auditoría.
 public sealed class CrearPedidoAlimentoHandler(
     IRepositorioPedidosAlimento repositorio,
+    IRepositorioGranjas repositorioGranjas,
     ICurrentUser usuarioActual,
     IRegistroVuelo registroVuelo,
     IUnidadTrabajoGestionAvicola unidadTrabajo)
@@ -250,7 +252,13 @@ public sealed class CrearPedidoAlimentoHandler(
             ?? throw new UnauthorizedAccessException("Solo una cuenta de tenant puede crear pedidos.");
         var actorId = usuarioActual.UsuarioId
             ?? throw new UnauthorizedAccessException("La sesión no es válida.");
-        var pedido = new PedidoAlimento(clienteId, Guid.Empty, actorId, null, request.Detalles);
+        // La granja no viaja en el comando: hoy el sistema garantiza una
+        // granja activa por cliente. El día que haya varias, el formulario
+        // gana un selector y este handler un parámetro, sin tocar el esquema.
+        var granja = await repositorioGranjas.ObtenerActivaDelTenantAsync(cancellationToken)
+            ?? throw new ValidationException("El cliente debe tener una granja activa registrada.");
+        var pedido = new PedidoAlimento(
+            clienteId, granja.Id, actorId, usuarioActual.TrabajadorId, request.Detalles);
         repositorio.Agregar(pedido);
         registroVuelo.Decidir("avicola.pedidos.crear", "creacion", "aplicada",
             new Dictionary<string, object?> { ["Lineas"] = pedido.Detalles.Count });

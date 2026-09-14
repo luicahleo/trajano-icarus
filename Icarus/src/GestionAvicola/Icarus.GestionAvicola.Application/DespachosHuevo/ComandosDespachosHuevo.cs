@@ -91,7 +91,8 @@ public sealed class CrearBorradorDespachoHuevoHandler(
         var granja = await granjas.ObtenerActivaDelTenantAsync(cancellationToken)
             ?? throw new ValidationException("El cliente debe tener una granja activa registrada.");
 
-        var despacho = new DespachoHuevo(clienteId, granja.Id, actorId, null, ParsearLineas(request.Lineas));
+        var despacho = new DespachoHuevo(
+            clienteId, granja.Id, actorId, usuarioActual.TrabajadorId, ParsearLineas(request.Lineas));
         repositorio.Agregar(despacho);
         registroVuelo.Decidir("avicola.despachos-huevo.crear-borrador", "creacion", "aplicada",
             new Dictionary<string, object?> { ["CantidadLineas"] = despacho.Detalles.Count });

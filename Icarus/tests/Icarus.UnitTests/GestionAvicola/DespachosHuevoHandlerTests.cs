@@ -45,7 +45,7 @@ public class DespachosHuevoHandlerTests
         [new("Primera", 2, 30)];
 
     private static DespachoHuevo CrearBorrador() =>
-        new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+        new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null,
             [new DatosDetalleDespachoHuevo(TamanoHuevo.Primera, 2, 30)]);
 
     private static PublicacionPrecioHuevo PublicacionVigente() =>
@@ -69,6 +69,39 @@ public class DespachosHuevoHandlerTests
 
         _repositorio.DidNotReceive().Agregar(Arg.Any<DespachoHuevo>());
         await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CrearBorradorComoTrabajadorGuardaSuIdComoAutor()
+    {
+        var trabajadorId = Guid.NewGuid();
+        _usuarioActual.ClienteId.Returns(Guid.NewGuid());
+        _usuarioActual.UsuarioId.Returns(Guid.NewGuid());
+        _usuarioActual.TrabajadorId.Returns(trabajadorId);
+        _granjas.ObtenerActivaDelTenantAsync(Arg.Any<CancellationToken>())
+            .Returns(new Granja(Guid.NewGuid(), Guid.NewGuid(), "Granja activa"));
+
+        await CrearCreador().Handle(
+            new CrearBorradorDespachoHuevoCommand(UnaLinea()), CancellationToken.None);
+
+        _repositorio.Received(1).Agregar(
+            Arg.Is<DespachoHuevo>(d => d.CreadoPorTrabajadorId == trabajadorId));
+    }
+
+    [Fact]
+    public async Task CrearBorradorComoClienteDejaElAutorEnNulo()
+    {
+        _usuarioActual.ClienteId.Returns(Guid.NewGuid());
+        _usuarioActual.UsuarioId.Returns(Guid.NewGuid());
+        _usuarioActual.TrabajadorId.Returns((Guid?)null);
+        _granjas.ObtenerActivaDelTenantAsync(Arg.Any<CancellationToken>())
+            .Returns(new Granja(Guid.NewGuid(), Guid.NewGuid(), "Granja activa"));
+
+        await CrearCreador().Handle(
+            new CrearBorradorDespachoHuevoCommand(UnaLinea()), CancellationToken.None);
+
+        _repositorio.Received(1).Agregar(
+            Arg.Is<DespachoHuevo>(d => d.CreadoPorTrabajadorId == null));
     }
 
     [Fact]

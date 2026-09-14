@@ -6,6 +6,7 @@ using Icarus.BuildingBlocks.Observability;
 using Icarus.GestionAvicola.Application;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.Documentos;
+using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Application.Notificaciones;
 using Icarus.GestionAvicola.Application.NotificacionesDespachoHuevo;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
@@ -29,6 +30,7 @@ public class PedidosAlimentoHandlerTests
 
     private readonly IRepositorioPedidosAlimento _repositorio =
         Substitute.For<IRepositorioPedidosAlimento>();
+    private readonly IRepositorioGranjas _granjas = Substitute.For<IRepositorioGranjas>();
     private readonly IRepositorioNotificacionesPrecios _repositorioPrecios =
         Substitute.For<IRepositorioNotificacionesPrecios>();
     private readonly ICurrentUser _usuarioActual = Substitute.For<ICurrentUser>();
@@ -47,7 +49,7 @@ public class PedidosAlimentoHandlerTests
     private readonly OpcionesPedidosAlimento _opciones = new() { MaximoPorSemana = 3 };
 
     private CrearPedidoAlimentoHandler CrearCreador() =>
-        new(_repositorio, _usuarioActual, _registroVuelo, _unidadTrabajo);
+        new(_repositorio, _granjas, _usuarioActual, _registroVuelo, _unidadTrabajo);
 
     private EditarPedidoAlimentoHandler CrearEditor() =>
         new(_repositorio, _registroVuelo, _unidadTrabajo);
@@ -65,6 +67,11 @@ public class PedidosAlimentoHandlerTests
         _usuarioActual.UsuarioId.Returns(UsuarioId);
         _usuarioActual.ClienteId.Returns(ClienteId);
         _usuarioActual.Rol.Returns("Cliente");
+        // Granja activa por defecto: los tests que no versan sobre la granja
+        // no deben tropezar con el 404 de «sin granja activa». El test de ese
+        // caso la sobreescribe con null.
+        _granjas.ObtenerActivaDelTenantAsync(Arg.Any<CancellationToken>())
+            .Returns(new Granja(Guid.NewGuid(), ClienteId, "Granja activa"));
         _repositorio.IniciarTransaccionAsync(Arg.Any<CancellationToken>())
             .Returns(_transaccion);
         // Saldo suficiente por defecto: los tests que no versan sobre crédito
@@ -113,6 +120,63 @@ public class PedidosAlimentoHandlerTests
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             CrearCreador().Handle(new CrearPedidoAlimentoCommand(LineasBolsa()), CancellationToken.None));
+
+        _repositorio.DidNotReceive().Agregar(Arg.Any<PedidoAlimento>());
+    }
+
+    // Trazabilidad (spec 2026-09-14): la granja no viaja en el comando, la
+    // resuelve el handler desde la granja activa del cliente; el autor sale de
+    // ICurrentUser.TrabajadorId, que ya viaja en el token.
+    [Fact]
+    public async Task CrearUnPedidoLoAsociaALaGranjaActivaDelCliente()
+    {
+        var granjaId = Guid.NewGuid();
+        _granjas.ObtenerActivaDelTenantAsync(Arg.Any<CancellationToken>())
+            .Returns(new Granja(granjaId, ClienteId, "Granja activa"));
+
+        await CrearCreador().Handle(
+            new CrearPedidoAlimentoCommand(LineasBolsa()), CancellationToken.None);
+
+        _repositorio.Received(1).Agregar(
+            Arg.Is<PedidoAlimento>(p => p.GranjaId == granjaId));
+    }
+
+    [Fact]
+    public async Task CrearUnPedidoComoTrabajadorGuardaSuIdComoAutor()
+    {
+        var trabajadorId = Guid.NewGuid();
+        _usuarioActual.TrabajadorId.Returns(trabajadorId);
+
+        await CrearCreador().Handle(
+            new CrearPedidoAlimentoCommand(LineasBolsa()), CancellationToken.None);
+
+        _repositorio.Received(1).Agregar(
+            Arg.Is<PedidoAlimento>(p => p.CreadoPorTrabajadorId == trabajadorId));
+    }
+
+    [Fact]
+    public async Task CrearUnPedidoComoClienteDejaElAutorEnNulo()
+    {
+        _usuarioActual.TrabajadorId.Returns((Guid?)null);
+
+        await CrearCreador().Handle(
+            new CrearPedidoAlimentoCommand(LineasBolsa()), CancellationToken.None);
+
+        _repositorio.Received(1).Agregar(
+            Arg.Is<PedidoAlimento>(p => p.CreadoPorTrabajadorId == null));
+    }
+
+    // Un cliente sin granja activa no puede pedir alimento: el pedido
+    // quedaría sin origen y el filtro por granja lo perdería para siempre.
+    [Fact]
+    public async Task SinGranjaActivaElPedidoNoSeCrea()
+    {
+        _granjas.ObtenerActivaDelTenantAsync(Arg.Any<CancellationToken>())
+            .Returns((Granja?)null);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            CrearCreador().Handle(
+                new CrearPedidoAlimentoCommand(LineasBolsa()), CancellationToken.None));
 
         _repositorio.DidNotReceive().Agregar(Arg.Any<PedidoAlimento>());
     }
