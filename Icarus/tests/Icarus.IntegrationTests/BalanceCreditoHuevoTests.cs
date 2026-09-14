@@ -114,14 +114,16 @@ public class BalanceCreditoHuevoTests
         Assert.Equal(-totalRecibido, saldo);
     }
 
+    // Corrección 2026-09-14: el saldo es la cuenta real, no una proyección.
+    // Un pedido enviado y todavía no recibido no consumió nada — CAISY
+    // todavía puede rechazarlo o devolverlo, y un saldo que rebota hacia
+    // arriba cuando eso pasa no es un saldo. El componente «comprometido
+    // pendiente» existía solo para que la advertencia de crédito
+    // insuficiente no se pudiera burlar con envíos sucesivos; sin
+    // advertencia, no tiene razón de ser.
     [Fact]
-    public async Task PedidoSoloSolicitadoSinRecepcionRealRestaComoComprometidoPendiente()
+    public async Task PedidoSolicitadoSinRecepcionRealNoDescuentaDelSaldo()
     {
-        // Un pedido enviado pero todavía sin recepción real ya reserva su
-        // monto congelado contra el crédito (corrección de revisión: sin
-        // esto, envíos concurrentes o sucesivos del mismo cliente no verían
-        // el compromiso del otro y la advertencia de crédito insuficiente
-        // podía perderse).
         var clienteId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
         var pedido = new PedidoAlimento(clienteId, actorId,
@@ -132,7 +134,7 @@ public class BalanceCreditoHuevoTests
 
         var saldo = await SaldoDeAsync(clienteId);
 
-        Assert.Equal(-18000m, saldo);
+        Assert.Equal(0m, saldo);
     }
 
     [Fact]

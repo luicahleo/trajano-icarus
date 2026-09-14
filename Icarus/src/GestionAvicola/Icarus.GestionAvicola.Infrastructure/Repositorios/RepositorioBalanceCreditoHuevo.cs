@@ -37,32 +37,19 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
             .Select(p => p.Recepcion!.TotalRecibido)
             .SumAsync(cancellationToken);
 
-        // Comprometido pendiente: pedidos ya enviados que todavía no llegaron
-        // a recepción real, con su monto congelado al envío. Sin esto, dos
-        // envíos concurrentes del mismo cliente (o varios envíos seguidos
-        // antes de que CAISY reciba el primero) verían el mismo saldo y
-        // ninguno dispararía la advertencia aunque juntos superen el
-        // crédito disponible. EnviarPedidoAlimentoHandler ya serializa los
-        // envíos concurrentes del mismo cliente con
-        // ContarEnviadosEnSemanaBloqueandoAsync (UPDLOCK+HOLDLOCK) antes de
-        // llegar a este cálculo, así que el segundo envío en llegar ya ve el
-        // primero comprometido aquí — no hace falta un lock propio.
-        var comprometidoPendiente = await db.PedidosAlimento
-            .Where(p => p.ClienteId == clienteId
-                && (p.Estado == EstadoPedidoAlimento.Solicitado
-                    || p.Estado == EstadoPedidoAlimento.Aceptado
-                    || p.Estado == EstadoPedidoAlimento.Despachado))
-            .SelectMany(p => p.Detalles)
-            .Where(d => d.SubtotalSolicitado != null)
-            .SumAsync(d => d.SubtotalSolicitado!.Value, cancellationToken);
-
         // Ajustes de corrección (spec SP9D): compensan un error real, no un
         // ingreso sujeto al desfase de dos semanas de ReglasCreditoHuevo.
         var ajustes = await db.AjustesCreditoHuevo
             .Where(a => a.ClienteId == clienteId)
             .SumAsync(a => a.Monto, cancellationToken);
 
-        return ingresos - recibidoReal - comprometidoPendiente + ajustes;
+        // Corrección 2026-09-14: el saldo es la cuenta real. No entra el
+        // alimento pedido y todavía no recibido: ese alimento no llegó, no
+        // consumió crédito, y el pedido todavía puede ser rechazado o
+        // devuelto por CAISY. El componente «comprometido pendiente» que
+        // vivía acá existía solo para blindar la advertencia de crédito
+        // insuficiente al enviar, retirada por esta misma corrección.
+        return ingresos - recibidoReal + ajustes;
     }
 
     // Materializa las filas (columnas simples, sin cómputo) y recién después
