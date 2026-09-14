@@ -20,6 +20,11 @@
 
    Resultado esperado con la semilla de desarrollo intacta:
      ingresos 13590.00 - recibidoReal 3600.00 + ajustes 0.00 = saldo 9990.00
+     (recibidoReciente 0.00: el demo no tiene despachos en la ventana)
+
+   Con el tenant c3@icarus.test (77777777-...), el único con un despacho dentro
+   de la ventana de referencia:
+     saldo 8973.00 y recibidoReciente 2088.00.
    =========================================================================== */
 
 SET NOCOUNT ON;
@@ -31,8 +36,9 @@ SET NOCOUNT ON;
 --   77777777-... c3@icarus.test (el único con ajuste de corrección)
 DECLARE @clienteId uniqueidentifier = '11111111-1111-1111-1111-111111111111';
 
--- ReglasCreditoHuevo.DiasDisponibilidadCredito = 14. El huevo recién recibido
--- todavía no es crédito usable: solo cuenta el recibido hasta esta fecha.
+-- ReglasCreditoHuevo.DiasReferenciaCredito = 14. Ventana de referencia, no un
+-- plazo: el crédito existe desde la recepción y la fecha de corte solo separa
+-- el huevo «reciente» del «consolidado» (corrección 2026-09-14).
 DECLARE @fechaCorte date = DATEADD(day, -14, CAST(GETDATE() AS date));
 
 PRINT '--- Fecha de corte aplicada a los ingresos ---';
@@ -42,9 +48,10 @@ SELECT FechaCorte = @fechaCorte;
 /* ---------------------------------------------------------------------------
    1) INGRESOS — lo que CAISY le debe al cliente por huevo entregado.
 
-   Solo despachos en estado Recibido (EstadoDespachoHuevo.Recibido = 2) y con
-   FechaRecepcion dentro del corte. El precio es el congelado en el despacho,
-   no el vigente hoy: republicar precios no mueve el saldo histórico.
+   Solo despachos en estado Recibido (EstadoDespachoHuevo.Recibido = 2), sin
+   importar hace cuánto: el crédito nace al recibir (corrección 2026-09-14).
+   El precio es el congelado en el despacho, no el vigente hoy: republicar
+   precios no mueve el saldo histórico.
 
    El 180 es DetalleDespachoHuevo.HuevosPorAmarra, un const que EF emite como
    literal. El CAST a decimal(10,4) es el que genera EF para multiplicar el
@@ -53,6 +60,8 @@ SELECT FechaCorte = @fechaCorte;
 PRINT '--- 1) Detalle de los ingresos, despacho por despacho ---';
 SELECT  d.Id               AS DespachoId,
         d.FechaRecepcion,
+        Ventana            = CASE WHEN d.FechaRecepcion > @fechaCorte
+                                  THEN 'reciente' ELSE 'consolidado' END,
         d0.CantidadAmarras,
         d0.UnidadesSueltas,
         Huevos             = d0.CantidadAmarras * 180 + d0.UnidadesSueltas,
@@ -66,7 +75,6 @@ WHERE   d.EstaActivo = 1                    -- soft delete
   AND   d.ClienteId = @clienteId
   AND   d.Estado = 2                        -- EstadoDespachoHuevo.Recibido
   AND   d.FechaRecepcion IS NOT NULL
-  AND   d.FechaRecepcion <= @fechaCorte
   AND   d0.PrecioUnitarioCongelado IS NOT NULL
 ORDER BY d.FechaRecepcion, d0.Id;
 
@@ -80,10 +88,24 @@ DECLARE @ingresos decimal(18,8) = ISNULL((
       AND   d.ClienteId = @clienteId
       AND   d.Estado = 2
       AND   d.FechaRecepcion IS NOT NULL
-      AND   d.FechaRecepcion <= @fechaCorte
       AND   d0.PrecioUnitarioCongelado IS NOT NULL), 0);
 -- El ISNULL replica el COALESCE(..., 0.0) de EF: SUM sobre cero filas devuelve
 -- NULL, y un NULL en cualquier término envenenaría el total entero.
+
+-- Recibido dentro de la ventana de referencia (corrección 2026-09-14): dato
+-- informativo que acompaña al saldo, no un término de la resta. Es la misma
+-- aritmética de ingresos con el filtro de fecha invertido.
+DECLARE @recibidoReciente decimal(18,8) = ISNULL((
+    SELECT  SUM(CAST(d0.CantidadAmarras * 180 + d0.UnidadesSueltas AS decimal(10,4))
+                * d0.PrecioUnitarioCongelado)
+    FROM    gestion_avicola.despachos_huevo AS d
+    JOIN    gestion_avicola.detalles_despacho_huevo AS d0
+              ON d.Id = d0.DespachoHuevoId
+    WHERE   d.EstaActivo = 1
+      AND   d.ClienteId = @clienteId
+      AND   d.Estado = 2
+      AND   d.FechaRecepcion > @fechaCorte
+      AND   d0.PrecioUnitarioCongelado IS NOT NULL), 0);
 
 
 /* ---------------------------------------------------------------------------
@@ -162,16 +184,17 @@ DECLARE @ajustes decimal(18,8) = ISNULL((
 
 
 /* ---------------------------------------------------------------------------
-   TOTAL — la línea 52 del repositorio, hecha a mano.
+   TOTAL — la fórmula del repositorio, hecha a mano.
    Este número tiene que ser idéntico al que muestra la PWA al cliente en el
    formulario de pedido de alimento y en el de despacho de huevo.
    --------------------------------------------------------------------------- */
 PRINT '--- Saldo resultante ---';
-SELECT  ClienteId    = @clienteId,
-        Ingresos     = @ingresos,
-        RecibidoReal = @recibidoReal,
-        Ajustes      = @ajustes,
-        Saldo        = @ingresos - @recibidoReal + @ajustes,
-        Signo        = CASE WHEN @ingresos - @recibidoReal + @ajustes < 0
-                            THEN 'Negativo (se muestra en rojo con chip)'
-                            ELSE 'Positivo' END;
+SELECT  ClienteId        = @clienteId,
+        Ingresos         = @ingresos,
+        RecibidoReal     = @recibidoReal,
+        Ajustes          = @ajustes,
+        RecibidoReciente = @recibidoReciente,
+        Saldo            = @ingresos - @recibidoReal + @ajustes,
+        Signo            = CASE WHEN @ingresos - @recibidoReal + @ajustes < 0
+                                THEN 'Negativo (se muestra en rojo con chip)'
+                                ELSE 'Positivo' END;
