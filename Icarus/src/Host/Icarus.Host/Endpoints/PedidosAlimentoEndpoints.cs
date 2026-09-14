@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using FluentValidation;
+using Icarus.BuildingBlocks.Application;
 using Icarus.Clientes.Domain;
 using Icarus.Clientes.Infrastructure.Autorizacion;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
@@ -40,8 +41,19 @@ public static class PedidosAlimentoEndpoints
                 new CrearPedidoAlimentoCommand(ParsearLineas(cuerpo.Detalles)), cancellationToken);
             return Results.Created($"/pedidos-alimento/{id}", new { id });
         });
-        tenant.MapGet("/", async (ISender mediator, CancellationToken cancellationToken) =>
-            Results.Ok(await mediator.Send(new ListarPedidosAlimentoQuery(), cancellationToken)));
+        // Listado del tenant (spec 2026-09-14): filtros por granja, estado,
+        // presentación, rango de fechas, autor y folio, con paginación. El
+        // tamaño fuera de rango se acota, no responde 400.
+        tenant.MapGet("/", async (ISender mediator, Guid? granjaId, string? estado,
+            string? presentacion, DateOnly? desde, DateOnly? hasta, Guid? creadoPorTrabajadorId,
+            int? numero, int? pagina, int? tamanoPagina, CancellationToken cancellationToken) =>
+            Results.Ok(await mediator.Send(
+                new ListarPedidosAlimentoQuery(
+                    new FiltrosPedidosTenant(granjaId, estado, presentacion, desde, hasta,
+                        creadoPorTrabajadorId, numero),
+                    new PeticionPaginada(
+                        pagina ?? 1, tamanoPagina ?? PeticionPaginada.TamanoPorDefecto)),
+                cancellationToken)));
         // Publicación vigente y cupo semanal para la bandeja del tenant
         // (spec SP8): la publicación es global pero su lectura para pedidos
         // queda autorizada por la función del tenant.

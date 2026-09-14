@@ -22,8 +22,13 @@ public interface IRepositorioPedidosAlimento
     Task<PedidoAlimento?> ObtenerConHistorialAsync(
         Guid id, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<PedidoAlimento>> ListarAsync(
-        CancellationToken cancellationToken = default);
+    // Listado del tenant (spec 2026-09-14): filtros y paginación resueltos en
+    // SQL, con el conteo antes del Skip/Take. El filtro de tenant del DbContext
+    // acota el alcance al cliente de la sesión.
+    Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoTenantAsync(
+        Guid? granjaId, EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,
+        DateOnly? desde, DateOnly? hasta, Guid? creadoPorTrabajadorId, int? numero,
+        int saltar, int tomar, CancellationToken cancellationToken = default);
 
     // Bandeja global de CAISY (spec SP8): filtros por estado y presentación
     // con paginación; el filtro de tenant del DbContext deja ver los pedidos

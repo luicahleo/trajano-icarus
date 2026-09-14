@@ -41,10 +41,34 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
             .ThenInclude(r => r!.Lineas)
             .SingleOrDefaultAsync(p => p.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<PedidoAlimento>> ListarAsync(
-        CancellationToken cancellationToken = default) =>
-        await db.PedidosAlimento.Include(p => p.Detalles)
+    public async Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoTenantAsync(
+        Guid? granjaId, EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,
+        DateOnly? desde, DateOnly? hasta, Guid? creadoPorTrabajadorId, int? numero,
+        int saltar, int tomar, CancellationToken cancellationToken = default)
+    {
+        var consulta = db.PedidosAlimento.Include(p => p.Detalles).AsNoTracking();
+        if (granjaId is { } granja)
+            consulta = consulta.Where(p => p.GranjaId == granja);
+        if (estado is { } e)
+            consulta = consulta.Where(p => p.Estado == e);
+        if (presentacion is { } pr)
+            consulta = consulta.Where(p => p.Detalles.Any(d => d.Presentacion == pr));
+        if (desde is { } d)
+            consulta = consulta.Where(p => p.FechaPedido >= d);
+        if (hasta is { } h)
+            consulta = consulta.Where(p => p.FechaPedido <= h);
+        if (creadoPorTrabajadorId is { } trabajador)
+            consulta = consulta.Where(p => p.CreadoPorTrabajadorId == trabajador);
+        if (numero is { } n)
+            consulta = consulta.Where(p => p.Numero == n);
+        var total = await consulta.CountAsync(cancellationToken);
+        var items = await consulta
+            .OrderByDescending(p => p.Numero)
+            .Skip(saltar)
+            .Take(tomar)
             .ToListAsync(cancellationToken);
+        return (items, total);
+    }
 
     public async Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoCaisyAsync(
         EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,

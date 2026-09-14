@@ -463,16 +463,25 @@ public class PedidosAlimentoHandlerTests
     public async Task ListarDevuelveResumenesDelTenant()
     {
         var pedido = new PedidoAlimento(Guid.NewGuid(), ClienteId, Guid.NewGuid(), UsuarioId, null, LineasBolsa());
-        _repositorio.ListarAsync(Arg.Any<CancellationToken>()).Returns([pedido]);
+        _repositorio.ListarPaginadoTenantAsync(
+            null, null, null, null, null, null, null, 0, 20, Arg.Any<CancellationToken>())
+            .Returns(([pedido], 1));
 
-        var resumenes = await new ListarPedidosAlimentoHandler(_repositorio).Handle(
-            new ListarPedidosAlimentoQuery(), CancellationToken.None);
+        var pagina = await new ListarPedidosAlimentoHandler(_repositorio).Handle(
+            new ListarPedidosAlimentoQuery(
+                new FiltrosPedidosTenant(null, null, null, null, null, null, null),
+                new PeticionPaginada()),
+            CancellationToken.None);
 
-        var resumen = Assert.Single(resumenes);
+        var resumen = Assert.Single(pagina.Items);
+        Assert.Equal(1, pagina.Total);
         Assert.Equal(pedido.Id, resumen.Id);
         Assert.Equal("Borrador", resumen.Estado);
         Assert.Equal(1, resumen.CantidadLineas);
         Assert.Null(resumen.TotalSolicitado);
+        // El folio se compone al proyectar: en memoria el correlativo es 0
+        // hasta que la SEQUENCE de SQL Server lo asigna al insertar.
+        Assert.Equal("P-000000", resumen.Folio);
     }
 
     [Fact]

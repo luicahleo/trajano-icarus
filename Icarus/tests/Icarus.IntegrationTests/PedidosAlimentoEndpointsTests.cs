@@ -3,7 +3,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Icarus.GestionAvicola.Domain;
+using Icarus.GestionAvicola.Infrastructure.Persistencia;
 using Icarus.Identity.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Icarus.IntegrationTests;
@@ -106,8 +109,10 @@ public class PedidosAlimentoEndpointsTests
     // Crea un tenant nuevo con el módulo GestionAvicola (que habilita la
     // función PedidoAlimento): cada prueba de este archivo necesita su propio
     // cupo semanal (spec SP8B), porque las cuentas semilla compartidas lo
-    // agotan con otras pruebas de la clase.
-    private async Task<(HttpClient Cliente, string Token, Guid ClienteId)> CrearClienteConGestionAvicolaAsync()
+    // agotan con otras pruebas de la clase. Desde 2026-09-14 el pedido exige
+    // granja de origen, así que el tenant nace con una.
+    private async Task<(HttpClient Cliente, string Token, Guid ClienteId, Guid GranjaId)>
+        CrearClienteConGestionAvicolaAsync()
     {
         var cliente = _factory.CreateClient();
         var tokenAdmin = await LoginComo(cliente, SemillaIdentidad.EmailAdmin);
@@ -127,7 +132,14 @@ public class PedidosAlimentoEndpointsTests
             HttpMethod.Put, $"/api/clientes/{clienteId}/modulos", tokenAdmin,
             JsonContent.Create(new { modulos = new[] { "GestionAvicola" } })));
         Assert.Equal(HttpStatusCode.NoContent, modulos.StatusCode);
-        return (cliente, await LoginComo(cliente, email, "Clave-Cliente-123"), clienteId);
+        var token = await LoginComo(cliente, email, "Clave-Cliente-123");
+
+        var granja = await cliente.SendAsync(Pedido(HttpMethod.Post, "/api/granjas", token,
+            JsonContent.Create(new { nombre = "Granja de Prueba" })));
+        Assert.Equal(HttpStatusCode.Created, granja.StatusCode);
+        var granjaId = (await granja.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetGuid();
+        return (cliente, token, clienteId, granjaId);
     }
 
     // Importa el PDF de muestra y lo publica con una vigencia propia: queda
@@ -329,8 +341,9 @@ public class PedidosAlimentoEndpointsTests
     [Fact]
     public async Task FlujoCompletoConTransicionesRechazoYNotificaciones()
     {
-        var cliente = _factory.CreateClient();
-        var tokenC1 = await LoginComo(cliente, SemillaIdentidad.EmailClienteC1);
+        // Tenant propio con granja: desde 2026-09-14 el pedido exige granja de
+        // origen y C1, la cuenta semilla, no la tiene.
+        var (cliente, tokenC1, _, _) = await CrearClienteConGestionAvicolaAsync();
         var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
         var idPublicacion = await ImportarYPublicarAsync(caisy, tokenCaisy);
 
@@ -506,7 +519,7 @@ public class PedidosAlimentoEndpointsTests
     [Fact]
     public async Task EnviarConCreditoInsuficienteProcedeAlPrimerIntento()
     {
-        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var (cliente, tokenCliente, _, _) = await CrearClienteConGestionAvicolaAsync();
         var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
         await ImportarYPublicarAsync(caisy, tokenCaisy);
         var id = await CrearBorradorAsync(cliente, tokenCliente);
@@ -524,7 +537,7 @@ public class PedidosAlimentoEndpointsTests
     [Fact]
     public async Task ElCreditoDelPedidoYaNoSeLeEntregaANingunGestorDeCaisy()
     {
-        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var (cliente, tokenCliente, _, _) = await CrearClienteConGestionAvicolaAsync();
         var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
         var id = await CrearBorradorAsync(cliente, tokenCliente);
 
@@ -532,5 +545,140 @@ public class PedidosAlimentoEndpointsTests
             HttpMethod.Get, $"/api/pedidos-alimento-caisy/{id}/credito", tokenCaisy));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
+    }
+
+    // Trazabilidad y listados filtrables (spec 2026-09-14): los pedidos se
+    // siembran por DbContext para fijar granja, autor y fecha sin depender de
+    // la cadena de publicación, y se consultan por HTTP para verificar el
+    // contrato de filtros y paginación.
+    private async Task<(Guid Id, int Numero)> SembrarPedidoAsync(
+        Guid clienteId, Guid granjaId, Guid? creadoPorTrabajadorId,
+        DateOnly? fechaPedido = null, int cantidad = 10)
+    {
+        using var alcance = _factory.Services.CreateScope();
+        var db = alcance.ServiceProvider.GetRequiredService<GestionAvicolaDbContext>();
+        var pedido = new PedidoAlimento(clienteId, granjaId, Guid.NewGuid(), creadoPorTrabajadorId,
+            [new DatosDetallePedido(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, cantidad)]);
+        if (fechaPedido is { } fecha)
+            pedido.EnviarACaisy(fecha, Guid.NewGuid(),
+                [new DatosPrecioEnvio(TipoAlimento.PosturaUno, PresentacionAlimento.Bolsa, 180m, Guid.NewGuid())]);
+        db.PedidosAlimento.Add(pedido);
+        await db.SaveChangesAsync();
+        return (pedido.Id, pedido.Numero);
+    }
+
+    private static async Task<JsonElement> ListadoTenantAsync(
+        HttpClient cliente, string token, string consulta)
+    {
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento{consulta}", token));
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        return await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    [Fact]
+    public async Task ElListadoDelTenantPagina()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGestionAvicolaAsync();
+        await SembrarPedidoAsync(clienteId, granjaId, null);
+        await SembrarPedidoAsync(clienteId, granjaId, null);
+
+        var cuerpo = await ListadoTenantAsync(cliente, token, "?pagina=2&tamanoPagina=1");
+
+        Assert.Equal(2, cuerpo.GetProperty("total").GetInt32());
+        Assert.Equal(1, cuerpo.GetProperty("items").GetArrayLength());
+        Assert.Equal(2, cuerpo.GetProperty("numeroPagina").GetInt32());
+        Assert.Equal(1, cuerpo.GetProperty("tamanoPagina").GetInt32());
+    }
+
+    [Fact]
+    public async Task FiltraPorGranja()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGestionAvicolaAsync();
+        var otraGranjaId = Guid.NewGuid();
+        await SembrarPedidoAsync(clienteId, granjaId, null);
+        await SembrarPedidoAsync(clienteId, otraGranjaId, null);
+
+        var propias = await ListadoTenantAsync(cliente, token, $"?granjaId={granjaId}");
+        var ajenas = await ListadoTenantAsync(cliente, token, $"?granjaId={otraGranjaId}");
+        var ninguna = await ListadoTenantAsync(cliente, token, $"?granjaId={Guid.NewGuid()}");
+
+        Assert.Equal(1, propias.GetProperty("total").GetInt32());
+        Assert.Equal(granjaId, propias.GetProperty("items")[0].GetProperty("granjaId").GetGuid());
+        Assert.Equal(1, ajenas.GetProperty("total").GetInt32());
+        Assert.Equal(0, ninguna.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task FiltraPorRangoDeFechas()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGestionAvicolaAsync();
+        var hoy = HoyBolivia();
+        await SembrarPedidoAsync(clienteId, granjaId, null, fechaPedido: hoy.AddDays(-10));
+        await SembrarPedidoAsync(clienteId, granjaId, null, fechaPedido: hoy);
+
+        var recientes = await ListadoTenantAsync(
+            cliente, token, $"?desde={hoy:yyyy-MM-dd}&hasta={hoy:yyyy-MM-dd}");
+        var todos = await ListadoTenantAsync(cliente, token, "");
+
+        Assert.Equal(1, recientes.GetProperty("total").GetInt32());
+        Assert.Equal(2, todos.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task FiltraPorAutor()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGestionAvicolaAsync();
+        var trabajadorId = Guid.NewGuid();
+        await SembrarPedidoAsync(clienteId, granjaId, trabajadorId);
+        await SembrarPedidoAsync(clienteId, granjaId, null);
+
+        var delTrabajador = await ListadoTenantAsync(
+            cliente, token, $"?creadoPorTrabajadorId={trabajadorId}");
+
+        Assert.Equal(1, delTrabajador.GetProperty("total").GetInt32());
+        Assert.Equal(trabajadorId,
+            delTrabajador.GetProperty("items")[0].GetProperty("creadoPorTrabajadorId").GetGuid());
+    }
+
+    [Fact]
+    public async Task BuscaPorFolio()
+    {
+        var (cliente, token, clienteId, granjaId) = await CrearClienteConGestionAvicolaAsync();
+        var (id, numero) = await SembrarPedidoAsync(clienteId, granjaId, null);
+
+        var cuerpo = await ListadoTenantAsync(cliente, token, $"?numero={numero}");
+
+        Assert.Equal(1, cuerpo.GetProperty("total").GetInt32());
+        var item = cuerpo.GetProperty("items")[0];
+        Assert.Equal(id, item.GetProperty("id").GetGuid());
+        Assert.Equal($"P-{numero:D6}", item.GetProperty("folio").GetString());
+    }
+
+    // CAISY ve el folio y NO ve al autor. Este test es la garantía ejecutable
+    // de la decisión de la spec.
+    [Fact]
+    public async Task ElListadoDeCaisyExponeElFolioYNingunAutor()
+    {
+        var (_, _, clienteId, granjaId) = await CrearClienteConGestionAvicolaAsync();
+        var trabajadorId = Guid.NewGuid();
+        // Fecha futura para que el pedido ordene primero y la primera página lo
+        // traiga sin depender de cuántos pedidos haya en la base compartida.
+        var (id, numero) = await SembrarPedidoAsync(
+            clienteId, granjaId, trabajadorId, fechaPedido: new DateOnly(2099, 1, 1));
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+
+        var respuesta = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento-caisy?pagina=1&tamanoPagina=1", tokenCaisy));
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var item = (await respuesta.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items")[0];
+
+        Assert.Equal(id, item.GetProperty("id").GetGuid());
+        Assert.Equal(numero, item.GetProperty("numero").GetInt32());
+        Assert.Equal($"P-{numero:D6}", item.GetProperty("folio").GetString());
+        Assert.False(item.TryGetProperty("creadoPorTrabajadorId", out _));
+        Assert.False(item.TryGetProperty("granjaId", out _));
+        Assert.False(item.TryGetProperty("nombre", out _));
     }
 }

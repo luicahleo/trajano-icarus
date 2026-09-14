@@ -96,8 +96,15 @@ public sealed record RegistrarDespachoPedidoCommand(
         { ["Lineas"] = DatoRegistroVuelo.Entero });
 }
 
-public sealed record ListarPedidosAlimentoQuery
-    : IRequest<IReadOnlyList<PedidoAlimentoResumen>>;
+// Filtros del listado (spec 2026-09-14). CreadoPorTrabajadorId NO existe en el
+// equivalente de CAISY: CAISY no filtra por personas porque no las ve.
+public sealed record FiltrosPedidosTenant(
+    Guid? GranjaId, string? Estado, string? Presentacion,
+    DateOnly? Desde, DateOnly? Hasta, Guid? CreadoPorTrabajadorId, int? Numero);
+
+public sealed record ListarPedidosAlimentoQuery(
+    FiltrosPedidosTenant Filtros, PeticionPaginada Paginacion)
+    : IRequest<Pagina<PedidoAlimentoResumen>>;
 
 public sealed record ObtenerPedidoAlimentoQuery(Guid PedidoId)
     : IRequest<PedidoAlimentoDetalle>;
@@ -112,8 +119,8 @@ public sealed record ListarPedidosCaisyQuery(
     string? Estado, string? Presentacion, int Pagina, int TamanoPagina)
     : IRequest<PaginaPedidosCaisy>;
 public sealed record PedidoCaisyResumen(
-    Guid Id, Guid ClienteId, string Estado, string Presentacion, DateOnly? FechaPedido,
-    DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
+    Guid Id, Guid ClienteId, string Folio, int Numero, string Estado, string Presentacion,
+    DateOnly? FechaPedido, DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
 
 public sealed record PaginaPedidosCaisy(
     IReadOnlyList<PedidoCaisyResumen> Items, int Total, int Pagina, int TamanoPagina);
@@ -133,8 +140,22 @@ public sealed class ListarPedidosCaisyValidator : AbstractValidator<ListarPedido
     }
 }
 
+public sealed class ListarPedidosAlimentoValidator : AbstractValidator<ListarPedidosAlimentoQuery>
+{
+    public ListarPedidosAlimentoValidator()
+    {
+        RuleFor(c => c.Filtros.Estado)
+            .Must(e => e is null || Enum.TryParse<EstadoPedidoAlimento>(e, true, out _))
+            .WithMessage("El estado indicado no existe.");
+        RuleFor(c => c.Filtros.Presentacion)
+            .Must(p => p is null || Enum.TryParse<PresentacionAlimento>(p, true, out _))
+            .WithMessage("La presentación indicada no existe.");
+    }
+}
+
 public sealed record PedidoAlimentoResumen(
-    Guid Id, string Estado, string Presentacion, DateOnly? FechaPedido,
+    Guid Id, string Folio, int Numero, Guid GranjaId, Guid? CreadoPorTrabajadorId,
+    string Estado, string Presentacion, DateOnly? FechaPedido,
     DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
 
 public sealed record LineaPedidoAlimentoResumen(
@@ -698,15 +719,24 @@ public sealed class DescargarDocumentoNotaHandler(
 }
 
 public sealed class ListarPedidosAlimentoHandler(IRepositorioPedidosAlimento repositorio)
-    : IRequestHandler<ListarPedidosAlimentoQuery, IReadOnlyList<PedidoAlimentoResumen>>
+    : IRequestHandler<ListarPedidosAlimentoQuery, Pagina<PedidoAlimentoResumen>>
 {
-    public async Task<IReadOnlyList<PedidoAlimentoResumen>> Handle(
-        ListarPedidosAlimentoQuery request, CancellationToken cancellationToken) =>
-        (await repositorio.ListarAsync(cancellationToken))
-            .OrderByDescending(p => p.FechaPedido)
-            .ThenByDescending(p => p.Id)
-            .Select(MapeadorPedidos.MapearResumen)
-            .ToList();
+    public async Task<Pagina<PedidoAlimentoResumen>> Handle(
+        ListarPedidosAlimentoQuery request, CancellationToken cancellationToken)
+    {
+        var filtros = request.Filtros;
+        var estado = filtros.Estado is null
+            ? (EstadoPedidoAlimento?)null : Enum.Parse<EstadoPedidoAlimento>(filtros.Estado, true);
+        var presentacion = filtros.Presentacion is null
+            ? (PresentacionAlimento?)null : Enum.Parse<PresentacionAlimento>(filtros.Presentacion, true);
+        var (items, total) = await repositorio.ListarPaginadoTenantAsync(
+            filtros.GranjaId, estado, presentacion, filtros.Desde, filtros.Hasta,
+            filtros.CreadoPorTrabajadorId, filtros.Numero,
+            request.Paginacion.Salto, request.Paginacion.TamanoNormalizado, cancellationToken);
+        return new Pagina<PedidoAlimentoResumen>(
+            items.Select(MapeadorPedidos.MapearResumen).ToList(),
+            total, request.Paginacion.PaginaNormalizada, request.Paginacion.TamanoNormalizado);
+    }
 }
 
 public sealed class ObtenerPedidoAlimentoHandler(IRepositorioPedidosAlimento repositorio)
@@ -764,14 +794,21 @@ public sealed class ListarPedidosCaisyHandler(IRepositorioPedidosAlimento reposi
 
 internal static class MapeadorPedidos
 {
+    // P-000123. El prefijo es presentación: guardar el texto compuesto
+    // duplicaría el dato y abriría la puerta a que diverja del número.
+    public static string FolioDe(int numero) =>
+        string.Create(CultureInfo.InvariantCulture, $"P-{numero:D6}");
+
     public static PedidoAlimentoResumen MapearResumen(PedidoAlimento pedido) =>
-        new(pedido.Id, pedido.Estado.ToString(), pedido.Detalles.First().Presentacion.ToString(),
+        new(pedido.Id, FolioDe(pedido.Numero), pedido.Numero, pedido.GranjaId,
+            pedido.CreadoPorTrabajadorId, pedido.Estado.ToString(),
+            pedido.Detalles.First().Presentacion.ToString(),
             pedido.FechaPedido, pedido.FechaEntregaEstimada, pedido.TotalSolicitado,
             pedido.Detalles.Count);
 
     public static PedidoCaisyResumen MapearResumenCaisy(PedidoAlimento pedido) =>
-        new(pedido.Id, pedido.ClienteId, pedido.Estado.ToString(),
-            pedido.Detalles.First().Presentacion.ToString(),
+        new(pedido.Id, pedido.ClienteId, FolioDe(pedido.Numero), pedido.Numero,
+            pedido.Estado.ToString(), pedido.Detalles.First().Presentacion.ToString(),
             pedido.FechaPedido, pedido.FechaEntregaEstimada, pedido.TotalSolicitado,
             pedido.Detalles.Count);
 
