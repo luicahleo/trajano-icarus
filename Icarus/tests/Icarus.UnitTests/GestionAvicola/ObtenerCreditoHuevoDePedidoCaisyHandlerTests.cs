@@ -1,3 +1,4 @@
+using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
@@ -9,11 +10,10 @@ namespace Icarus.UnitTests.GestionAvicola;
 
 // Vista de CAISY del crédito (spec 2026-09-11-credito-huevo-vista-caisy):
 // el handler deriva el cliente del pedido y resuelve cuánto pesa ese pedido
-// en el saldo según su estado. No verifica rol: la política del grupo
-// /pedidos-alimento-caisy ya exige rol GestorCaisy más la funcionalidad
-// GestorPedidoAlimento (ver ObtenerBalanceCreditoHuevoHandlerTests.cs para
-// el gate del lado Cliente, que existe porque la política del tenant no
-// distingue Cliente de Trabajador).
+// en el saldo según su estado. La corrección 2026-09-14 le agregó el gate de
+// rol Cliente: como el endpoint vive en el grupo /pedidos-alimento-caisy,
+// nadie que llegue hasta él pasa el gate, y el camino queda cerrado a
+// propósito.
 public class ObtenerCreditoHuevoDePedidoCaisyHandlerTests
 {
     private static readonly Guid ClienteId = Guid.NewGuid();
@@ -24,8 +24,13 @@ public class ObtenerCreditoHuevoDePedidoCaisyHandlerTests
         Substitute.For<IRepositorioPedidosAlimento>();
     private readonly IRepositorioBalanceCreditoHuevo _credito =
         Substitute.For<IRepositorioBalanceCreditoHuevo>();
+    private readonly ICurrentUser _usuarioActual = Substitute.For<ICurrentUser>();
 
-    private ObtenerCreditoHuevoDePedidoCaisyHandler CrearHandler() => new(_pedidos, _credito);
+    public ObtenerCreditoHuevoDePedidoCaisyHandlerTests() =>
+        _usuarioActual.Rol.Returns("Cliente");
+
+    private ObtenerCreditoHuevoDePedidoCaisyHandler CrearHandler() =>
+        new(_pedidos, _credito, _usuarioActual);
 
     private void ConSaldo(decimal saldo, params AjusteCreditoHuevoResumen[] ajustes)
     {
@@ -166,5 +171,36 @@ public class ObtenerCreditoHuevoDePedidoCaisyHandlerTests
             Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
         await _credito.DidNotReceive().ObtenerAjustesAsync(
             Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    // Corrección 2026-09-14: el saldo del Cliente es privado. Ningún
+    // funcionario de CAISY lo ve, ni el gestor de pedidos de alimento ni el
+    // de recepción de huevos. Como este endpoint vive en el grupo de CAISY,
+    // el gate lo deja inerte a propósito: el handler no se borra, se cierra.
+    [Fact]
+    public async Task UnGestorDeCaisyNoPuedeVerElCreditoDelCliente()
+    {
+        var pedido = PedidoEnviado();
+        ConPedido(pedido);
+        _usuarioActual.Rol.Returns("GestorCaisy");
+
+        await Assert.ThrowsAsync<CreditoHuevoRequiereRolClienteException>(() =>
+            CrearHandler().Handle(
+                new ObtenerCreditoHuevoDePedidoCaisyQuery(pedido.Id), CancellationToken.None));
+
+        await _credito.DidNotReceive().ObtenerSaldoDisponibleAsync(
+            Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UnTrabajadorNoPuedeVerElCreditoDelCliente()
+    {
+        var pedido = PedidoEnviado();
+        ConPedido(pedido);
+        _usuarioActual.Rol.Returns("Trabajador");
+
+        await Assert.ThrowsAsync<CreditoHuevoRequiereRolClienteException>(() =>
+            CrearHandler().Handle(
+                new ObtenerCreditoHuevoDePedidoCaisyQuery(pedido.Id), CancellationToken.None));
     }
 }

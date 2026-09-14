@@ -1,3 +1,4 @@
+using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.GestionAvicola.Application.PedidosAlimento;
 using Icarus.GestionAvicola.Domain;
@@ -10,11 +11,12 @@ namespace Icarus.GestionAvicola.Application.CreditoHuevo;
 // el cliente: el ClienteId se deriva del pedido y nunca viaja como
 // parámetro, así que no hay enumeración posible de clientes desde la API.
 //
-// Sin gate de rol dentro del handler, a diferencia de
-// ObtenerBalanceCreditoHuevoHandler: la política del grupo
-// /pedidos-alimento-caisy exige rol GestorCaisy más la funcionalidad
-// GestorPedidoAlimento, mientras la política del tenant no distingue
-// Cliente de Trabajador — de ahí que solo ese otro handler necesite el if.
+// CERRADO por la corrección 2026-09-14: el saldo del Cliente es privado y
+// ningún funcionario de CAISY lo ve. El gate de rol de acá abajo, sumado a
+// que el endpoint vive en el grupo /pedidos-alimento-caisy, deja este camino
+// inerte: nadie que pueda llegar al endpoint pasa el gate. La consulta, el
+// handler y el endpoint se conservan sin borrar por decisión explícita del
+// usuario; el inventario de lo que quedó inerte está en la spec.
 public sealed record ObtenerCreditoHuevoDePedidoCaisyQuery(Guid PedidoId)
     : IRequest<CreditoHuevoDePedidoCaisy>;
 
@@ -30,12 +32,17 @@ public sealed record CreditoHuevoDePedidoCaisy(
 
 public sealed class ObtenerCreditoHuevoDePedidoCaisyHandler(
     IRepositorioPedidosAlimento repositorioPedidos,
-    IRepositorioBalanceCreditoHuevo repositorioCredito)
+    IRepositorioBalanceCreditoHuevo repositorioCredito,
+    ICurrentUser usuarioActual)
     : IRequestHandler<ObtenerCreditoHuevoDePedidoCaisyQuery, CreditoHuevoDePedidoCaisy>
 {
     public async Task<CreditoHuevoDePedidoCaisy> Handle(
         ObtenerCreditoHuevoDePedidoCaisyQuery request, CancellationToken cancellationToken)
     {
+        if (usuarioActual.Rol != "Cliente")
+            throw new CreditoHuevoRequiereRolClienteException(
+                "El crédito por despachos de huevo es exclusivo del Cliente.");
+
         var pedido = await repositorioPedidos.ObtenerPorIdAsync(request.PedidoId, cancellationToken)
             ?? throw new NotFoundException("Pedido de alimento", request.PedidoId);
         var saldo = await repositorioCredito.ObtenerSaldoDisponibleAsync(

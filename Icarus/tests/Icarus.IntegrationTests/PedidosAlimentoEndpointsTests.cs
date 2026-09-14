@@ -70,18 +70,12 @@ public class PedidosAlimentoEndpointsTests
         return Guid.Parse(cuerpo.GetProperty("id").GetString()!);
     }
 
-    // El default confirma crédito insuficiente (spec SP9E): sin ningún
-    // despacho de huevo sembrado, el saldo real de cualquier cliente de
-    // prueba es 0, así que cualquier pedido con total > 0 dispara el
-    // chequeo. Los tests de este archivo versan sobre cupo semanal y
-    // transiciones, no sobre crédito, así que no deben verse afectados; el
-    // único test que sí prueba crédito llama al endpoint directo, sin este
-    // helper, para controlar el flag explícitamente.
+    // El envío ya no lleva cuerpo (corrección 2026-09-14): el crédito dejó de
+    // gobernar el pedido, así que no hay flag de confirmación que enviar.
     private static async Task<HttpStatusCode> EnviarAsync(
-        HttpClient cliente, string token, Guid id, bool confirmarCreditoInsuficiente = true) =>
+        HttpClient cliente, string token, Guid id) =>
         (await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{id}/enviar", token,
-            JsonContent.Create(new { confirmarCreditoInsuficiente })))).StatusCode;
+            HttpMethod.Post, $"/api/pedidos-alimento/{id}/enviar", token))).StatusCode;
 
     private static async Task<JsonElement> ObtenerDetalleAsync(HttpClient cliente, string token, Guid id)
     {
@@ -134,37 +128,6 @@ public class PedidosAlimentoEndpointsTests
             JsonContent.Create(new { modulos = new[] { "GestionAvicola" } })));
         Assert.Equal(HttpStatusCode.NoContent, modulos.StatusCode);
         return (cliente, await LoginComo(cliente, email, "Clave-Cliente-123"), clienteId);
-    }
-
-    // Trabajador nuevo bajo el tenant recién creado, con solo la
-    // funcionalidad indicada (spec, ítem 2 del backlog: el Trabajador tiene
-    // el entitlement de módulo pero no debe poder confirmar un envío con
-    // crédito insuficiente).
-    private static async Task<string> CrearTrabajadorConFuncionAsync(
-        HttpClient cliente, string tokenCliente, Guid clienteId, string funcionalidad)
-    {
-        var email = $"pedidos-trabajador-{Guid.NewGuid():N}@icarus.test";
-        var alta = await cliente.SendAsync(Pedido(HttpMethod.Post,
-            $"/api/clientes/{clienteId}/trabajadores", tokenCliente,
-            JsonContent.Create(new
-            {
-                nombre = "Trabajador de Prueba",
-                documentoIdentidad = $"9{Random.Shared.Next(10000000, 99999999)}",
-                cargo = "Operario",
-                fechaIngreso = "2026-01-15",
-                email,
-                contrasena = "Clave-Trabajador-123",
-            })));
-        Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
-        var trabajadorId = (await alta.Content.ReadFromJsonAsync<JsonElement>())
-            .GetProperty("id").GetGuid();
-
-        var asignar = await cliente.SendAsync(Pedido(HttpMethod.Put,
-            $"/api/clientes/{clienteId}/trabajadores/{trabajadorId}/funcionalidades", tokenCliente,
-            JsonContent.Create(new { funcionalidades = new[] { funcionalidad } })));
-        Assert.Equal(HttpStatusCode.NoContent, asignar.StatusCode);
-
-        return await LoginComo(cliente, email, "Clave-Trabajador-123");
     }
 
     // Importa el PDF de muestra y lo publica con una vigencia propia: queda
@@ -538,147 +501,36 @@ public class PedidosAlimentoEndpointsTests
         Assert.Equal(0, cuerpoFuturo.GetProperty("items").GetArrayLength());
     }
 
-    // SP9E (spec: "Confirmación explícita al enviar un pedido con crédito de
-    // huevo insuficiente"): sin ningún despacho de huevo recibido, el saldo
-    // del cliente es 0 y cualquier pedido con total > 0 exige confirmación.
+    // Corrección 2026-09-14: el saldo no frena el envío. Un único intento,
+    // sin cuerpo de confirmación, y el pedido sale.
     [Fact]
-    public async Task EnviarSinConfirmarConCreditoInsuficienteExigeConfirmacionYElReintentoLoAcepta()
-    {
-        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
-        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
-        await ImportarYPublicarAsync(caisy, tokenCaisy);
-        var pedidoId = await CrearBorradorAsync(cliente, tokenCliente);
-
-        var primerIntento = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{pedidoId}/enviar", tokenCliente,
-            JsonContent.Create(new { confirmarCreditoInsuficiente = false })));
-        Assert.Equal(HttpStatusCode.Conflict, primerIntento.StatusCode);
-        var cuerpoError = await primerIntento.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("Crédito insuficiente", cuerpoError.GetProperty("title").GetString());
-
-        var detalleSinEnviar = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
-        Assert.Equal("Borrador", detalleSinEnviar.GetProperty("estado").GetString());
-        Assert.Equal(0, detalleSinEnviar.GetProperty("historial").GetArrayLength());
-
-        var reintento = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{pedidoId}/enviar", tokenCliente,
-            JsonContent.Create(new { confirmarCreditoInsuficiente = true })));
-        Assert.Equal(HttpStatusCode.NoContent, reintento.StatusCode);
-
-        var detalleEnviado = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
-        Assert.Equal("Solicitado", detalleEnviado.GetProperty("estado").GetString());
-        var transicion = detalleEnviado.GetProperty("historial").EnumerateArray().Single();
-        Assert.Contains("crédito insuficiente",
-            transicion.GetProperty("motivo").GetString()!, StringComparison.OrdinalIgnoreCase);
-    }
-
-    // Segunda brecha de rol cerrada por el mismo ítem del backlog: aunque el
-    // Trabajador tenga la funcionalidad PedidoAlimento (entitlement de
-    // módulo), no puede confirmar un envío con crédito insuficiente —
-    // llamando la API directo, saltando la UI que ya no le ofrece ese botón.
-    [Fact]
-    public async Task UnTrabajadorNoPuedeConfirmarElEnvioConCreditoInsuficiente()
-    {
-        var (cliente, tokenCliente, clienteId) = await CrearClienteConGestionAvicolaAsync();
-        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
-        await ImportarYPublicarAsync(caisy, tokenCaisy);
-        var pedidoId = await CrearBorradorAsync(cliente, tokenCliente);
-        var tokenTrabajador = await CrearTrabajadorConFuncionAsync(
-            cliente, tokenCliente, clienteId, "PedidoAlimento");
-
-        var intento = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{pedidoId}/enviar", tokenTrabajador,
-            JsonContent.Create(new { confirmarCreditoInsuficiente = true })));
-
-        Assert.Equal(HttpStatusCode.Forbidden, intento.StatusCode);
-        var detalle = await ObtenerDetalleAsync(cliente, tokenCliente, pedidoId);
-        Assert.Equal("Borrador", detalle.GetProperty("estado").GetString());
-        Assert.Equal(0, detalle.GetProperty("historial").GetArrayLength());
-    }
-
-    // Vista de CAISY del crédito (spec 2026-09-11-credito-huevo-vista-caisy):
-    // el cliente sale del pedido, así que la ruta no lleva ningún ClienteId.
-    // El tenant de prueba no tiene despachos de huevo sembrados, así que sus
-    // ingresos y ajustes son cero y el saldo es exactamente el negativo de lo
-    // comprometido por este pedido. No se fija el precio en la aserción: el
-    // monto se contrasta contra el total solicitado que informa la API, que
-    // es el mismo snapshot congelado al envío.
-    [Fact]
-    public async Task ElCreditoDelPedidoDevuelveLasTresCifrasCoherentes()
+    public async Task EnviarConCreditoInsuficienteProcedeAlPrimerIntento()
     {
         var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
         var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
         await ImportarYPublicarAsync(caisy, tokenCaisy);
         var id = await CrearBorradorAsync(cliente, tokenCliente);
-        Assert.Equal(HttpStatusCode.NoContent, await EnviarAsync(cliente, tokenCliente, id));
-        var detalle = await ObtenerDetalleAsync(cliente, tokenCliente, id);
-        var totalSolicitado = detalle.GetProperty("totalSolicitado").GetDecimal();
-
-        var respuesta = await caisy.SendAsync(Pedido(
-            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{id}/credito", tokenCaisy));
-
-        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
-        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(totalSolicitado, cuerpo.GetProperty("montoDelPedido").GetDecimal());
-        Assert.Equal(-totalSolicitado, cuerpo.GetProperty("saldoDisponible").GetDecimal());
-        Assert.Equal(0m, cuerpo.GetProperty("saldoSinEstePedido").GetDecimal());
-        Assert.True(cuerpo.GetProperty("pedidoComputadoEnElSaldo").GetBoolean());
-        Assert.Empty(cuerpo.GetProperty("ajustes").EnumerateArray());
-    }
-
-    // Un borrador no pesa en el saldo: no entra en ningún componente del
-    // cálculo, así que las dos cifras derivadas quedan neutras.
-    [Fact]
-    public async Task ElCreditoDeUnBorradorInformaQueNoPesaEnElSaldo()
-    {
-        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
-        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
-        var id = await CrearBorradorAsync(cliente, tokenCliente);
-
-        var respuesta = await caisy.SendAsync(Pedido(
-            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{id}/credito", tokenCaisy));
-
-        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
-        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(0m, cuerpo.GetProperty("montoDelPedido").GetDecimal());
-        Assert.Equal(0m, cuerpo.GetProperty("saldoDisponible").GetDecimal());
-        Assert.False(cuerpo.GetProperty("pedidoComputadoEnElSaldo").GetBoolean());
-    }
-
-    // El crédito de CAISY es financiero y exclusivo de las dos partes de la
-    // relación comercial: solo una cuenta GestorCaisy con la funcionalidad
-    // GestorPedidoAlimento lo consulta por esta ruta. El Cliente tiene su
-    // propio endpoint (/despachos-huevo/credito) y el Trabajador no tiene
-    // ninguno.
-    [Fact]
-    public async Task ElCreditoDelPedidoSoloLoVeCaisyConGestorPedidoAlimento()
-    {
-        var (cliente, tokenCliente, clienteId) = await CrearClienteConGestionAvicolaAsync();
-        var tokenTrabajador = await CrearTrabajadorConFuncionAsync(
-            cliente, tokenCliente, clienteId, "PedidoAlimento");
-        var (_, tokenOtraFuncion) = await CrearCuentaCaisyConFuncion("GestorRecepcionHuevos");
-        var id = await CrearBorradorAsync(cliente, tokenCliente);
-        var ruta = $"/api/pedidos-alimento-caisy/{id}/credito";
-
-        var sinToken = await cliente.GetAsync(ruta);
-        var comoCliente = await cliente.SendAsync(Pedido(HttpMethod.Get, ruta, tokenCliente));
-        var comoTrabajador = await cliente.SendAsync(Pedido(HttpMethod.Get, ruta, tokenTrabajador));
-        var comoOtraFuncion = await cliente.SendAsync(Pedido(HttpMethod.Get, ruta, tokenOtraFuncion));
-
-        Assert.Equal(HttpStatusCode.Unauthorized, sinToken.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, comoCliente.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, comoTrabajador.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, comoOtraFuncion.StatusCode);
-    }
-
-    [Fact]
-    public async Task ElCreditoDeUnPedidoInexistenteDevuelve404()
-    {
-        var (cliente, tokenCaisy) = await CrearCuentaCaisyConFuncion();
 
         var respuesta = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{Guid.NewGuid()}/credito", tokenCaisy));
+            HttpMethod.Post, $"/api/pedidos-alimento/{id}/enviar", tokenCliente));
 
-        Assert.Equal(HttpStatusCode.NotFound, respuesta.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, respuesta.StatusCode);
+    }
+
+    // Corrección 2026-09-14: este endpoint quedó cerrado. Nadie que pueda
+    // llegar hasta él pasa el gate de rol Cliente del handler, así que
+    // responde 403 incluso con el token de CAISY correcto y con un pedido
+    // que existe. El endpoint no se borró: se cerró.
+    [Fact]
+    public async Task ElCreditoDelPedidoYaNoSeLeEntregaANingunGestorDeCaisy()
+    {
+        var (cliente, tokenCliente, _) = await CrearClienteConGestionAvicolaAsync();
+        var (caisy, tokenCaisy) = await CrearCuentaCaisyConFuncion();
+        var id = await CrearBorradorAsync(cliente, tokenCliente);
+
+        var respuesta = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy/{id}/credito", tokenCaisy));
+
+        Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
     }
 }

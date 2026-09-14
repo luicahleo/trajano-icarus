@@ -113,12 +113,11 @@ public class DocumentosNotaEndpointsTests
             })));
         Assert.Equal(HttpStatusCode.Created, crear.StatusCode);
         var idPedido = Guid.Parse((await crear.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!);
-        // Sin despachos de huevo sembrados el saldo es 0 (spec SP9E): confirma
-        // directo, este archivo no prueba crédito, solo necesita el pedido
-        // despachado para llegar a la recepción.
+        // El envío no depende del saldo (corrección 2026-09-14): este archivo
+        // no prueba crédito, solo necesita el pedido despachado para llegar a
+        // la recepción.
         var enviar = await cliente.SendAsync(Pedido(
-            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/enviar", tokenTenant,
-            JsonContent.Create(new { confirmarCreditoInsuficiente = true })));
+            HttpMethod.Post, $"/api/pedidos-alimento/{idPedido}/enviar", tokenTenant));
         Assert.Equal(HttpStatusCode.NoContent, enviar.StatusCode);
         var aceptar = await cliente.SendAsync(Pedido(
             HttpMethod.Post, $"/api/pedidos-alimento-caisy/{idPedido}/aceptar", tokenCaisy,
