@@ -148,11 +148,12 @@ public class CorreccionPrecioHuevoTests
             .SingleAsync(a => a.DespachoHuevoId == despacho.Id);
         Assert.Equal(45m, ajuste.Monto);
 
-        // ...y reflejado en el saldo: el despacho se recibió hoy (dentro del
-        // desfase de 14 días no aporta), así que el saldo es solo el ajuste.
+        // ...y reflejado en el saldo: el despacho se recibió hoy y el crédito
+        // nace al recibir (corrección 2026-09-14), así que suma su total
+        // congelado (180 × 1,40 = 252) además del ajuste de 45.
         var repositorioBalance = alcanceVerificacion.ServiceProvider
             .GetRequiredService<IRepositorioBalanceCreditoHuevo>();
         var saldo = await repositorioBalance.ObtenerSaldoDisponibleAsync(clienteId, hoy);
-        Assert.Equal(45m, saldo);
+        Assert.Equal(252m + 45m, saldo);
     }
 }

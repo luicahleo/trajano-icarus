@@ -365,9 +365,11 @@ public class DespachosHuevoCaisyEndpointsTests
         var detalle = await ObtenerDetalleCaisyAsync(cliente, tokenCaisy, id);
         Assert.Equal("Recibido", detalle.GetProperty("estado").GetString());
 
-        // El crédito por la recepción se libera recién catorce días después
-        // (spec SP9): una recepción confirmada hoy todavía no mueve el saldo.
-        Assert.Equal(saldoAntes, await ObtenerSaldoCreditoAsync(cliente, tokenCliente));
+        // El crédito por la recepción se libera al confirmarla (corrección
+        // 2026-09-14): una recepción confirmada hoy ya mueve el saldo por el
+        // total congelado del despacho.
+        var totalDespacho = detalle.GetProperty("totalBs").GetDecimal();
+        Assert.Equal(saldoAntes + totalDespacho, await ObtenerSaldoCreditoAsync(cliente, tokenCliente));
 
         // El tenant recibe la notificación de la recepción confirmada.
         var bandeja = await cliente.SendAsync(
