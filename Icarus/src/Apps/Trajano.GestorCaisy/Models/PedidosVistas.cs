@@ -6,11 +6,16 @@ using Trajano.GestorCaisy.Servicios;
 namespace Trajano.GestorCaisy.Models;
 
 // Bandeja de pedidos entrantes (SP8B): filtros y paginación sobre la lista
-// global y las notificaciones sin leer con su contador.
+// global y las notificaciones sin leer con su contador. CAISY ve el folio y la
+// granja, nunca al autor (spec 2026-09-14).
 public sealed record BandejaPedidosVista(
     PaginaPedidosApi Pagina,
     string? Estado,
     string? Presentacion,
+    string? Granja,
+    DateOnly? Desde,
+    DateOnly? Hasta,
+    int? Numero,
     BandejaNotificacionesApi Notificaciones);
 
 public sealed class FiltrosPedidosVista
@@ -18,6 +23,17 @@ public sealed class FiltrosPedidosVista
     public string? Estado { get; set; }
 
     public string? Presentacion { get; set; }
+
+    // Búsqueda por nombre de granja (contiene). No es un dato personal.
+    public string? Granja { get; set; }
+
+    public DateOnly? Desde { get; set; }
+
+    public DateOnly? Hasta { get; set; }
+
+    // Búsqueda por folio: el correlativo, no el prefijo visible.
+    [Range(1, int.MaxValue, ErrorMessage = "El folio debe ser un número positivo.")]
+    public int? Numero { get; set; }
 
     [Range(1, int.MaxValue)]
     public int Pagina { get; set; } = 1;

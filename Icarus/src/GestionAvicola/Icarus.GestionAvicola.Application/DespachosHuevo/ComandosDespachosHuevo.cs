@@ -252,11 +252,13 @@ public sealed class ListarDespachosHuevoTenantHandler(IRepositorioDespachosHuevo
 // Bandeja global de CAISY (spec SP9C): filtro por estado con paginación,
 // igual que pedidos de alimento. El resumen de CAISY NO lleva autor ni granja:
 // CAISY ve el folio, nunca personas (decisión central de la spec 2026-09-14).
-public sealed record ListarDespachosHuevoCaisyQuery(EstadoDespachoHuevo? Estado, int Pagina, int TamanoPagina)
+public sealed record ListarDespachosHuevoCaisyQuery(
+    EstadoDespachoHuevo? Estado, string? Granja, DateOnly? Desde, DateOnly? Hasta, int? Numero,
+    int Pagina, int TamanoPagina)
     : IRequest<PaginaDespachosHuevo>;
 
 public sealed record DespachoHuevoCaisyResumen(
-    Guid Id, string Folio, int Numero, string Estado, DateOnly? FechaDespacho,
+    Guid Id, string Folio, int Numero, string? GranjaNombre, string Estado, DateOnly? FechaDespacho,
     int TotalAmarras, int TotalHuevos, decimal? TotalBs);
 
 public sealed record PaginaDespachosHuevo(IReadOnlyList<DespachoHuevoCaisyResumen> Items, int Total);
@@ -268,10 +270,11 @@ public sealed class ListarDespachosHuevoCaisyHandler(IRepositorioDespachosHuevo 
         ListarDespachosHuevoCaisyQuery request, CancellationToken cancellationToken)
     {
         var saltar = (Math.Max(request.Pagina, 1) - 1) * Math.Max(request.TamanoPagina, 1);
-        var (items, total) = await repositorio.ListarPaginadoCaisyAsync(
-            request.Estado, saltar, Math.Max(request.TamanoPagina, 1), cancellationToken);
+        var (items, total, granjas) = await repositorio.ListarPaginadoCaisyAsync(
+            request.Estado, request.Granja, request.Desde, request.Hasta, request.Numero,
+            saltar, Math.Max(request.TamanoPagina, 1), cancellationToken);
         return new PaginaDespachosHuevo(
-            items.Select(MapeadorDespachos.MapearResumenCaisy).ToList(),
+            items.Select(d => MapeadorDespachos.MapearResumenCaisy(d, granjas)).ToList(),
             total);
     }
 }
@@ -380,7 +383,10 @@ internal static class MapeadorDespachos
             despacho.CreadoPorTrabajadorId, despacho.Estado.ToString(), despacho.FechaDespacho,
             despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs);
 
-    public static DespachoHuevoCaisyResumen MapearResumenCaisy(DespachoHuevo despacho) =>
-        new(despacho.Id, FolioDe(despacho.Numero), despacho.Numero, despacho.Estado.ToString(),
-            despacho.FechaDespacho, despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs);
+    public static DespachoHuevoCaisyResumen MapearResumenCaisy(
+        DespachoHuevo despacho, IReadOnlyDictionary<Guid, string> granjas) =>
+        new(despacho.Id, FolioDe(despacho.Numero), despacho.Numero,
+            granjas.TryGetValue(despacho.GranjaId, out var nombre) ? nombre : null,
+            despacho.Estado.ToString(), despacho.FechaDespacho,
+            despacho.TotalAmarras, despacho.TotalHuevos, despacho.TotalBs);
 }

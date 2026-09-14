@@ -116,11 +116,16 @@ public sealed record ObtenerCupoPedidosQuery : IRequest<CupoPedidosResumen>;
 public sealed record CupoPedidosResumen(int Enviados, int Maximo, DateOnly Desde, DateOnly Hasta);
 
 public sealed record ListarPedidosCaisyQuery(
-    string? Estado, string? Presentacion, int Pagina, int TamanoPagina)
+    string? Estado, string? Presentacion, string? Granja, DateOnly? Desde, DateOnly? Hasta,
+    int? Numero, int Pagina, int TamanoPagina)
     : IRequest<PaginaPedidosCaisy>;
+// CAISY ve el folio, nunca personas (spec 2026-09-14). El nombre de la granja
+// sí viaja: no es un dato personal y es lo que permite filtrar por granja sin
+// exponer al autor.
 public sealed record PedidoCaisyResumen(
-    Guid Id, Guid ClienteId, string Folio, int Numero, string Estado, string Presentacion,
-    DateOnly? FechaPedido, DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
+    Guid Id, Guid ClienteId, string Folio, int Numero, string? GranjaNombre, string Estado,
+    string Presentacion, DateOnly? FechaPedido, DateOnly? FechaEntregaEstimada,
+    decimal? TotalSolicitado, int CantidadLineas);
 
 public sealed record PaginaPedidosCaisy(
     IReadOnlyList<PedidoCaisyResumen> Items, int Total, int Pagina, int TamanoPagina);
@@ -139,7 +144,6 @@ public sealed class ListarPedidosCaisyValidator : AbstractValidator<ListarPedido
             .WithMessage("La presentación indicada no existe.");
     }
 }
-
 public sealed class ListarPedidosAlimentoValidator : AbstractValidator<ListarPedidosAlimentoQuery>
 {
     public ListarPedidosAlimentoValidator()
@@ -784,10 +788,11 @@ public sealed class ListarPedidosCaisyHandler(IRepositorioPedidosAlimento reposi
         var presentacion = request.Presentacion is null
             ? (PresentacionAlimento?)null : Enum.Parse<PresentacionAlimento>(request.Presentacion, true);
         var saltar = (request.Pagina - 1) * request.TamanoPagina;
-        var (items, total) = await repositorio.ListarPaginadoCaisyAsync(
-            estado, presentacion, saltar, request.TamanoPagina, cancellationToken);
+        var (items, total, granjas) = await repositorio.ListarPaginadoCaisyAsync(
+            estado, presentacion, request.Granja, request.Desde, request.Hasta, request.Numero,
+            saltar, request.TamanoPagina, cancellationToken);
         return new PaginaPedidosCaisy(
-            items.Select(MapeadorPedidos.MapearResumenCaisy).ToList(),
+            items.Select(p => MapeadorPedidos.MapearResumenCaisy(p, granjas)).ToList(),
             total, request.Pagina, request.TamanoPagina);
     }
 }
@@ -806,8 +811,10 @@ internal static class MapeadorPedidos
             pedido.FechaPedido, pedido.FechaEntregaEstimada, pedido.TotalSolicitado,
             pedido.Detalles.Count);
 
-    public static PedidoCaisyResumen MapearResumenCaisy(PedidoAlimento pedido) =>
+    public static PedidoCaisyResumen MapearResumenCaisy(
+        PedidoAlimento pedido, IReadOnlyDictionary<Guid, string> granjas) =>
         new(pedido.Id, pedido.ClienteId, FolioDe(pedido.Numero), pedido.Numero,
+            granjas.TryGetValue(pedido.GranjaId, out var nombre) ? nombre : null,
             pedido.Estado.ToString(), pedido.Detalles.First().Presentacion.ToString(),
             pedido.FechaPedido, pedido.FechaEntregaEstimada, pedido.TotalSolicitado,
             pedido.Detalles.Count);

@@ -35,7 +35,8 @@ public class RecepcionesHuevoControllerTests
     {
         _api.PaginaDeDespachosHuevo = new PaginaDespachosHuevoApi(
             [new DespachoHuevoResumenApi(
-                Guid.NewGuid(), "Despachado", new(2025, 11, 2), 10, 2950, 1602.75m)],
+                Guid.NewGuid(), "D-000001", 1, "Granja Uno", "Despachado", new(2025, 11, 2),
+                10, 2950, 1602.75m)],
             1);
         _api.NotificacionesDeDespachosHuevo = new BandejaNotificacionesDespachoHuevoApi(
             [new NotificacionDespachoHuevoApi(

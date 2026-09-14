@@ -34,7 +34,7 @@ public class PedidosControllerTests
     {
         _api.PaginaDePedidos = new PaginaPedidosApi(
             [new PedidoResumenApi(
-                Guid.NewGuid(), Guid.NewGuid(), "Solicitado", "Bolsa",
+                Guid.NewGuid(), Guid.NewGuid(), "P-000001", 1, "Granja Uno", "Solicitado", "Bolsa",
                 new(2025, 11, 2), null, 14120m, 1)],
             1, 1, 20);
         _api.NotificacionesDePedidos = new BandejaNotificacionesApi(

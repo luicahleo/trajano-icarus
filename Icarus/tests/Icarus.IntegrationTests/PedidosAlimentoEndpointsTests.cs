@@ -680,5 +680,15 @@ public class PedidosAlimentoEndpointsTests
         Assert.False(item.TryGetProperty("creadoPorTrabajadorId", out _));
         Assert.False(item.TryGetProperty("granjaId", out _));
         Assert.False(item.TryGetProperty("nombre", out _));
+
+        // El filtro por folio de CAISY busca por el correlativo (spec
+        // 2026-09-14) y devuelve exactamente el pedido buscado.
+        var porFolio = await caisy.SendAsync(Pedido(
+            HttpMethod.Get, $"/api/pedidos-alimento-caisy?numero={numero}&pagina=1&tamanoPagina=1",
+            tokenCaisy));
+        Assert.Equal(HttpStatusCode.OK, porFolio.StatusCode);
+        var itemFolio = (await porFolio.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items")[0];
+        Assert.Equal(id, itemFolio.GetProperty("id").GetGuid());
     }
 }

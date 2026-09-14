@@ -30,13 +30,15 @@ public interface IRepositorioPedidosAlimento
         DateOnly? desde, DateOnly? hasta, Guid? creadoPorTrabajadorId, int? numero,
         int saltar, int tomar, CancellationToken cancellationToken = default);
 
-    // Bandeja global de CAISY (spec SP8): filtros por estado y presentación
-    // con paginación; el filtro de tenant del DbContext deja ver los pedidos
-    // de todos los tenants a las cuentas sin tenant y la política de CAISY
-    // autoriza el acceso.
-    Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoCaisyAsync(
-        EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,
-        int saltar, int tomar, CancellationToken cancellationToken = default);
+    // Bandeja global de CAISY (spec SP8/2026-09-14): filtros por estado,
+    // presentación, granja (por nombre), rango de fechas y folio, con
+    // paginación. Devuelve además los nombres de las granjas de la página para
+    // que el DTO no tenga que resolverlos (y CAISY nunca vea personas).
+    Task<(IReadOnlyList<PedidoAlimento> Items, int Total, IReadOnlyDictionary<Guid, string> Granjas)>
+        ListarPaginadoCaisyAsync(
+            EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion, string? granja,
+            DateOnly? desde, DateOnly? hasta, int? numero,
+            int saltar, int tomar, CancellationToken cancellationToken = default);
 
     // Cuenta los pedidos del cliente con envío dentro de la semana indicada
     // y bloquea el rango leído (UPDLOCK con semántica serializable) hasta el

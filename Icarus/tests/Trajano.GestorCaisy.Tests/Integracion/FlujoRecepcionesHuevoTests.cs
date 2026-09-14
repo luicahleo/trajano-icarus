@@ -44,13 +44,16 @@ public class FlujoRecepcionesHuevoTests
         var cliente = await aplicacion.AccederAsync(funcCaisy: 2);
         aplicacion.Api.PaginaDeDespachosHuevo = new PaginaDespachosHuevoApi(
             Enumerable.Range(0, 3).Select(_ => new DespachoHuevoResumenApi(
-                Guid.NewGuid(), "Despachado", new(2025, 11, 2), 10, 2950, 1602.75m)).ToList(),
+                Guid.NewGuid(), "D-000001", 1, "Granja Uno", "Despachado", new(2025, 11, 2),
+                10, 2950, 1602.75m)).ToList(),
             3);
 
         var html = await cliente.GetStringAsync("/RecepcionesHuevo?estado=Despachado");
 
         Assert.Contains("Despachado", html);
         Assert.Contains("02/11/2025", html);
+        Assert.Contains("D-000001", html);
+        Assert.DoesNotContain("creadoPorTrabajadorId", html);
         Assert.Contains("2950", html);
         Assert.Contains("1602.75", html);
         Assert.Contains("Página 1 de 1 con 3 despachos de huevo.", html);

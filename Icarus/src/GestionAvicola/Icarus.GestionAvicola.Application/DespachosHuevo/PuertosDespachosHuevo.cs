@@ -28,13 +28,13 @@ public interface IRepositorioDespachosHuevo
         Guid? creadoPorTrabajadorId, int? numero,
         int saltar, int tomar, CancellationToken cancellationToken = default);
 
-    // Bandeja global de CAISY (spec SP9C): filtro por estado con paginación,
-    // igual que pedidos de alimento. El filtro de tenant del DbContext deja
-    // ver los despachos de todos los tenants a las cuentas sin tenant y la
-    // política de CAISY autoriza el acceso.
-    Task<(IReadOnlyList<DespachoHuevo> Items, int Total)> ListarPaginadoCaisyAsync(
-        EstadoDespachoHuevo? estado, int saltar, int tomar,
-        CancellationToken cancellationToken = default);
+    // Bandeja global de CAISY (spec SP9C/2026-09-14): filtros por estado,
+    // granja (por nombre), rango de fechas y folio, con paginación. Devuelve
+    // además los nombres de las granjas de la página; CAISY nunca ve personas.
+    Task<(IReadOnlyList<DespachoHuevo> Items, int Total, IReadOnlyDictionary<Guid, string> Granjas)>
+        ListarPaginadoCaisyAsync(
+            EstadoDespachoHuevo? estado, string? granja, DateOnly? desde, DateOnly? hasta,
+            int? numero, int saltar, int tomar, CancellationToken cancellationToken = default);
 
     // Despachos ya recibidos que congelaron una línea con esta publicación
     // (spec SP9D): usado tanto por la vista previa de una corrección como

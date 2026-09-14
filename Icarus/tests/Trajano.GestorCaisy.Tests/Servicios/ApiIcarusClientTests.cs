@@ -155,7 +155,7 @@ public class ApiIcarusClientTests
             """{"items":[{"id":"6b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c001","estado":"Despachado","fechaDespacho":"2025-11-02","totalAmarras":10,"totalHuevos":2950,"totalBs":1602.75}],"total":1}""");
 
         var pagina = await _cliente.ListarDespachosHuevoAsync(
-            new FiltrosDespachosHuevoApi("Despachado", 2, 50));
+            new FiltrosDespachosHuevoApi("Despachado", null, null, null, null, 2, 50));
 
         var resumen = Assert.Single(pagina.Items);
         Assert.Equal(1, pagina.Total);

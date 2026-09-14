@@ -68,6 +68,22 @@
             </select>
         </div>
         <div class="campo">
+            <label for="granja">Granja</label>
+            <input id="granja" name="granja" type="text" value="@Model.Granja" />
+        </div>
+        <div class="campo">
+            <label for="desde">Desde</label>
+            <input id="desde" name="desde" type="date" value="@(Model.Desde?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="campo">
+            <label for="hasta">Hasta</label>
+            <input id="hasta" name="hasta" type="date" value="@(Model.Hasta?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="campo">
+            <label for="numero">Folio</label>
+            <input id="numero" name="numero" type="number" min="1" value="@Model.Numero" />
+        </div>
+        <div class="campo">
             <button type="submit" class="boton">Filtrar</button>
         </div>
     </form>
@@ -80,7 +96,9 @@
         <table class="tabla">
             <thead>
                 <tr>
+                    <th scope="col">Folio</th>
                     <th scope="col">Despachado</th>
+                    <th scope="col">Granja</th>
                     <th scope="col">Estado</th>
                     <th scope="col">Amarras</th>
                     <th scope="col">Huevos</th>
@@ -92,7 +110,9 @@
                 @foreach (var despacho in pagina.Items)
                 {
                     <tr>
+                        <td>@despacho.Folio</td>
                         <td>@(despacho.FechaDespacho?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td>@(despacho.GranjaNombre ?? "—")</td>
                         <td><span class="chip chip--@ClaseChipEstado(despacho.Estado)">@despacho.Estado</span></td>
                         <td>@despacho.TotalAmarras</td>
                         <td>@despacho.TotalHuevos</td>
@@ -107,14 +127,18 @@
             @if (Model.NumeroPagina > 1)
             {
                 <a class="enlace" asp-action="Index"
-                   asp-route-estado="@Model.Estado"
+                   asp-route-estado="@Model.Estado" asp-route-granja="@Model.Granja"
+                   asp-route-desde="@(Model.Desde?.ToString("yyyy-MM-dd"))"
+                   asp-route-hasta="@(Model.Hasta?.ToString("yyyy-MM-dd"))" asp-route-numero="@Model.Numero"
                    asp-route-pagina="@(Model.NumeroPagina - 1)"
                    asp-route-tamanoPagina="@Model.TamanoPagina">Anterior</a>
             }
             @if (Model.NumeroPagina < totalPaginas)
             {
                 <a class="enlace" asp-action="Index"
-                   asp-route-estado="@Model.Estado"
+                   asp-route-estado="@Model.Estado" asp-route-granja="@Model.Granja"
+                   asp-route-desde="@(Model.Desde?.ToString("yyyy-MM-dd"))"
+                   asp-route-hasta="@(Model.Hasta?.ToString("yyyy-MM-dd"))" asp-route-numero="@Model.Numero"
                    asp-route-pagina="@(Model.NumeroPagina + 1)"
                    asp-route-tamanoPagina="@Model.TamanoPagina">Siguiente</a>
             }

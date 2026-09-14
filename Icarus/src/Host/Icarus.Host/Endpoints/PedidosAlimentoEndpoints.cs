@@ -140,9 +140,10 @@ public static class PedidosAlimentoEndpoints
 
         var caisy = app.MapGroup("/pedidos-alimento-caisy").RequireAuthorization(politicaCaisy);
         caisy.MapGet("/", async (ISender mediator, string? estado, string? presentacion,
+            string? granja, DateOnly? desde, DateOnly? hasta, int? numero,
             int? pagina, int? tamanoPagina, CancellationToken cancellationToken) =>
             Results.Ok(await mediator.Send(
-                new ListarPedidosCaisyQuery(estado, presentacion,
+                new ListarPedidosCaisyQuery(estado, presentacion, granja, desde, hasta, numero,
                     pagina ?? 1, tamanoPagina ?? 20),
                 cancellationToken)));
         caisy.MapGet("/{id:guid}", async (Guid id, ISender mediator,

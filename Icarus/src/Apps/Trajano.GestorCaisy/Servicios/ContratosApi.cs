@@ -67,13 +67,16 @@ public sealed record VistaPreviaCorreccionHuevoApi(
 public sealed record ComandoCorregirVigenteHuevoApi(Guid PublicacionErroneaId, Guid PublicacionCorrectivaId, string Motivo);
 
 // Pedidos de alimento (SP8B): espejo de los DTO de la API para la bandeja
-// global del tenant-caisy con filtros y paginación.
+// global del tenant-caisy con filtros y paginación. El autor NUNCA viaja:
+// CAISY ve el folio y el nombre de la granja, no personas (spec 2026-09-14).
 public sealed record FiltrosPedidosApi(
-    string? Estado, string? Presentacion, int Pagina, int TamanoPagina);
+    string? Estado, string? Presentacion, string? Granja, DateOnly? Desde, DateOnly? Hasta,
+    int? Numero, int Pagina, int TamanoPagina);
 
 public sealed record PedidoResumenApi(
-    Guid Id, Guid ClienteId, string Estado, string Presentacion, DateOnly? FechaPedido,
-    DateOnly? FechaEntregaEstimada, decimal? TotalSolicitado, int CantidadLineas);
+    Guid Id, Guid ClienteId, string Folio, int Numero, string? GranjaNombre, string Estado,
+    string Presentacion, DateOnly? FechaPedido, DateOnly? FechaEntregaEstimada,
+    decimal? TotalSolicitado, int CantidadLineas);
 
 public sealed record PaginaPedidosApi(
     IReadOnlyList<PedidoResumenApi> Items, int Total, int Pagina, int TamanoPagina);
@@ -135,11 +138,12 @@ public sealed record ComandoDespachoApi(
 // nombre JSON (Extra, Primera, ...); el precio congelado es el snapshot del
 // despacho y nunca se recalcula.
 public sealed record FiltrosDespachosHuevoApi(
-    string? Estado, int Pagina, int TamanoPagina);
+    string? Estado, string? Granja, DateOnly? Desde, DateOnly? Hasta, int? Numero,
+    int Pagina, int TamanoPagina);
 
 public sealed record DespachoHuevoResumenApi(
-    Guid Id, string Estado, DateOnly? FechaDespacho, int TotalAmarras,
-    int TotalHuevos, decimal? TotalBs);
+    Guid Id, string Folio, int Numero, string? GranjaNombre, string Estado, DateOnly? FechaDespacho,
+    int TotalAmarras, int TotalHuevos, decimal? TotalBs);
 
 public sealed record PaginaDespachosHuevoApi(
     IReadOnlyList<DespachoHuevoResumenApi> Items, int Total);

@@ -75,6 +75,22 @@
             </select>
         </div>
         <div class="campo">
+            <label for="granja">Granja</label>
+            <input id="granja" name="granja" type="text" value="@Model.Granja" />
+        </div>
+        <div class="campo">
+            <label for="desde">Desde</label>
+            <input id="desde" name="desde" type="date" value="@(Model.Desde?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="campo">
+            <label for="hasta">Hasta</label>
+            <input id="hasta" name="hasta" type="date" value="@(Model.Hasta?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="campo">
+            <label for="numero">Folio</label>
+            <input id="numero" name="numero" type="number" min="1" value="@Model.Numero" />
+        </div>
+        <div class="campo">
             <button type="submit" class="boton">Filtrar</button>
         </div>
     </form>
@@ -87,8 +103,9 @@
         <table class="tabla">
             <thead>
                 <tr>
+                    <th scope="col">Folio</th>
                     <th scope="col">Enviado</th>
-                    <th scope="col">Tenant</th>
+                    <th scope="col">Granja</th>
                     <th scope="col">Estado</th>
                     <th scope="col">Presentación</th>
                     <th scope="col">Líneas</th>
@@ -101,8 +118,9 @@
                 @foreach (var pedido in pagina.Items)
                 {
                     <tr>
+                        <td>@pedido.Folio</td>
                         <td>@(pedido.FechaPedido?.ToString("dd/MM/yyyy") ?? "—")</td>
-                        <td>@pedido.ClienteId.ToString()[..8]</td>
+                        <td>@(pedido.GranjaNombre ?? "—")</td>
                         <td><span class="chip chip--@pedido.Estado.ToLowerInvariant()">@pedido.Estado</span></td>
                         <td>@pedido.Presentacion</td>
                         <td>@pedido.CantidadLineas</td>
@@ -119,12 +137,16 @@
             {
                 <a class="enlace" asp-action="Index"
                    asp-route-estado="@Model.Estado" asp-route-presentacion="@Model.Presentacion"
+                   asp-route-granja="@Model.Granja" asp-route-desde="@(Model.Desde?.ToString("yyyy-MM-dd"))"
+                   asp-route-hasta="@(Model.Hasta?.ToString("yyyy-MM-dd"))" asp-route-numero="@Model.Numero"
                    asp-route-pagina="@(pagina.Pagina - 1)">Anterior</a>
             }
             @if (pagina.Pagina < totalPaginas)
             {
                 <a class="enlace" asp-action="Index"
                    asp-route-estado="@Model.Estado" asp-route-presentacion="@Model.Presentacion"
+                   asp-route-granja="@Model.Granja" asp-route-desde="@(Model.Desde?.ToString("yyyy-MM-dd"))"
+                   asp-route-hasta="@(Model.Hasta?.ToString("yyyy-MM-dd"))" asp-route-numero="@Model.Numero"
                    asp-route-pagina="@(pagina.Pagina + 1)">Siguiente</a>
             }
         </p>

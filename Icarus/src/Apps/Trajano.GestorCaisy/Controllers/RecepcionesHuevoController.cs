@@ -23,10 +23,12 @@ public sealed class RecepcionesHuevoController(IApiIcarusClient api) : Controlle
         if (!ModelState.IsValid)
             return BadRequest();
         var pagina = await api.ListarDespachosHuevoAsync(
-            new FiltrosDespachosHuevoApi(filtros.Estado, filtros.Pagina, filtros.TamanoPagina), token);
+            new FiltrosDespachosHuevoApi(filtros.Estado, filtros.Granja, filtros.Desde,
+                filtros.Hasta, filtros.Numero, filtros.Pagina, filtros.TamanoPagina), token);
         var notificaciones = await api.ListarNotificacionesDespachoHuevoAsync(token);
         return View(new BandejaDespachosHuevoVista(
-            pagina, filtros.Estado, filtros.Pagina, filtros.TamanoPagina, notificaciones));
+            pagina, filtros.Estado, filtros.Granja, filtros.Desde, filtros.Hasta,
+            filtros.Numero, filtros.Pagina, filtros.TamanoPagina, notificaciones));
     }
 
     [HttpGet("{id:guid}")]

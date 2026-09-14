@@ -70,23 +70,40 @@ public sealed class RepositorioPedidosAlimento(GestionAvicolaDbContext db)
         return (items, total);
     }
 
-    public async Task<(IReadOnlyList<PedidoAlimento> Items, int Total)> ListarPaginadoCaisyAsync(
-        EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion,
-        int saltar, int tomar, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<PedidoAlimento> Items, int Total, IReadOnlyDictionary<Guid, string> Granjas)>
+        ListarPaginadoCaisyAsync(
+            EstadoPedidoAlimento? estado, PresentacionAlimento? presentacion, string? granja,
+            DateOnly? desde, DateOnly? hasta, int? numero,
+            int saltar, int tomar, CancellationToken cancellationToken = default)
     {
         var consulta = db.PedidosAlimento.Include(p => p.Detalles).AsNoTracking();
         if (estado is { } e)
             consulta = consulta.Where(p => p.Estado == e);
         if (presentacion is { } pr)
             consulta = consulta.Where(p => p.Detalles.Any(d => d.Presentacion == pr));
+        if (!string.IsNullOrWhiteSpace(granja))
+        {
+            var nombre = granja.Trim();
+            consulta = consulta.Where(p =>
+                db.Granjas.Any(g => g.Id == p.GranjaId && g.Nombre.Contains(nombre)));
+        }
+        if (desde is { } desdeValor)
+            consulta = consulta.Where(p => p.FechaPedido >= desdeValor);
+        if (hasta is { } hastaValor)
+            consulta = consulta.Where(p => p.FechaPedido <= hastaValor);
+        if (numero is { } n)
+            consulta = consulta.Where(p => p.Numero == n);
         var total = await consulta.CountAsync(cancellationToken);
         var items = await consulta
-            .OrderByDescending(p => p.FechaPedido)
-            .ThenByDescending(p => p.Id)
+            .OrderByDescending(p => p.Numero)
             .Skip(saltar)
             .Take(tomar)
             .ToListAsync(cancellationToken);
-        return (items, total);
+        var idsGranjas = items.Select(p => p.GranjaId).Distinct().ToList();
+        var granjas = await db.Granjas.IgnoreQueryFilters()
+            .Where(g => idsGranjas.Contains(g.Id))
+            .ToDictionaryAsync(g => g.Id, g => g.Nombre, cancellationToken);
+        return (items, total, granjas);
     }
 
     public Task<int> ContarEnviadosEnSemanaBloqueandoAsync(

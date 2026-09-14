@@ -53,20 +53,36 @@ public sealed class RepositorioDespachosHuevo(GestionAvicolaDbContext db) : IRep
         return (items, total);
     }
 
-    public async Task<(IReadOnlyList<DespachoHuevo> Items, int Total)> ListarPaginadoCaisyAsync(
-        EstadoDespachoHuevo? estado, int saltar, int tomar,
-        CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<DespachoHuevo> Items, int Total, IReadOnlyDictionary<Guid, string> Granjas)>
+        ListarPaginadoCaisyAsync(
+            EstadoDespachoHuevo? estado, string? granja, DateOnly? desde, DateOnly? hasta,
+            int? numero, int saltar, int tomar, CancellationToken cancellationToken = default)
     {
         var consulta = db.DespachosHuevo.Include(d => d.Detalles).AsNoTracking();
         if (estado is { } e)
             consulta = consulta.Where(d => d.Estado == e);
+        if (!string.IsNullOrWhiteSpace(granja))
+        {
+            var nombre = granja.Trim();
+            consulta = consulta.Where(d =>
+                db.Granjas.Any(g => g.Id == d.GranjaId && g.Nombre.Contains(nombre)));
+        }
+        if (desde is { } desdeValor)
+            consulta = consulta.Where(d => d.FechaDespacho >= desdeValor);
+        if (hasta is { } hastaValor)
+            consulta = consulta.Where(d => d.FechaDespacho <= hastaValor);
+        if (numero is { } n)
+            consulta = consulta.Where(d => d.Numero == n);
         var total = await consulta.CountAsync(cancellationToken);
         var items = await consulta
-            .OrderByDescending(d => d.FechaDespacho)
-            .ThenByDescending(d => d.Id)
+            .OrderByDescending(d => d.Numero)
             .Skip(saltar).Take(tomar)
             .ToListAsync(cancellationToken);
-        return (items, total);
+        var idsGranjas = items.Select(d => d.GranjaId).Distinct().ToList();
+        var granjas = await db.Granjas.IgnoreQueryFilters()
+            .Where(g => idsGranjas.Contains(g.Id))
+            .ToDictionaryAsync(g => g.Id, g => g.Nombre, cancellationToken);
+        return (items, total, granjas);
     }
 
     public async Task<IReadOnlyList<DespachoHuevo>> ListarRecibidosPorPublicacionAsync(

@@ -23,11 +23,13 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         if (!ModelState.IsValid)
             return BadRequest();
         var pagina = await api.ListarPedidosAsync(
-            new FiltrosPedidosApi(filtros.Estado, filtros.Presentacion,
+            new FiltrosPedidosApi(filtros.Estado, filtros.Presentacion, filtros.Granja,
+                filtros.Desde, filtros.Hasta, filtros.Numero,
                 filtros.Pagina, filtros.TamanoPagina), token);
         var notificaciones = await api.ListarNotificacionesPedidoAsync(token);
         return View(new BandejaPedidosVista(
-            pagina, filtros.Estado, filtros.Presentacion, notificaciones));
+            pagina, filtros.Estado, filtros.Presentacion, filtros.Granja,
+            filtros.Desde, filtros.Hasta, filtros.Numero, notificaciones));
     }
 
     [HttpGet("{id:guid}")]

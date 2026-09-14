@@ -28,7 +28,7 @@ public class FlujoPedidosTests
         var cliente = await aplicacion.AccederAsync();
         aplicacion.Api.PaginaDePedidos = new PaginaPedidosApi(
             Enumerable.Range(0, 3).Select(_ => new PedidoResumenApi(
-                Guid.NewGuid(), Guid.NewGuid(), "Solicitado", "Bolsa",
+                Guid.NewGuid(), Guid.NewGuid(), "P-000001", 1, "Granja Uno", "Solicitado", "Bolsa",
                 new(2025, 11, 2), null, 14120m, 1)).ToList(),
             3, 1, 20);
 
@@ -36,6 +36,8 @@ public class FlujoPedidosTests
 
         Assert.Contains("Solicitado", html);
         Assert.Contains("02/11/2025", html);
+        Assert.Contains("P-000001", html);
+        Assert.DoesNotContain("creadoPorTrabajadorId", html);
         Assert.Contains("Página 1 de 1 con 3 pedidos.", html);
         Assert.Equal("Solicitado", aplicacion.Api.UltimosFiltros!.Estado);
     }

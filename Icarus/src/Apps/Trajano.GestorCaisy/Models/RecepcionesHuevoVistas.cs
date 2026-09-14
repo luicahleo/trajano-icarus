@@ -10,6 +10,10 @@ namespace Trajano.GestorCaisy.Models;
 public sealed record BandejaDespachosHuevoVista(
     PaginaDespachosHuevoApi Pagina,
     string? Estado,
+    string? Granja,
+    DateOnly? Desde,
+    DateOnly? Hasta,
+    int? Numero,
     int NumeroPagina,
     int TamanoPagina,
     BandejaNotificacionesDespachoHuevoApi Notificaciones);
@@ -17,6 +21,16 @@ public sealed record BandejaDespachosHuevoVista(
 public sealed class FiltrosDespachosHuevoVista
 {
     public string? Estado { get; set; }
+
+    // Búsqueda por nombre de granja (contiene). No es un dato personal.
+    public string? Granja { get; set; }
+
+    public DateOnly? Desde { get; set; }
+
+    public DateOnly? Hasta { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "El folio debe ser un número positivo.")]
+    public int? Numero { get; set; }
 
     [Range(1, int.MaxValue)]
     public int Pagina { get; set; } = 1;

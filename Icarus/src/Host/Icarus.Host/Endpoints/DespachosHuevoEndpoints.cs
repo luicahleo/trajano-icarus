@@ -101,14 +101,16 @@ public static class DespachosHuevoEndpoints
         var politicaCaisy = PoliticasAutorizacion.FuncionalidadCaisy(FuncionalidadesCaisy.GestorRecepcionHuevos);
         var caisy = app.MapGroup("/despachos-huevo-caisy").RequireAuthorization(politicaCaisy);
 
-        caisy.MapGet("/", async (ISender mediator, string? estado, int? pagina, int? tamanoPagina,
+        caisy.MapGet("/", async (ISender mediator, string? estado, string? granja,
+            DateOnly? desde, DateOnly? hasta, int? numero, int? pagina, int? tamanoPagina,
             CancellationToken cancellationToken) =>
         {
             if (!Enum.TryParse<EstadoDespachoHuevo>(estado, true, out var estadoParseado) && estado is not null)
                 return Results.BadRequest(new { error = "El estado indicado no existe." });
             return Results.Ok(await mediator.Send(
                 new ListarDespachosHuevoCaisyQuery(
-                    estado is null ? null : estadoParseado, pagina ?? 1, tamanoPagina ?? 20),
+                    estado is null ? null : estadoParseado, granja, desde, hasta, numero,
+                    pagina ?? 1, tamanoPagina ?? 20),
                 cancellationToken));
         });
 

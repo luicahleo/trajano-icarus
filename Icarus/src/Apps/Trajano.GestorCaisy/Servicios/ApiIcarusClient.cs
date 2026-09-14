@@ -261,6 +261,14 @@ public sealed class ApiIcarusClient : IApiIcarusClient
             consulta.Append("&estado=").Append(Uri.EscapeDataString(filtros.Estado));
         if (!string.IsNullOrEmpty(filtros.Presentacion))
             consulta.Append("&presentacion=").Append(Uri.EscapeDataString(filtros.Presentacion));
+        if (!string.IsNullOrWhiteSpace(filtros.Granja))
+            consulta.Append("&granja=").Append(Uri.EscapeDataString(filtros.Granja.Trim()));
+        if (filtros.Desde is { } desdePedidos)
+            consulta.Append("&desde=").Append(desdePedidos.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (filtros.Hasta is { } hastaPedidos)
+            consulta.Append("&hasta=").Append(hastaPedidos.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (filtros.Numero is { } numeroPedido)
+            consulta.Append("&numero=").Append(numeroPedido.ToString(CultureInfo.InvariantCulture));
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(), accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
@@ -401,6 +409,14 @@ public sealed class ApiIcarusClient : IApiIcarusClient
             CultureInfo.InvariantCulture, "pagina={0}&tamanoPagina={1}", filtros.Pagina, filtros.TamanoPagina);
         if (!string.IsNullOrEmpty(filtros.Estado))
             consulta.Append("&estado=").Append(Uri.EscapeDataString(filtros.Estado));
+        if (!string.IsNullOrWhiteSpace(filtros.Granja))
+            consulta.Append("&granja=").Append(Uri.EscapeDataString(filtros.Granja.Trim()));
+        if (filtros.Desde is { } desdeHuevo)
+            consulta.Append("&desde=").Append(desdeHuevo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (filtros.Hasta is { } hastaHuevo)
+            consulta.Append("&hasta=").Append(hastaHuevo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (filtros.Numero is { } numeroHuevo)
+            consulta.Append("&numero=").Append(numeroHuevo.ToString(CultureInfo.InvariantCulture));
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(), accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
