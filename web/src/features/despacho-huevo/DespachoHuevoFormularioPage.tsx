@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   IconButton,
   MenuItem,
   Paper,
@@ -16,9 +17,12 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
+import { useAuth } from '../auth/AuthContext';
+import { AjustesCreditoHuevo } from './AjustesCreditoHuevo';
 import {
   crearDespacho,
   editarDespacho,
+  obtenerBalanceCreditoHuevo,
   obtenerDespacho,
   obtenerPrecioHuevoVigente,
   type LineaDespacho,
@@ -63,6 +67,17 @@ export function DespachoHuevoFormularioPage() {
   const { data: precios, isError: errorPrecios } = useQuery({
     queryKey: ['despachos-huevo', 'precios-vigentes'],
     queryFn: obtenerPrecioHuevoVigente,
+  });
+
+  // Crédito por despachos de huevo: informativo, solo para el Cliente. El
+  // crédito nace acá, así que es donde más sentido tiene verlo. Nunca para el
+  // Trabajador: el backend responde 403 y esta consulta ni se dispara.
+  const { tieneRol } = useAuth();
+  const esCliente = tieneRol('Cliente');
+  const { data: credito } = useQuery({
+    queryKey: ['despachos-huevo', 'credito'],
+    queryFn: obtenerBalanceCreditoHuevo,
+    enabled: esCliente,
   });
 
   // Carga inicial del borrador a editar: una sola vez, cuando llega.
@@ -173,6 +188,25 @@ export function DespachoHuevoFormularioPage() {
               {formatoFecha(precios.fechaVigencia)} (notificada el{' '}
               {formatoFecha(precios.fechaNotificacion)}).
             </Typography>
+          )}
+          {esCliente && credito && (
+            <Box>
+              {/* El saldo negativo no se distingue solo por color: lleva la
+                  etiqueta textual "Negativo", para que se perciba sin visión
+                  de color. Mismo bloque que PedidoFormularioPage. */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography
+                  variant="body2"
+                  color={credito.saldoDisponible < 0 ? 'error' : 'text.secondary'}
+                >
+                  Crédito por despachos de huevo: {formatoPrecioUnitario(credito.saldoDisponible)}
+                </Typography>
+                {credito.saldoDisponible < 0 && (
+                  <Chip size="small" color="error" label="Negativo" />
+                )}
+              </Stack>
+              <AjustesCreditoHuevo ajustes={credito.ajustes} />
+            </Box>
           )}
           {esEdicion && despacho && despacho.estado !== 'Borrador' && (
             <Alert severity="warning">Solo un borrador se puede editar.</Alert>

@@ -4,6 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { DespachoHuevoFormularioPage } from './DespachoHuevoFormularioPage';
 
+// AuthContext real es pesado para este test: se mockea useAuth. Por defecto
+// Cliente, que es el rol que ve el crédito de huevo.
+const authMock = vi.fn(() => ({ tieneRol: (...roles: string[]) => roles.includes('Cliente') }));
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => authMock(),
+}));
+
 const despachoBorrador = {
   id: 'h1',
   estado: 'Borrador',
@@ -227,5 +234,47 @@ describe('DespachoHuevoFormularioPage', () => {
     ).toBeInTheDocument();
     await usuario.click(screen.getByLabelText('Tamaño de huevo'));
     expect(await screen.findByRole('option', { name: 'Primera' })).toBeInTheDocument();
+  });
+
+  // El crédito nace de los despachos de huevo: el Cliente lo ve justo donde
+  // decide cuánto despachar. Cuatro decimales, igual que en el formulario de
+  // pedido: el crédito sale de precios por huevo de cuatro decimales y
+  // redondear haría que la cuenta no cierre.
+  test('muestra el saldo y los ajustes al Cliente', async () => {
+    vi.stubGlobal(
+      'fetch',
+      fetchSimulado({
+        'GET /api/despachos-huevo/precios-vigentes': respuesta(200, precioVigente),
+        'GET /api/despachos-huevo/credito': respuesta(200, {
+          saldoDisponible: -5000,
+          ajustes: [
+            { id: 'a1', monto: 900, motivo: 'Corrección de precio Extra.', fecha: '2026-09-01' },
+          ],
+        }),
+      }),
+    );
+    renderPagina();
+
+    expect(await screen.findByText(/Crédito por despachos de huevo/)).toBeInTheDocument();
+    expect(screen.getByText('Negativo')).toBeInTheDocument();
+    expect(screen.getByText(/Corrección/)).toBeInTheDocument();
+  });
+
+  test('no muestra ni consulta el crédito para el Trabajador', async () => {
+    authMock.mockReturnValue({ tieneRol: () => false });
+    const rutasLlamadas: string[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(String(input), init);
+      const ruta = `${req.method} ${new URL(req.url).pathname}`;
+      rutasLlamadas.push(ruta);
+      if (ruta === 'GET /api/despachos-huevo/precios-vigentes') return respuesta(200, precioVigente);
+      return respuesta(404);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPagina();
+    await screen.findByText(/vigente desde/);
+
+    expect(screen.queryByText(/Crédito por despachos de huevo/)).toBeNull();
+    expect(rutasLlamadas).not.toContain('GET /api/despachos-huevo/credito');
   });
 });
