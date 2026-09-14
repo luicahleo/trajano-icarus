@@ -122,21 +122,15 @@
     }
 </section>
 @functions {
-    // Esta bandeja es global de CAISY (ClienteId nulo en la consulta): solo
-    // puede recibir notificaciones creadas con ese mismo alcance nulo, es
-    // decir, CreditoInsuficiente. DespachoRecibido se crea con el ClienteId
-    // real del tenant emisor (para su propia bandeja en la PWA) y nunca
-    // puede aparecer acá — no incluir esa rama evita un caso muerto que
-    // sugiere una función que esta pantalla no tiene.
-    private static string EtiquetaNotificacion(string tipo) => tipo switch
-    {
-        "CreditoInsuficiente" => "Crédito insuficiente",
-        _ => tipo,
-    };
+    // Esta bandeja es global de CAISY (ClienteId nulo en la consulta). El
+    // único tipo que se creaba con ese alcance era CreditoInsuficiente, y la
+    // corrección 2026-09-14 dejó de emitirlo: no se manda ninguna alerta por
+    // saldo. Las filas ya existentes en base se conservan y caen en la rama
+    // por defecto. El valor 1 del enum queda reservado y no se renumera.
+    private static string EtiquetaNotificacion(string tipo) => tipo;
 
     private static string EtiquetaChip(string tipo) => tipo switch
     {
-        "CreditoInsuficiente" => "rechazado",
         _ => "borrador",
     };
 

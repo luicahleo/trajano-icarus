@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -318,126 +317,46 @@ public class PedidosControllerTests
         Assert.IsType<NotFoundResult>(resultado);
     }
 
-    [Fact]
-    public async Task DetallesLlevaElCreditoDelClienteAlModelo()
+    // Corrección 2026-09-14: el saldo del cliente es privado. GestorCaisy no
+    // lo ve ni lo pide: el controlador ni siquiera llama a la API, así que
+    // tampoco hay degradación que probar.
+    [Theory]
+    [InlineData("Detalles")]
+    [InlineData("Aceptar")]
+    [InlineData("Despachar")]
+    public async Task NingunaPantallaDeDecisionPideNiLlevaElCreditoDelCliente(string accion)
     {
         var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
         _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
 
-        var vista = await _controlador.Detalles(id, default);
+        var resultado = await EjecutarAccionAsync(accion, id);
 
-        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
-        Assert.Equal(-5000m, modelo.Credito!.SaldoDisponible);
-        Assert.Equal(9120m, modelo.Credito.SaldoSinEstePedido);
-        Assert.Equal(id, _api.UltimoCreditoPedido);
-        Assert.Equal(1, _api.VecesObtenerCredito);
+        Assert.Equal(0, _api.VecesObtenerCredito);
+        Assert.Null(CreditoDelModelo(resultado));
     }
 
-    // El crédito es informativo (spec SP9E y
-    // 2026-09-11-credito-huevo-vista-caisy): una falla del cálculo no puede
-    // paralizar la decisión sobre el pedido.
-    [Fact]
-    public async Task SiElCreditoFallaElDetalleSigueRenderizandoSinCredito()
+    // Reutiliza el arranque que usaban los tests de crédito: el estado del
+    // pedido depende de la acción (Aceptar y Despachar exigen Solicitado y
+    // Aceptado, respectivamente, o redirigen al detalle).
+    private async Task<IActionResult> EjecutarAccionAsync(string accion, Guid id)
     {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        _api.ErrorDeObtenerCredito = new ErrorApiException(500, "Error interno");
-
-        var vista = await _controlador.Detalles(id, default);
-
-        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
-        Assert.Null(modelo.Credito);
-        Assert.True(modelo.PuedeProcesarse);
-    }
-
-    [Fact]
-    public async Task SiLaRedFallaElDetalleSigueRenderizandoSinCredito()
-    {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        _api.ErrorDeObtenerCredito = new HttpRequestException("La API no responde.");
-
-        var vista = await _controlador.Detalles(id, default);
-
-        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
-        Assert.Null(modelo.Credito);
-    }
-
-    // Un 200 con cuerpo ilegible (respuesta truncada, o un campo requerido
-    // que la API deje de enviar) no pasa por AsegurarExitoAsync: llega como
-    // JsonException. Sin degradarla, un bloque informativo tiraría abajo la
-    // pantalla donde CAISY decide.
-    [Fact]
-    public async Task SiElCuerpoDelCreditoEsIlegibleElDetalleSigueRenderizandoSinCredito()
-    {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        _api.ErrorDeObtenerCredito = new JsonException("Cuerpo ilegible.");
-
-        var vista = await _controlador.Detalles(id, default);
-
-        var modelo = Assert.IsType<VistaPedidoDetalle>(((ViewResult)vista).Model);
-        Assert.Null(modelo.Credito);
-        Assert.True(modelo.PuedeProcesarse);
-    }
-
-    [Fact]
-    public async Task AceptarLlevaElCreditoAlFormulario()
-    {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
-
-        var vista = await _controlador.ConfirmarAceptacion(id, default);
-
-        var modelo = Assert.IsType<FormularioEntregaVista>(((ViewResult)vista).Model);
-        Assert.Equal(-5000m, modelo.Credito!.SaldoDisponible);
-    }
-
-    [Fact]
-    public async Task DespacharLlevaElCreditoAlFormulario()
-    {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado");
-        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
-
-        var vista = await _controlador.ConfirmarDespacho(id, default);
-
-        var modelo = Assert.IsType<FormularioDespachoVista>(((ViewResult)vista).Model);
-        Assert.Equal(9120m, modelo.Credito!.SaldoSinEstePedido);
-    }
-
-    // El bloque no puede desaparecer a mitad de la decisión: el re-render
-    // por error de validación lo vuelve a cargar.
-    [Fact]
-    public async Task ElReRenderPorFechaPasadaConservaElCredito()
-    {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        _api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
-
-        var vista = await _controlador.Aceptar(id, new FormularioEntregaVista
+        _api.PedidoActual = accion == "Despachar"
+            ? ApiIcarusFalsa.CrearPedido(id, "Aceptado")
+            : ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        return accion switch
         {
-            Id = id,
-            FechaEntregaEstimada = FechasDeOficina.Hoy().AddDays(-1),
-        }, default);
-
-        var modelo = Assert.IsType<FormularioEntregaVista>(((ViewResult)vista).Model);
-        Assert.Equal(-5000m, modelo.Credito!.SaldoDisponible);
-        Assert.False(_controlador.ModelState.IsValid);
+            "Detalles" => await _controlador.Detalles(id, default),
+            "Aceptar" => await _controlador.ConfirmarAceptacion(id, default),
+            "Despachar" => await _controlador.ConfirmarDespacho(id, default),
+            _ => throw new ArgumentOutOfRangeException(nameof(accion)),
+        };
     }
 
-    [Fact]
-    public async Task SiElCreditoFallaLaPantallaDeAceptacionSigueRenderizando()
-    {
-        var id = Guid.NewGuid();
-        _api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        _api.ErrorDeObtenerCredito = new ErrorApiException(500, "Error interno");
-
-        var vista = await _controlador.ConfirmarAceptacion(id, default);
-
-        var modelo = Assert.IsType<FormularioEntregaVista>(((ViewResult)vista).Model);
-        Assert.Null(modelo.Credito);
-    }
+    private static CreditoHuevoPedidoApi? CreditoDelModelo(IActionResult resultado) =>
+        ((ViewResult)resultado).Model switch
+        {
+            VistaPedidoDetalle detalle => detalle.Credito,
+            IFormularioConCredito formulario => formulario.Credito,
+            _ => null,
+        };
 }

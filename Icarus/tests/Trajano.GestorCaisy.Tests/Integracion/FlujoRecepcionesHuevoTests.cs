@@ -219,11 +219,12 @@ public class FlujoRecepcionesHuevoTests
         using var aplicacion = new AplicacionDePruebas();
         var cliente = await aplicacion.AccederAsync(funcCaisy: 2);
         var notificacionId = Guid.NewGuid();
-        // CreditoInsuficiente es la única notificación que la bandeja global
-        // de CAISY puede recibir realmente: se crea con ClienteId nulo
-        // (bandeja global), igual que la consulta del backend filtra acá.
-        // DespachoRecibido se crea con el ClienteId del tenant emisor y solo
-        // aparece en su propia bandeja de la PWA, nunca en esta.
+        // CreditoInsuficiente era la única notificación que la bandeja global
+        // de CAISY podía recibir: se creaba con ClienteId nulo. La corrección
+        // 2026-09-14 dejó de emitirla y la etiqueta salió de la vista, pero
+        // las filas históricas se conservan y caen en la rama por defecto
+        // (el tipo crudo). DespachoRecibido se crea con el ClienteId del
+        // tenant emisor y solo aparece en su propia bandeja de la PWA.
         aplicacion.Api.NotificacionesDeDespachosHuevo = new BandejaNotificacionesDespachoHuevoApi(
             [new NotificacionDespachoHuevoApi(
                 notificacionId, "CreditoInsuficiente", null,
@@ -231,7 +232,7 @@ public class FlujoRecepcionesHuevoTests
             1);
 
         var bandeja = await cliente.GetStringAsync("/RecepcionesHuevo");
-        Assert.Contains("Crédito insuficiente", bandeja);
+        Assert.Contains("CreditoInsuficiente", bandeja);
 
         var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, "/RecepcionesHuevo");
         var respuesta = await cliente.PostAsync($"/RecepcionesHuevo/Notificaciones/{notificacionId}/MarcarLeida",

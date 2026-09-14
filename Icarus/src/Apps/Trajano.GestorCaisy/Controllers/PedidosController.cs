@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -50,7 +49,7 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
             PuedeProcesarse: pedido.Estado == "Solicitado",
             PuedeActualizarEntrega: pedido.Estado == "Aceptado",
             PuedeDespacharse: pedido.Estado == "Aceptado",
-            Credito: await CreditoDelPedidoONullAsync(id, token)));
+            Credito: CreditoRetirado));
     }
 
     // Despacho (SP8C "Despacho, nota y recepción"): pantalla con el resumen de
@@ -65,7 +64,7 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         var pedido = await api.ObtenerPedidoAsync(id, token);
         if (pedido.Estado != "Aceptado")
             return RedirectToAction(nameof(Detalles), new { id });
-        return await VistaConCredito("Despachar", id, FormularioDespachoDesde(pedido), token);
+        return VistaConCredito("Despachar", FormularioDespachoDesde(pedido));
     }
 
     private static FormularioDespachoVista FormularioDespachoDesde(PedidoDetalleApi pedido) => new()
@@ -90,12 +89,12 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
     {
         formulario.Id = id;
         if (!ModelState.IsValid)
-            return await VistaConCredito("Despachar", id, formulario, token);
+            return VistaConCredito("Despachar", formulario);
         if (formulario.Lineas.Any(l => l.CantidadEntregada < 0))
         {
             ModelState.AddModelError(
                 string.Empty, "La cantidad entregada no puede ser negativa.");
-            return await VistaConCredito("Despachar", id, formulario, token);
+            return VistaConCredito("Despachar", formulario);
         }
         try
         {
@@ -108,7 +107,7 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         catch (ErrorApiException error) when (error.Estado is 400 or 409)
         {
             ModelState.AddModelError(string.Empty, error.MensajeParaLaInterfaz());
-            return await VistaConCredito("Despachar", id, formulario, token);
+            return VistaConCredito("Despachar", formulario);
         }
         TempData["Exito"] = "El pedido quedó despachado con su nota registrada.";
         return RedirectToAction(nameof(Detalles), new { id });
@@ -233,11 +232,11 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         var pedido = await api.ObtenerPedidoAsync(id, token);
         if (pedido.Estado != "Solicitado")
             return RedirectToAction(nameof(Detalles), new { id });
-        return await VistaConCredito("Aceptar", id, new FormularioEntregaVista
+        return VistaConCredito("Aceptar", new FormularioEntregaVista
         {
             Id = id,
             FechaEntregaEstimada = FechasDeOficina.Hoy(),
-        }, token);
+        });
     }
 
     [HttpPost("{id:guid}/Aceptar")]
@@ -247,13 +246,13 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
     {
         formulario.Id = id;
         if (!ModelState.IsValid)
-            return await VistaConCredito("Aceptar", id, formulario, token);
+            return VistaConCredito("Aceptar", formulario);
         if (formulario.FechaEntregaEstimada < FechasDeOficina.Hoy())
         {
             ModelState.AddModelError(
                 nameof(formulario.FechaEntregaEstimada),
                 "La fecha de entrega estimada debe ser hoy o posterior.");
-            return await VistaConCredito("Aceptar", id, formulario, token);
+            return VistaConCredito("Aceptar", formulario);
         }
         try
         {
@@ -264,7 +263,7 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         catch (ErrorApiException error) when (error.Estado is 400 or 409)
         {
             ModelState.AddModelError(string.Empty, error.MensajeParaLaInterfaz());
-            return await VistaConCredito("Aceptar", id, formulario, token);
+            return VistaConCredito("Aceptar", formulario);
         }
     }
 
@@ -329,44 +328,23 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // El crédito es informativo: si el cálculo no está disponible, la
-    // pantalla carga igual y la decisión sigue habilitada (spec
-    // 2026-09-11-credito-huevo-vista-caisy-design). No se degrada
-    // TaskCanceledException: una cancelación real del token significa que la
-    // petición se abortó y no hay pantalla que renderizar. Sin logs: el
-    // saldo es dato financiero del cliente (anti-PII).
-    private async Task<CreditoHuevoPedidoApi?> CreditoDelPedidoONullAsync(
-        Guid id, CancellationToken token)
-    {
-        try
-        {
-            return await api.ObtenerCreditoDePedidoAsync(id, token);
-        }
-        catch (ErrorApiException)
-        {
-            return null;
-        }
-        catch (HttpRequestException)
-        {
-            return null;
-        }
-        catch (JsonException)
-        {
-            // Un 200 con cuerpo ilegible no pasa por AsegurarExitoAsync:
-            // respuesta truncada, o un campo con [JsonRequired] que la API
-            // deje de enviar. Degrada igual que el resto.
-            return null;
-        }
-    }
+    // RETIRADO por la corrección 2026-09-14: el saldo del cliente es privado
+    // y GestorCaisy no lo ve. No se llama a la API —que además responde 403
+    // desde esta misma corrección—, así que no hay ida y vuelta inútil por
+    // cada render. El antiguo `CreditoDelPedidoONullAsync` quedó como esta
+    // propiedad constante: `VistaConCredito`, `IFormularioConCredito` y
+    // `ObtenerCreditoDePedidoAsync` se conservan sin borrar por decisión
+    // explícita del usuario: el inventario está en la spec.
+    private static CreditoHuevoPedidoApi? CreditoRetirado => null;
 
     // Cada render de un formulario de decisión pasa por acá, incluidos los
-    // re-render por error de validación: el bloque de crédito no puede
-    // desaparecer a mitad de la decisión.
-    private async Task<IActionResult> VistaConCredito<T>(
-        string vista, Guid id, T formulario, CancellationToken token)
+    // re-render por error de validación: el bloque de crédito quedó retirado
+    // por la corrección 2026-09-14 y siempre viaja nulo.
+    private IActionResult VistaConCredito<T>(
+        string vista, T formulario)
         where T : IFormularioConCredito
     {
-        formulario.Credito = await CreditoDelPedidoONullAsync(id, token);
+        formulario.Credito = CreditoRetirado;
         return View(vista, formulario);
     }
 }

@@ -277,82 +277,36 @@ public class FlujoPedidosTests
         Assert.Contains("-2", html);
     }
 
-    [Fact]
-    public async Task DetallesMuestraElCreditoDelClienteConLasTresCifras()
+    // El HTML renderizado no debe contener el bloque de crédito por ninguna
+    // de sus tres puertas: el título de la tarjeta, el aviso de degradación
+    // y el rótulo del saldo.
+    [Theory]
+    [InlineData("Detalles")]
+    [InlineData("Aceptar")]
+    [InlineData("Despachar")]
+    public async Task NingunaPantallaDeDecisionRenderizaElCreditoDelCliente(string accion)
     {
         using var aplicacion = new AplicacionDePruebas();
         var cliente = await aplicacion.AccederAsync();
         var id = Guid.NewGuid();
-        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(
-            -5000m, 14120m, 9120m, true,
-            [
-                new AjusteCreditoHuevoApi(
-                    Guid.NewGuid(), 45m, "Corrección de precio Extra.", new(2026, 9, 1)),
-            ]);
+        aplicacion.Api.PedidoActual = accion == "Despachar"
+            ? ApiIcarusFalsa.CrearPedido(id, "Aceptado")
+            : ApiIcarusFalsa.CrearPedido(id, "Solicitado");
+        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(-5000m, 14120m, 9120m, true, []);
 
-        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
+        var html = await cliente.GetStringAsync(RutaDeAccion(accion, id));
 
-        Assert.Contains("Crédito por despachos de huevo", html);
-        // Cuatro decimales: el crédito sale de precios por huevo de cuatro
-        // decimales y CAISY tiene que ver la misma cifra que el Cliente en la
-        // PWA, sin que ninguno de los dos la vea redondeada.
-        Assert.Contains("-5000.0000", html);
-        Assert.Contains("14120.0000", html);
-        Assert.Contains("9120.0000", html);
-        Assert.Contains("Negativo", html);
-        Assert.Contains("Corrección de precio Extra.", html);
-        Assert.Contains("45.0000", html);
+        Assert.DoesNotContain("Crédito por despachos de huevo", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Saldo disponible", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Crédito no disponible", html, StringComparison.Ordinal);
+        Assert.Equal(0, aplicacion.Api.VecesObtenerCredito);
     }
 
-    [Fact]
-    public async Task DetallesConUnBorradorAclaraQueElPedidoNoPesaEnElSaldo()
+    private static string RutaDeAccion(string accion, Guid id) => accion switch
     {
-        using var aplicacion = new AplicacionDePruebas();
-        var cliente = await aplicacion.AccederAsync();
-        var id = Guid.NewGuid();
-        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Borrador");
-        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(2500m, 0m, 2500m, false, []);
-
-        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
-
-        Assert.Contains("2500.0000", html);
-        Assert.Contains("Este pedido todavía no pesa en el saldo.", html);
-        Assert.DoesNotContain("Saldo sin este pedido", html);
-    }
-
-    [Fact]
-    public async Task DetallesConElCreditoCaidoAvisaYMantieneLasAcciones()
-    {
-        using var aplicacion = new AplicacionDePruebas();
-        var cliente = await aplicacion.AccederAsync();
-        var id = Guid.NewGuid();
-        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        aplicacion.Api.ErrorDeObtenerCredito = new ErrorApiException(500, "Error interno");
-
-        var html = await cliente.GetStringAsync($"/Pedidos/{id}");
-
-        Assert.Contains("Crédito no disponible por ahora.", html);
-        Assert.Contains($"/Pedidos/{id}/Aceptar", html);
-    }
-
-    [Fact]
-    public async Task AceptarYDespacharMuestranElCreditoDelCliente()
-    {
-        using var aplicacion = new AplicacionDePruebas();
-        var cliente = await aplicacion.AccederAsync();
-        var id = Guid.NewGuid();
-        aplicacion.Api.CreditoDePedido = new CreditoHuevoPedidoApi(
-            -5000m, 14120m, 9120m, true, []);
-
-        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Solicitado");
-        var htmlAceptar = await cliente.GetStringAsync($"/Pedidos/{id}/Aceptar");
-        aplicacion.Api.PedidoActual = ApiIcarusFalsa.CrearPedido(id, "Aceptado");
-        var htmlDespachar = await cliente.GetStringAsync($"/Pedidos/{id}/Despachar");
-
-        Assert.Contains("Crédito por despachos de huevo", htmlAceptar);
-        Assert.Contains("9120.0000", htmlAceptar);
-        Assert.Contains("Crédito por despachos de huevo", htmlDespachar);
-        Assert.Contains("9120.0000", htmlDespachar);
-    }
+        "Detalles" => $"/Pedidos/{id}",
+        "Aceptar" => $"/Pedidos/{id}/Aceptar",
+        "Despachar" => $"/Pedidos/{id}/Despachar",
+        _ => throw new ArgumentOutOfRangeException(nameof(accion)),
+    };
 }
