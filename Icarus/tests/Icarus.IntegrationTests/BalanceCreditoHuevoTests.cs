@@ -10,9 +10,9 @@ namespace Icarus.IntegrationTests;
 
 // SP9C Task 4 (spec: "Confirmar recepción y crédito"): el crédito disponible
 // no se persiste como saldo, se calcula por consulta contra SQL Server: se
-// suman los despachos de huevo Recibido con recepción de hace más de 14 días
-// (precio unitario congelado por cantidad) y se restan los pedidos de
-// alimento realmente recibidos (RecibidoConforme / RecibidoConDiferencias).
+// suman los despachos de huevo Recibido, sin importar hace cuánto (corrección
+// 2026-09-14) (precio unitario congelado por cantidad) y se restan los pedidos
+// de alimento realmente recibidos (RecibidoConforme / RecibidoConDiferencias).
 // Cada prueba siembra su propio tenant para no depender del orden en la base
 // compartida de la colección.
 [Collection(IntegracionCollection.Nombre)]
@@ -27,6 +27,13 @@ public class BalanceCreditoHuevoTests
         using var alcance = _factory.Services.CreateScope();
         var repositorio = alcance.ServiceProvider.GetRequiredService<IRepositorioBalanceCreditoHuevo>();
         return await repositorio.ObtenerSaldoDisponibleAsync(clienteId, FechasNegocio.Hoy());
+    }
+
+    private async Task<decimal> RecibidoRecienteDeAsync(Guid clienteId)
+    {
+        using var alcance = _factory.Services.CreateScope();
+        var repositorio = alcance.ServiceProvider.GetRequiredService<IRepositorioBalanceCreditoHuevo>();
+        return await repositorio.ObtenerRecibidoRecienteAsync(clienteId, FechasNegocio.Hoy());
     }
 
     private async Task<IReadOnlyList<AjusteCreditoHuevoResumen>> AjustesDeAsync(Guid clienteId)
@@ -85,18 +92,28 @@ public class BalanceCreditoHuevoTests
         var saldo = await SaldoDeAsync(clienteId);
 
         Assert.Equal(390 * 12.50m, saldo);
+        // Fuera de la ventana de referencia: suma al saldo y no se señala.
+        Assert.Equal(0m, await RecibidoRecienteDeAsync(clienteId));
     }
 
+    // Corrección 2026-09-14 (segunda): el crédito nace cuando CAISY recibe el
+    // huevo, no catorce días después. Los catorce días describen el ritmo con
+    // que CAISY liquida, que en la práctica varía; nunca fueron condición para
+    // que el dinero exista. Este test afirmaba lo contrario.
     [Fact]
-    public async Task DespachoRecibidoHaceMenosDe14DiasNoSuma()
+    public async Task DespachoRecibidoHaceMenosDe14DiasSumaYSeReportaComoReciente()
     {
         var clienteId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
         await SembrarAsync(DespachoRecibido(clienteId, actorId, FechasNegocio.Hoy().AddDays(-5)));
 
         var saldo = await SaldoDeAsync(clienteId);
+        var reciente = await RecibidoRecienteDeAsync(clienteId);
 
-        Assert.Equal(0m, saldo);
+        Assert.Equal(390 * 12.50m, saldo);
+        // El mismo monto, en las dos cifras: el dinero cuenta Y se señala como
+        // recién recibido. No son términos que se resten entre sí.
+        Assert.Equal(390 * 12.50m, reciente);
     }
 
     [Fact]
@@ -138,13 +155,13 @@ public class BalanceCreditoHuevoTests
     }
 
     [Fact]
-    public async Task UnAjusteDeCreditoSumaAlSaldoSinDesfase()
+    public async Task UnAjusteDeCreditoSumaAlSaldo()
     {
         var clienteId = Guid.NewGuid();
         var actorId = Guid.NewGuid();
-        // FechaRecepcion = hoy: dentro del desfase de 14 días, así que el
-        // despacho en sí no aporta nada al saldo (aísla la contribución del
-        // ajuste, que no tiene desfase).
+        // El despacho es de hoy. Antes de la corrección del 2026-09-14 no
+        // aportaba nada y el test aislaba el ajuste; ahora aporta, y el
+        // esperado incluye las dos partes.
         var despacho = DespachoRecibido(clienteId, actorId, FechasNegocio.Hoy());
         var ajuste = new AjusteCreditoHuevo(
             clienteId, despacho.Id, Guid.NewGuid(), Guid.NewGuid(), 150m, "Corrección de precio", actorId);
@@ -152,7 +169,10 @@ public class BalanceCreditoHuevoTests
 
         var saldo = await SaldoDeAsync(clienteId);
 
-        Assert.Equal(150m, saldo);
+        Assert.Equal(390 * 12.50m + 150m, saldo);
+        // El ajuste no entra en el reciente: no es huevo recibido, es una
+        // corrección de un error anterior.
+        Assert.Equal(390 * 12.50m, await RecibidoRecienteDeAsync(clienteId));
     }
 
     // Desglose visible del crédito (spec, ítem 2 del backlog): la lista de

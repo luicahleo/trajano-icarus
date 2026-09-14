@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Icarus.GestionAvicola.Application.CreditoHuevo;
 using Icarus.GestionAvicola.Domain;
 using Icarus.GestionAvicola.Infrastructure.Persistencia;
@@ -18,17 +19,12 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
     public async Task<decimal> ObtenerSaldoDisponibleAsync(
         Guid clienteId, DateOnly hoy, CancellationToken cancellationToken = default)
     {
-        var fechaCorte = hoy.AddDays(-ReglasCreditoHuevo.DiasDisponibilidadCredito);
-
-        var ingresos = await db.DespachosHuevo
-            .Where(d => d.ClienteId == clienteId && d.Estado == EstadoDespachoHuevo.Recibido
-                && d.FechaRecepcion != null && d.FechaRecepcion <= fechaCorte)
-            .SelectMany(d => d.Detalles)
-            .Where(det => det.PrecioUnitarioCongelado != null)
-            .SumAsync(det =>
-                (det.CantidadAmarras * DetalleDespachoHuevo.HuevosPorAmarra + det.UnidadesSueltas)
-                    * det.PrecioUnitarioCongelado!.Value,
-                cancellationToken);
+        // Corrección 2026-09-14: sin filtro de fecha. El crédito nace cuando
+        // CAISY recibe el huevo. El filtro que vivía acá ocultaba dinero que
+        // ya era del cliente, y no protegía ninguna regla: el saldo no valida
+        // nada. Sobrevive invertido en ObtenerRecibidoRecienteAsync, como
+        // referencia visible.
+        var ingresos = await SumarIngresosAsync(clienteId, null, cancellationToken);
 
         var recibidoReal = await db.PedidosAlimento
             .Where(p => p.ClienteId == clienteId
@@ -50,6 +46,35 @@ public sealed class RepositorioBalanceCreditoHuevo(GestionAvicolaDbContext db) :
         // vivía acá existía solo para blindar la advertencia de crédito
         // insuficiente al enviar, retirada por esta misma corrección.
         return ingresos - recibidoReal + ajustes;
+    }
+
+    public Task<decimal> ObtenerRecibidoRecienteAsync(
+        Guid clienteId, DateOnly hoy, CancellationToken cancellationToken = default)
+    {
+        var fechaCorte = hoy.AddDays(-ReglasCreditoHuevo.DiasReferenciaCredito);
+        return SumarIngresosAsync(clienteId, d => d.FechaRecepcion > fechaCorte, cancellationToken);
+    }
+
+    // Una sola copia de la aritmética de ingresos, que es la parte frágil de
+    // este archivo (ver comentario de clase): el saldo la usa sin filtro de
+    // fecha y el reciente con uno. Duplicarla invitaría a que las dos cifras
+    // se desincronicen en silencio.
+    private Task<decimal> SumarIngresosAsync(
+        Guid clienteId, Expression<Func<DespachoHuevo, bool>>? filtroFecha,
+        CancellationToken cancellationToken)
+    {
+        var despachos = db.DespachosHuevo
+            .Where(d => d.ClienteId == clienteId && d.Estado == EstadoDespachoHuevo.Recibido
+                && d.FechaRecepcion != null);
+        if (filtroFecha is not null)
+            despachos = despachos.Where(filtroFecha);
+        return despachos
+            .SelectMany(d => d.Detalles)
+            .Where(det => det.PrecioUnitarioCongelado != null)
+            .SumAsync(det =>
+                (det.CantidadAmarras * DetalleDespachoHuevo.HuevosPorAmarra + det.UnidadesSueltas)
+                    * det.PrecioUnitarioCongelado!.Value,
+                cancellationToken);
     }
 
     // Materializa las filas (columnas simples, sin cómputo) y recién después

@@ -179,7 +179,7 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
         var db = _servicios.GetRequiredService<GestionAvicolaDbContext>();
         var repositorio = new RepositorioBalanceCreditoHuevo(db);
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
-        var corte = hoy.AddDays(-ReglasCreditoHuevo.DiasDisponibilidadCredito);
+        var corte = hoy.AddDays(-ReglasCreditoHuevo.DiasReferenciaCredito);
 
         // Despachos ya recibidos pero todavía dentro de la ventana: hoy no
         // cuentan, y catorce días después sí.
@@ -200,7 +200,7 @@ public sealed class SemillaDesarrolloAvicolaTests(IdentityFactory factory) : IAs
         // que los despachos recientes entren en la ventana.
         var saldoHoy = await repositorio.ObtenerSaldoDisponibleAsync(ConMovimiento.ClienteId, hoy);
         var saldoEnCatorceDias = await repositorio.ObtenerSaldoDisponibleAsync(
-            ConMovimiento.ClienteId, hoy.AddDays(ReglasCreditoHuevo.DiasDisponibilidadCredito));
+            ConMovimiento.ClienteId, hoy.AddDays(ReglasCreditoHuevo.DiasReferenciaCredito));
 
         Assert.Equal(importeReciente, saldoEnCatorceDias - saldoHoy);
     }

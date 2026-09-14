@@ -2,12 +2,21 @@ using Icarus.BuildingBlocks.Domain;
 
 namespace Icarus.GestionAvicola.Application.CreditoHuevo;
 
-// Crédito por huevos despachados (spec SP9): disponible recién catorce días
-// después de la recepción. Sin tabla de saldo persistida: se calcula por
-// consulta (suma de ingresos disponibles menos egresos reales).
+// Crédito por huevos despachados (spec SP9, corregido el 2026-09-14):
+// disponible desde que CAISY confirma la recepción, sin espera. Sin tabla de
+// saldo persistida: se calcula por consulta (suma de ingresos menos egresos
+// reales más ajustes).
 public interface IRepositorioBalanceCreditoHuevo
 {
     Task<decimal> ObtenerSaldoDisponibleAsync(
+        Guid clienteId, DateOnly hoy, CancellationToken cancellationToken = default);
+
+    // Cuánto del saldo se recibió dentro de la ventana de referencia
+    // (DiasReferenciaCredito). Dato informativo que acompaña al saldo, NO un
+    // término que se le reste: por construcción vale entre cero y el total de
+    // ingresos. Existe porque el ritmo de liquidación de CAISY le sirve al
+    // Cliente para decidir cuánto pedir, aunque no condicione nada.
+    Task<decimal> ObtenerRecibidoRecienteAsync(
         Guid clienteId, DateOnly hoy, CancellationToken cancellationToken = default);
 
     // Desglose visible del crédito: solo los ajustes de corrección, el único
@@ -20,7 +29,12 @@ public interface IRepositorioBalanceCreditoHuevo
 
 public static class ReglasCreditoHuevo
 {
-    public const int DiasDisponibilidadCredito = 14;
+    // Ventana de referencia, NO un plazo de disponibilidad: el crédito existe
+    // desde la recepción. Catorce días es el ritmo habitual con que CAISY
+    // liquida, que en la práctica varía. Se usa solo para señalar qué parte
+    // del saldo es reciente (corrección 2026-09-14; antes se llamaba
+    // DiasDisponibilidadCredito y filtraba el saldo).
+    public const int DiasReferenciaCredito = 14;
 }
 
 // RETIRADA por la corrección 2026-09-14: el envío de un pedido de alimento ya
