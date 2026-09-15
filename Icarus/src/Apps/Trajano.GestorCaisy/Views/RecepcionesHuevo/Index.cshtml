@@ -18,7 +18,8 @@
 </div>
 <partial name="_Avisos" />
 <section class="tarjeta">
-    <h2>Novedades para CAISY (@Model.Notificaciones.Contador sin leer)</h2>
+    <h2>Novedades para CAISY (<span data-contador-novedades
+        data-url-contador="@Url.Action("ContadorNotificaciones")">@Model.Notificaciones.Contador</span> sin leer)</h2>
     @if (Model.Notificaciones.Items.Count == 0)
     {
         <p class="vacio__texto">No hay notificaciones de despachos de huevo.</p>

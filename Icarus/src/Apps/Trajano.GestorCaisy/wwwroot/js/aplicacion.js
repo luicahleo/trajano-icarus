@@ -57,4 +57,28 @@
             renumerar();
         });
     }
+
+    /* Sondeo del badge de novedades. El endpoint responde 304 cuando nada
+       cambió, así que un sondeo sin noticias cuesta una respuesta vacía.
+       Treinta segundos, igual que la PWA. */
+    var contadorNovedades = document.querySelector('[data-contador-novedades]');
+    if (contadorNovedades) {
+        var urlContador = contadorNovedades.getAttribute('data-url-contador');
+        window.setInterval(function () {
+            /* Una pestaña oculta no necesita el badge al día. */
+            if (document.hidden) return;
+            window.fetch(urlContador, { credentials: 'same-origin' })
+                .then(function (respuesta) {
+                    return respuesta.ok ? respuesta.json() : null;
+                })
+                .then(function (datos) {
+                    if (!datos) return;
+                    contadorNovedades.textContent = String(datos.contador);
+                })
+                .catch(function () {
+                    /* Un sondeo fallido no molesta al usuario: el siguiente
+                       lo vuelve a intentar. */
+                });
+        }, 30000);
+    }
 })();

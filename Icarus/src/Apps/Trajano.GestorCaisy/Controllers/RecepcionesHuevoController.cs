@@ -115,4 +115,13 @@ public sealed class RecepcionesHuevoController(IApiIcarusClient api) : Controlle
         }
         return RedirectToAction(nameof(Index));
     }
+
+    // Sondeo del badge: devuelve solo el número, sin volver a renderizar la
+    // bandeja. La vista sigue pintando la lista al cargar.
+    [HttpGet("Notificaciones/Contador")]
+    public async Task<IActionResult> ContadorNotificaciones(CancellationToken token)
+    {
+        var notificaciones = await api.ListarNotificacionesDespachoHuevoAsync(token);
+        return Json(new { contador = notificaciones.Contador });
+    }
 }

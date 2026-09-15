@@ -330,6 +330,15 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // Sondeo del badge: devuelve solo el número, sin volver a renderizar la
+    // bandeja. La vista sigue pintando la lista al cargar.
+    [HttpGet("Notificaciones/Contador")]
+    public async Task<IActionResult> ContadorNotificaciones(CancellationToken token)
+    {
+        var notificaciones = await api.ListarNotificacionesPedidoAsync(token);
+        return Json(new { contador = notificaciones.Contador });
+    }
+
     // RETIRADO por la corrección 2026-09-14: el saldo del cliente es privado
     // y GestorCaisy no lo ve. No se llama a la API —que además responde 403
     // desde esta misma corrección—, así que no hay ida y vuelta inútil por

@@ -359,4 +359,16 @@ public class PedidosControllerTests
             IFormularioConCredito formulario => formulario.Credito,
             _ => null,
         };
+
+    [Fact]
+    public async Task ElContadorDeNotificacionesDevuelveSoloElNumero()
+    {
+        _api.NotificacionesDePedidos = new([], 7);
+
+        var resultado = await _controlador.ContadorNotificaciones(CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(resultado);
+        var contador = json.Value!.GetType().GetProperty("contador")!.GetValue(json.Value);
+        Assert.Equal(7, contador);
+    }
 }
