@@ -90,6 +90,30 @@ public class PreciosHuevoHandlerTests
     }
 
     [Fact]
+    public async Task ImportarConCeldasInvalidasFormaMensajesConUbicacionYValor()
+    {
+        _importador.Importar(Arg.Any<Stream>()).Returns(new ResultadoImportacionPrecioHuevo(
+            null,
+            [
+                new ErrorImportacionPrecioHuevo(
+                    8, "debe ser mayor que cero", "NUEVO PRECIO AL PRODUCTOR", "0"),
+                new ErrorImportacionPrecioHuevo(
+                    11, "no es reconocido", "TAMAÑO", "Mediano XL"),
+            ]));
+
+        var excepcion = await Assert.ThrowsAsync<ValidationException>(() =>
+            CrearImportador().Handle(
+                new ImportarPublicacionPrecioHuevoExcelCommand(ContenidoExcel()), CancellationToken.None));
+
+        Assert.Contains(excepcion.Errors, e =>
+            e.ErrorMessage.Contains("Fila 8, columna NUEVO PRECIO AL PRODUCTOR", StringComparison.Ordinal)
+            && e.ErrorMessage.Contains("«0»", StringComparison.Ordinal));
+        Assert.Contains(excepcion.Errors, e =>
+            e.ErrorMessage.Contains("Fila 11, columna TAMAÑO", StringComparison.Ordinal)
+            && e.ErrorMessage.Contains("«Mediano XL»", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task PublicarRechazaDosPublicacionesConLaMismaVigencia()
     {
         var borrador = CrearBorradorPublicable();

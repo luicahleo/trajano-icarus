@@ -119,7 +119,7 @@ public sealed class ImportarPublicacionPrecioHuevoExcelHandler(
         var resultado = importador.Importar(new MemoryStream(bytes));
         if (resultado.Errores.Count > 0 || resultado.Propuesta is null)
             throw new ValidationException(resultado.Errores.Select(e => new ValidationFailure(
-                "Documento", e.Fila is { } fila ? $"Fila {fila}: {e.Mensaje}" : e.Mensaje)));
+                "Documento", MensajeDeError(e))));
         Guid documentoOriginalId;
         await using (var original = new MemoryStream(bytes))
             documentoOriginalId = await almacen.GuardarAsync(original, cancellationToken);
@@ -133,6 +133,18 @@ public sealed class ImportarPublicacionPrecioHuevoExcelHandler(
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return publicacion.Id;
     }
+
+    // Mensaje de interfaz: con ubicación de celda incluye fila, columna de
+    // negocio y el valor recibido; los errores de archivo o cabecera se
+    // muestran tal cual, sin inventar fila ni columna.
+    private static string MensajeDeError(ErrorImportacionPrecioHuevo error) =>
+        error switch
+        {
+            { Fila: { } fila, Columna: { } columna } =>
+                $"Fila {fila}, columna {columna}: el valor «{error.Valor}» {error.Mensaje}.",
+            { Fila: { } fila } => $"Fila {fila}: {error.Mensaje}",
+            _ => error.Mensaje,
+        };
 }
 
 public sealed class ActualizarBorradorPrecioHuevoHandler(

@@ -53,21 +53,22 @@ public sealed class ImportadorPublicacionPrecioHuevoExcel : IImportadorPublicaci
                 var columnas = Columnas(encabezado);
                 foreach (var fila in usados.Rows().Where(r => r.RowNumber() > encabezado.RowNumber()))
                 {
-                    var tamanoTexto = Normalizar(Texto(fila, columnas.Tamano));
+                    var tamanoCrudo = Texto(fila, columnas.Tamano);
+                    var tamanoTexto = Normalizar(tamanoCrudo);
                     if (string.IsNullOrWhiteSpace(tamanoTexto)) continue;
                     if (!Tamanos.TryGetValue(tamanoTexto, out var tamano))
-                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), $"El tamaño '{tamanoTexto}' no es reconocido.")); continue; }
+                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "no es reconocido", "TAMAÑO", tamanoCrudo)); continue; }
 
                     var precioProductor = DecimalCelda(fila, columnas.PrecioProductor);
                     if (precioProductor is null or <= 0)
-                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "El precio al productor debe ser mayor que cero.")); continue; }
+                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "debe ser mayor que cero", "NUEVO PRECIO AL PRODUCTOR", Texto(fila, columnas.PrecioProductor))); continue; }
 
                     var servicio = DecimalCelda(fila, columnas.Servicio);
                     if (servicio is null or <= 0)
-                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "El servicio debe ser mayor que cero.")); continue; }
+                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "debe ser mayor que cero", "SERVICIOS", Texto(fila, columnas.Servicio))); continue; }
                     if (servicioComun is null) servicioComun = servicio;
                     else if (servicioComun != servicio)
-                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "El servicio debe ser el mismo para todos los tamaños.")); continue; }
+                    { errores.Add(new ErrorImportacionPrecioHuevo(fila.RowNumber(), "debe ser el mismo para todos los tamaños", "SERVICIOS", Texto(fila, columnas.Servicio))); continue; }
 
                     detalles.Add(new DatosDetallePrecioHuevo(
                         tamano, precioProductor.Value, DecimalCelda(fila, columnas.PrecioActual)));

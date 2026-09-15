@@ -59,7 +59,11 @@ public sealed record DatosPublicacionPrecioHuevo(
     DateOnly FechaNotificacion, DateOnly FechaVigencia, decimal Servicio,
     IReadOnlyList<DatosDetallePrecioHuevo> Detalles);
 
-public sealed record ErrorImportacionPrecioHuevo(int? Fila, string Mensaje);
+// Ubicación opcional de un error de celda: la columna es el nombre de negocio
+// del Excel (TAMAÑO, NUEVO PRECIO AL PRODUCTOR, SERVICIOS) y el valor es el
+// contenido recibido. Los errores de archivo o cabecera no traen ubicación.
+public sealed record ErrorImportacionPrecioHuevo(
+    int? Fila, string Mensaje, string? Columna = null, string? Valor = null);
 
 public sealed record ResultadoImportacionPrecioHuevo(
     DatosPublicacionPrecioHuevo? Propuesta, IReadOnlyList<ErrorImportacionPrecioHuevo> Errores);
