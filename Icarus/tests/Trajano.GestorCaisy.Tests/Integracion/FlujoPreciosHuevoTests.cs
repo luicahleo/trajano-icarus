@@ -90,6 +90,48 @@ public class FlujoPreciosHuevoTests
     }
 
     [Fact]
+    public async Task ImportarConErroresMuestraTodosLosMensajesComoLista()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync(funcCaisy: 2);
+        aplicacion.Api.ErrorDeImportarHuevo = new ErrorApiException(400, "Solicitud inválida",
+            erroresValidacion: new Dictionary<string, IReadOnlyList<string>>
+            {
+                ["Documento"] =
+                [
+                    "Fila 8, columna NUEVO PRECIO AL PRODUCTOR: el valor «0» debe ser mayor que cero.",
+                    "Fila 11, columna TAMAÑO: el valor «Mediano XL» no es reconocido.",
+                ],
+            });
+        var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, "/PreciosHuevo/Importar");
+
+        var respuesta = await cliente.PostAsync("/PreciosHuevo/Importar", ContenidoMultiparte(token));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var html = await respuesta.Content.ReadAsStringAsync();
+        Assert.Contains("Fila 8", html);
+        Assert.Contains("NUEVO PRECIO AL PRODUCTOR", html);
+        Assert.Contains("Fila 11", html);
+        Assert.Contains("Mediano XL", html);
+    }
+
+    [Fact]
+    public async Task DetallesAdvierteDiferenciasDePrecioActualSinBloquearPublicar()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync(funcCaisy: 2);
+        var id = Guid.NewGuid();
+        aplicacion.Api.DetalleHuevoActual = ApiIcarusFalsa.CrearDetalleHuevo(id, "Borrador");
+
+        var html = await cliente.GetStringAsync($"/PreciosHuevo/{id}");
+
+        Assert.Contains("Precio actual esperado", html);
+        Assert.Contains("0.0445", html);
+        Assert.Contains("advertencia", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"/PreciosHuevo/{id}/Publicar", html);
+    }
+
+    [Fact]
     public async Task EditarMuestraFilasDelBorradorYGuardaLosCambios()
     {
         using var aplicacion = new AplicacionDePruebas();

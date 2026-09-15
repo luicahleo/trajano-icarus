@@ -3,6 +3,11 @@
     var publicacion = Model.Publicacion;
     ViewData["Titulo"] = "Publicación de precios de huevo";
     ViewData["Seccion"] = "precios-huevo";
+    static bool EsAdvertencia(DetallePrecioHuevoApi detalle) =>
+        detalle.PrecioActualDocumento is { } actual
+        && detalle.PrecioAnteriorEsperado is { } esperado
+        && actual != esperado;
+    var hayAdvertencias = publicacion.Detalles.Any(EsAdvertencia);
 }
 <div class="pagina-cabecera">
     <div>
@@ -74,6 +79,14 @@
 </section>
 <section class="tarjeta tarjeta--tabla">
     <h2>Detalles de precio</h2>
+    @if (hayAdvertencias)
+    {
+        <div class="alerta alerta--aviso" role="note">
+            <strong>Advertencia:</strong> el «PRECIO ACTUAL» de una o más líneas no
+            coincide con el precio anterior esperado. Es informativo: no impide
+            publicar; revise el borrador si corresponde.
+        </div>
+    }
     @if (publicacion.Detalles.Count == 0)
     {
         <p class="vacio__texto">El borrador aún no tiene detalles de precio.</p>
@@ -86,16 +99,24 @@
                     <th scope="col">Tamaño</th>
                     <th scope="col">Precio al productor</th>
                     <th scope="col">Precio actual del documento</th>
+                    <th scope="col">Precio actual esperado</th>
                     <th scope="col">Precio unitario</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var detalle in publicacion.Detalles)
                 {
-                    <tr>
+                    <tr class="@(EsAdvertencia(detalle) ? "fila--advertencia" : null)">
                         <td>@detalle.Tamano</td>
                         <td>@detalle.PrecioAlProductor.ToString("0.0000")</td>
                         <td>@(detalle.PrecioActualDocumento?.ToString("0.0000") ?? "—")</td>
+                        <td>
+                            @(detalle.PrecioAnteriorEsperado?.ToString("0.0000") ?? "—")
+                            @if (EsAdvertencia(detalle))
+                            {
+                                <span class="advertencia-precio">Diferencia</span>
+                            }
+                        </td>
                         <td>@detalle.PrecioUnitario.ToString("0.0000")</td>
                     </tr>
                 }

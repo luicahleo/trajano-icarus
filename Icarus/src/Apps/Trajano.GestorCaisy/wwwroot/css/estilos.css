@@ -376,6 +376,14 @@ a { color: var(--aqua-oscuro); }
     border: 1px solid var(--borde);
 }
 
+/* Advertencia informativa de «Precio actual»: no bloquea publicar. */
+.fila--advertencia { background-color: var(--bruma); }
+.advertencia-precio {
+    color: var(--terracota-oscura);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
 .validation-summary-errors { margin: 0; padding-left: 20px; }
 .validation-summary-errors li { margin: 2px 0; }
 .field-validation-error { color: var(--terracota-oscura); font-size: 0.8125rem; font-weight: 600; }

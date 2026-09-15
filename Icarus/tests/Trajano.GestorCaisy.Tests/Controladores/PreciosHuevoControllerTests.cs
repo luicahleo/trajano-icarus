@@ -273,6 +273,31 @@ public class PreciosHuevoControllerTests
     }
 
     [Fact]
+    public async Task ImportarConVariosErroresLosConservaComoLista()
+    {
+        _api.ErrorDeImportarHuevo = new ErrorApiException(400, "Solicitud inválida", erroresValidacion:
+            new Dictionary<string, IReadOnlyList<string>>
+            {
+                ["Documento"] =
+                [
+                    "Fila 8, columna NUEVO PRECIO AL PRODUCTOR: el valor «0» debe ser mayor que cero.",
+                    "Fila 11, columna TAMAÑO: el valor «Mediano XL» no es reconocido.",
+                ],
+            });
+        var archivo = CrearArchivo("PK\x03\x04"u8.ToArray(), "precios-huevo.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        var resultado = await _controlador.Importar(archivo, default);
+
+        Assert.IsType<ViewResult>(resultado);
+        Assert.False(_controlador.ModelState.IsValid);
+        var mensajes = _controlador.ModelState["Documento"]!.Errors
+            .Select(e => e.ErrorMessage).ToList();
+        Assert.Contains(mensajes, m => m.Contains("NUEVO PRECIO AL PRODUCTOR", StringComparison.Ordinal));
+        Assert.Contains(mensajes, m => m.Contains("Mediano XL", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EditarMuestraElFormularioDelBorrador()
     {
         var id = Guid.NewGuid();
