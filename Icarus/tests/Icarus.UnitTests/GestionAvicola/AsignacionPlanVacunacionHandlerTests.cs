@@ -131,7 +131,9 @@ public class AsignacionPlanVacunacionHandlerTests
         await HandlerAsignar().Handle(new(galpon.Id, programa.Id), CancellationToken.None);
 
         await _tareas.Received(1).DesactivarPendientesDeGalponAsync(galpon.Id, Arg.Any<CancellationToken>());
-        _vuelo.Received().Decidir("avicola.vacunacion.asignar", "asignacion", "aplicada",
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.asignar"),
+            "asignacion", "aplicada",
             Arg.Is<IReadOnlyDictionary<string, object?>>(c =>
                 Equals(c["TareasCreadas"], 2) && Equals(c["TareasPendientesDesactivadas"], 2)));
     }
@@ -156,7 +158,9 @@ public class AsignacionPlanVacunacionHandlerTests
 
         await handler.Handle(new(galpon.Id), CancellationToken.None);
 
-        _vuelo.Received().Decidir("avicola.vacunacion.quitar-plan", "quitar", "aplicada",
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.quitar-plan"),
+            "quitar", "aplicada",
             Arg.Is<IReadOnlyDictionary<string, object?>>(c => Equals(c["TareasPendientesDesactivadas"], 1)));
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }

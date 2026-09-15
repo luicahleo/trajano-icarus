@@ -41,7 +41,10 @@ public class DesactivarGranjaHandlerTests
         await _handler.Handle(new DesactivarGranjaCommand(granja.Id), CancellationToken.None);
         Assert.False(granja.EstaActivo);
         Assert.All(galpones, g => Assert.False(g.EstaActivo));
-        _registroVuelo.Received(1).Decidir("avicola.granjas.desactivar", "cascada_galpones", "aplicada", Arg.Is<IReadOnlyDictionary<string, object?>>(d => (int)d["GalponesDesactivados"]! == 2));
+        _registroVuelo.Received(1).Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.granjas.desactivar"),
+            "cascada_galpones", "aplicada",
+            Arg.Is<IReadOnlyDictionary<string, object?>>(d => (int)d["GalponesDesactivados"]! == 2));
         await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -52,7 +55,9 @@ public class DesactivarGranjaHandlerTests
         _granjas.ObtenerPorIdAsync(granja.Id, Arg.Any<CancellationToken>()).Returns(granja);
         _galpones.ListarActivosDeGranjaAsync(granja.Id, Arg.Any<CancellationToken>()).Returns(new List<Galpon>());
         await _handler.Handle(new DesactivarGranjaCommand(granja.Id), CancellationToken.None);
-        _registroVuelo.DidNotReceive().Decidir(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<IReadOnlyDictionary<string, object?>?>());
+        _registroVuelo.DidNotReceive().Decidir(
+            Arg.Any<DescriptorOperacionRegistroVuelo>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<IReadOnlyDictionary<string, object?>?>());
         await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

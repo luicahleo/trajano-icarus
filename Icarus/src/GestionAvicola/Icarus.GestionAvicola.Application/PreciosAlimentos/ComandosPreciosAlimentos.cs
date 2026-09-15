@@ -153,7 +153,10 @@ public sealed class ImportarNotificacionPdfHandler(
             propuesta.AporteCaisy, propuesta.Fondo, propuesta.Servicios, propuesta.Detalles);
         notificacion.AsignarDocumentoOriginal(documentoOriginalId);
         repositorio.Agregar(notificacion);
-        registroVuelo.Decidir("avicola.precios.importar-pdf", "importacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios.importar-pdf",
+                ("DetallesImportados", DatoRegistroVuelo.Entero)),
+            "importacion", "aplicada",
             new Dictionary<string, object?> { ["DetallesImportados"] = propuesta.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return notificacion.Id;
@@ -190,7 +193,10 @@ public sealed class ImportarNotificacionExcelHandler(
             propuesta.AporteCaisy, propuesta.Fondo, propuesta.Servicios, propuesta.Detalles);
         notificacion.AsignarDocumentoOriginal(documentoOriginalId);
         repositorio.Agregar(notificacion);
-        registroVuelo.Decidir("avicola.precios.importar-excel", "importacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios.importar-excel",
+                ("DetallesImportados", DatoRegistroVuelo.Entero)),
+            "importacion", "aplicada",
             new Dictionary<string, object?> { ["DetallesImportados"] = propuesta.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return notificacion.Id;
@@ -214,7 +220,10 @@ public sealed class ActualizarBorradorPreciosHandler(
         // se registran como Added explícitamente (ver IRepositorioNotificacionesPrecios).
         foreach (var detalle in notificacion.Detalles)
             repositorio.AgregarDetalle(detalle);
-        registroVuelo.Decidir("avicola.precios.actualizar-borrador", "edicion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios.actualizar-borrador",
+                ("CantidadDetalles", DatoRegistroVuelo.Entero)),
+            "edicion", "aplicada",
             new Dictionary<string, object?> { ["CantidadDetalles"] = notificacion.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -244,7 +253,10 @@ public sealed class PublicarNotificacionPreciosHandler(
                 $"Detalles[{d.DetalleId}].PrecioActualDocumento", d.Mensaje())));
 
         notificacion.Publicar();
-        registroVuelo.Decidir("avicola.precios.publicar", "publicacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios.publicar",
+                ("CantidadDetalles", DatoRegistroVuelo.Entero)),
+            "publicacion", "aplicada",
             new Dictionary<string, object?> { ["CantidadDetalles"] = notificacion.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -296,8 +308,7 @@ public sealed class AnularNotificacionFuturaHandler(
         // Solo una publicación futura se anula; una efectiva queda sellada
         // (spec SP8) y la corrección es otra publicación.
         notificacion.AnularFutura(FechasNegocio.Hoy());
-        registroVuelo.Decidir("avicola.precios.anular-futura", "anulacion", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.precios.anular-futura", "anulacion", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -316,8 +327,7 @@ public sealed class DescartarBorradorPreciosHandler(
         var notificacion = await repositorio.ObtenerPorIdAsync(request.NotificacionId, cancellationToken)
             ?? throw new NotFoundException("Notificación de precios", request.NotificacionId);
         notificacion.DescartarBorrador();
-        registroVuelo.Decidir("avicola.precios.descartar-borrador", "borrado", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.precios.descartar-borrador", "borrado", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }

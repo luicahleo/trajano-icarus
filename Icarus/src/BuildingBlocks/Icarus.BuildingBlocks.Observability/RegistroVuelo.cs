@@ -27,9 +27,13 @@ public sealed class RegistroVuelo : IRegistroVuelo
         return operacion;
     }
 
-    public void Decidir(string operacion, string codigo, string resultado,
+    public void Decidir(string operacion, string codigo, string resultado) =>
+        Escribir(LogLevel.Information, "operation.decision", operacion, "decision", resultado, codigo, null);
+
+    public void Decidir(DescriptorOperacionRegistroVuelo descriptor, string codigo, string resultado,
         IReadOnlyDictionary<string, object?>? campos = null) =>
-        Escribir(LogLevel.Information, "operation.decision", operacion, "decision", resultado, codigo, campos);
+        Escribir(LogLevel.Information, "operation.decision", descriptor.Nombre, "decision",
+            resultado, codigo, campos, descriptor);
 
     public void PersistenciaCompletada(string contexto, int filas, long duracionMs) =>
         Escribir(LogLevel.Information, "persistence.save_changes.completed", contexto, "persistence", "succeeded",
@@ -60,9 +64,16 @@ public sealed class RegistroVuelo : IRegistroVuelo
     public ICompensacionVuelo IniciarCompensacion(string operacion)
     {
         Escribir(LogLevel.Warning, "operation.compensation.started", operacion, "compensation", null, null,
-            new Dictionary<string, object?> { ["CompensationKind"] = "logical" });
+            new Dictionary<string, object?> { ["CompensationKind"] = "logical" },
+            DescriptorCompensacion(operacion));
         return new Compensacion(this, operacion);
     }
+
+    // Campo interno de compensación: declarado para que no se descarte como
+    // campo libre (la ausencia de descriptor nunca autoriza datos).
+    private static DescriptorOperacionRegistroVuelo DescriptorCompensacion(string operacion) =>
+        DescriptorOperacionRegistroVuelo.Crear(operacion,
+            ("CompensationKind", DatoRegistroVuelo.Texto));
 
     private void Escribir(LogLevel nivel, string evento, string operacion, string fase, string? resultado,
         string? codigo, IReadOnlyDictionary<string, object?>? campos, DescriptorOperacionRegistroVuelo? descriptor = null,
@@ -74,7 +85,8 @@ public sealed class RegistroVuelo : IRegistroVuelo
             ["Operation"] = operacion,
             ["Phase"] = fase,
         };
-        if (resultado is not null) propiedades["Outcome"] = resultado;
+        if (resultado is not null)
+            propiedades["Outcome"] = fase == "decision" ? NormalizarDecision(resultado) : resultado;
         if (codigo is not null) propiedades["ReasonCode"] = codigo;
         if (duracion is not null) propiedades["DurationMs"] = duracion.Value;
         if (campos is not null)
@@ -91,13 +103,34 @@ public sealed class RegistroVuelo : IRegistroVuelo
         try
         {
             _logger.Log(nivel, new EventId(0, evento), propiedades, null,
-                static (state, _) => state["EventName"]?.ToString() ?? "evento de operación");
+                static (state, _) => Narrar(state));
         }
         catch
         {
             // El registro nunca debe alterar el resultado funcional.
         }
     }
+
+    // Frase estable en español: operación, fase y resultado en una sola línea
+    // legible; los códigos técnicos siguen en ReasonCode.
+    private static string Narrar(IReadOnlyDictionary<string, object?> propiedades)
+    {
+        var evento = propiedades["EventName"];
+        var operacion = propiedades["Operation"];
+        var fase = propiedades["Phase"];
+        var resultado = propiedades.TryGetValue("Outcome", out var valor) && valor is not null
+            ? valor
+            : "en curso";
+        var codigo = propiedades.TryGetValue("ReasonCode", out var motivo) && motivo is not null
+            ? $" (motivo {motivo})"
+            : string.Empty;
+        return $"{evento}: operación {operacion} en fase {fase} con resultado {resultado}{codigo}";
+    }
+
+    // Las decisiones usan "aplicada" en los flujos; el contrato de resultados
+    // distingue la decisión de la persistencia confirmada.
+    private static string NormalizarDecision(string resultado) =>
+        resultado == "aplicada" ? "applied" : resultado;
 
     private static bool EsTipoValido(object? valor, DatoRegistroVuelo dato) => dato.Tipo switch
     {
@@ -162,7 +195,8 @@ public sealed class RegistroVuelo : IRegistroVuelo
             if (_finalizada) return;
             _finalizada = true;
             _registro.Escribir(nivel, evento, _operacion, "compensation", resultado, null,
-                new Dictionary<string, object?> { ["CompensationKind"] = "logical" });
+                new Dictionary<string, object?> { ["CompensationKind"] = "logical" },
+                DescriptorCompensacion(_operacion));
         }
     }
 }

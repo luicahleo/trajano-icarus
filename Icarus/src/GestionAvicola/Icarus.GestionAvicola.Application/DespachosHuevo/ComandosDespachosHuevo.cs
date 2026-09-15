@@ -104,7 +104,10 @@ public sealed class CrearBorradorDespachoHuevoHandler(
         var despacho = new DespachoHuevo(
             clienteId, granja.Id, actorId, usuarioActual.TrabajadorId, ParsearLineas(request.Lineas));
         repositorio.Agregar(despacho);
-        registroVuelo.Decidir("avicola.despachos-huevo.crear-borrador", "creacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.despachos-huevo.crear-borrador",
+                ("CantidadLineas", DatoRegistroVuelo.Entero)),
+            "creacion", "aplicada",
             new Dictionary<string, object?> { ["CantidadLineas"] = despacho.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return despacho.Id;
@@ -133,7 +136,10 @@ public sealed class EditarBorradorDespachoHuevoHandler(
         despacho.EditarDetalles(CrearBorradorDespachoHuevoHandler.ParsearLineas(request.Lineas));
         foreach (var detalle in despacho.Detalles)
             repositorio.AgregarDetalle(detalle);
-        registroVuelo.Decidir("avicola.despachos-huevo.editar-borrador", "edicion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.despachos-huevo.editar-borrador",
+                ("CantidadLineas", DatoRegistroVuelo.Entero)),
+            "edicion", "aplicada",
             new Dictionary<string, object?> { ["CantidadLineas"] = despacho.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -152,8 +158,7 @@ public sealed class DesactivarBorradorDespachoHuevoHandler(
         if (despacho.Estado != EstadoDespachoHuevo.Borrador)
             throw new ConflictException("Solo un borrador se puede desactivar.");
         despacho.Desactivar();
-        registroVuelo.Decidir("avicola.despachos-huevo.desactivar-borrador", "borrado", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.despachos-huevo.desactivar-borrador", "borrado", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -197,7 +202,11 @@ public sealed class DespacharDespachoHuevoHandler(
             guardado.HashSha256, SanearNombre(request.NombreArchivo));
 
         despacho.Despachar(hoy, actorId, precios, documento);
-        registroVuelo.Decidir("avicola.despachos-huevo.despachar", "envio", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.despachos-huevo.despachar",
+                ("Lineas", DatoRegistroVuelo.Entero),
+                ("PublicacionPrecioHuevoId", DatoRegistroVuelo.Identificador)),
+            "envio", "aplicada",
             new Dictionary<string, object?>
             {
                 ["Lineas"] = despacho.Detalles.Count,
@@ -363,7 +372,10 @@ public sealed class ConfirmarRecepcionDespachoHuevoHandler(
         despacho.ConfirmarRecepcion(FechasNegocio.Hoy(), actorId);
         notificaciones.Agregar(NotificacionInternaDespachoHuevo.ParaRecepcionConfirmada(
             despacho.Id, despacho.ClienteId));
-        registroVuelo.Decidir("avicola.despachos-huevo.confirmar-recepcion", "recepcion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.despachos-huevo.confirmar-recepcion",
+                ("TotalBs", DatoRegistroVuelo.Decimal)),
+            "recepcion", "aplicada",
             new Dictionary<string, object?> { ["TotalBs"] = despacho.TotalBs });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }

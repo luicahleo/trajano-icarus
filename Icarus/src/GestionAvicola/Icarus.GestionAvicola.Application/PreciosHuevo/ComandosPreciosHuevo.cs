@@ -131,7 +131,10 @@ public sealed class ImportarPublicacionPrecioHuevoExcelHandler(
             propuesta.FechaNotificacion, propuesta.FechaVigencia, propuesta.Servicio, propuesta.Detalles);
         publicacion.AsignarDocumentoOriginal(documentoOriginalId);
         repositorio.Agregar(publicacion);
-        registroVuelo.Decidir("avicola.precios-huevo.importar-excel", "importacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios-huevo.importar-excel",
+                ("DetallesImportados", DatoRegistroVuelo.Entero)),
+            "importacion", "aplicada",
             new Dictionary<string, object?> { ["DetallesImportados"] = propuesta.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return publicacion.Id;
@@ -164,7 +167,10 @@ public sealed class ActualizarBorradorPrecioHuevoHandler(
             request.FechaNotificacion, request.FechaVigencia, request.Servicio, request.Detalles);
         foreach (var detalle in publicacion.Detalles)
             repositorio.AgregarDetalle(detalle);
-        registroVuelo.Decidir("avicola.precios-huevo.actualizar-borrador", "edicion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios-huevo.actualizar-borrador",
+                ("CantidadDetalles", DatoRegistroVuelo.Entero)),
+            "edicion", "aplicada",
             new Dictionary<string, object?> { ["CantidadDetalles"] = publicacion.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -187,7 +193,10 @@ public sealed class PublicarPublicacionPrecioHuevoHandler(
                 publicacion.FechaVigencia, publicacion.Id, cancellationToken))
             throw new ConflictException("Ya existe una publicación activa con esa vigencia.");
         publicacion.Publicar();
-        registroVuelo.Decidir("avicola.precios-huevo.publicar", "publicacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios-huevo.publicar",
+                ("CantidadDetalles", DatoRegistroVuelo.Entero)),
+            "publicacion", "aplicada",
             new Dictionary<string, object?> { ["CantidadDetalles"] = publicacion.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -204,8 +213,7 @@ public sealed class AnularPublicacionPrecioHuevoFuturaHandler(
         var publicacion = await repositorio.ObtenerPorIdAsync(request.PublicacionId, cancellationToken)
             ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionId);
         publicacion.AnularFutura(FechasNegocio.Hoy());
-        registroVuelo.Decidir("avicola.precios-huevo.anular-futura", "anulacion", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.precios-huevo.anular-futura", "anulacion", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -221,8 +229,7 @@ public sealed class DescartarBorradorPrecioHuevoHandler(
         var publicacion = await repositorio.ObtenerPorIdAsync(request.PublicacionId, cancellationToken)
             ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionId);
         publicacion.DescartarBorrador();
-        registroVuelo.Decidir("avicola.precios-huevo.descartar-borrador", "borrado", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.precios-huevo.descartar-borrador", "borrado", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -467,7 +474,10 @@ public sealed class CorregirPublicacionPrecioHuevoVigenteHandler(
             ajustados++;
         }
 
-        registroVuelo.Decidir("avicola.precios-huevo.corregir-vigente", "correccion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.precios-huevo.corregir-vigente",
+                ("DespachosAjustados", DatoRegistroVuelo.Entero)),
+            "correccion", "aplicada",
             new Dictionary<string, object?> { ["DespachosAjustados"] = ajustados });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         await transaccion.ConfirmarAsync(cancellationToken);

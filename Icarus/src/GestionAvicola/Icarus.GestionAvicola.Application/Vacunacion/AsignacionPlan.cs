@@ -55,7 +55,11 @@ public sealed class AsignarPlanVacunacionHandler(
                 item.EdadDia, item.Vacuna, item.ModoAplicacion, item.Observaciones,
                 item.Fecha ?? galpon.FechaNacimientoLote.AddDays(item.EdadDia)));
 
-        registroVuelo.Decidir("avicola.vacunacion.asignar", "asignacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.asignar",
+                ("TareasCreadas", DatoRegistroVuelo.Entero),
+                ("TareasPendientesDesactivadas", DatoRegistroVuelo.Entero)),
+            "asignacion", "aplicada",
             new Dictionary<string, object?>
             {
                 ["TareasCreadas"] = items.Count,
@@ -75,7 +79,10 @@ public sealed class QuitarPlanVacunacionHandler(
         var galpon = await galpones.ObtenerPorIdAsync(request.GalponId, cancellationToken)
             ?? throw new NotFoundException("Galpon", request.GalponId);
         var desactivadas = await tareas.DesactivarPendientesDeGalponAsync(galpon.Id, cancellationToken);
-        registroVuelo.Decidir("avicola.vacunacion.quitar-plan", "quitar", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.quitar-plan",
+                ("TareasPendientesDesactivadas", DatoRegistroVuelo.Entero)),
+            "quitar", "aplicada",
             new Dictionary<string, object?> { ["TareasPendientesDesactivadas"] = desactivadas });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }

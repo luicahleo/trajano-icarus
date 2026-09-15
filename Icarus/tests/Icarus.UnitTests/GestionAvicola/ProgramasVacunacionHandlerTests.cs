@@ -42,8 +42,9 @@ public class ProgramasVacunacionHandlerTests
         _programas.Received(1).Agregar(Arg.Is<ProgramaVacunacion>(p =>
             p.Nombre == "PLAN CAISY 1000" && p.CantidadAves == 1000 && p.EstaActivo));
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-        _vuelo.Received().Decidir("avicola.vacunacion.programas.crear", "alta", "aplicada",
-            Arg.Any<IReadOnlyDictionary<string, object?>>());
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.programas.crear"),
+            "alta", "aplicada", Arg.Any<IReadOnlyDictionary<string, object?>>());
     }
 
     [Fact]
@@ -146,8 +147,9 @@ public class ProgramasVacunacionHandlerTests
         Assert.Equal(2, importados);
         Assert.Equal(4, programa.Items.Count);
         Assert.Equal(2, programa.Items.Count(i => i.EstaActivo));
-        _vuelo.Received().Decidir("avicola.vacunacion.programas.importar-cronograma", "importacion", "aplicada",
-            Arg.Any<IReadOnlyDictionary<string, object?>>());
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.programas.importar-cronograma"),
+            "importacion", "aplicada", Arg.Any<IReadOnlyDictionary<string, object?>>());
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -201,7 +203,9 @@ public class ProgramasVacunacionHandlerTests
 
         Assert.False(programa.EstaActivo);
         await _tareas.Received(1).DesactivarPendientesDeProgramaAsync(programa.Id, Arg.Any<CancellationToken>());
-        _vuelo.Received().Decidir("avicola.vacunacion.programas.desactivar", "desactivacion", "aplicada",
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.programas.desactivar"),
+            "desactivacion", "aplicada",
             Arg.Is<IReadOnlyDictionary<string, object?>>(c => (int)c["TareasPendientesDesactivadas"]! == 3));
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }

@@ -28,7 +28,11 @@ public sealed class DesactivarGranjaHandler : IRequestHandler<DesactivarGranjaCo
         foreach (var galpon in galpones)
             galpon.Desactivar();
         if (galpones.Count > 0)
-            _registroVuelo.Decidir("avicola.granjas.desactivar", "cascada_galpones", "aplicada", new Dictionary<string, object?> { ["GalponesDesactivados"] = galpones.Count });
+            _registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.granjas.desactivar",
+                ("GalponesDesactivados", DatoRegistroVuelo.Entero)),
+            "cascada_galpones", "aplicada",
+            new Dictionary<string, object?> { ["GalponesDesactivados"] = galpones.Count });
         granja.Desactivar();
         await _unidadTrabajo.SaveChangesAsync(cancellationToken);
     }

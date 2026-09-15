@@ -64,7 +64,9 @@ public class EjecucionTareasVacunacionHandlerTests
 
         Assert.Equal(Hoy.AddDays(-2), tarea.FechaAplicacion);
         Assert.Equal(950, tarea.AvesVacunadas);
-        _vuelo.Received().Decidir("avicola.vacunacion.completar", "aplicacion", "aplicada",
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.completar"),
+            "aplicacion", "aplicada",
             Arg.Is<IReadOnlyDictionary<string, object?>>(c => Equals(c["AvesVacunadas"], 950)));
     }
 

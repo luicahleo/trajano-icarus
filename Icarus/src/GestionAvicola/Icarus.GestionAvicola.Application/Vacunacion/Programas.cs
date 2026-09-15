@@ -77,7 +77,10 @@ public sealed class CrearProgramaVacunacionHandler(
             throw new ConflictException("No se pudo registrar el programa de vacunación.");
         var programa = new ProgramaVacunacion(request.Nombre, null, request.CantidadAves, request.Observaciones);
         programas.Agregar(programa);
-        registroVuelo.Decidir("avicola.vacunacion.programas.crear", "alta", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.crear",
+                ("CantidadAves", DatoRegistroVuelo.Entero)),
+            "alta", "aplicada",
             new Dictionary<string, object?> { ["CantidadAves"] = programa.CantidadAves });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return programa.Id;
@@ -96,7 +99,10 @@ public sealed class ActualizarProgramaVacunacionHandler(
         if (await programas.ExisteNombreAsync(request.Nombre.Trim(), programa.Id, cancellationToken))
             throw new ConflictException("No se pudo actualizar el programa de vacunación.");
         programa.ActualizarDatos(request.Nombre, request.CantidadAves, request.Observaciones);
-        registroVuelo.Decidir("avicola.vacunacion.programas.actualizar", "edicion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.actualizar",
+                ("CantidadAves", DatoRegistroVuelo.Entero)),
+            "edicion", "aplicada",
             new Dictionary<string, object?> { ["CantidadAves"] = programa.CantidadAves });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -130,7 +136,10 @@ public sealed class ImportarCronogramaExcelHandler(
         // Modified por asumir que ya existen).
         foreach (var item in programa.Items.Where(i => i.EstaActivo))
             programas.AgregarItem(item);
-        registroVuelo.Decidir("avicola.vacunacion.programas.importar-cronograma", "importacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.importar-cronograma",
+                ("ItemsImportados", DatoRegistroVuelo.Entero)),
+            "importacion", "aplicada",
             new Dictionary<string, object?> { ["ItemsImportados"] = resultado.Items.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return resultado.Items.Count;
@@ -151,7 +160,10 @@ public sealed class DesactivarProgramaVacunacionHandler(
         // completadas y canceladas quedan como historial sanitario (spec SP7).
         var desactivadas = await tareas.DesactivarPendientesDeProgramaAsync(programa.Id, cancellationToken);
         programa.Desactivar();
-        registroVuelo.Decidir("avicola.vacunacion.programas.desactivar", "desactivacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.desactivar",
+                ("TareasPendientesDesactivadas", DatoRegistroVuelo.Entero)),
+            "desactivacion", "aplicada",
             new Dictionary<string, object?> { ["TareasPendientesDesactivadas"] = desactivadas });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }

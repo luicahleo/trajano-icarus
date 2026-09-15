@@ -57,7 +57,10 @@ public sealed class CompletarTareaVacunacionHandler(
             request.FechaAplicacion ?? DateOnly.FromDateTime(DateTime.UtcNow),
             request.AvesVacunadas, usuario.UsuarioId ?? Guid.Empty, request.Observaciones);
         if (request.AvesVacunadas is int aves)
-            registroVuelo.Decidir("avicola.vacunacion.completar", "aplicacion", "aplicada",
+            registroVuelo.Decidir(
+                DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.completar",
+                    ("AvesVacunadas", DatoRegistroVuelo.Entero)),
+                "aplicacion", "aplicada",
                 new Dictionary<string, object?> { ["AvesVacunadas"] = aves });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }

@@ -62,7 +62,11 @@ public sealed class ObtenerBalanceAlimentosHandler(
             ?? throw new UnauthorizedAccessException("Solo una cuenta de tenant consulta el balance.");
         var lineas = await repositorio.ObtenerAsync(
             clienteId, request.Desde, request.Hasta, cancellationToken);
-        registroVuelo.Decidir("avicola.balance.consultar", "consulta", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.balance.consultar",
+                ("Lineas", DatoRegistroVuelo.Entero),
+                ("EstadosRecibidos", DatoRegistroVuelo.Entero)),
+            "consulta", "aplicada",
             new Dictionary<string, object?>
             {
                 ["Lineas"] = lineas.Count,

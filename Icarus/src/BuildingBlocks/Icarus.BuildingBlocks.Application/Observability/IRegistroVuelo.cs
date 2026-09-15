@@ -3,8 +3,15 @@ namespace Icarus.BuildingBlocks.Application.Observability;
 public interface IRegistroVuelo
 {
     IOperacionVuelo Iniciar(DescriptorOperacionRegistroVuelo descriptor);
-    void Decidir(string operacion, string codigo, string resultado,
+
+    /// <summary>Decisión sin campos: no puede transportar datos libres.</summary>
+    void Decidir(string operacion, string codigo, string resultado);
+
+    /// <summary>Decisión independiente con descriptor explícito: solo se
+    /// conservan los campos declarados y con el tipo correcto.</summary>
+    void Decidir(DescriptorOperacionRegistroVuelo descriptor, string codigo, string resultado,
         IReadOnlyDictionary<string, object?>? campos = null);
+
     void PersistenciaCompletada(string contexto, int filas, long duracionMs);
     void PersistenciaFallida(string contexto, long duracionMs);
     void TransaccionTerminada(string contexto, bool confirmada);

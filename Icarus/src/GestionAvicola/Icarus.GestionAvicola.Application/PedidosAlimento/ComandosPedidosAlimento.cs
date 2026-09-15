@@ -291,7 +291,10 @@ public sealed class CrearPedidoAlimentoHandler(
         var pedido = new PedidoAlimento(
             clienteId, granja.Id, actorId, usuarioActual.TrabajadorId, request.Detalles);
         repositorio.Agregar(pedido);
-        registroVuelo.Decidir("avicola.pedidos.crear", "creacion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.pedidos.crear",
+                ("Lineas", DatoRegistroVuelo.Entero)),
+            "creacion", "aplicada",
             new Dictionary<string, object?> { ["Lineas"] = pedido.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
         return pedido.Id;
@@ -314,7 +317,10 @@ public sealed class EditarPedidoAlimentoHandler(
         // Las líneas se recrean con clave nueva: se registran como Added.
         foreach (var linea in pedido.Detalles)
             repositorio.AgregarDetalle(linea);
-        registroVuelo.Decidir("avicola.pedidos.editar", "edicion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.pedidos.editar",
+                ("Lineas", DatoRegistroVuelo.Entero)),
+            "edicion", "aplicada",
             new Dictionary<string, object?> { ["Lineas"] = pedido.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
@@ -333,8 +339,7 @@ public sealed class DesactivarPedidoAlimentoHandler(
         if (pedido.Estado != EstadoPedidoAlimento.Borrador)
             throw new ConflictException("Solo un borrador se puede desactivar.");
         pedido.Desactivar();
-        registroVuelo.Decidir("avicola.pedidos.desactivar", "borrado", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.pedidos.desactivar", "borrado", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -416,7 +421,13 @@ public sealed class EnviarPedidoAlimentoHandler(
             esReenvio ? TipoNotificacionPedido.PedidoReenviado : TipoNotificacionPedido.PedidoSolicitado,
             pedido.Id));
 
-        registroVuelo.Decidir("avicola.pedidos.enviar", "envio", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.pedidos.enviar",
+                ("Lineas", DatoRegistroVuelo.Entero),
+                ("NotificacionPreciosId", DatoRegistroVuelo.Identificador),
+                ("SaldoCreditoAntes", DatoRegistroVuelo.Decimal),
+                ("TotalPedido", DatoRegistroVuelo.Decimal)),
+            "envio", "aplicada",
             new Dictionary<string, object?>
             {
                 ["Lineas"] = pedido.Detalles.Count,
@@ -460,8 +471,7 @@ public sealed class DevolverPedidoAlimentoHandler(
         pedido.DevolverParaCorreccion(request.Motivo.Trim(), actorId);
         notificaciones.Agregar(NotificacionInterna.ParaTenant(
             TipoNotificacionPedido.PedidoDevuelto, pedido.Id, pedido.ClienteId));
-        registroVuelo.Decidir("avicola.pedidos.devolver", "devolucion", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.pedidos.devolver", "devolucion", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -485,8 +495,7 @@ public sealed class RechazarPedidoAlimentoHandler(
         pedido.Rechazar(request.Motivo.Trim(), actorId);
         notificaciones.Agregar(NotificacionInterna.ParaTenant(
             TipoNotificacionPedido.PedidoRechazado, pedido.Id, pedido.ClienteId));
-        registroVuelo.Decidir("avicola.pedidos.rechazar", "rechazo", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.pedidos.rechazar", "rechazo", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -510,8 +519,7 @@ public sealed class AceptarPedidoAlimentoHandler(
         pedido.Aceptar(request.FechaEntregaEstimada, FechasNegocio.Hoy(), actorId);
         notificaciones.Agregar(NotificacionInterna.ParaTenant(
             TipoNotificacionPedido.PedidoAceptado, pedido.Id, pedido.ClienteId));
-        registroVuelo.Decidir("avicola.pedidos.aceptar", "aceptacion", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.pedidos.aceptar", "aceptacion", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }
@@ -537,8 +545,7 @@ public sealed class ActualizarEntregaEstimadaPedidoHandler(
         notificaciones.Agregar(NotificacionInterna.ParaTenant(
             TipoNotificacionPedido.EntregaEstimadaActualizada, pedido.Id, pedido.ClienteId,
             Meta(request.NuevaFecha)));
-        registroVuelo.Decidir("avicola.pedidos.actualizar-entrega", "actualizacion", "aplicada",
-            new Dictionary<string, object?>());
+        registroVuelo.Decidir("avicola.pedidos.actualizar-entrega", "actualizacion", "aplicada");
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 
@@ -576,7 +583,11 @@ public sealed class RegistrarDespachoPedidoHandler(
             request.LineasEntregadas, FechasNegocio.Hoy(), actorId);
         notificaciones.Agregar(NotificacionInterna.ParaTenant(
             TipoNotificacionPedido.PedidoDespachado, pedido.Id, pedido.ClienteId));
-        registroVuelo.Decidir("avicola.pedidos.despachar", "despacho", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.pedidos.despachar",
+                ("Lineas", DatoRegistroVuelo.Entero),
+                ("Diferencias", DatoRegistroVuelo.Entero)),
+            "despacho", "aplicada",
             new Dictionary<string, object?>
             {
                 ["Lineas"] = request.LineasEntregadas.Count,
@@ -664,7 +675,11 @@ public sealed class ConfirmarRecepcionPedidoHandler(
                 ? TipoNotificacionPedido.RecepcionConforme
                 : TipoNotificacionPedido.RecepcionConDiferencias,
             pedido.Id));
-        registroVuelo.Decidir("avicola.pedidos.recibir", "recepcion", "aplicada",
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.pedidos.recibir",
+                ("Lineas", DatoRegistroVuelo.Entero),
+                ("Diferencias", DatoRegistroVuelo.Entero)),
+            "recepcion", "aplicada",
             new Dictionary<string, object?>
             {
                 ["Lineas"] = request.LineasRecibidas.Count,

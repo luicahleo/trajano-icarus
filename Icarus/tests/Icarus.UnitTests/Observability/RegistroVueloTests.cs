@@ -1,12 +1,85 @@
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Observability;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
+using Serilog.Extensions.Logging;
 using Xunit;
 
 namespace Icarus.UnitTests.Observability;
 
 public sealed class RegistroVueloTests
 {
+    [Fact]
+    public void LaDecisionConDescriptorConservaCamposPermitidosYRechazaDesconocidosEnSerilog()
+    {
+        var capturador = new CapturadorSink();
+        using var logger = new LoggerConfiguration().WriteTo.Sink(capturador).CreateLogger();
+        ILoggerFactory fabrica = new SerilogLoggerFactory(logger);
+        var registro = new RegistroVuelo(fabrica.CreateLogger<RegistroVuelo>());
+        var descriptor = DescriptorOperacionRegistroVuelo.Crear("avicola.pedidos.crear",
+            ("Lineas", DatoRegistroVuelo.Entero));
+
+        registro.Decidir(descriptor, "creacion", "aplicada", new Dictionary<string, object?>
+        {
+            ["Lineas"] = 3,
+            ["Email"] = "no-debe-aparecer",
+            ["TrabajadorId"] = Guid.NewGuid(),
+        });
+
+        var evento = Assert.Single(capturador.Eventos);
+        Assert.Equal("3", Prop(evento, "Lineas"));
+        Assert.Equal("applied", Prop(evento, "Outcome"));
+        Assert.DoesNotContain("Email", evento.Properties.Keys);
+        Assert.DoesNotContain("TrabajadorId", evento.Properties.Keys);
+        Assert.Contains("operación avicola.pedidos.crear", evento.RenderMessage());
+    }
+
+    [Fact]
+    public void LaDecisionSinDescriptorNoTransportaCamposLibres()
+    {
+        var capturador = new CapturadorSink();
+        using var logger = new LoggerConfiguration().WriteTo.Sink(capturador).CreateLogger();
+        ILoggerFactory fabrica = new SerilogLoggerFactory(logger);
+        var registro = new RegistroVuelo(fabrica.CreateLogger<RegistroVuelo>());
+
+        registro.Decidir("avicola.pedidos.devolver", "devolucion", "aplicada");
+
+        var evento = Assert.Single(capturador.Eventos);
+        Assert.Equal("operation.decision", Prop(evento, "EventName"));
+        Assert.DoesNotContain("Lineas", evento.Properties.Keys);
+    }
+
+    [Fact]
+    public void LaCompensacionConservaCompensationKindEnSerilog()
+    {
+        var capturador = new CapturadorSink();
+        using var logger = new LoggerConfiguration().WriteTo.Sink(capturador).CreateLogger();
+        ILoggerFactory fabrica = new SerilogLoggerFactory(logger);
+        var registro = new RegistroVuelo(fabrica.CreateLogger<RegistroVuelo>());
+
+        using (var compensacion = registro.IniciarCompensacion("clientes.suspender_alta_incompleta"))
+        {
+            compensacion.Completar();
+        }
+
+        Assert.Equal(2, capturador.Eventos.Count);
+        Assert.All(capturador.Eventos,
+            e => Assert.Equal("logical", Prop(e, "CompensationKind")));
+    }
+
+    private static string? Prop(LogEvent evento, string nombre) =>
+        evento.Properties.TryGetValue(nombre, out var valor)
+            ? (valor as ScalarValue)?.Value?.ToString()
+            : null;
+
+    private sealed class CapturadorSink : ILogEventSink
+    {
+        public List<LogEvent> Eventos { get; } = [];
+        public void Emit(LogEvent logEvent) => Eventos.Add(logEvent);
+    }
+
     [Fact]
     public void RegistraInicioYFinConCamposEstablesYDescartaCamposNoPermitidos()
     {
@@ -62,7 +135,7 @@ public sealed class RegistroVueloTests
         Assert.DoesNotContain("TrabajadorId", evento.Properties.Keys);
     }
 
-    private sealed class LoggerCapturador : ILogger
+    private sealed class LoggerCapturador : Microsoft.Extensions.Logging.ILogger
     {
         public List<EventoCapturado> Eventos { get; } = [];
 
