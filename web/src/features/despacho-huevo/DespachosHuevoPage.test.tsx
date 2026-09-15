@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthContext';
+import { INTERVALO_SONDEO_MS } from '../../lib/sondeo';
 import { DespachosHuevoPage } from './DespachosHuevoPage';
 
 function respuesta(status: number, cuerpo?: unknown) {
@@ -227,5 +228,48 @@ describe('DespachosHuevoPage', () => {
 
     expect(await screen.findByText('No hay despachos todavía. Creá el primero.')).toBeInTheDocument();
     expect(screen.queryByText(/Novedades del despacho de huevo/i)).not.toBeInTheDocument();
+  });
+
+  test('actualiza el contador de novedades sin recargar la página', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.stubGlobal(
+        'fetch',
+        baseFetch({
+          'GET /api/despachos-huevo': [
+            respuesta(200, pagina([DESPACHO], 1)),
+            respuesta(200, pagina([DESPACHO], 1)),
+          ],
+          'GET /api/despachos-huevo/notificaciones': [
+            respuesta(200, { items: [], contador: 0 }),
+            respuesta(200, {
+              items: [
+                {
+                  id: 'n1',
+                  tipo: 'DespachoRecibido',
+                  despachoHuevoId: 'h1',
+                  fechaUtc: '2026-09-14T10:00:00Z',
+                  leida: false,
+                  meta: null,
+                },
+              ],
+              contador: 1,
+            }),
+          ],
+        }),
+      );
+      renderPagina();
+      expect(await screen.findByText('D-000001')).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(INTERVALO_SONDEO_MS + 100);
+
+      await waitFor(() =>
+        expect(
+          screen.getByText(/Novedades del despacho de huevo \(1\)/),
+        ).toBeInTheDocument(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
