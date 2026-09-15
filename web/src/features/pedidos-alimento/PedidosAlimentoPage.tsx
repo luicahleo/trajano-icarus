@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -17,6 +17,7 @@ import {
 import DoneAllRoundedIcon from '@mui/icons-material/DoneAllRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useConexion } from '../../app/useConexion';
 import { BarraFiltros } from '../../app/ui/BarraFiltros';
 import type { DeclaracionFiltro, ValoresFiltros } from '../../app/ui/BarraFiltros';
 import { ControlesPaginacion } from '../../app/ui/ControlesPaginacion';
@@ -25,6 +26,7 @@ import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
 import { TablaDatos } from '../../app/ui/TablaDatos';
 import type { Columna } from '../../app/ui/TablaDatos';
 import { TAMANO_PAGINA_POR_DEFECTO } from '../../lib/paginacion';
+import { INTERVALO_SONDEO_MS } from '../../lib/sondeo';
 import { useAuth } from '../auth/AuthContext';
 import { listarTrabajadores } from '../trabajadores/api';
 import {
@@ -87,10 +89,46 @@ export function PedidosAlimentoPage() {
 
   const { data: cupo } = useQuery({ queryKey: ['pedidos-alimento', 'cupo'], queryFn: obtenerCupo });
 
+  const hayConexion = useConexion();
+
   const { data: notificaciones } = useQuery({
     queryKey: ['pedidos-alimento', 'notificaciones'],
     queryFn: listarNotificaciones,
+    // Sin conexión no se sondea: la app es offline-first a propósito y un
+    // reintento cada treinta segundos solo acumularía fallos.
+    refetchInterval: hayConexion ? INTERVALO_SONDEO_MS : false,
+    // Una pestaña oculta no necesita el badge al día.
+    refetchIntervalInBackground: false,
   });
+
+  // Huella de la bandeja de novedades. El contador solo no alcanza: marcar una
+  // como leída mientras llega otra lo dejaría igual. No depende del orden en
+  // que el servidor devuelva la lista.
+  const huellaNovedades = notificaciones
+    ? [
+        notificaciones.contador,
+        notificaciones.items.length,
+        notificaciones.items.reduce((max, n) => (n.fechaUtc > max ? n.fechaUtc : max), ''),
+      ].join(':')
+    : null;
+  const huellaPrevia = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (huellaNovedades === null) return;
+    if (huellaPrevia.current === null) {
+      huellaPrevia.current = huellaNovedades; // primer render: nada que refrescar
+      return;
+    }
+    if (huellaPrevia.current === huellaNovedades) return;
+    huellaPrevia.current = huellaNovedades;
+    // Solo la bandeja. Invalidar por el prefijo 'pedidos-alimento' alcanzaría
+    // a esta misma query de novedades y el refresco se realimentaría sin fin;
+    // la clave de la bandeja es la única cuyo segundo elemento es la página.
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        query.queryKey[0] === 'pedidos-alimento' && typeof query.queryKey[1] === 'number',
+    });
+  }, [huellaNovedades, queryClient]);
 
   const marcarLeida = useMutation({
     mutationFn: marcarNotificacionLeida,

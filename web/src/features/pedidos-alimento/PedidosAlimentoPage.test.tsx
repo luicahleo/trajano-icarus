@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthContext';
+import { INTERVALO_SONDEO_MS } from '../../lib/sondeo';
 import { PedidosAlimentoPage } from './PedidosAlimentoPage';
 
 function respuesta(status: number, cuerpo?: unknown) {
@@ -206,5 +207,47 @@ describe('PedidosAlimentoPage', () => {
     renderPagina();
     await usuario.click(await screen.findByRole('link', { name: /nuevo pedido/i }));
     expect(await screen.findByText('Formulario de pedido')).toBeInTheDocument();
+  });
+
+  test('actualiza el contador de novedades sin recargar la página', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.stubGlobal(
+        'fetch',
+        baseFetch({
+          'GET /api/pedidos-alimento': [
+            respuesta(200, pagina([PEDIDO], 1)),
+            respuesta(200, pagina([PEDIDO], 1)),
+          ],
+          'GET /api/pedidos-alimento/notificaciones': [
+            respuesta(200, { items: [], contador: 0 }),
+            respuesta(200, {
+              items: [
+                {
+                  id: 'n1',
+                  tipo: 'PedidoAceptado',
+                  pedidoId: 'p1',
+                  fechaUtc: '2026-09-14T10:00:00Z',
+                  leida: false,
+                  meta: null,
+                },
+              ],
+              contador: 1,
+            }),
+          ],
+        }),
+      );
+      renderPagina();
+      expect(await screen.findByText('P-000001')).toBeInTheDocument();
+      expect(screen.queryByText(/Novedades de CAISY/)).not.toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(INTERVALO_SONDEO_MS + 100);
+
+      await waitFor(() =>
+        expect(screen.getByText(/Novedades de CAISY \(1\)/)).toBeInTheDocument(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
