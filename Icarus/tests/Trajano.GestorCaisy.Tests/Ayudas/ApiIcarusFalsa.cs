@@ -547,9 +547,11 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
             id, new(2025, 11, 2), DateOnly.Parse(fechaVigencia, CultureInfo.InvariantCulture), estado,
             0.50m, Guid.NewGuid(),
             [
+                // La fila Primera difiere del precio anterior esperado y la
+                // fila Extra coincide, para probar ambos casos visuales.
                 new DetallePrecioHuevoApi(
-                    Guid.NewGuid(), "Primera", 0.045m, 0.044m, 0.545m),
+                    Guid.NewGuid(), "Primera", 0.045m, 0.044m, 0.545m, 0.0445m),
                 new DetallePrecioHuevoApi(
-                    Guid.NewGuid(), "Extra", 0.050m, 0.049m, 0.550m),
+                    Guid.NewGuid(), "Extra", 0.050m, 0.049m, 0.550m, 0.049m),
             ]);
 }

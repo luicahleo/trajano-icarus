@@ -76,9 +76,12 @@ public sealed record ObtenerPublicacionPrecioHuevoQuery(Guid PublicacionId)
 public sealed record ObtenerPrecioHuevoVigenteQuery(DateOnly? Fecha)
     : IRequest<PublicacionPrecioHuevoDetalle?>;
 
+// PrecioAnteriorEsperado es informativo (spec 2026-09-15): el PrecioAlProductor
+// de la publicación vigente a la fecha de notificación para el mismo tamaño.
+// No se persiste ni bloquea publicar; solo alimenta la advertencia visual.
 public sealed record DetallePrecioHuevoResumen(
     Guid Id, string Tamano, decimal PrecioAlProductor, decimal? PrecioActualDocumento,
-    decimal PrecioUnitario);
+    decimal PrecioUnitario, decimal? PrecioAnteriorEsperado = null);
 
 public sealed record PublicacionPrecioHuevoDetalle(
     Guid Id, DateOnly FechaNotificacion, DateOnly FechaVigencia, string Estado,
@@ -244,7 +247,9 @@ public sealed class ObtenerPublicacionPrecioHuevoHandler(IRepositorioPublicacion
     {
         var publicacion = await repositorio.ObtenerPorIdAsync(request.PublicacionId, cancellationToken)
             ?? throw new NotFoundException("Publicación de precio de huevo", request.PublicacionId);
-        return MapeadorPreciosHuevo.Mapear(publicacion);
+        var anterior = await repositorio.ObtenerVigenteAsync(
+            publicacion.FechaNotificacion, cancellationToken);
+        return MapeadorPreciosHuevo.Mapear(publicacion, anterior);
     }
 }
 
@@ -256,7 +261,11 @@ public sealed class ObtenerPrecioHuevoVigenteHandler(IRepositorioPublicacionesPr
     {
         var vigente = await repositorio.ObtenerVigenteAsync(
             request.Fecha ?? FechasNegocio.Hoy(), cancellationToken);
-        return vigente is null ? null : MapeadorPreciosHuevo.Mapear(vigente);
+        if (vigente is null)
+            return null;
+        var anterior = await repositorio.ObtenerVigenteAsync(
+            vigente.FechaNotificacion, cancellationToken);
+        return MapeadorPreciosHuevo.Mapear(vigente, anterior);
     }
 }
 
@@ -279,15 +288,25 @@ public sealed class DescargarDocumentoOriginalPrecioHuevoHandler(
 
 internal static class MapeadorPreciosHuevo
 {
-    public static PublicacionPrecioHuevoDetalle Mapear(PublicacionPrecioHuevo publicacion) =>
-        new(publicacion.Id, publicacion.FechaNotificacion, publicacion.FechaVigencia,
+    public static PublicacionPrecioHuevoDetalle Mapear(
+        PublicacionPrecioHuevo publicacion, PublicacionPrecioHuevo? anterior = null)
+    {
+        var preciosAnteriores = new Dictionary<TamanoHuevo, decimal>();
+        if (anterior is not null)
+            foreach (var detalle in anterior.Detalles)
+                preciosAnteriores[detalle.Tamano] = detalle.PrecioAlProductor;
+        return new(publicacion.Id, publicacion.FechaNotificacion, publicacion.FechaVigencia,
             publicacion.Estado.ToString(), publicacion.Servicio, publicacion.DocumentoOriginalId,
             publicacion.Detalles
                 .OrderBy(d => d.Tamano)
                 .Select(d => new DetallePrecioHuevoResumen(
                     d.Id, d.Tamano.ToString(), d.PrecioAlProductor, d.PrecioActualDocumento,
-                    d.PrecioAlProductor + publicacion.Servicio))
+                    d.PrecioAlProductor + publicacion.Servicio,
+                    preciosAnteriores.TryGetValue(d.Tamano, out var precioAnterior)
+                        ? precioAnterior
+                        : null))
                 .ToList());
+    }
 }
 
 public sealed record PrevisualizarCorreccionPrecioHuevoQuery(Guid PublicacionErroneaId, Guid PublicacionCorrectivaId)

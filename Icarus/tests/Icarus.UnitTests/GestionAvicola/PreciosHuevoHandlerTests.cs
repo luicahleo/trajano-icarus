@@ -157,4 +157,61 @@ public class PreciosHuevoHandlerTests
 
         Assert.Null(detalle);
     }
+
+    [Fact]
+    public async Task ObtenerDetalleExponeElPrecioAnteriorEsperadoPorTamano()
+    {
+        var borrador = new PublicacionPrecioHuevo(
+            FechaNotificacion, FechaVigencia, 0.40m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.046m, 0.045m)]);
+        var vigente = new PublicacionPrecioHuevo(
+            new(2025, 10, 1), new(2025, 10, 1), 0.40m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Primera, 0.0445m, null)]);
+        _repositorio.ObtenerPorIdAsync(borrador.Id, Arg.Any<CancellationToken>())
+            .Returns(borrador);
+        _repositorio.ObtenerVigenteAsync(borrador.FechaNotificacion, Arg.Any<CancellationToken>())
+            .Returns(vigente);
+
+        var detalle = await new ObtenerPublicacionPrecioHuevoHandler(_repositorio).Handle(
+            new ObtenerPublicacionPrecioHuevoQuery(borrador.Id), CancellationToken.None);
+
+        var fila = Assert.Single(detalle.Detalles);
+        Assert.Equal(0.0445m, fila.PrecioAnteriorEsperado);
+    }
+
+    [Fact]
+    public async Task ObtenerDetalleSinPublicacionAnteriorNoInventaPrecioEsperado()
+    {
+        var borrador = CrearBorradorPublicable();
+        _repositorio.ObtenerPorIdAsync(borrador.Id, Arg.Any<CancellationToken>())
+            .Returns(borrador);
+        _repositorio.ObtenerVigenteAsync(borrador.FechaNotificacion, Arg.Any<CancellationToken>())
+            .Returns((PublicacionPrecioHuevo?)null);
+
+        var detalle = await new ObtenerPublicacionPrecioHuevoHandler(_repositorio).Handle(
+            new ObtenerPublicacionPrecioHuevoQuery(borrador.Id), CancellationToken.None);
+
+        Assert.All(detalle.Detalles, d => Assert.Null(d.PrecioAnteriorEsperado));
+    }
+
+    [Fact]
+    public async Task ObtenerDetalleConTamanoSinCorrespondenciaNoInventaPrecioEsperado()
+    {
+        var borrador = CrearBorradorPublicable();
+        var vigente = new PublicacionPrecioHuevo(
+            new(2025, 10, 1), new(2025, 10, 1), 0.40m,
+            [new DatosDetallePrecioHuevo(TamanoHuevo.Extra, 0.0445m, null)]);
+        _repositorio.ObtenerPorIdAsync(borrador.Id, Arg.Any<CancellationToken>())
+            .Returns(borrador);
+        _repositorio.ObtenerVigenteAsync(borrador.FechaNotificacion, Arg.Any<CancellationToken>())
+            .Returns(vigente);
+
+        var detalle = await new ObtenerPublicacionPrecioHuevoHandler(_repositorio).Handle(
+            new ObtenerPublicacionPrecioHuevoQuery(borrador.Id), CancellationToken.None);
+
+        Assert.Equal(0.0445m,
+            Assert.Single(detalle.Detalles, d => d.Tamano == "Extra").PrecioAnteriorEsperado);
+        Assert.All(detalle.Detalles.Where(d => d.Tamano != "Extra"),
+            d => Assert.Null(d.PrecioAnteriorEsperado));
+    }
 }

@@ -234,6 +234,26 @@ public class ApiIcarusClientTests
     }
 
     [Fact]
+    public async Task ObtenerPublicacionHuevoParseaElPrecioAnteriorEsperado()
+    {
+        var id = Guid.NewGuid();
+        _manejador.Responder(HttpStatusCode.OK,
+            $$"""
+            {"id":"{{id}}","fechaNotificacion":"2025-11-02","fechaVigencia":"2025-12-01",
+             "estado":"Borrador","servicio":0.40,"documentoOriginalId":null,
+             "detalles":[{"id":"11111111-1111-1111-1111-111111111111","tamano":"Primera",
+                         "precioAlProductor":0.046,"precioActualDocumento":0.045,
+                         "precioUnitario":0.446,"precioAnteriorEsperado":0.0445}]}
+            """);
+
+        var publicacion = await _cliente.ObtenerPublicacionHuevoAsync(id);
+
+        var detalle = Assert.Single(publicacion.Detalles);
+        Assert.Equal(0.0445m, detalle.PrecioAnteriorEsperado);
+        Assert.Equal($"{BaseApi}precios-huevo-caisy/{id}", _manejador.Peticiones[0].Uri.ToString());
+    }
+
+    [Fact]
     public async Task ListarNotificacionesEnviaBearerYParseaLaColeccion()
     {
         _manejador.Responder(HttpStatusCode.OK,
