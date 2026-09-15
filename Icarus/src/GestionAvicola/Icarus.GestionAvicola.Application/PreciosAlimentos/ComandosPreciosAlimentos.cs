@@ -240,11 +240,8 @@ public sealed class PublicarNotificacionPreciosHandler(
         var vigente = await repositorio.ObtenerVigenteAsync(notificacion.FechaDocumento, cancellationToken);
         var discrepancias = BuscarDiscrepancias(notificacion, vigente);
         if (discrepancias.Count > 0)
-            throw new ValidationException(new[]
-            {
-                new ValidationFailure("Documento",
-                    "El «Precio actual» del documento no coincide con la publicación vigente; revise el borrador antes de publicar."),
-            });
+            throw new ValidationException(discrepancias.Select(d => new ValidationFailure(
+                $"Detalles[{d.DetalleId}].PrecioActualDocumento", d.Mensaje())));
 
         notificacion.Publicar();
         registroVuelo.Decidir("avicola.precios.publicar", "publicacion", "aplicada",
@@ -252,7 +249,11 @@ public sealed class PublicarNotificacionPreciosHandler(
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 
-    private static List<DetallePrecioAlimento> BuscarDiscrepancias(
+    // La interfaz de CAISY es en español (Bolivia): los precios de la
+    // discrepancia se muestran con coma decimal.
+    private static readonly CultureInfo CulturaInterfaz = CultureInfo.GetCultureInfo("es-BO");
+
+    private static List<DiscrepanciaPrecio> BuscarDiscrepancias(
         NotificacionPreciosAlimentos notificacion, NotificacionPreciosAlimentos? vigente)
     {
         if (vigente is null)
@@ -263,7 +264,22 @@ public sealed class PublicarNotificacionPreciosHandler(
             .Where(d => d.PrecioActualDocumento is { } precioActual
                 && preciosVigentes.TryGetValue((d.TipoAlimento, d.Presentacion), out var precioVigente)
                 && precioActual != precioVigente)
+            .Select(d => new DiscrepanciaPrecio(
+                d.Id, d.TipoAlimento, d.Presentacion, d.PrecioActualDocumento!.Value,
+                preciosVigentes[(d.TipoAlimento, d.Presentacion)]))
             .ToList();
+    }
+
+    // El borrador es editable: la discrepancia se identifica por tipo y
+    // presentación, nunca por la fila original del Excel (spec 2026-09-15).
+    private sealed record DiscrepanciaPrecio(
+        Guid DetalleId, TipoAlimento Tipo, PresentacionAlimento Presentacion,
+        decimal PrecioBorrador, decimal PrecioVigente)
+    {
+        public string Mensaje() =>
+            $"Tipo: {Tipo}; presentación: {Presentacion}; columna: PRECIO ACTUAL; " +
+            $"valor del borrador: {PrecioBorrador.ToString("0.00", CulturaInterfaz)}; " +
+            $"valor vigente esperado: {PrecioVigente.ToString("0.00", CulturaInterfaz)}.";
     }
 }
 

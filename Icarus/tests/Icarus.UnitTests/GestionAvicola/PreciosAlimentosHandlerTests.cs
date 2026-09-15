@@ -151,7 +151,62 @@ public class PreciosAlimentosHandlerTests
 
         Assert.Equal(EstadoNotificacionPreciosAlimentos.Borrador, borrador.Estado);
         Assert.Contains(excepcion.Errors, e =>
-            e.ErrorMessage.Contains("Precio actual", StringComparison.Ordinal));
+            e.ErrorMessage.Contains("PRECIO ACTUAL", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task PublicarDevuelveUnaDiscrepanciaPorCadaPrecioActualDiferente()
+    {
+        // Dos líneas del borrador declaran un «Precio actual» distinto del
+        // vigente: la publicación se bloquea y la API devuelve una entrada por
+        // línea, con tipo, presentación, columna y ambos precios.
+        var borrador = new NotificacionPreciosAlimentos(
+            FechaDocumento, VigenteDesde, 1.20m, 0.60m, 0.75m,
+            [
+                new DatosDetallePrecio(TipoAlimento.Iniciador, PresentacionAlimento.Bolsa,
+                    176.5m, 22, 35, 179m),
+                new DatosDetallePrecio(TipoAlimento.Crecimiento, PresentacionAlimento.Granel,
+                    174.5m, 22, 35, 170m),
+            ]);
+        var vigente = new NotificacionPreciosAlimentos(
+            new(2025, 10, 1), new(2025, 10, 1), 1.10m, 0.50m, 0.70m,
+            [
+                new DatosDetallePrecio(TipoAlimento.Iniciador, PresentacionAlimento.Bolsa,
+                    180m, 22, 35, null),
+                new DatosDetallePrecio(TipoAlimento.Crecimiento, PresentacionAlimento.Granel,
+                    172.5m, 22, 35, null),
+            ]);
+        _repositorio.ObtenerPorIdAsync(borrador.Id, Arg.Any<CancellationToken>())
+            .Returns(borrador);
+        _repositorio.ExistePublicadaConVigenciaIgualAsync(
+                Arg.Any<DateOnly>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _repositorio.ObtenerVigenteAsync(borrador.FechaDocumento, Arg.Any<CancellationToken>())
+            .Returns(vigente);
+
+        var excepcion = await Assert.ThrowsAsync<ValidationException>(() =>
+            CrearPublicador().Handle(
+                new PublicarNotificacionPreciosCommand(borrador.Id), CancellationToken.None));
+
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Borrador, borrador.Estado);
+        Assert.Equal(2, excepcion.Errors.Count());
+        Assert.All(excepcion.Errors, e =>
+        {
+            Assert.StartsWith("Detalles[", e.PropertyName, StringComparison.Ordinal);
+            Assert.EndsWith("].PrecioActualDocumento", e.PropertyName, StringComparison.Ordinal);
+        });
+        var iniciador = Assert.Single(
+            excepcion.Errors, e => e.ErrorMessage.Contains("Iniciador", StringComparison.Ordinal));
+        Assert.Contains("Bolsa", iniciador.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("PRECIO ACTUAL", iniciador.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("179,00", iniciador.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("180,00", iniciador.ErrorMessage, StringComparison.Ordinal);
+        var crecimiento = Assert.Single(
+            excepcion.Errors, e => e.ErrorMessage.Contains("Crecimiento", StringComparison.Ordinal));
+        Assert.Contains("Granel", crecimiento.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("170,00", crecimiento.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("172,50", crecimiento.ErrorMessage, StringComparison.Ordinal);
+        await _unidadTrabajo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
