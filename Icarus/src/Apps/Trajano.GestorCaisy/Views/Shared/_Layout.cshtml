@@ -11,10 +11,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Prompt:wght@600;700&display=swap" />
     <link rel="stylesheet" href="~/css/estilos.css" asp-append-version="true" />
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" sizes="32x32" />
 </head>
 <body>
     <a class="salto" href="#contenido-principal">Saltar al contenido</a>
     <header class="barra">
+        <partial name="_MarcaIcarus" />
         <span class="barra__marca">Trajano GestorCaisy</span>
         <span class="barra__contexto" aria-hidden="true">/</span>
         <span class="barra__titulo">@(ViewData["Titulo"] ?? "Inicio")</span>

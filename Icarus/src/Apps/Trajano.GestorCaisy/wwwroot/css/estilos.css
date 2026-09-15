@@ -89,6 +89,14 @@ a { color: var(--aqua-oscuro); }
     white-space: nowrap;
 }
 
+/* Marca de producto Icarus: monocroma, hereda el color de la barra. */
+.marca-icarus {
+    width: 28px;
+    height: 28px;
+    display: block;
+    flex-shrink: 0;
+}
+
 .barra__contexto { opacity: 0.5; }
 
 .barra__titulo {
