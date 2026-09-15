@@ -141,6 +141,30 @@ public class PreciosControllerTests
     }
 
     [Fact]
+    public async Task PublicarConVariasDiscrepanciasConservaTodosLosMensajesParaLaConfirmacion()
+    {
+        _api.ErrorDePublicar = new ErrorApiException(400, "Solicitud inválida", erroresValidacion:
+            new Dictionary<string, IReadOnlyList<string>>
+            {
+                ["Detalles[4f].PrecioActualDocumento"] =
+                    ["Tipo: Iniciador; presentación: Bolsa; columna: PRECIO ACTUAL; valor del borrador: 179,00; valor vigente esperado: 180,00."],
+                ["Detalles[9a].PrecioActualDocumento"] =
+                    ["Tipo: Crecimiento; presentación: Granel; columna: PRECIO ACTUAL; valor del borrador: 170,00; valor vigente esperado: 172,50."],
+            });
+
+        var resultado = await _controlador.Publicar(Guid.NewGuid(), default);
+
+        var redireccion = Assert.IsType<RedirectToActionResult>(resultado);
+        Assert.Equal(nameof(PreciosController.ConfirmarPublicacion), redireccion.ActionName);
+        var mensajes = Assert.IsAssignableFrom<IReadOnlyList<string>>(
+            _controlador.TempData["ErroresDiscrepancias"]);
+        Assert.Equal(2, mensajes.Count);
+        Assert.Contains(mensajes, m => m.Contains("Iniciador", StringComparison.Ordinal));
+        Assert.Contains(mensajes, m => m.Contains("Crecimiento", StringComparison.Ordinal));
+        Assert.Equal(1, _api.VecesPublicar);
+    }
+
+    [Fact]
     public async Task PublicarEnConflictoMuestraElMensajeDeLaApi()
     {
         _api.ErrorDePublicar = new ErrorApiException(409, "Conflicto con el estado actual");

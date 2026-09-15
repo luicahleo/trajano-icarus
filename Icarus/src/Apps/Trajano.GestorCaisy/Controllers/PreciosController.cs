@@ -158,10 +158,27 @@ public sealed class PreciosController(IApiIcarusClient api) : Controller
         }
         catch (ErrorApiException error) when (error.Estado is 400 or 409)
         {
-            TempData["Error"] = error.MensajeParaLaInterfaz();
+            // Una discrepancia de «Precio actual» llega como una entrada de
+            // validación por línea: se conservan todas para la pantalla de
+            // confirmación en lugar de aplanarlas en una sola alerta. Los 409 y
+            // las validaciones ajenas a los detalles mantienen su mensaje.
+            if (error.Estado == StatusCodes.Status400BadRequest
+                && TieneDiscrepanciasDeDetalles(error.ErroresValidacion))
+                TempData[ClaveErroresDiscrepancias] = error.ErroresValidacion!
+                    .SelectMany(entrada => entrada.Value)
+                    .ToList();
+            else
+                TempData["Error"] = error.MensajeParaLaInterfaz();
             return RedirectToAction(nameof(ConfirmarPublicacion), new { id });
         }
     }
+
+    private const string ClaveErroresDiscrepancias = "ErroresDiscrepancias";
+
+    private static bool TieneDiscrepanciasDeDetalles(
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? errores) =>
+        errores is not null && errores.Keys.Any(
+            clave => clave.StartsWith("Detalles[", StringComparison.Ordinal));
 
     [HttpPost("{id:guid}/Anular")]
     [ValidateAntiForgeryToken]
