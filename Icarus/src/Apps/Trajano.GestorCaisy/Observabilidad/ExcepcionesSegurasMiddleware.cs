@@ -37,7 +37,12 @@ public sealed class ExcepcionesSegurasMiddleware
     // y una referencia técnica, nunca la excepción cruda con su stack.
     private void RegistrarErrorSeguro(HttpContext contexto, Exception ex)
     {
-        var errorId = $"ERR-{Convert.ToHexString(RandomNumberGenerator.GetBytes(6))}";
+        // Un fallo secundario al representar la página reutiliza la referencia
+        // del incidente original en lugar de sustituirla por otra.
+        var errorId = contexto.Items.TryGetValue(ErrorIdItem, out var previo)
+            && previo is string previoTexto
+                ? previoTexto
+                : $"ERR-{Convert.ToHexString(RandomNumberGenerator.GetBytes(6))}";
         contexto.Items[ErrorIdItem] = errorId;
         var patron = RegistroHttpSeguro.PatronRuta(contexto);
         using (LogContext.PushProperty("ErrorId", errorId))

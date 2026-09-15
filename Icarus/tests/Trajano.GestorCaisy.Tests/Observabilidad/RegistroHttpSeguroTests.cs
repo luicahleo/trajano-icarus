@@ -22,7 +22,7 @@ public class RegistroHttpSeguroTests
         var respuesta = await cliente.GetAsync("/Sesion/Acceder");
         var correlation = Correlacion(respuesta);
 
-        var resumen = Assert.Single(Resumenes(correlation));
+        var resumen = Assert.Single(Resumenes(aplicacion, correlation));
         Assert.Equal("GET", Prop(resumen, "Method"));
         Assert.Equal(PatronControlador, Prop(resumen, "RoutePattern"));
         Assert.Equal(PatronControlador, Prop(resumen, "RequestPath"));
@@ -41,7 +41,7 @@ public class RegistroHttpSeguroTests
         var correlation = Correlacion(respuesta);
 
         Assert.Equal(HttpStatusCode.NotFound, respuesta.StatusCode);
-        var resumen = Assert.Single(Resumenes(correlation));
+        var resumen = Assert.Single(Resumenes(aplicacion, correlation));
         Assert.Equal("unmatched", Prop(resumen, "RoutePattern"));
         Assert.Equal("404", Prop(resumen, "StatusCode"));
         Assert.DoesNotContain("CANARIO", Serializar(resumen));
@@ -59,20 +59,20 @@ public class RegistroHttpSeguroTests
         var respuesta = await cliente.SendAsync(pedido);
         var correlation = Correlacion(respuesta);
 
-        var eventos = EventosDe(correlation);
+        var eventos = EventosDe(aplicacion, correlation);
         Assert.NotEmpty(eventos);
         foreach (var evento in eventos)
             Assert.DoesNotContain("CANARIO", Serializar(evento));
     }
 
-    private static List<LogEvent> EventosDe(string correlation) =>
-        AplicacionDePruebas.Colector.Eventos
+    private static List<LogEvent> EventosDe(AplicacionDePruebas aplicacion, string correlation) =>
+        aplicacion.Colector.Eventos
             .Where(e => e.Properties.TryGetValue("CorrelationId", out var valor)
                 && valor is ScalarValue { Value: string id } && id == correlation)
             .ToList();
 
-    private static List<LogEvent> Resumenes(string correlation) =>
-        EventosDe(correlation).Where(e => Prop(e, "EventName") == EventoResumen).ToList();
+    private static List<LogEvent> Resumenes(AplicacionDePruebas aplicacion, string correlation) =>
+        EventosDe(aplicacion, correlation).Where(e => Prop(e, "EventName") == EventoResumen).ToList();
 
     private static string Correlacion(HttpResponseMessage respuesta) =>
         respuesta.Headers.TryGetValues("X-Correlation-ID", out var valores)

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -15,11 +16,15 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
 {
     public ApiIcarusFalsa Api { get; } = new();
 
-    // Sink compartido para inspeccionar los eventos reales de Serilog.
-    public static ColectorSerilog Colector { get; } = new();
+    // Sink por instancia: los eventos de este host no se mezclan con otros.
+    public ColectorSerilog Colector { get; } = new();
 
     // Destino Seq adicional para las pruebas de ingestión aisladas.
     public string? UrlSeqAdicional { get; set; }
+
+    // Entorno real que resuelve la aplicación; permite cubrir Development,
+    // Testing y Production con la misma política de privacidad.
+    public string Entorno { get; set; } = "Testing";
 
     // Credenciales que la API falsa acepta como válidas.
     public const string CorreoValido = "gestor@caisy.test";
@@ -27,7 +32,15 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(Entorno);
+        // Aísla la URL Seq de desarrollo para no tocar el stack del usuario.
+        // Solo aplica cuando appsettings.Development.json declara ese sink.
+        if (Entorno == "Development")
+            builder.ConfigureAppConfiguration((_, configuracion) =>
+                configuracion.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Serilog:WriteTo:Seq:Args:serverUrl"] = "http://127.0.0.1:1",
+                }));
         // ConfigureTestServices corre DESPUÉS de Program.cs: reemplaza de
         // verdad el cliente tipado registrado por la aplicación.
         builder.ConfigureTestServices(services =>
@@ -35,6 +48,11 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
             // Última registración gana: sin RemoveAll, que en el flujo del
             // host diferido llega a borrar la registración de la aplicación.
             services.AddSingleton<IApiIcarusClient>(Api);
+            // Controladores y filtros exclusivos de las pruebas.
+            services.AddControllers().AddApplicationPart(
+                typeof(ControladorErroresDePrueba).Assembly);
+            services.Configure<MvcOptions>(
+                opciones => opciones.Filters.Add<FiltroFalloPaginaDeErrorPrueba>());
         });
         // Recompone el logger real y añade el sink de prueba.
         builder.ConfigureTestServices(servicios => servicios.AddSerilog(

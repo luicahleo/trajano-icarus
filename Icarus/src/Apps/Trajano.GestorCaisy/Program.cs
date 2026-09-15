@@ -92,7 +92,19 @@ app.UseSerilogRequestLogging(opciones =>
     // logger ajeno o en apagado silencie el resumen.
     opciones.Logger = app.Services.GetRequiredService<Serilog.ILogger>();
 });
-app.UseExceptionHandler("/Sesion/Error");
+// Cierra los caminos en que el manejador de excepciones relanza (respuesta ya
+// iniciada o fallo de la propia página de error): aborta sin fabricar otra
+// respuesta y sin dejar la excepción cruda al resumen HTTP.
+app.UseMiddleware<RespuestaErrorSeguraMiddleware>();
+// SuppressDiagnosticsCallback: el diagnóstico propio (backend.error) ya es
+// seguro, así que se suprime el evento redundante del framework con la
+// excepción cruda. Las fuentes que igualmente relanzan quedan cubiertas por
+// RespuestaErrorSeguraMiddleware y por la exclusión declarativa en appsettings.
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    ExceptionHandlingPath = "/Sesion/Error",
+    SuppressDiagnosticsCallback = _ => true,
+});
 app.UseMiddleware<ExcepcionesSegurasMiddleware>();
 app.UseStatusCodePagesWithReExecute("/Sesion/Error", "?codigo={0}");
 app.UseStaticFiles();
