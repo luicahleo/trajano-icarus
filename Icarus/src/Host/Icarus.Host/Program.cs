@@ -142,8 +142,8 @@ if (ejecutarMigraciones)
     // En Development y Testing migra y siembra los datos de prueba por rol (la
     // factory de Testing inyecta la cadena y las claves fijas). En Production
     // es opt-in vía Migraciones:EjecutarAlArranque (ruta de migración
-    // controlada por el despliegue, paridad con Caserito) y solo siembra el
-    // administrador de plataforma si SeedSettings está completo.
+    // controlada por el despliegue, paridad con Caserito) y ejecuta el
+    // bootstrap de las cuentas globales mínimas si SeedSettings está completo.
     using var alcance = app.Services.CreateScope();
     var db = alcance.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await db.Database.MigrateAsync();
@@ -198,13 +198,13 @@ if (ejecutarMigraciones)
     }
     else
     {
-        var opcionesSeedAdmin = app.Configuration
-            .GetSection(OpcionesSeedAdmin.Seccion)
-            .Get<OpcionesSeedAdmin>() ?? new OpcionesSeedAdmin();
-        var seedAdmin = new SeedAdminPlataforma(
+        var opcionesSeed = app.Configuration
+            .GetSection(OpcionesSeedCuentasIniciales.Seccion)
+            .Get<OpcionesSeedCuentasIniciales>() ?? new OpcionesSeedCuentasIniciales();
+        var seedCuentas = new SeedCuentasInicialesProduccion(
             alcance.ServiceProvider.GetRequiredService<UserManager<Usuario>>(),
-            alcance.ServiceProvider.GetRequiredService<ILogger<SeedAdminPlataforma>>());
-        await seedAdmin.EjecutarAsync(opcionesSeedAdmin);
+            alcance.ServiceProvider.GetRequiredService<ILogger<SeedCuentasInicialesProduccion>>());
+        await seedCuentas.EjecutarAsync(opcionesSeed);
     }
 }
 
