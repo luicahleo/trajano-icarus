@@ -229,6 +229,39 @@ public class PreciosAlimentosHandlerTests
     }
 
     [Fact]
+    public async Task PublicarComparaElPrecioActualConLaPublicacionAplicableEnSuVigencia()
+    {
+        // Una publicación futura ya programada sustituye al precio vigente hoy.
+        // El tercer documento debe controlar su «Precio actual» contra aquella,
+        // porque es la que regirá al entrar en vigencia.
+        var borrador = CrearBorradorPublicable();
+        var vigenteHoy = VigentePublicada();
+        vigenteHoy.Publicar();
+        var publicadaIntermedia = new NotificacionPreciosAlimentos(
+            new(2025, 11, 5), new(2025, 11, 7), 1.10m, 0.50m, 0.70m,
+            [new DatosDetallePrecio(TipoAlimento.Iniciador, PresentacionAlimento.Bolsa,
+                176.5m, 22, 35, null)]);
+        publicadaIntermedia.Publicar();
+
+        _repositorio.ObtenerPorIdAsync(borrador.Id, Arg.Any<CancellationToken>())
+            .Returns(borrador);
+        _repositorio.ExistePublicadaConVigenciaIgualAsync(
+                Arg.Any<DateOnly>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _repositorio.ObtenerVigenteAsync(borrador.FechaDocumento, Arg.Any<CancellationToken>())
+            .Returns(vigenteHoy);
+        _repositorio.ObtenerVigenteAsync(borrador.VigenteDesde, Arg.Any<CancellationToken>())
+            .Returns(publicadaIntermedia);
+
+        await CrearPublicador().Handle(
+            new PublicarNotificacionPreciosCommand(borrador.Id), CancellationToken.None);
+
+        Assert.Equal(EstadoNotificacionPreciosAlimentos.Publicada, borrador.Estado);
+        await _repositorio.Received(1).ObtenerVigenteAsync(
+            borrador.VigenteDesde, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task LaConcurrenciaOptimistaSeTraduceAConflictoGenerico()
     {
         // La traducción vive en el decorador de la unidad de trabajo
