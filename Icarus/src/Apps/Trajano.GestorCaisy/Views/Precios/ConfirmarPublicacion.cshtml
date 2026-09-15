@@ -16,6 +16,22 @@
     <span class="chip chip--@notificacion.Estado.ToLowerInvariant()">@notificacion.Estado</span>
 </div>
 <partial name="_Avisos" />
+@if (TempData["ErroresDiscrepancias"] is IEnumerable<string> discrepancias)
+{
+    <section class="alerta alerta--error" role="alert">
+        <p>
+            <strong>No se pudo publicar: el «Precio actual» no coincide con la
+            publicación vigente.</strong>
+            Corrija las líneas señaladas en el borrador antes de reintentar.
+        </p>
+        <ul class="validation-summary-errors">
+            @foreach (var discrepancia in discrepancias)
+            {
+                <li>@discrepancia</li>
+            }
+        </ul>
+    </section>
+}
 <section class="tarjeta">
     <h2>Resumen a publicar</h2>
     <dl class="ficha">

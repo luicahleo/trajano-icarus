@@ -121,6 +121,43 @@ public class FlujoPreciosTests
     }
 
     [Fact]
+    public async Task VariasDiscrepanciasAlPublicarSeMuestranTodasEnLaConfirmacion()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.DetalleActual = ApiIcarusFalsa.CrearDetalle(id, "Borrador");
+        aplicacion.Api.ErrorDePublicar = new ErrorApiException(400, "Solicitud inválida",
+            erroresValidacion: new Dictionary<string, IReadOnlyList<string>>
+            {
+                ["Detalles[4f].PrecioActualDocumento"] =
+                    ["Tipo: Iniciador; presentación: Bolsa; columna: PRECIO ACTUAL; valor del borrador: 179,00; valor vigente esperado: 180,00."],
+                ["Detalles[9a].PrecioActualDocumento"] =
+                    ["Tipo: Crecimiento; presentación: Granel; columna: PRECIO ACTUAL; valor del borrador: 170,00; valor vigente esperado: 172,50."],
+            });
+        var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, $"/Precios/{id}/Publicar");
+
+        var respuesta = await cliente.PostAsync($"/Precios/{id}/Publicar",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, respuesta.StatusCode);
+        var confirmacion = await cliente.GetStringAsync(respuesta.Headers.Location!.OriginalString);
+        Assert.Contains("Iniciador", confirmacion);
+        Assert.Contains("Bolsa", confirmacion);
+        Assert.Contains("Crecimiento", confirmacion);
+        Assert.Contains("Granel", confirmacion);
+        Assert.Contains("PRECIO ACTUAL", confirmacion);
+        Assert.Contains("valor del borrador", confirmacion);
+        Assert.Contains("valor vigente esperado", confirmacion);
+        Assert.Contains("Publicar ahora", confirmacion);
+        Assert.Contains("volver al borrador", confirmacion);
+        Assert.Equal(1, aplicacion.Api.VecesPublicar);
+    }
+
+    [Fact]
     public async Task AnularUnaPublicacionFutura()
     {
         using var aplicacion = new AplicacionDePruebas();
