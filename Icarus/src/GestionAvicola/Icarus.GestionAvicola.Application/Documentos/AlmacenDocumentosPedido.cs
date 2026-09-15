@@ -39,7 +39,7 @@ public sealed class OpcionesAlmacenDocumentosPedido
 
     public string Ruta { get; set; } = string.Empty;
 
-    public long MaxTamanoBytes { get; set; } = 5 * 1024 * 1024;
+    public long MaxTamanoBytes { get; set; } = 512 * 1024;
 
     public int MaxDimensionesPixeles { get; set; } = 8000;
 }

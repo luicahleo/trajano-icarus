@@ -19,7 +19,7 @@ namespace Icarus.Host.Endpoints;
 // /despachos-huevo-caisy, que también sirve el recibo PDF.
 public static class DespachosHuevoEndpoints
 {
-    private const long TamanoMaximoImagen = 5 * 1024 * 1024;
+    private const long TamanoMaximoImagen = 512 * 1024;
 
     public static IEndpointRouteBuilder MapDespachosHuevo(this IEndpointRouteBuilder app)
     {

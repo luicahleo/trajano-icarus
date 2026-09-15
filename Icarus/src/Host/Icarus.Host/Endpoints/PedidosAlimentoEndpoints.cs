@@ -25,7 +25,7 @@ namespace Icarus.Host.Endpoints;
 // técnicos, estados y conteos (anti-PII).
 public static class PedidosAlimentoEndpoints
 {
-    private const long TamanoMaximoImagen = 5 * 1024 * 1024;
+    private const long TamanoMaximoImagen = 512 * 1024;
 
     public static IEndpointRouteBuilder MapPedidosAlimento(this IEndpointRouteBuilder app)
     {

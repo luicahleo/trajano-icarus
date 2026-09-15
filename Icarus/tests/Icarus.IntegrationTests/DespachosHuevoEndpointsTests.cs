@@ -309,8 +309,8 @@ public class DespachosHuevoEndpointsTests
             DespachoMultipart([])));
         Assert.Equal(HttpStatusCode.BadRequest, vacio.StatusCode);
 
-        // Archivo mayor al límite (5 MiB): 413, sin tocar el estado.
-        var excesivo = new byte[5 * 1024 * 1024 + 1024];
+        // Archivo mayor al límite (512 KiB): 413, sin tocar el estado.
+        var excesivo = new byte[512 * 1024 + 1024];
         Array.Copy(ImagenPng(), excesivo, 8);
         var grande = await cliente.SendAsync(Pedido(
             HttpMethod.Post, $"/api/despachos-huevo/{sinFoto}/despachar", tokenCliente,

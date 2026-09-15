@@ -22,7 +22,7 @@ public class AlmacenDocumentosPedidoTests : IDisposable
         Path.GetTempPath(), "icarus-almacen-" + Guid.NewGuid().ToString("N"));
 
     private AlmacenDocumentosPedidoLocal CrearAlmacen(
-        long maxTamanoBytes = 5 * 1024 * 1024, int maxDimensiones = 8000)
+        long maxTamanoBytes = 512 * 1024, int maxDimensiones = 8000)
     {
         Directory.CreateDirectory(_raiz);
         var configuracion = new ConfigurationBuilder().AddInMemoryCollection(

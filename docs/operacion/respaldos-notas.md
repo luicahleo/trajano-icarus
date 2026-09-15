@@ -3,7 +3,8 @@
 Los documentos privados viven en volúmenes Docker fuera del web root, detrás
 de los puertos `IAlmacenDocumentosPrecios` (PDF de la Notificación de Precios)
 e `IAlmacenDocumentosPedido` (respaldo fotográfico que adjunta el receptor al
-confirmar la recepción de una nota de entrega). SQL Server guarda solo la
+confirmar la recepción de una nota de alimento y el emisor al despachar
+huevos). SQL Server guarda solo la
 clave lógica UUID, el MIME, el tamaño, el hash SHA-256 y un nombre seguro;
 nunca rutas físicas, Base64 ni URL públicas.
 
@@ -18,7 +19,7 @@ esa copia externa, el valor probatorio de los respaldos de notas se pierde.
 
 | Volumen (compose) | Ruta en el contenedor | Contenido |
 |---|---|---|
-| `documentos-pedidos` | `/app/documentos-pedidos` | Originales (`.bin`) y vistas (`.jpg`) del respaldo fotográfico del receptor al confirmar la recepción |
+| `documentos-pedidos` | `/app/documentos-pedidos` | Originales (`.bin`) y vistas (`.jpg`) de los respaldos fotográficos de pedidos de alimento y despachos de huevo |
 | `mssql-data` | `/var/opt/mssql` | La base, con las claves lógicas y hashes de cada documento |
 | `seq-data` | `/data` | Logs (no es obligatorio restaurarlo, solo conservar ventanas recientes) |
 
@@ -71,13 +72,13 @@ variables de entorno `AlmacenDocumentosPedido__*`) y se validan al arrancar:
 | Opción | Valor inicial | Efecto |
 |---|---|---|
 | `Ruta` | (vacío → `/app/documentos-pedidos`) | Directorio del volumen privado |
-| `MaxTamanoBytes` | 5 MiB | Tamaño máximo por archivo subido |
+| `MaxTamanoBytes` | 512 KiB | Tamaño máximo por archivo subido |
 | `MaxDimensionesPixeles` | 8000 | Lado máximo de la imagen (por lado) |
 
 Además, el endpoint rechaza de forma temprana (413) cualquier cuerpo mayor a
-5 MiB antes de leerlo. La foto del receptor se sube en el mismo paso que la
-confirmación de recepción, nunca por separado: cada pedido genera como máximo
-un respaldo, una sola vez.
+512 KiB antes de leerlo. La foto se sube en el mismo paso de confirmar la
+recepción de un pedido de alimento o despachar huevos, nunca por separado:
+cada operación genera como máximo un respaldo, una sola vez.
 
 ## Monitorización
 

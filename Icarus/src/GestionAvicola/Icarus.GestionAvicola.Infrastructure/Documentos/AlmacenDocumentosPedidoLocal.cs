@@ -27,7 +27,7 @@ public sealed class AlmacenDocumentosPedidoLocal : IAlmacenDocumentosPedido
         _raiz = seccion["Ruta"]
             ?? Path.Combine(AppContext.BaseDirectory, "documentos-pedidos");
         _maxTamanoBytes = seccion.GetValue<long?>("MaxTamanoBytes")
-            ?? 5 * 1024 * 1024;
+            ?? 512 * 1024;
         _maxDimensiones = seccion.GetValue<int?>("MaxDimensionesPixeles")
             ?? 8000;
     }
