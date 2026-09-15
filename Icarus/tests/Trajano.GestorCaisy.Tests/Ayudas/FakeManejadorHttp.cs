@@ -5,7 +5,8 @@ namespace Trajano.GestorCaisy.Tests.Ayudas;
 
 public sealed record PeticionCapturada(
     HttpMethod Metodo, Uri Uri, string? Cuerpo,
-    string? Autorizacion, string? Cookie, string? TipoDeContenido);
+    string? Autorizacion, string? Cookie, string? TipoDeContenido,
+    string? Correlacion, string? TraceParent);
 
 // Manejador HTTP de prueba: graba cada petición y devuelve las respuestas
 // encoladas en orden. Si se agotan, falla de forma explícita para que el test
@@ -52,7 +53,13 @@ public sealed class FakeManejadorHttp : HttpMessageHandler
             request.Headers.TryGetValues("Cookie", out var cookies)
                 ? string.Join("; ", cookies)
                 : null,
-            tipoDeContenido));
+            tipoDeContenido,
+            request.Headers.TryGetValues("X-Correlation-ID", out var correlacion)
+                ? correlacion.Single()
+                : null,
+            request.Headers.TryGetValues("traceparent", out var traceParent)
+                ? traceParent.Single()
+                : null));
 
         if (_respuestas.Count == 0)
             throw new InvalidOperationException(

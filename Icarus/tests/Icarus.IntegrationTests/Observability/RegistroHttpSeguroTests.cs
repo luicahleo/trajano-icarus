@@ -81,6 +81,21 @@ public class RegistroHttpSeguroTests
     }
 
     [Fact]
+    public async Task ElTraceIdW3cEntranteSeConservaEnElResumen()
+    {
+        var cliente = _factory.CreateClient();
+        var pedido = new HttpRequestMessage(HttpMethod.Get, "/api/health");
+        pedido.Headers.Add("traceparent",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
+
+        var respuesta = await cliente.SendAsync(pedido);
+        var correlation = Correlacion(respuesta);
+
+        var resumen = Assert.Single(Resumenes(correlation));
+        Assert.Equal("0af7651916cd43dd8448eb211c80319c", Prop(resumen, "TraceId"));
+    }
+
+    [Fact]
     public async Task ElRechazoPorClienteInactivoTambienGeneraResumen()
     {
         var (clienteId, token) = await CrearClienteConSesion();

@@ -76,7 +76,9 @@ builder.Services.AddAuthorization(opciones =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ISesionCaisyActual, SesionCaisyCookie>();
-builder.Services.AddHttpClient<IApiIcarusClient, ApiIcarusClient>();
+builder.Services.AddTransient<CorrelacionApiHandler>();
+builder.Services.AddHttpClient<IApiIcarusClient, ApiIcarusClient>()
+    .AddHttpMessageHandler<CorrelacionApiHandler>();
 
 var app = builder.Build();
 
