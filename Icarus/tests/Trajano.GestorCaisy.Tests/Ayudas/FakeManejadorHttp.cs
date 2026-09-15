@@ -17,6 +17,10 @@ public sealed class FakeManejadorHttp : HttpMessageHandler
 
     public List<PeticionCapturada> Peticiones { get; } = [];
 
+    // Cuando se define, el envío falla con una excepción de red que lleva el
+    // mensaje indicado (para comprobar que no se filtra a los eventos).
+    public string? MensajeDeFalloRed { get; set; }
+
     public void Responder(HttpStatusCode estado, string? cuerpoJson = null,
         IEnumerable<KeyValuePair<string, string>>? cabeceras = null,
         byte[]? contenido = null, string? tipoDeContenido = null)
@@ -60,6 +64,9 @@ public sealed class FakeManejadorHttp : HttpMessageHandler
             request.Headers.TryGetValues("traceparent", out var traceParent)
                 ? traceParent.Single()
                 : null));
+
+        if (MensajeDeFalloRed is not null)
+            throw new HttpRequestException(MensajeDeFalloRed);
 
         if (_respuestas.Count == 0)
             throw new InvalidOperationException(

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Trajano.GestorCaisy.Observabilidad;
 
 namespace Trajano.GestorCaisy.Servicios;
 
@@ -13,6 +14,47 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private const string CookieRefresh = "icarus_refresh";
+
+    // Plantillas técnicas de observabilidad: las constantes las aporta el
+    // código de cada operación; los valores dinámicos solo van a la URI real.
+    private static class Plantillas
+    {
+        public const string Sesion = "/api/identidad/sesion";
+        public const string Renovar = "/api/identidad/sesion/renovar";
+        public const string Notificaciones = "/api/precios-alimentos/";
+        public const string Notificacion = "/api/precios-alimentos/{id}";
+        public const string NotificacionPublicar = "/api/precios-alimentos/{id}/publicar";
+        public const string NotificacionAnular = "/api/precios-alimentos/{id}/anular";
+        public const string NotificacionDocumento = "/api/precios-alimentos/{id}/documento-original";
+        public const string NotificacionImportar = "/api/precios-alimentos/importar";
+        public const string PublicacionesHuevo = "/api/precios-huevo-caisy/";
+        public const string PublicacionHuevo = "/api/precios-huevo-caisy/{id}";
+        public const string PublicacionHuevoPublicar = "/api/precios-huevo-caisy/{id}/publicar";
+        public const string PublicacionHuevoAnular = "/api/precios-huevo-caisy/{id}/anular";
+        public const string PublicacionHuevoDocumento = "/api/precios-huevo-caisy/{id}/documento-original";
+        public const string PublicacionHuevoVigente = "/api/precios-huevo-caisy/vigente";
+        public const string PublicacionHuevoImportar = "/api/precios-huevo-caisy/importar";
+        public const string PrevisualizarCorreccion = "/api/precios-huevo-caisy/corregir/previsualizar";
+        public const string CorregirVigente = "/api/precios-huevo-caisy/corregir";
+        public const string Pedidos = "/api/pedidos-alimento-caisy";
+        public const string Pedido = "/api/pedidos-alimento-caisy/{id}";
+        public const string PedidoCredito = "/api/pedidos-alimento-caisy/{id}/credito";
+        public const string PedidoDevolver = "/api/pedidos-alimento-caisy/{id}/devolver";
+        public const string PedidoRechazar = "/api/pedidos-alimento-caisy/{id}/rechazar";
+        public const string PedidoAceptar = "/api/pedidos-alimento-caisy/{id}/aceptar";
+        public const string PedidoEntregaEstimada = "/api/pedidos-alimento-caisy/{id}/entrega-estimada";
+        public const string PedidosNotificaciones = "/api/pedidos-alimento-caisy/notificaciones";
+        public const string PedidoNotificacionLeida = "/api/pedidos-alimento-caisy/notificaciones/{id}/marcar-leida";
+        public const string PedidoDespachar = "/api/pedidos-alimento-caisy/{id}/despachar";
+        public const string PedidoDocumentoNota = "/api/pedidos-alimento-caisy/{id}/nota/documentos/{documentoId}/vista";
+        public const string PedidoRecibo = "/api/pedidos-alimento-caisy/{id}/recibo.pdf";
+        public const string DespachosHuevo = "/api/despachos-huevo-caisy";
+        public const string DespachoHuevo = "/api/despachos-huevo-caisy/{id}";
+        public const string DespachoHuevoConfirmar = "/api/despachos-huevo-caisy/{id}/confirmar-recepcion";
+        public const string DespachoHuevoRecibo = "/api/despachos-huevo-caisy/{id}/recibo.pdf";
+        public const string DespachosHuevoNotificaciones = "/api/despachos-huevo-caisy/notificaciones";
+        public const string DespachoHuevoNotificacionLeida = "/api/despachos-huevo-caisy/notificaciones/{id}/marcar-leida";
+    }
 
     private readonly HttpClient _http;
     private readonly string? _baseUrl;
@@ -38,7 +80,7 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         // Renovable en falso: renovar una renovación solo multiplicaría los
         // intentos con credenciales ya rechazadas.
         using var respuesta = await EnviarAsync(
-            _ => PeticionJson(HttpMethod.Post, "identidad/sesion", null,
+            _ => PeticionJson(HttpMethod.Post, "identidad/sesion", Plantillas.Sesion, null,
                 new { email = correo, contrasena }),
             renovable: false, token);
         await AsegurarExitoAsync(respuesta, token);
@@ -54,7 +96,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, "precios-alimentos/", accessToken), token);
+            accessToken => PeticionJson(HttpMethod.Get, "precios-alimentos/",
+                Plantillas.Notificaciones, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content
                 .ReadFromJsonAsync<IReadOnlyList<NotificacionPreciosResumenApi>>(Json, token)
@@ -65,7 +108,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         Guid id, CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, $"precios-alimentos/{id}", accessToken),
+            accessToken => PeticionJson(HttpMethod.Get, $"precios-alimentos/{id}",
+                Plantillas.Notificacion, accessToken),
             token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<NotificacionPreciosDetalleApi>(Json, token)
@@ -81,8 +125,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         await contenido.CopyToAsync(memoria, token);
         var bytes = memoria.ToArray();
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionMultipart(bytes, nombreArchivo, accessToken,
-                "precios-alimentos/importar"), token);
+            accessToken => PeticionMultipart(bytes, nombreArchivo, "precios-alimentos/importar",
+                Plantillas.NotificacionImportar, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var borrador = await respuesta.Content.ReadFromJsonAsync<BorradorImportadoApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de importación ilegible");
@@ -94,7 +138,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Put,
-                $"precios-alimentos/{comando.NotificacionId}", accessToken, comando), token);
+                $"precios-alimentos/{comando.NotificacionId}", Plantillas.Notificacion,
+                accessToken, comando), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -102,7 +147,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Post, $"precios-alimentos/{id}/publicar", accessToken), token);
+                HttpMethod.Post, $"precios-alimentos/{id}/publicar",
+                Plantillas.NotificacionPublicar, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -110,7 +156,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Post, $"precios-alimentos/{id}/anular", accessToken), token);
+                HttpMethod.Post, $"precios-alimentos/{id}/anular",
+                Plantillas.NotificacionAnular, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -118,7 +165,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Delete, $"precios-alimentos/{id}", accessToken), token);
+                HttpMethod.Delete, $"precios-alimentos/{id}",
+                Plantillas.Notificacion, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -127,7 +175,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Get, $"precios-alimentos/{id}/documento-original", accessToken), token);
+                HttpMethod.Get, $"precios-alimentos/{id}/documento-original",
+                Plantillas.NotificacionDocumento, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var memoria = new MemoryStream();
         await respuesta.Content.CopyToAsync(memoria, token);
@@ -139,7 +188,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, "precios-huevo-caisy/", accessToken), token);
+            accessToken => PeticionJson(HttpMethod.Get, "precios-huevo-caisy/",
+                Plantillas.PublicacionesHuevo, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content
                 .ReadFromJsonAsync<IReadOnlyList<PublicacionPrecioHuevoResumenApi>>(Json, token)
@@ -150,7 +200,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         Guid id, CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, $"precios-huevo-caisy/{id}", accessToken),
+            accessToken => PeticionJson(HttpMethod.Get, $"precios-huevo-caisy/{id}",
+                Plantillas.PublicacionHuevo, accessToken),
             token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<PublicacionPrecioHuevoDetalleApi>(Json, token)
@@ -166,8 +217,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         await contenido.CopyToAsync(memoria, token);
         var bytes = memoria.ToArray();
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionMultipart(bytes, nombreArchivo, accessToken,
-                "precios-huevo-caisy/importar"), token);
+            accessToken => PeticionMultipart(bytes, nombreArchivo, "precios-huevo-caisy/importar",
+                Plantillas.PublicacionHuevoImportar, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var borrador = await respuesta.Content.ReadFromJsonAsync<BorradorImportadoApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de importación ilegible");
@@ -179,7 +230,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Put,
-                $"precios-huevo-caisy/{comando.PublicacionId}", accessToken, comando), token);
+                $"precios-huevo-caisy/{comando.PublicacionId}", Plantillas.PublicacionHuevo,
+                accessToken, comando), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -187,7 +239,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Post, $"precios-huevo-caisy/{id}/publicar", accessToken), token);
+                HttpMethod.Post, $"precios-huevo-caisy/{id}/publicar",
+                Plantillas.PublicacionHuevoPublicar, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -195,7 +248,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Post, $"precios-huevo-caisy/{id}/anular", accessToken), token);
+                HttpMethod.Post, $"precios-huevo-caisy/{id}/anular",
+                Plantillas.PublicacionHuevoAnular, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -203,7 +257,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Delete, $"precios-huevo-caisy/{id}", accessToken), token);
+                HttpMethod.Delete, $"precios-huevo-caisy/{id}",
+                Plantillas.PublicacionHuevo, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -212,7 +267,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Get, $"precios-huevo-caisy/{id}/documento-original", accessToken), token);
+                HttpMethod.Get, $"precios-huevo-caisy/{id}/documento-original",
+                Plantillas.PublicacionHuevoDocumento, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var memoria = new MemoryStream();
         await respuesta.Content.CopyToAsync(memoria, token);
@@ -224,7 +280,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, "precios-huevo-caisy/vigente", accessToken), token);
+            accessToken => PeticionJson(HttpMethod.Get, "precios-huevo-caisy/vigente",
+                Plantillas.PublicacionHuevoVigente, accessToken), token);
         if (respuesta.StatusCode == HttpStatusCode.NotFound)
             return null;
         await AsegurarExitoAsync(respuesta, token);
@@ -237,7 +294,7 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Get,
                 $"precios-huevo-caisy/corregir/previsualizar?erronea={erroneaId}&correctiva={correctivaId}",
-                accessToken), token);
+                Plantillas.PrevisualizarCorreccion, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<VistaPreviaCorreccionHuevoApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
@@ -247,7 +304,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         Guid erroneaId, Guid correctivaId, string motivo, CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Post, "precios-huevo-caisy/corregir", accessToken,
+            accessToken => PeticionJson(HttpMethod.Post, "precios-huevo-caisy/corregir",
+                Plantillas.CorregirVigente, accessToken,
                 new ComandoCorregirVigenteHuevoApi(erroneaId, correctivaId, motivo)), token);
         await AsegurarExitoAsync(respuesta, token);
     }
@@ -270,7 +328,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         if (filtros.Numero is { } numeroPedido)
             consulta.Append("&numero=").Append(numeroPedido.ToString(CultureInfo.InvariantCulture));
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(), accessToken), token);
+            accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(),
+                Plantillas.Pedidos, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<PaginaPedidosApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
@@ -280,7 +339,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         Guid id, CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, $"pedidos-alimento-caisy/{id}", accessToken), token);
+            accessToken => PeticionJson(HttpMethod.Get, $"pedidos-alimento-caisy/{id}",
+                Plantillas.Pedido, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<PedidoDetalleApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
@@ -291,7 +351,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Get, $"pedidos-alimento-caisy/{id}/credito", accessToken), token);
+                HttpMethod.Get, $"pedidos-alimento-caisy/{id}/credito",
+                Plantillas.PedidoCredito, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<CreditoHuevoPedidoApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
@@ -299,18 +360,19 @@ public sealed class ApiIcarusClient : IApiIcarusClient
 
     public Task DevolverPedidoAsync(
         Guid id, string motivo, CancellationToken token = default) =>
-        EnviarDecisionPedidoAsync(id, "devolver", motivo, token);
+        EnviarDecisionPedidoAsync(id, "devolver", Plantillas.PedidoDevolver, motivo, token);
 
     public Task RechazarPedidoAsync(
         Guid id, string motivo, CancellationToken token = default) =>
-        EnviarDecisionPedidoAsync(id, "rechazar", motivo, token);
+        EnviarDecisionPedidoAsync(id, "rechazar", Plantillas.PedidoRechazar, motivo, token);
 
     private async Task EnviarDecisionPedidoAsync(
-        Guid id, string accion, string motivo, CancellationToken token)
+        Guid id, string accion, string plantilla, string motivo, CancellationToken token)
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"pedidos-alimento-caisy/{id}/{accion}", accessToken, new { motivo }), token);
+                $"pedidos-alimento-caisy/{id}/{accion}", plantilla, accessToken,
+                new { motivo }), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -319,7 +381,7 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"pedidos-alimento-caisy/{id}/aceptar", accessToken,
+                $"pedidos-alimento-caisy/{id}/aceptar", Plantillas.PedidoAceptar, accessToken,
                 new { fechaEntregaEstimada }), token);
         await AsegurarExitoAsync(respuesta, token);
     }
@@ -329,8 +391,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"pedidos-alimento-caisy/{id}/entrega-estimada", accessToken,
-                new { fechaEntregaEstimada = nuevaFecha }), token);
+                $"pedidos-alimento-caisy/{id}/entrega-estimada", Plantillas.PedidoEntregaEstimada,
+                accessToken, new { fechaEntregaEstimada = nuevaFecha }), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -339,7 +401,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Get, "pedidos-alimento-caisy/notificaciones", accessToken), token);
+                HttpMethod.Get, "pedidos-alimento-caisy/notificaciones",
+                Plantillas.PedidosNotificaciones, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<BandejaNotificacionesApi>(Json, token)
             ?? new BandejaNotificacionesApi([], 0);
@@ -350,7 +413,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"pedidos-alimento-caisy/notificaciones/{id}/marcar-leida", accessToken), token);
+                $"pedidos-alimento-caisy/notificaciones/{id}/marcar-leida",
+                Plantillas.PedidoNotificacionLeida, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -359,7 +423,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"pedidos-alimento-caisy/{comando.Id}/despachar", accessToken,
+                $"pedidos-alimento-caisy/{comando.Id}/despachar", Plantillas.PedidoDespachar,
+                accessToken,
                 new
                 {
                     numeroNota = comando.NumeroNota,
@@ -379,7 +444,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Get,
-                $"pedidos-alimento-caisy/{id}/nota/documentos/{documentoId}/vista", accessToken), token);
+                $"pedidos-alimento-caisy/{id}/nota/documentos/{documentoId}/vista",
+                Plantillas.PedidoDocumentoNota, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var tipo = respuesta.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
         var memoria = new MemoryStream();
@@ -392,7 +458,7 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Get,
-                $"pedidos-alimento-caisy/{id}/recibo.pdf", accessToken), token);
+                $"pedidos-alimento-caisy/{id}/recibo.pdf", Plantillas.PedidoRecibo, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var memoria = new MemoryStream();
         await respuesta.Content.CopyToAsync(memoria, token);
@@ -418,7 +484,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         if (filtros.Numero is { } numeroHuevo)
             consulta.Append("&numero=").Append(numeroHuevo.ToString(CultureInfo.InvariantCulture));
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(), accessToken), token);
+            accessToken => PeticionJson(HttpMethod.Get, consulta.ToString(),
+                Plantillas.DespachosHuevo, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<PaginaDespachosHuevoApi>(Json, token)
             ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
@@ -428,7 +495,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
         Guid id, CancellationToken token = default)
     {
         using var respuesta = await EnviarConSesionAsync(
-            accessToken => PeticionJson(HttpMethod.Get, $"despachos-huevo-caisy/{id}", accessToken),
+            accessToken => PeticionJson(HttpMethod.Get, $"despachos-huevo-caisy/{id}",
+                Plantillas.DespachoHuevo, accessToken),
             token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<DespachoHuevoDetalleApi>(Json, token)
@@ -440,7 +508,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"despachos-huevo-caisy/{id}/confirmar-recepcion", accessToken), token);
+                $"despachos-huevo-caisy/{id}/confirmar-recepcion",
+                Plantillas.DespachoHuevoConfirmar, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -449,7 +518,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Get,
-                $"despachos-huevo-caisy/{id}/recibo.pdf", accessToken), token);
+                $"despachos-huevo-caisy/{id}/recibo.pdf",
+                Plantillas.DespachoHuevoRecibo, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         var memoria = new MemoryStream();
         await respuesta.Content.CopyToAsync(memoria, token);
@@ -462,7 +532,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(
-                HttpMethod.Get, "despachos-huevo-caisy/notificaciones", accessToken), token);
+                HttpMethod.Get, "despachos-huevo-caisy/notificaciones",
+                Plantillas.DespachosHuevoNotificaciones, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
         return await respuesta.Content.ReadFromJsonAsync<BandejaNotificacionesDespachoHuevoApi>(Json, token)
             ?? new BandejaNotificacionesDespachoHuevoApi([], 0);
@@ -473,7 +544,8 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     {
         using var respuesta = await EnviarConSesionAsync(
             accessToken => PeticionJson(HttpMethod.Post,
-                $"despachos-huevo-caisy/notificaciones/{id}/marcar-leida", accessToken), token);
+                $"despachos-huevo-caisy/notificaciones/{id}/marcar-leida",
+                Plantillas.DespachoHuevoNotificacionLeida, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 
@@ -508,6 +580,7 @@ public sealed class ApiIcarusClient : IApiIcarusClient
             return false;
         using var peticion = new HttpRequestMessage(
             HttpMethod.Post, new Uri(ResolverBase() + "identidad/sesion/renovar"));
+        peticion.EstablecerRuta(Plantillas.Renovar);
         peticion.Headers.TryAddWithoutValidation("Cookie", $"{CookieRefresh}={refresh}");
         using var respuesta = await _http.SendAsync(peticion, token);
         if (respuesta.StatusCode != HttpStatusCode.OK)
@@ -557,9 +630,10 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     }
 
     private HttpRequestMessage PeticionJson(
-        HttpMethod metodo, string ruta, string? accessToken, object? cuerpo = null)
+        HttpMethod metodo, string ruta, string plantilla, string? accessToken, object? cuerpo = null)
     {
         var peticion = new HttpRequestMessage(metodo, new Uri(ResolverBase() + ruta));
+        peticion.EstablecerRuta(plantilla);
         if (accessToken is not null)
             peticion.Headers.Authorization = new("Bearer", accessToken);
         if (cuerpo is not null)
@@ -569,10 +643,11 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     }
 
     private HttpRequestMessage PeticionMultipart(
-        byte[] bytes, string nombreArchivo, string? accessToken, string ruta)
+        byte[] bytes, string nombreArchivo, string ruta, string plantilla, string? accessToken)
     {
         var peticion = new HttpRequestMessage(
             HttpMethod.Post, new Uri(ResolverBase() + ruta));
+        peticion.EstablecerRuta(plantilla);
         if (accessToken is not null)
             peticion.Headers.Authorization = new("Bearer", accessToken);
         var parte = new StreamContent(new MemoryStream(bytes));

@@ -77,8 +77,12 @@ builder.Services.AddAuthorization(opciones =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ISesionCaisyActual, SesionCaisyCookie>();
 builder.Services.AddTransient<CorrelacionApiHandler>();
+// RemoveAllLoggers: los handlers automáticos de IHttpClientFactory añaden un
+// scope con la URI concreta que contaminaría incluso el evento propio
+// http.client.send. La señal segura la aporta CorrelacionApiHandler.
 builder.Services.AddHttpClient<IApiIcarusClient, ApiIcarusClient>()
-    .AddHttpMessageHandler<CorrelacionApiHandler>();
+    .AddHttpMessageHandler<CorrelacionApiHandler>()
+    .RemoveAllLoggers();
 
 var app = builder.Build();
 

@@ -26,6 +26,13 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
     // Testing y Production con la misma política de privacidad.
     public string Entorno { get; set; } = "Testing";
 
+    // Con la API real se conserva el cliente tipado y el transporte HttpClient
+    // productivo; el fake solo se registra cuando esta bandera es falsa.
+    public bool UsarApiReal { get; set; }
+
+    // URL absoluta de la API para escenarios que no deben tocar red real.
+    public string? BaseUrlApi { get; set; }
+
     // Credenciales que la API falsa acepta como válidas.
     public const string CorreoValido = "gestor@caisy.test";
     public const string ClaveValida = "Clave-De-Prueba-1";
@@ -33,21 +40,28 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Entorno);
-        // Aísla la URL Seq de desarrollo para no tocar el stack del usuario.
-        // Solo aplica cuando appsettings.Development.json declara ese sink.
-        if (Entorno == "Development")
-            builder.ConfigureAppConfiguration((_, configuracion) =>
-                configuracion.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Serilog:WriteTo:Seq:Args:serverUrl"] = "http://127.0.0.1:1",
-                }));
+        // Aísla la URL Seq de desarrollo y fija la URL de la API cuando el
+        // escenario lo requiere.
+        builder.ConfigureAppConfiguration((_, configuracion) =>
+        {
+            var fuentes = new Dictionary<string, string?>();
+            // El override de Seq solo aplica cuando el JSON de desarrollo
+            // declara ese sink; en otros entornos la clave huérfana molesta.
+            if (Entorno == "Development")
+                fuentes["Serilog:WriteTo:Seq:Args:serverUrl"] = "http://127.0.0.1:1";
+            if (!string.IsNullOrWhiteSpace(BaseUrlApi))
+                fuentes["ApiIcarus:BaseUrl"] = BaseUrlApi;
+            if (fuentes.Count > 0)
+                configuracion.AddInMemoryCollection(fuentes);
+        });
         // ConfigureTestServices corre DESPUÉS de Program.cs: reemplaza de
         // verdad el cliente tipado registrado por la aplicación.
         builder.ConfigureTestServices(services =>
         {
             // Última registración gana: sin RemoveAll, que en el flujo del
             // host diferido llega a borrar la registración de la aplicación.
-            services.AddSingleton<IApiIcarusClient>(Api);
+            if (!UsarApiReal)
+                services.AddSingleton<IApiIcarusClient>(Api);
             // Controladores y filtros exclusivos de las pruebas.
             services.AddControllers().AddApplicationPart(
                 typeof(ControladorErroresDePrueba).Assembly);

@@ -55,6 +55,8 @@ public sealed class CorrelacionApiHandler : DelegatingHandler
             EventoEnvio, peticion.Method.Method, Ruta(peticion), ex.GetType().FullName,
             Stopwatch.GetElapsedTime(inicio).TotalMilliseconds);
 
+    // La plantilla llega por Options desde la operación que conoce la ruta; sin
+    // metadato se registra "unmatched". Nunca se inspecciona AbsolutePath.
     private static string Ruta(HttpRequestMessage peticion) =>
-        peticion.RequestUri?.AbsolutePath ?? "desconocida";
+        peticion.RutaSegura();
 }

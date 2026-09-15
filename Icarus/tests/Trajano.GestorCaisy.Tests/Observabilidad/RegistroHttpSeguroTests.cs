@@ -1,6 +1,8 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using Trajano.GestorCaisy.Servicios;
 using Trajano.GestorCaisy.Tests.Ayudas;
 using Xunit;
 
@@ -63,6 +65,26 @@ public class RegistroHttpSeguroTests
         Assert.NotEmpty(eventos);
         foreach (var evento in eventos)
             Assert.DoesNotContain("CANARIO", Serializar(evento));
+    }
+
+    [Fact]
+    public async Task ElFalloDeRedDelClienteTipadoNoFiltraLaRutaConcreta()
+    {
+        using var aplicacion = new AplicacionDePruebas
+        {
+            UsarApiReal = true,
+            BaseUrlApi = "http://127.0.0.1:1/api",
+        };
+        var api = aplicacion.Services.GetRequiredService<IApiIcarusClient>();
+        var id = Guid.NewGuid();
+
+        await Assert.ThrowsAnyAsync<Exception>(() => api.ObtenerNotificacionAsync(id));
+
+        var serializado = aplicacion.Colector.SerializarTodo();
+        Assert.DoesNotContain(id.ToString(), serializado);
+        Assert.Contains(aplicacion.Colector.Eventos,
+            e => Prop(e, "EventName") == "http.client.send"
+                && Prop(e, "RoutePattern") == "/api/precios-alimentos/{id}");
     }
 
     private static List<LogEvent> EventosDe(AplicacionDePruebas aplicacion, string correlation) =>
