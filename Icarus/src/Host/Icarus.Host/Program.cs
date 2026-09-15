@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Identity;
+using Serilog;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -86,11 +87,23 @@ forwardedHeaders.KnownIPNetworks.Clear();
 forwardedHeaders.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeaders);
 
+// Un solo resumen por petición que termina en respuesta: envuelve routing,
+// autenticación, rechazo por cliente inactivo y endpoint. El manejador de
+// excepciones va por dentro y consume el error antes del resumen.
 app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseAuthentication();
-app.UseMiddleware<ClienteActivoMiddleware>();
-app.UseMiddleware<RequestObservabilityMiddleware>();
+app.UseMiddleware<ContextoTrazaMiddleware>();
+app.UseSerilogRequestLogging(opciones =>
+{
+    RegistroHttpSeguro.Configurar(opciones);
+    // El resumen usa el logger del host (DI), no el estático: evita que un
+    // logger ajeno o en apagado silencie el resumen.
+    opciones.Logger = app.Services.GetRequiredService<Serilog.ILogger>();
+});
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseRouting();
+app.UseAuthentication();
+app.UseMiddleware<ContextoIdentidadObservabilidadMiddleware>();
+app.UseMiddleware<ClienteActivoMiddleware>();
 app.UseMiddleware<ClientDiagnosticsBodyLimitMiddleware>();
 app.UseRateLimiter();
 app.UseAuthorization();

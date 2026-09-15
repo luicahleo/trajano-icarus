@@ -3,14 +3,20 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using Trajano.GestorCaisy.Servicios;
+using Trajano.GestorCaisy.Tests.Observabilidad;
 
 namespace Trajano.GestorCaisy.Tests.Ayudas;
 
 public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
 {
     public ApiIcarusFalsa Api { get; } = new();
+
+    // Sink compartido para inspeccionar los eventos reales de Serilog.
+    public static ColectorSerilog Colector { get; } = new();
 
     // Credenciales que la API falsa acepta como válidas.
     public const string CorreoValido = "gestor@caisy.test";
@@ -27,6 +33,13 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
             // host diferido llega a borrar la registración de la aplicación.
             services.AddSingleton<IApiIcarusClient>(Api);
         });
+        // Recompone el logger real y añade el sink de prueba.
+        builder.ConfigureTestServices(servicios => servicios.AddSerilog(
+            (proveedor, configuracion) => configuracion
+                .ReadFrom.Configuration(proveedor.GetRequiredService<IConfiguration>())
+                .ReadFrom.Services(proveedor)
+                .WriteTo.Sink(Colector),
+            preserveStaticLogger: true));
     }
 
     public HttpClient CrearClienteSinRedireccion() =>

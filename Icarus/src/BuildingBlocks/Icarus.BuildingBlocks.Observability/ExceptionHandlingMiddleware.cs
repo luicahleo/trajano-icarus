@@ -2,6 +2,7 @@ using FluentValidation;
 using Icarus.BuildingBlocks.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 
 namespace Icarus.BuildingBlocks.Observability;
@@ -29,6 +30,23 @@ public sealed class ExceptionHandlingMiddleware
         }
     }
 
+    // Sombra el RequestPath concreto heredado del scope del framework con el
+    // patrón de ruta resuelto; nunca copia el pathname recibido.
+    private static Dictionary<string, object?> PropiedadesSeguras(
+        HttpContext context, string? errorId, Exception ex)
+    {
+        var patron = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText
+            ?? "unmatched";
+        var propiedades = new Dictionary<string, object?>
+        {
+            ["ExceptionType"] = ex.GetType().FullName,
+            ["RoutePattern"] = patron,
+            ["RequestPath"] = patron,
+        };
+        if (errorId is not null) propiedades["ErrorId"] = errorId;
+        return propiedades;
+    }
+
     private async Task EscribirProblemDetails(HttpContext context, Exception ex)
     {
         var (status, tituloGenerico) = ex switch
@@ -48,22 +66,15 @@ public sealed class ExceptionHandlingMiddleware
         {
             errorId = DiagnosticIds.NuevoErrorId();
             DiagnosticContext.EstablecerErrorId(context, errorId);
-            using (_logger.BeginScope(new Dictionary<string, object?>
-            {
-                ["ErrorId"] = errorId,
-                ["ExceptionType"] = ex.GetType().FullName,
-                ["ExceptionStackTrace"] = ex.StackTrace,
-            }))
+            // Solo tipo de excepción: el stack crudo puede arrastrar datos.
+            using (_logger.BeginScope(PropiedadesSeguras(context, errorId, ex)))
             {
                 _logger.LogError("{EventName}: error no controlado", "backend.error");
             }
         }
         else
         {
-            using (_logger.BeginScope(new Dictionary<string, object?>
-            {
-                ["ExceptionType"] = ex.GetType().FullName,
-            }))
+            using (_logger.BeginScope(PropiedadesSeguras(context, null, ex)))
             {
                 _logger.LogWarning("{EventName}: error esperado de negocio", "backend.business_warning");
             }

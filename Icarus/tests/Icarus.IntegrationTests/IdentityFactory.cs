@@ -1,5 +1,10 @@
+using Icarus.IntegrationTests.Observability;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using Testcontainers.MsSql;
 using Xunit;
 
@@ -19,6 +24,10 @@ public sealed class IdentityFactory : WebApplicationFactory<Program>, IAsyncLife
 
     private readonly MsSqlContainer _contenedor =
         new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+
+    // Sink compartido para inspeccionar los eventos reales de Serilog en las
+    // pruebas de observabilidad. La suite de integración es secuencial.
+    public static ColectorSerilog Colector { get; } = new();
 
     // Cadena del MISMO contenedor compartido: las pruebas que necesitan una
     // base aislada (para no contaminar la base que comparte la suite) crean
@@ -44,5 +53,14 @@ public sealed class IdentityFactory : WebApplicationFactory<Program>, IAsyncLife
         builder.UseSetting("ConnectionStrings:Icarus", _contenedor.GetConnectionString());
         builder.UseSetting("Jwt:Clave", JwtClaveDePrueba);
         builder.UseSetting("Semilla:ContrasenaPrueba", ContrasenaDePrueba);
+        // Recompone el logger real de la aplicación y añade el sink de prueba.
+        // ConfigureTestServices corre después de Program.cs: esta registración
+        // reemplaza la del host y conserva la configuración declarativa.
+        builder.ConfigureTestServices(servicios => servicios.AddSerilog(
+            (proveedor, configuracion) => configuracion
+                .ReadFrom.Configuration(proveedor.GetRequiredService<IConfiguration>())
+                .ReadFrom.Services(proveedor)
+                .WriteTo.Sink(Colector),
+            preserveStaticLogger: true));
     }
 }

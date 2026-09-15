@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Serilog;
 using Trajano.GestorCaisy.Autenticacion;
 using Trajano.GestorCaisy.Filtros;
+using Trajano.GestorCaisy.Observabilidad;
 using Trajano.GestorCaisy.Servicios;
 using Trajano.GestorCaisy.Sesion;
 
@@ -79,15 +80,22 @@ builder.Services.AddHttpClient<IApiIcarusClient, ApiIcarusClient>();
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+// Un solo resumen por petición externa; envuelve las reejecuciones de error y
+// conserva el patrón de ruta original. Sin query, cuerpos ni excepción cruda.
+app.UseMiddleware<ContextoPeticionMiddleware>();
+app.UseSerilogRequestLogging(opciones =>
 {
-    app.UseExceptionHandler("/Sesion/Error");
-}
+    RegistroHttpSeguro.Configurar(opciones);
+    // El resumen usa el logger del host (DI), no el estático: evita que un
+    // logger ajeno o en apagado silencie el resumen.
+    opciones.Logger = app.Services.GetRequiredService<Serilog.ILogger>();
+});
+app.UseExceptionHandler("/Sesion/Error");
+app.UseMiddleware<ExcepcionesSegurasMiddleware>();
 app.UseStatusCodePagesWithReExecute("/Sesion/Error", "?codigo={0}");
-// Trazas de petición: método, ruta, estado y duración; sin cuerpos ni PII.
-app.UseSerilogRequestLogging();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseMiddleware<ContextoRutaMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
