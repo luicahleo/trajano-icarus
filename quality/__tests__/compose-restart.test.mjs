@@ -56,5 +56,16 @@ test('el stack PC arma la web de producción sin el api dev', () => {
   assert.match(serviciosProd.get('web'), /^\s{4}restart: unless-stopped$/m);
   assert.match(serviciosProd.get('web'), /Dockerfile\.web/);
   assert.match(serviciosProd.get('web'), /ASPNETCORE_HTTP_PORTS: "8080"/);
-  assert.match(serviciosProd.get('web'), /Seq__Url: "http:\/\/seq:80"/);
+  assert.match(serviciosProd.get('web'), /Serilog__WriteTo__Seq__Name: "Seq"/);
+  assert.match(serviciosProd.get('web'), /Serilog__WriteTo__Seq__Args__serverUrl: "http:\/\/seq:80"/);
+});
+
+test('las variables de Seq van nombradas en ambos composes', () => {
+  const serviciosDev = servicios(dev);
+  assert.match(serviciosDev.get('api'), /Serilog__WriteTo__Seq__Name: "Seq"/);
+  assert.match(serviciosDev.get('api'), /Serilog__WriteTo__Seq__Args__serverUrl: "http:\/\/seq:80"/);
+  const serviciosProd = servicios(prodlocal);
+  assert.match(serviciosProd.get('gestor-caisy'), /Serilog__WriteTo__Seq__Name: "Seq"/);
+  assert.doesNotMatch(dev, /Seq__Url:/);
+  assert.doesNotMatch(prodlocal, /Seq__Url:/);
 });

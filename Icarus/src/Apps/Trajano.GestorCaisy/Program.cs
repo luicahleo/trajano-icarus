@@ -4,7 +4,6 @@ using System.Text.Unicode;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Serilog;
-using Serilog.Formatting.Compact;
 using Trajano.GestorCaisy.Autenticacion;
 using Trajano.GestorCaisy.Filtros;
 using Trajano.GestorCaisy.Servicios;
@@ -13,26 +12,11 @@ using Trajano.GestorCaisy.Sesion;
 var builder = WebApplication.CreateBuilder(args);
 
 // Observabilidad propia (misma convención que Icarus.Host, sin referenciar el
-// backend): consola JSON compacta y Seq opcional vía Seq:Url/Seq:ApiKey. Una
-// caída de Seq no impide responder peticiones.
-builder.Host.UseSerilog((context, config) =>
-{
-    config
-        .ReadFrom.Configuration(context.Configuration)
-        .Enrich.FromLogContext()
-        .Enrich.WithProperty("Aplicacion", "Trajano.GestorCaisy")
-        .Enrich.WithProperty("Entorno", context.HostingEnvironment.EnvironmentName)
-        .WriteTo.Console(new CompactJsonFormatter());
-
-    var seqUrl = context.Configuration["Seq:Url"];
-    if (!string.IsNullOrWhiteSpace(seqUrl))
-    {
-        var apiKey = context.Configuration["Seq:ApiKey"];
-        config.WriteTo.Seq(
-            seqUrl,
-            apiKey: string.IsNullOrWhiteSpace(apiKey) ? null : apiKey);
-    }
-});
+// backend): sinks, niveles y enrichers viven en la sección Serilog de la
+// configuración. Una caída de Seq no impide responder peticiones.
+builder.Host.UseSerilog((context, services, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services));
 
 // Cultura fija de la aplicación de oficina: formatos invariantes (punto
 // decimal, fechas ISO en formularios) y textos en español.

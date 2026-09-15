@@ -55,9 +55,16 @@ services:
       # Contraseña de las cuentas semilla (paridad con Caserito, SeedUsuariosDesarrollo).
       Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Admin123456!}"
       # Dentro del contenedor localhost no es el host: Seq se alcanza por la red
-      # de compose; la API key es opcional (el Seq local no exige auth).
-      Seq__Url: "http://seq:80"
-      Seq__ApiKey: "${SEQ_API_KEY:-}"
+      # de compose; la API key es opcional (el Seq local no exige auth). Las
+      # entradas van nombradas (Name + Args) para que el sink se cree aunque no
+      # exista en el JSON base (spec de Serilog y Seq).
+      Serilog__WriteTo__Seq__Name: "Seq"
+      Serilog__WriteTo__Seq__Args__serverUrl: "http://seq:80"
+      Serilog__WriteTo__Seq__Args__apiKey: "${SEQ_API_KEY:-}"
+      Serilog__WriteTo__Seq__Args__batchPostingLimit: "1000"
+      Serilog__WriteTo__Seq__Args__period: "00:00:02"
+      Serilog__WriteTo__Seq__Args__queueSizeLimit: "10000"
+      Serilog__Properties__Release: "${ICARUS_RELEASE:-development}"
       # Volumen privado de respaldos de notas (spec SP8C): fuera del web root,
       # persistente entre recreaciones del contenedor (no es backup por sí solo).
       AlmacenDocumentosPedido__Ruta: "/app/documentos-pedidos"

@@ -100,17 +100,25 @@ docker compose -f docker-compose.seq.yml up -d
 
 ### Configurar una aplicación consumidora
 
-Icarus ya lo hace vía configuración (env vars para `ICARUS_RELEASE` y Seq):
+Icarus ya lo hace vía configuración: los sinks se declaran en la sección
+`Serilog` y las variables de despliegue usan entradas **nombradas** (`Name` +
+`Args`) para crear el sink aunque no exista en el JSON base:
 
 | Variable | Ejemplo | Uso |
 |---|---|---|
-| `ICARUS_RELEASE` | `1.0.0+a1b2c3d` | release en todos los logs |
-| `Seq__Url` | `http://seq:5341` | URL de ingestión (red interna de la VPS) |
-| `Seq__ApiKey` | `<key propia de Icarus>` | API key exclusiva de Icarus |
+| `Serilog__Properties__Release` | `1.0.0+a1b2c3d` | release en todos los logs (saneada a 1–40 ASCII seguros) |
+| `ICARUS_RELEASE` | `1.0.0+a1b2c3d` | respaldo de la anterior si no se define la primera |
+| `Serilog__WriteTo__Seq__Name` | `Seq` | nombre del sink; obligatorio al declararlo solo por variables |
+| `Serilog__WriteTo__Seq__Args__serverUrl` | `http://seq:80` | URL de ingestión (red interna de la VPS) |
+| `Serilog__WriteTo__Seq__Args__apiKey` | `<key propia de Icarus>` | API key exclusiva de Icarus |
+| `Serilog__WriteTo__Seq__Args__batchPostingLimit` | `1000` | eventos por lote |
+| `Serilog__WriteTo__Seq__Args__period` | `00:00:02` | intervalo de envío |
+| `Serilog__WriteTo__Seq__Args__queueSizeLimit` | `10000` | cola acotada en memoria |
 
 Cada consumidor debe añadir su propia propiedad `Aplicacion` en su Serilog
-(`Icarus` ya lo hace) y usar una API key distinta. Sin `Seq__Url`, Icarus solo
-escribe a consola.
+(`Icarus` ya lo hace) y usar una API key distinta. Si no se declara el sink
+`Seq`, Icarus solo escribe a consola; una URL vacía no lo deshabilita por sí
+sola.
 
 ## Consultas útiles en Seq
 

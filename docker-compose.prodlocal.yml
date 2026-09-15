@@ -56,8 +56,13 @@ services:
       Migraciones__EjecutarAlArranque: "true"
       ConnectionStrings__Icarus: "Server=sqlserver,1433;Database=Icarus;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
       Semilla__ContrasenaPrueba: "${ICARUS_SEMILLA_PASSWORD:-Admin123456!}"
-      Seq__Url: "http://seq:80"
-      Seq__ApiKey: "${SEQ_API_KEY:-}"
+      Serilog__WriteTo__Seq__Name: "Seq"
+      Serilog__WriteTo__Seq__Args__serverUrl: "http://seq:80"
+      Serilog__WriteTo__Seq__Args__apiKey: "${SEQ_API_KEY:-}"
+      Serilog__WriteTo__Seq__Args__batchPostingLimit: "1000"
+      Serilog__WriteTo__Seq__Args__period: "00:00:02"
+      Serilog__WriteTo__Seq__Args__queueSizeLimit: "10000"
+      Serilog__Properties__Release: "${ICARUS_RELEASE:-development}"
       # Volumen privado de respaldos de notas (spec SP8C): fuera del web root
       # y persistente; forma parte del backup externo de la VPS (ver
       # docs/operacion/respaldos-notas.md).
@@ -92,8 +97,13 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       TZ: "America/La_Paz"
       ApiIcarus__BaseUrl: "http://web:8080/api"
-      Seq__Url: "http://seq:80"
-      Seq__ApiKey: "${SEQ_API_KEY:-}"
+      Serilog__WriteTo__Seq__Name: "Seq"
+      Serilog__WriteTo__Seq__Args__serverUrl: "http://seq:80"
+      Serilog__WriteTo__Seq__Args__apiKey: "${SEQ_API_KEY:-}"
+      Serilog__WriteTo__Seq__Args__batchPostingLimit: "1000"
+      Serilog__WriteTo__Seq__Args__period: "00:00:02"
+      Serilog__WriteTo__Seq__Args__queueSizeLimit: "10000"
+      Serilog__Properties__Release: "${ICARUS_RELEASE:-development}"
     ports:
       # Acceso directo desde la PC a la oficina sin pasar por el gateway
       # (gestor.localhost no resuelve en Windows sin entrada en hosts).
