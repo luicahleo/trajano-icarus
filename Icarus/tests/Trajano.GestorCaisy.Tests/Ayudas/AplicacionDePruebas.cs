@@ -18,6 +18,9 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
     // Sink compartido para inspeccionar los eventos reales de Serilog.
     public static ColectorSerilog Colector { get; } = new();
 
+    // Destino Seq adicional para las pruebas de ingestión aisladas.
+    public string? UrlSeqAdicional { get; set; }
+
     // Credenciales que la API falsa acepta como válidas.
     public const string CorreoValido = "gestor@caisy.test";
     public const string ClaveValida = "Clave-De-Prueba-1";
@@ -35,10 +38,16 @@ public sealed partial class AplicacionDePruebas : WebApplicationFactory<Program>
         });
         // Recompone el logger real y añade el sink de prueba.
         builder.ConfigureTestServices(servicios => servicios.AddSerilog(
-            (proveedor, configuracion) => configuracion
-                .ReadFrom.Configuration(proveedor.GetRequiredService<IConfiguration>())
-                .ReadFrom.Services(proveedor)
-                .WriteTo.Sink(Colector),
+            (proveedor, configuracion) =>
+            {
+                configuracion
+                    .ReadFrom.Configuration(proveedor.GetRequiredService<IConfiguration>())
+                    .ReadFrom.Services(proveedor)
+                    .WriteTo.Sink(Colector);
+                if (!string.IsNullOrWhiteSpace(UrlSeqAdicional))
+                    configuracion.WriteTo.Seq(UrlSeqAdicional,
+                        period: TimeSpan.FromMilliseconds(200));
+            },
             preserveStaticLogger: true));
     }
 
