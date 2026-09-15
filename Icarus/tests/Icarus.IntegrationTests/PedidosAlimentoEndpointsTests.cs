@@ -747,4 +747,29 @@ public class PedidosAlimentoEndpointsTests
         var vistaTenant = await ObtenerDetalleAsync(cliente, tokenCliente, borrador);
         Assert.Equal("Borrador", vistaTenant.GetProperty("estado").GetString());
     }
+
+    // El sondeo del badge se apoya en el 304: sin no-cache, el navegador
+    // decide solo si revalida, y el contador puede quedar congelado.
+    [Fact]
+    public async Task ElSondeoDeNotificacionesPideRevalidarSiempre()
+    {
+        var cliente = _factory.CreateClient();
+        var tokenCliente = await LoginComo(cliente, SemillaIdentidad.EmailClienteC1);
+
+        var respuesta = await cliente.SendAsync(Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento/notificaciones", tokenCliente));
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        Assert.True(respuesta.Headers.CacheControl?.NoCache);
+        var etag = respuesta.Headers.ETag?.ToString();
+        Assert.False(string.IsNullOrWhiteSpace(etag));
+
+        // La respuesta 304 también instruye al navegador: si no la llevara,
+        // la siguiente revalidación quedaría sin regla.
+        var condicional = Pedido(
+            HttpMethod.Get, "/api/pedidos-alimento/notificaciones", tokenCliente);
+        condicional.Headers.TryAddWithoutValidation("If-None-Match", etag);
+        var sinCambios = await cliente.SendAsync(condicional);
+        Assert.Equal(HttpStatusCode.NotModified, sinCambios.StatusCode);
+        Assert.True(sinCambios.Headers.CacheControl?.NoCache);
+    }
 }

@@ -243,6 +243,9 @@ public static class PedidosAlimentoEndpoints
             var notificaciones = await mediator.Send(new ListarNotificacionesQuery(), cancellationToken);
             var contador = notificaciones.Count(n => !n.Leida);
             var etag = CalcularEtag(notificaciones, contador);
+            // «no-cache» es «guarda, pero revalida siempre», no «no guardes».
+            // Va antes del 304 para que esa respuesta también la lleve.
+            contexto.Response.Headers.CacheControl = "no-cache";
             if (contexto.Request.Headers.IfNoneMatch.ToString().Contains(etag, StringComparison.Ordinal))
                 return Results.StatusCode(StatusCodes.Status304NotModified);
             contexto.Response.Headers.ETag = etag;
