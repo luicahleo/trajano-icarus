@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import html from '../../index.html?raw';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -52,6 +53,20 @@ function renderLayout(rol: Rol, rutaInicial = '/', funcionalidades: Funcionalida
 
 describe('AppLayout', () => {
   beforeEach(() => vi.restoreAllMocks());
+
+  test('index.html enlaza el favicon SVG y su fallback .ico', () => {
+    expect(html).toContain('rel="icon"');
+    expect(html).toContain('/favicon.svg');
+    expect(html).toContain('/favicon.ico');
+  });
+
+  test('presenta la marca Icarus junto al nombre de la aplicación', async () => {
+    renderLayout('Administrador');
+
+    const marca = await screen.findByTestId('marca-icarus');
+    expect(marca).toHaveAttribute('viewBox', '0 0 800 800');
+    expect(marca).toHaveAttribute('aria-hidden', 'true');
+  });
 
   test('presenta la plantilla maestra y su navegación accesible', async () => {
     renderLayout('Administrador');

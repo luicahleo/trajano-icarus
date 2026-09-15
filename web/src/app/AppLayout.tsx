@@ -16,6 +16,7 @@ import { Suspense, useState } from 'react';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
 import { CargandoRuta } from './CargandoRuta';
+import { MarcaIcarus } from './MarcaIcarus';
 import { BannerSinConexion } from './BannerSinConexion';
 import { obtenerEnlacesNavegacion, obtenerTituloRuta } from './navegacion';
 import { NavegacionPrincipal } from './NavegacionPrincipal';
@@ -84,6 +85,7 @@ export function AppLayout() {
               <MenuRoundedIcon />
             </IconButton>
           )}
+          <MarcaIcarus tamano={28} />
           <Typography
             variant="h6"
             component={RouterLink}
