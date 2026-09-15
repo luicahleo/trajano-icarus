@@ -32,6 +32,13 @@ El `docker-compose.yml` de producción recibe estas variables por `env_file:
 .env`; la plantilla está en `.env.example`. Nunca se registran en logs ni se
 escriben en archivos versionados.
 
+El workflow de despliegue obtiene las contraseñas de los secretos del entorno
+protegido `production` de GitHub (`SEEDSETTINGS__GESTORRECEPCIONHUEVOSPASSWORD`
+y `SEEDSETTINGS__GESTORPEDIDOALIMENTOPASSWORD`). Las transfiere a la VPS en un
+archivo temporal de permisos `0600`, actualiza solo esas dos claves del `.env`
+remoto y elimina el temporal; no las acepta como argumentos ni las muestra en
+los logs.
+
 ## Comportamiento
 
 - **Falta un secreto**: la ejecución se omite íntegramente. No se crea un

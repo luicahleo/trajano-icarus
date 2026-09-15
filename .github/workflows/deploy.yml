@@ -193,6 +193,60 @@ jobs:
             payload/Dockerfile.gestor payload/docker-compose.gestor.yml payload/.dockerignore \
             "$destino:$release_gestor/"
 
+      - name: Actualizar secretos de cuentas gestoras
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          GESTOR_RECEPCION_HUEVOS_PASSWORD: ${{ secrets.SEEDSETTINGS__GESTORRECEPCIONHUEVOSPASSWORD }}
+          GESTOR_PEDIDO_ALIMENTO_PASSWORD: ${{ secrets.SEEDSETTINGS__GESTORPEDIDOALIMENTOPASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$GESTOR_RECEPCION_HUEVOS_PASSWORD"
+          test -n "$GESTOR_PEDIDO_ALIMENTO_PASSWORD"
+
+          secretos_temporales="$(mktemp)"
+          remoto="/tmp/trajano-icarus-seed-cuentas-${GITHUB_RUN_ID}"
+          limpiar() {
+            rm -f -- "$secretos_temporales"
+            ssh -o BatchMode=yes -o ConnectTimeout=15 "$VPS_USER@$VPS_HOST" \
+              "rm -f -- '$remoto'" || true
+          }
+          trap limpiar EXIT
+
+          umask 077
+          printf '%s=%s\n' \
+            'SeedSettings__GestorRecepcionHuevosPassword' "$GESTOR_RECEPCION_HUEVOS_PASSWORD" \
+            'SeedSettings__GestorPedidoAlimentoPassword' "$GESTOR_PEDIDO_ALIMENTO_PASSWORD" \
+            > "$secretos_temporales"
+
+          destino="$VPS_USER@$VPS_HOST"
+          scp -q -o BatchMode=yes -o ConnectTimeout=15 "$secretos_temporales" "$destino:$remoto"
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$destino" \
+            "bash -s -- '$remoto'" <<'ENDSSH'
+          set -Eeuo pipefail
+
+          archivo_temporal="$1"
+          raiz='/var/apps/trajano-icarus'
+          archivo_env="$raiz/.env"
+          archivo_nuevo="$(mktemp "$raiz/.env.XXXXXX")"
+          trap 'rm -f -- "$archivo_temporal" "$archivo_nuevo"' EXIT
+
+          test -s "$archivo_env"
+          test "$(grep -c '^SeedSettings__GestorRecepcionHuevosPassword=' "$archivo_temporal")" -eq 1
+          test "$(grep -c '^SeedSettings__GestorPedidoAlimentoPassword=' "$archivo_temporal")" -eq 1
+          test -n "$(sed -n 's/^SeedSettings__GestorRecepcionHuevosPassword=//p' "$archivo_temporal")"
+          test -n "$(sed -n 's/^SeedSettings__GestorPedidoAlimentoPassword=//p' "$archivo_temporal")"
+
+          awk -F '=' '
+            $1 != "SeedSettings__GestorRecepcionHuevosPassword" &&
+            $1 != "SeedSettings__GestorPedidoAlimentoPassword" { print }
+          ' "$archivo_env" > "$archivo_nuevo"
+          cat "$archivo_temporal" >> "$archivo_nuevo"
+          chmod 0600 "$archivo_nuevo"
+          mv -f "$archivo_nuevo" "$archivo_env"
+          ENDSSH
+
       - name: Desplegar candidato y promover con rollback
         shell: bash
         env:
