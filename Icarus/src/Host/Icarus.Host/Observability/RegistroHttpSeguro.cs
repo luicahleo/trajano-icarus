@@ -53,20 +53,23 @@ public static class RegistroHttpSeguro
             if (DiagnosticIds.EsSessionId(sessionId))
                 diagnostico.Set("SessionId", sessionId!);
 
-            if (contexto.Items.TryGetValue(ContextoIdentidadObservabilidadMiddleware.ClienteIdItem,
-                    out var clienteId))
+            if (DiagnosticContext.ObtenerClienteId(contexto) is { } clienteId)
                 diagnostico.Set("ClienteId", clienteId);
 
-            if (contexto.Items.TryGetValue(ContextoIdentidadObservabilidadMiddleware.RolItem,
-                    out var rol))
+            if (DiagnosticContext.ObtenerRol(contexto) is { } rol)
                 diagnostico.Set("Rol", rol);
         };
     }
 
     /// <summary>Patrón de ruta resuelto, o un valor cerrado cuando no hay
-    /// endpoint. Nunca copia el pathname recibido.</summary>
+    /// endpoint. Nunca copia el pathname recibido. Prefiere el patrón capturado
+    /// por ContextoRutaMiddleware, que sobrevive al desenrollado de scopes.</summary>
     public static string PatronRuta(HttpContext contexto)
     {
+        if (contexto.Items.TryGetValue(ContextoRutaMiddleware.Item, out var capturado)
+            && capturado is string patronCapturado && patronCapturado.Length > 0)
+            return patronCapturado;
+
         if (contexto.GetEndpoint() is RouteEndpoint { RoutePattern.RawText: { Length: > 0 } patron })
             return patron;
 

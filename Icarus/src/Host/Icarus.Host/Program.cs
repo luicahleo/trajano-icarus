@@ -101,6 +101,9 @@ app.UseSerilogRequestLogging(opciones =>
 });
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseRouting();
+// Patrón de ruta seguro tras routing: sombrea el RequestPath concreto en todos
+// los eventos de la ejecución (operación, decisión, persistencia).
+app.UseMiddleware<ContextoRutaMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<ContextoIdentidadObservabilidadMiddleware>();
 app.UseMiddleware<ClienteActivoMiddleware>();

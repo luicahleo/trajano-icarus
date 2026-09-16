@@ -44,6 +44,12 @@ public sealed class ExceptionHandlingMiddleware
             ["RequestPath"] = patron,
         };
         if (errorId is not null) propiedades["ErrorId"] = errorId;
+        // El scope de identidad ya se desenrolló: se recupera de Items, que
+        // persiste, para que el log de error exterior conserve el contexto.
+        if (DiagnosticContext.ObtenerClienteId(context) is { } clienteId)
+            propiedades["ClienteId"] = clienteId;
+        if (DiagnosticContext.ObtenerRol(context) is { } rol)
+            propiedades["Rol"] = rol;
         return propiedades;
     }
 

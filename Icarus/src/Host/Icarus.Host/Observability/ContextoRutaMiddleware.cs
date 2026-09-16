@@ -3,15 +3,15 @@ using Serilog.Context;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Trajano.GestorCaisy.Observabilidad;
+namespace Icarus.Host.Observability;
 
-/// <summary>Captura el patrón de ruta del endpoint original una sola vez, antes
-/// de las reejecuciones de error, y lo publica como contexto de la ejecución:
-/// sombrea el RequestPath concreto en todos los eventos internos. Nunca copia
-/// el pathname recibido.</summary>
+/// <summary>Fija el patrón de ruta seguro después de routing y lo publica como
+/// contexto de la ejecución: sombrea el RequestPath concreto que hereda el
+/// scope del framework y lo conserva en Items para el resumen y el log de
+/// error exterior, que corren con los scopes ya desenrollados.</summary>
 public sealed class ContextoRutaMiddleware
 {
-    public const string Item = "Trajano.Observabilidad.RoutePattern";
+    public const string Item = "Icarus.Observabilidad.RoutePattern";
 
     private readonly RequestDelegate _siguiente;
 
@@ -19,14 +19,11 @@ public sealed class ContextoRutaMiddleware
 
     public async Task Invoke(HttpContext contexto)
     {
-        if (!contexto.Items.TryGetValue(Item, out var capturado) || capturado is not string)
-        {
-            capturado = (contexto.GetEndpoint() as RouteEndpoint)
-                ?.RoutePattern.RawText ?? RegistroHttpSeguro.RutaSinResolver;
-            contexto.Items[Item] = capturado;
-        }
+        var patron = (contexto.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
+        if (string.IsNullOrEmpty(patron))
+            patron = RegistroHttpSeguro.RutaSinResolver;
 
-        var patron = (string)capturado;
+        contexto.Items[Item] = patron;
         using (LogContext.Push(new EnriquecedorRutaSegura(patron)))
         {
             await _siguiente(contexto);

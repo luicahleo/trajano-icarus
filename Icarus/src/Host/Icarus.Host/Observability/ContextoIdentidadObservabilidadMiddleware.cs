@@ -1,16 +1,17 @@
 using System.Security.Claims;
+using Icarus.BuildingBlocks.Observability;
 using Icarus.Identity.Domain;
+using Serilog.Context;
 
 namespace Icarus.Host.Observability;
 
-/// <summary>Guarda el tenant y el rol permitidos en el contexto de la petición
-/// para que el resumen externo los enriquezca después de que el scope interno
-/// haya terminado. Solo copia claims validados; nunca claims completos.</summary>
+/// <summary>Publica el tenant y el rol permitidos como contexto de todos los
+/// eventos de la ejecución (operación, decisión, persistencia y transacción),
+/// además de guardarlos en Items para que el resumen externo y el log de error
+/// exterior los enriquezcan después de que el scope interno haya terminado.
+/// Solo copia claims validados; nunca claims completos ni datos nominales.</summary>
 public sealed class ContextoIdentidadObservabilidadMiddleware
 {
-    public const string ClienteIdItem = "Icarus.Observabilidad.ClienteId";
-    public const string RolItem = "Icarus.Observabilidad.Rol";
-
     private readonly RequestDelegate _siguiente;
 
     public ContextoIdentidadObservabilidadMiddleware(RequestDelegate siguiente) =>
@@ -18,14 +19,33 @@ public sealed class ContextoIdentidadObservabilidadMiddleware
 
     public async Task Invoke(HttpContext contexto)
     {
-        var clienteId = contexto.User.FindFirstValue(ClaimsIdentidad.ClienteId);
-        if (Guid.TryParse(clienteId, out var cliente))
-            contexto.Items[ClienteIdItem] = cliente;
+        Guid? clienteId = null;
+        if (Guid.TryParse(contexto.User.FindFirstValue(ClaimsIdentidad.ClienteId), out var cliente))
+        {
+            clienteId = cliente;
+            DiagnosticContext.EstablecerClienteId(contexto, cliente);
+        }
 
         var rol = contexto.User.FindFirstValue(ClaimsIdentidad.Rol);
-        if (!string.IsNullOrWhiteSpace(rol))
-            contexto.Items[RolItem] = rol;
+        if (string.IsNullOrWhiteSpace(rol))
+            rol = null;
+        else
+            DiagnosticContext.EstablecerRol(contexto, rol);
 
-        await _siguiente(contexto);
+        // El scope se dispone siempre, también ante excepción.
+        var ambitos = new List<IDisposable>(2);
+        try
+        {
+            if (clienteId is not null)
+                ambitos.Add(LogContext.PushProperty("ClienteId", clienteId.Value));
+            if (rol is not null)
+                ambitos.Add(LogContext.PushProperty("Rol", rol));
+            await _siguiente(contexto);
+        }
+        finally
+        {
+            for (var i = ambitos.Count - 1; i >= 0; i--)
+                ambitos[i].Dispose();
+        }
     }
 }
