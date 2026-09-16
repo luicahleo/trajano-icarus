@@ -113,6 +113,17 @@ if ($LASTEXITCODE -ne 0) {
 $raiz = Invoke-Git 'rev-parse' '--show-toplevel'
 Set-Location $raiz
 
+# ---------------------------------------------------------------------------
+# Puerta de calidad local
+# ---------------------------------------------------------------------------
+
+Write-Host 'Ejecutando puerta de calidad local...'
+& powershell -NoProfile -File .\verify.ps1
+if ($LASTEXITCODE -ne 0) {
+    throw 'La puerta de calidad local falló. Corrige antes de publicar.'
+}
+Write-Host 'Puerta de calidad local verde.' -ForegroundColor Green
+
 $ramaActual = Invoke-Git 'branch' '--show-current'
 if ($ramaActual -ne $RamaDesarrollo) {
     throw "Debes estar en la rama '$RamaDesarrollo' para publicar. Rama actual: $ramaActual"
