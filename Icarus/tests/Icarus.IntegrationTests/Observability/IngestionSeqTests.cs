@@ -103,6 +103,27 @@ public sealed class IngestionSeqTests : IAsyncLifetime
         Assert.Single(capturador.Eventos);
     }
 
+    [Fact]
+    public async Task SeqRecibeEventosAunqueLaConsolaEsteBloqueada()
+    {
+        using var consumidor = new SinkBloqueable();
+        await using var logger = new LoggerConfiguration()
+            .WriteTo.Async(c => c.Sink(consumidor), bufferSize: 2, blockWhenFull: false)
+            .WriteTo.Seq(UrlSeq, batchPostingLimit: 10,
+                period: TimeSpan.FromMilliseconds(200), queueSizeLimit: 1000)
+            .CreateLogger();
+
+        consumidor.Bloquear();
+        logger.Information("{EventName}: consola bloqueada", Evento);
+
+        // Seq es independiente del consumidor de consola bloqueado; esta prueba
+        // no dice nada sobre la cola interna de Seq.
+        var crudo = await ConsultarSeqCrudoAsync();
+        Assert.Contains(Evento, crudo);
+
+        consumidor.Liberar();
+    }
+
     private async Task<string> ConsultarSeqCrudoAsync()
     {
         using var http = new HttpClient { BaseAddress = new Uri(UrlSeq) };
@@ -123,6 +144,19 @@ public sealed class IngestionSeqTests : IAsyncLifetime
             await Task.Delay(250);
         }
         return ultimo ?? string.Empty;
+    }
+
+    private sealed class SinkBloqueable : ILogEventSink, IDisposable
+    {
+        private readonly ManualResetEventSlim _liberar = new(true);
+
+        public void Bloquear() => _liberar.Reset();
+
+        public void Liberar() => _liberar.Set();
+
+        public void Emit(LogEvent logEvent) => _liberar.Wait(TimeSpan.FromSeconds(30));
+
+        public void Dispose() => _liberar.Dispose();
     }
 
     private sealed class CapturadorSink : ILogEventSink
