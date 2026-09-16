@@ -24,6 +24,8 @@ y buscan los errores técnicos sin exponer PII. Diseño y contrato:
 | `ErrorId` | un incidente | `ERR-` + 12 hex mayúsculas | `ErrorId = 'ERR-...'` |
 | `SessionId` | una pestaña | `SES-` + 12 hex mayúsculas | `SessionId = 'SES-...'` |
 | `CorrelationId` | una petición HTTP | UUID | `CorrelationId = '...'` |
+| `ClienteId` | tenant de una ejecución | GUID opaco | `ClienteId = '...'` |
+| `Rol` | rol validado del principal | valor cerrado | `Rol = 'Cliente'` |
 | `DownstreamCorrelationId` | un envío MVC → API | UUID | `DownstreamCorrelationId = '...'` |
 | `TraceId` | ejecución ASP.NET (W3C) | 32 hex minúsculas | `TraceId = '...'` |
 | `Operation` | una operación del vuelo | vocabulario de dominio | `Operation = 'avicola.pedidos.crear'` |
@@ -153,6 +155,66 @@ El buscador acepta la sintaxis `Propiedad = 'valor'`:
 > `RoutePattern` para no heredar el pathname concreto del framework. La consulta
 > de contrato es `RoutePattern`; `EventName` reemplaza al antiguo `EventType`.
 
+## Plantillas seguras, identidad y saturación (cierre correctivo)
+
+### Plantillas de las llamadas salientes
+
+`http.client.send` registra la **plantilla técnica** que aporta la operación que
+construye la llamada (`/api/pedidos-alimento-caisy/{id}`), no la URI concreta:
+un id, un folio o un query con datos nunca aparecen en `RoutePattern`. La
+plantilla viaja por `HttpRequestMessage.Options`; si el envío no trae metadato
+se registra `unmatched`, nunca se deriva del `AbsolutePath`. Esto cubre JSON,
+multipart, renovación de sesión y reintentos. Las llamadas automáticas de
+`IHttpClientFactory` se retiran del cliente tipado de GestorCaisy
+(`RemoveAllLoggers`): su scope incrustaba la URI concreta incluso en el evento
+propio.
+
+### Identidad disponible en los eventos internos
+
+Tras autenticar, el host abre un scope con `ClienteId` (identificador opaco del
+tenant) y `Rol` (valor validado). Así lo heredan `operation.*`,
+`persistence.save_changes.*` y `transaction.*`, no solo el resumen. El contexto
+se guarda además en `Items` para que el resumen y el log de error exterior —que
+corren con los scopes ya desenrollados— lo conserven. Nunca se registran claims
+completos, usuarios ni trabajadores.
+
+### Relaciones entre identificadores
+
+| Relación | Cómo se lee |
+|---|---|
+| MVC → API, misma ejecución | `TraceId` compartido en ambos hosts |
+| salto físico MVC → API | `DownstreamCorrelationId` (MVC) = `CorrelationId` (API) |
+| varios saltos (401 → renovación → reintento) | un `DownstreamCorrelationId` distinto por envío, mismo `TraceId` |
+| incidente | `ErrorId` idéntico en `backend.error` y en el resumen 500 |
+
+`TraceId` es el id W3C de la ejecución; los spans nativos de `Activity` separan
+servidor y cliente dentro de la misma traza. La prueba de extremo a extremo usa
+el transporte HTTP real de ambos hosts (Kestrel en puertos efímeros), no un
+cliente falso ni cabeceras inyectadas por el test.
+
+### Saturación de la consola asíncrona
+
+La consola JSON sigue envuelta en `Serilog.Sinks.Async` con cola acotada y
+`blockWhenFull=false`. Un monitor mínimo publica por `System.Diagnostics.Metrics`
+(`Icarus.Observabilidad.ColaConsola` / `Trajano.GestorCaisy.Observabilidad.ColaConsola`):
+`cola.consola.capacidad`, `cola.consola.ocupacion` y `cola.consola.descartes`.
+El aviso de saturación **no** se emite por la propia cola saturada. Al liberar el
+consumidor la cola se drena y vuelve a aceptar eventos. Seq es un sink
+independiente: recibe eventos aunque el consumidor de consola esté bloqueado
+(esta prueba no dice nada sobre la cola interna de Seq).
+
+### Fuentes suprimidas y por qué
+
+- `Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware` (MVC): a
+  `Fatal` en `appsettings.json`. El diagnóstico seguro lo aportan
+  `backend.error` y `backend.error.fallback`; el evento del framework repetía la
+  excepción cruda. La supresión por `SuppressDiagnosticsCallback` cubre el camino
+  normal y `RespuestaErrorSeguraMiddleware` cubre respuesta ya iniciada y fallo
+  de la página de error.
+- `System.Net.Http.HttpClient` (MVC): a `Fatal`, y las llamadas automáticas se
+  retiran con `RemoveAllLoggers`. Se conserva `http.client.send`, que es el
+  evento seguro propio.
+
 ## Alertas iniciales
 
 Definir señales y umbrales iniciales (configuración operativa, fuera de este
@@ -173,9 +235,10 @@ incremento):
   `queueSizeLimit` se declaran en la configuración (`Serilog:WriteTo:Seq:Args`).
 - **La consola JSON es un respaldo independiente**, envuelta en
   `Serilog.Sinks.Async` con cola acotada (`bufferSize`) y `blockWhenFull=false`
-  para no bloquear el hilo de petición. La consola **no reenvía** a Seq: si Seq
-  cae, los eventos solo quedan en `docker logs` y su retención depende del
-  sistema de logs del contenedor.
+  para no bloquear el hilo de petición; su capacidad, ocupación y descartes se
+  observan con el monitor de métricas descrito arriba. La consola **no reenvía**
+  a Seq: si Seq cae, los eventos solo quedan en `docker logs` y su retención
+  depende del sistema de logs del contenedor.
 - **No hay entrega exactamente una vez ni buffer durable**. Una cola llena, una
   caída prolongada de Seq o una terminación abrupta pueden perder eventos. Un
   buffer durable en volumen queda como mejora posterior y necesita límites de

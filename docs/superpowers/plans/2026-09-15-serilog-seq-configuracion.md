@@ -371,9 +371,12 @@ verde antes de cada commit (Docker y .NET 10).
   para no pasar la excepción cruda al logger (regla S6667) sin perder la señal.
 - **Testcontainers pasa a ser dependencia de pruebas de `Trajano.GestorCaisy.Tests`**
   (no del backend que consume).
-- **En Development, GestorCaisy usa también `UseExceptionHandler`**; la página
-  de desarrollo queda por fuera, así que en ese entorno el resumen podría
-  adjuntar la excepción. Es una limitación de desarrollo, no de producción.
+- **`UseExceptionHandler` está activo en todos los entornos de GestorCaisy**, no
+  solo en Development: el diagnóstico del framework con la excepción cruda podía
+  alcanzar cualquier entorno. La afirmación previa de que era «una limitación de
+  desarrollo, no de producción» quedó **corregida** por el
+  [cierre correctivo](../specs/2026-09-15-serilog-seq-cierre-correctivo-design.md),
+  que suprime ese diagnóstico y cubre los tres entornos con canarios sintéticos.
 
 ### Verificación observada
 
