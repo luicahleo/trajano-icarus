@@ -19,7 +19,7 @@ public sealed class ColaConsolaTests
     public async Task ElHostConectaElMonitorDeLaColaDeConsola()
     {
         using var escucha = new MeterListener();
-        int? capacidad = null;
+        var capacidad = new int[1];
         escucha.InstrumentPublished = (instrumento, oyente) =>
         {
             if (instrumento.Meter.Name == MonitorColaConsola.NombreMedidor)
@@ -28,16 +28,24 @@ public sealed class ColaConsolaTests
         escucha.SetMeasurementEventCallback<int>((instrumento, valor, _, _) =>
         {
             if (instrumento.Name == "cola.consola.capacidad")
-                capacidad = valor;
+                Interlocked.Exchange(ref capacidad[0], valor);
         });
         escucha.Start();
 
         using var aplicacion = new AplicacionDePruebas();
         var cliente = aplicacion.CreateClient();
         await cliente.GetAsync("/Sesion/Acceder");
-        escucha.RecordObservableInstruments();
 
-        Assert.Equal(10000, capacidad);
+        // El instrumento se publica al componer el logger del host; se sondea
+        // con cota amplia para no depender del orden de arranque.
+        var limite = DateTime.UtcNow.AddSeconds(15);
+        while (Volatile.Read(ref capacidad[0]) != 10000 && DateTime.UtcNow < limite)
+        {
+            escucha.RecordObservableInstruments();
+            await Task.Delay(50);
+        }
+
+        Assert.Equal(10000, Volatile.Read(ref capacidad[0]));
     }
 
     [Fact]
