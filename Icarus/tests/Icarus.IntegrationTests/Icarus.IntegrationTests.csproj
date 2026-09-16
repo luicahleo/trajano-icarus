@@ -26,6 +26,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host\Icarus.Host\Icarus.Host.csproj" />
+    <!-- Alias para evitar la colisión de los dos tipos Program (Host y MVC).
+         Es una referencia exclusiva de pruebas: el desplegable MVC no depende
+         del backend. -->
+    <ProjectReference Include="..\..\src\Apps\Trajano.GestorCaisy\Trajano.GestorCaisy.csproj">
+      <Aliases>mvc</Aliases>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

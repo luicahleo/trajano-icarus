@@ -40,7 +40,10 @@ public sealed class ContextoRutaMiddleware
     {
         public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
         {
-            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RoutePattern", patron));
+            // RoutePattern solo si el evento no trae uno propio (una llamada
+            // saliente declara su propia plantilla); RequestPath siempre se
+            // sombrea con el patrón seguro.
+            logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("RoutePattern", patron));
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RequestPath", patron));
         }
     }
