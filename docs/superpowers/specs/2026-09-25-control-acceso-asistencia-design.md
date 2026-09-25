@@ -5,6 +5,12 @@ revisar el proyecto MAUI IMCA, su documentación y el patrón modular de Gestió
 Avícola. IMCA queda como fuente histórica: no se reutiliza su aplicación ni su
 arquitectura offline.
 
+Detalle de la fase 1: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
+[spec técnico propuesto](2026-09-25-control-acceso-fase1-design.md) y
+[plan](../plans/2026-09-25-control-acceso-fase1.md). La sesión de preparación
+es exclusivamente documental. Las propuestas técnicas y dependencias abiertas
+se distinguen de las reglas funcionales aprobadas.
+
 ## Propósito
 
 Crear `ControlAcceso` como un bounded context nuevo de Trajano-Icarus. Un único
@@ -60,11 +66,14 @@ aplicación.
 
 ## Flujo del kiosco
 
-El cliente autenticado abre el modo kiosco. El Host sustituye su sesión normal
-por una sesión restringida, ligada al tenant y utilizable solo en los endpoints
-del kiosco; nunca se expone el token administrativo en esa pantalla. No se crea
-un catálogo de dispositivos. Salir del modo kiosco exige volver a autenticarse
-como cliente.
+El cliente activa una sesión restringida, ligada al tenant y utilizable solo
+en los endpoints del kiosco; nunca se expone un token administrativo en esa
+pantalla. El detalle propuesto para la fase 1 utiliza un origen y arranque web
+dedicados, con verificación de credenciales que emite solo sesión de kiosco.
+Esto precisa la idea inicial de sustituir una sesión normal: el login normal
+existente conserva un refresh token y no basta con ocultar la administración.
+No se crea un catálogo de dispositivos. Salir del modo kiosco exige volver a
+autenticarse como cliente.
 
 La pantalla inactiva muestra dos botones grandes: `Entrada` y `Salida`.
 
@@ -89,9 +98,12 @@ biométricos.
 
 ## ARGOS y custodia biométrica
 
-El ARGOS actual genera embeddings ArcFace y ofrece registro e identificación,
-pero no implementa prueba de vida. Antes de que la fase 1 sea apta para uso
-real, ARGOS debe ofrecer un contrato interno versionado que:
+La copia local de ARGOS revisada genera embeddings ArcFace e identifica contra
+plantillas recibidas o consultadas en ICARUS legacy. No se encontró una ruta
+actual de registro en `ARGOS/views.py`, custodia independiente para el nuevo
+módulo ni prueba de vida habilitada. La referencia de IMCA a registro no acredita
+esa capacidad actual. Antes de que la fase 1 sea apta para uso real, ARGOS debe
+ofrecer un contrato interno versionado que:
 
 - registre o sustituya la referencia facial de un trabajador dentro de un
   tenant;
@@ -281,6 +293,7 @@ del kiosco.
 - La telemetría operativa se limita a disponibilidad, latencia, contadores
   agregados y códigos genéricos de resultado.
 
-Cada fase posterior tendrá su propio spec y plan. El siguiente artefacto de
-este flujo es el plan ejecutable de la fase 1; no se implementarán todavía las
-fases 2 a 4.
+Cada fase posterior tendrá su propio spec y plan. El plan de fase 1 ya está
+preparado por dependencias. Su preparación no implementa ni autoriza despliegue
+de ninguna fase; A0 de ARGOS y la aceptación del equipo del kiosco siguen
+pendientes.
