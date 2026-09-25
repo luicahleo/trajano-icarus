@@ -11,7 +11,7 @@ Los identificadores de dominio van en español, igual que el resto del proyecto.
 
 | Módulo | Alcance |
 |---|---|
-| Control de acceso | Trabajadores, zonas, registros biométricos, entradas y salidas |
+| Control de acceso | Asistencia online de trabajadores en un único punto físico bidireccional por cliente: habilitación y enrolamiento facial mediante ARGOS, entradas y salidas, varios pares diarios, incidencias y correcciones auditadas. No incluye zonas, huella, funcionamiento offline ni salarios. Horarios, reportes, vacaciones y permisos se incorporan por fases. |
 | Gestión avícola | Granjas, galpones, producción de huevos, mortalidad, vacunación, alimentación, despachos, precios |
 
 ## Actores
