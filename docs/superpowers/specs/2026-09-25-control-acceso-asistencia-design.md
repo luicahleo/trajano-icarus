@@ -9,6 +9,12 @@ Actualización funcional del brainstorming: 2026-09-26. Se mantienen las
 decisiones iniciales y se incorporan las respuestas posteriores sobre equipos,
 cuentas compartidas, enrolamiento y registro manual.
 
+La [evaluación de ARGOS compartido](2026-09-26-control-acceso-argos-evaluacion.md)
+reabre la ubicación de la custodia biométrica. El servicio ya funciona para
+Caserito; agregarle un almacén de perfiles fue una propuesta técnica inicial,
+no una decisión aprobada. A0 debe comparar esa alternativa con plantillas
+cifradas en Trajano-Icarus y mantener el motor compartido compatible.
+
 Detalle de la fase 1: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
 [spec técnico propuesto](2026-09-25-control-acceso-fase1-design.md) y
 [plan](../plans/2026-09-25-control-acceso-fase1.md). La sesión de preparación
@@ -124,8 +130,8 @@ La copia local de ARGOS revisada genera embeddings ArcFace e identifica contra
 plantillas recibidas o consultadas en ICARUS legacy. No se encontró una ruta
 actual de registro en `ARGOS/views.py`, custodia independiente para el nuevo
 módulo ni prueba de vida habilitada. La referencia de IMCA a registro no acredita
-esa capacidad actual. Antes de que la fase 1 sea apta para uso real, ARGOS debe
-ofrecer un contrato interno versionado que:
+esa capacidad actual. Si se elige custodia en ARGOS, la alternativa inicial
+necesitará un contrato interno versionado que:
 
 - registre o sustituya la referencia facial de un trabajador dentro de un
   tenant;
@@ -137,9 +143,11 @@ ofrecer un contrato interno versionado que:
   asociadas a personas ni marcaciones nominales en logs;
 - descarte las muestras capturadas después de procesarlas.
 
-Trajano-Icarus conserva solamente la referencia opaca de ARGOS y el estado de
-enrolamiento. Las fotografías y plantillas faciales no se duplican en su base
-de datos. Los umbrales y el mecanismo de prueba de vida son configuración del
+La propuesta inicial conservaba en Trajano-Icarus solo una referencia opaca de
+ARGOS y el estado de enrolamiento, con plantillas custodiadas fuera del módulo.
+La revisión posterior deja esa custodia pendiente de decisión A0. En cualquier
+alternativa no habrá biometría en el navegador o logs ni fotos persistidas de
+intentos. Los umbrales y el mecanismo de prueba de vida son configuración del
 sistema, no parámetros editables por cada cliente.
 
 La indisponibilidad de ARGOS no impide arrancar Trajano-Icarus ni utilizar otros
@@ -305,7 +313,9 @@ del kiosco.
 - reconocimiento ONNX en el navegador o dispositivo;
 - funcionamiento offline o sincronización diferida;
 - migración automática de biometría o marcaciones desde IMCA;
-- copia de fotografías o embeddings en Trajano-Icarus;
+- almacenamiento de fotos de cada marcación; la custodia cifrada de plantillas
+  de enrolamiento se decide en A0 (la prohibición inicial en Trajano queda
+  sujeta a esa revisión técnica);
 - marcaciones manuales del cliente presentadas como si fueran eventos del
   kiosco.
 

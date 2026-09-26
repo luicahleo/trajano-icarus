@@ -4,6 +4,13 @@ Creado: 2026-09-25. Actualizado: 2026-09-26 con decisiones del brainstorming.
 Estado: reglas funcionales confirmadas; propuestas técnicas sujetas a revisión.
 No hay implementación ni autorización de despliegue en esta sesión.
 
+Revisión de ARGOS compartido: [evidencia local y VPS](2026-09-26-control-acceso-argos-evaluacion.md).
+La custodia de plantillas se reabre como decisión técnica pendiente: no fue
+aprobada por el usuario. El contrato de perfiles de la sección 5 describe la
+alternativa inicial con almacén en ARGOS, no una capacidad existente ni una
+obligación ya elegida. A0 debe resolverlo antes de ejecutar persistencia
+biométrica, adaptador real o enrolamiento.
+
 Referencias: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
 [diseño general](2026-09-25-control-acceso-asistencia-design.md) y
 [plan ejecutable por dependencias](../plans/2026-09-25-control-acceso-fase1.md).
@@ -168,10 +175,18 @@ usuario. Solo hay una sesión lógica, sin registro de hardware ni emparejamient
 
 ## 5. Contrato ARGOS: dependencia externa A0
 
-El repositorio local actual no cumple el contrato de esta sección. No ofrece
-custodia independiente compatible con los GUID del nuevo sistema ni activa
-prueba de vida. Los endpoints legacy consultan ICARUS y pueden devolver
-candidatos y puntuaciones; no se consumen desde este módulo.
+ARGOS ya es el servicio facial compartido con Caserito; `/api/verify` compara
+dos imágenes y su funcionamiento está acreditado por la batería VPS del
+2026-08-06 (doc 34). Existe además `/api/identify`, con candidatos aportados
+en la petición o consultados en ICARUS legacy, pero exige adaptación para GUID,
+privacidad y el nuevo flujo. No activa PAD ni ofrece custodia independiente.
+
+A0 decidirá entre mantener ARGOS como motor con plantillas cifradas custodiadas
+por Trajano-Icarus o añadir custodia en ARGOS. La segunda es la propuesta
+inicial desarrollada a continuación. Si se elige la primera, actualizar
+contratos/persistencia/enrolamiento antes de ejecutarlos; no cambiar nunca la
+prohibición de biometría en logs o navegador. No se trata de crear otro motor
+facial ni de reutilizar el catálogo KYC de Caserito.
 
 Proponer API interna separada y versionada `/api/v2/control-acceso`, con
 autenticación entre servicios, namespace de aplicación y tenant obligatorios:
@@ -205,12 +220,14 @@ prueba de vida aprobada, coincidencia no ambigua y perfil vigente. Si faltan
 campos, la respuesta es negativa o el servicio no está disponible, no marca.
 La disponibilidad de ARGOS no condiciona el arranque de los otros módulos.
 
-ARGOS custodia plantillas cifradas y versionadas, con aislamiento por
+Bajo la alternativa de custodia en ARGOS, este guardaría plantillas cifradas
+y versionadas, con aislamiento por
 namespace/tenant, restauración probada e invalidación inmediata de cachés al
 revocar. No retiene capturas de intentos. A0 documentará claves, volumen,
 retención de respaldos y eliminación; no se da por hecho que eso exista hoy.
 
-Trajano-Icarus conserva referencia/versión y estado, jamás foto o plantilla.
+En esa alternativa, Trajano-Icarus conserva referencia/versión y estado, jamás
+foto o plantilla. Esto sigue sujeto a la decisión de custodia en A0.
 Estados de enrolamiento: SinEnrolar, Pendiente, Vigente, RevocacionPendiente,
 Revocado. Ante resultado incierto, conservar operación durable sin biometría
 y reconciliar. Nunca activar un perfil con solo un timeout como evidencia.
@@ -223,6 +240,9 @@ Deshabilitar es reversible y no borra el perfil; revocar sí lo elimina.
 
 Cambios de ARGOS se ejecutarán en su propio repositorio y según su AGENTS.md.
 No romper `/api/verify`, usado por CaseritoApp, ni alterar sus consumidores.
+Conservar contrato y semántica, incluyendo errores sin rostro; no trasladar
+umbrales de aprobación KYC al kiosco ni activar PAD sobre documentos de KYC.
+Ensayar carga compartida y regresión: ambos flujos usan el mismo servicio.
 Esta sesión solo documenta el requisito; no modifica ni despliega ese servicio.
 
 ## 6. Modelo temporal, secuencia y concurrencia

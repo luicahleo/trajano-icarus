@@ -10,6 +10,11 @@ Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
 funcionales aprobadas están distinguidas de las propuestas técnicas y de las
 dependencias externas pendientes.
 
+Evidencia adicional: [ARGOS compartido con Caserito](../specs/2026-09-26-control-acceso-argos-evaluacion.md).
+La custodia en ARGOS no está decidida. A0 debe elegir su ubicación y actualizar
+las partes biométricas de tareas 4, 6 y 7 antes de ejecutarlas; las rutas v2
+de perfiles son una alternativa, no un requisito impuesto al servicio actual.
+
 ## Reglas para el futuro ejecutor
 
 - Trabajar en develop según AGENTS.md; preservar cambios ajenos. En el momento
@@ -61,7 +66,7 @@ productivo hasta superar 6 y 13. Si A0 requiere vídeo/gestos en vez de captura
 pasiva, actualizar spec y tareas 6, 7 y 11 antes de implementar esas partes.
 No seleccionar en silencio un modelo, licencia, umbral o almacenamiento facial.
 
-## A0 — Dependencia externa: contrato ARGOS v2
+## A0 — Integración con ARGOS existente y decisión de custodia
 
 Responsable futuro: ejecutor de ARGOS, coordinado con agenteLocal y agenteVPS.
 No se inicia ese trabajo desde esta sesión. ARGOS tiene su propio AGENTS.md:
@@ -75,21 +80,35 @@ Rutas a revisar allí: `ARGOS/views.py`, `ARGOS/api_client.py`,
 plan, después de decidir custodia/PAD; no tratar estas rutas nuevas como código
 que ya existe.
 
-- [ ] Confirmar con agenteVPS versión de imagen/commit y capacidades realmente
-  desplegadas; la respuesta 48 solo acredita relojes.
-- [ ] Fijar contrato de namespace/tenant opacos, perfiles versionados,
-  operaciones idempotentes, identificación, revocación y capacidades.
+- [ ] Partir de las capacidades existentes: verify 1:1, extracción e identify
+  con candidatos externos; no diseñar como si no existiera reconocimiento.
+  Confirmar imagen/commit desplegado actual: doc 34 acredita batería funcional
+  del 2026-08-06, doc 45 calibración KYC y doc 48 solamente relojes.
+- [ ] Decidir custodia: plantillas cifradas en Trajano con ARGOS como motor,
+  o nuevo almacén de perfiles en ARGOS. Actualizar spec y tareas afectadas;
+  no ejecutar ambas alternativas ni tratar la segunda como ya aprobada.
+- [ ] Fijar contrato según custodia elegida: namespace/tenant opacos,
+  identificación y capacidades; perfiles versionados y revocación en ARGOS
+  solo si será su custodio. En ambas opciones, operaciones idempotentes.
 - [ ] Decidir modelo PAD/versión/licencia, formato de evidencia y criterios
   medibles de identificación, ambigüedad, rechazo y rendimiento con el equipo.
 - [ ] Definir almacén cifrado, claves, respaldo/restauración, eliminación y
-  aislamiento; no usar el almacén biométrico del legacy como dependencia oculta.
+  aislamiento en el custodio elegido; no usar el almacén biométrico del legacy
+  como dependencia oculta.
 - [ ] Prueba roja: contrato v2 ausente, rechazo de GUID/tenant ajeno, falta de
   PAD y filtración de candidatos detectados por tests nuevos.
-- [ ] Verificación prevista en ARGOS: `python -m pytest tests/test_control_acceso_v2.py`,
-  suite completa del repositorio y `docker build -t argos:control-acceso-validacion .`.
-  Confirmar primero el runner vigente; no dar estos comandos por ejecutados.
+- [ ] Verificación prevista en ARGOS: `python -m unittest discover -s tests -p 'test_control_acceso_v2.py' -v`,
+  `python -m unittest discover -s tests -p 'test_*.py' -v` y
+  `docker build -t argos:control-acceso-validacion .`. El runner actual es
+  unittest y hoy sus tests solo cubren workflows; añadir cobertura de contrato.
+  No dar estos comandos por ejecutados en la revisión documental.
 - [ ] Preservar `/api/verify` y sus contratos existentes; ensayar restauración y
   borrado de un perfil sintético. Tests de integración no prueban precisión PAD.
+- [ ] Reproducir la regresión de Caserito: dos imágenes, códigos 400/422/500 y
+  respuesta exitosa con los campos consumidos. No cambiar umbral/detector
+  globales ni exigir PAD a la foto de documento por añadir el kiosco.
+  Medir carga concurrente KYC+kiosco y planificar la interrupción del servicio
+  compartido cuando se autorice despliegue; no desplegar en esta sesión.
 - [ ] Entregar contrato firmado por versión y matriz de ensayos, sin biometría
   ni secretos en el repositorio de Trajano-Icarus.
 

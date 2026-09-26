@@ -8,6 +8,11 @@ Referencia: [diseño general](2026-09-25-control-acceso-asistencia-design.md).
 Resultado técnico: [spec de fase 1](2026-09-25-control-acceso-fase1-design.md)
 y [plan](../plans/2026-09-25-control-acceso-fase1.md).
 
+Revisión del servicio compartido con Caserito:
+[ARGOS local y respuestas VPS](2026-09-26-control-acceso-argos-evaluacion.md).
+Se reabre la custodia de plantillas como decisión técnica: el almacenamiento
+en ARGOS fue una propuesta del borrador, no una decisión funcional del usuario.
+
 ## Decisiones del usuario que se conservan
 
 - Nuevo módulo de Trajano-Icarus, sin MAUI ni funcionamiento offline.
@@ -90,8 +95,10 @@ Requiere coordinación futura de DNS, HTTPS y proxy con agenteVPS.
 - Se propone detección pasiva de presentación fraudulenta en ARGOS para
   evitar pedir gestos en cada marcación. Su eficacia debe medirse; el soporte
   de una biblioteca no certifica la solución ni garantiza detectar todo ataque.
-- El contrato de custodia en ARGOS aún debe construirse. Es una dependencia
-  explícita de la fase, no una capacidad existente.
+- ARGOS ya compara imágenes para Caserito y ofrece identificación con
+  candidatos externos. Antes de exigir un almacén de perfiles nuevo, comparar
+  custodia cifrada en Trajano-Icarus con custodia en ARGOS. Si se elige esta
+  última, su contrato y almacén aún deben construirse.
 - No se elige proveedor de prueba de vida ni se inventan umbrales. La tarea
   externa A0 debe fijar modelo, versiones, licencias y criterios medibles antes
   de implementar el adaptador real.
@@ -124,9 +131,10 @@ Requiere coordinación futura de DNS, HTTPS y proxy con agenteVPS.
   concreto, cámara, solución de bloqueo y arranque automático en el equipo real.
 - DNS/origen definitivo, política de bloqueo y cámara: confirmar con agenteVPS
   y el equipo real antes del piloto. No se solicita despliegue en esta sesión.
-- A0 de ARGOS: decisión de prueba de vida y custodia durable, validación de
-  rendimiento y contrato versionado. El plan distingue tareas ejecutables sin
-  ARGOS real de tareas dependientes de su aceptación.
+- A0 de ARGOS: decidir dónde se custodian las plantillas, prueba de vida,
+  rendimiento compartido con Caserito y contrato compatible. Se conoce la
+  batería VPS doc 34 y el runner unittest del repo. El plan distingue tareas
+  independientes del motor de las que requieren esa decisión y aceptación.
 
 El detalle técnico del spec es una propuesta para revisión e implementación
 posterior. No presentar estos pendientes como decisiones ya aprobadas ni el
