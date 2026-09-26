@@ -1,6 +1,7 @@
 # Control de acceso — brainstorming de la fase 1
 
-Fecha: 2026-09-25. Alcance de esta sesión: documentación exclusivamente.
+Creado: 2026-09-25. Actualizado con respuestas del usuario: 2026-09-26.
+Alcance de esta sesión: documentación exclusivamente.
 El usuario solicita brainstorming, spec y plan; no autoriza implementar.
 
 Referencia: [diseño general](2026-09-25-control-acceso-asistencia-design.md).
@@ -20,6 +21,34 @@ y [plan](../plans/2026-09-25-control-acceso-fase1.md).
 - Horas y reportes en fases posteriores; salarios totalmente excluidos.
 - Vacaciones y permisos también quedan fuera de esta fase.
 
+## Decisiones confirmadas en las preguntas posteriores
+
+- Android dedicado exclusivamente a marcación. El cliente administra y enrola
+  desde su propio teléfono, tablet o PC; no enrola en el kiosco.
+- ControlAcceso puede contratarse sin Gestión Avícola. Ambos reutilizan los
+  trabajadores del módulo común Clientes, sin duplicar personas.
+- Todos los trabajadores se crean con correo y contraseña, como ahora. Tener
+  cuenta no concede acceso a un módulo: se exige contratación por el cliente
+  y las funcionalidades correspondientes asignadas al trabajador.
+- Si después se contrata Gestión Avícola, se reutiliza la misma cuenta y se
+  asignan funcionalidades. La alternativa de cuenta opcional se descartó.
+- Enrolamiento exclusivamente con cámara en directo desde el equipo del
+  cliente, sin subida de fotos de galería. Al completarse correctamente queda
+  habilitado para marcar; se puede deshabilitar después.
+- El cliente puede sustituir el registro facial, conservando cuenta e historial.
+- Reiniciar el Android debe devolverlo al kiosco listo para marcar con su
+  sesión restringida vigente, sin un nuevo login por el mero reinicio. También
+  hay que configurar y probar el arranque automático en Android.
+- Tras una marcación correcta se muestran brevemente nombre, acción y hora
+  boliviana; después se limpia la pantalla. Sin documento ni fotografía.
+- Si falla el reconocimiento, el cliente puede registrar manualmente entradas
+  y salidas desde su administración, incluso de días anteriores, nunca futuras.
+- El registro manual exige motivo, autor y fecha real de creación. Es válido
+  al guardar, sin segunda aprobación, y se distingue de la marcación facial.
+  Se permite crear una jornada sin marcaciones previas para resolver el fallo.
+- La restricción de día actual continúa aplicándose al kiosco. Cada par,
+  incluso manual, permanece dentro del mismo día civil boliviano.
+
 ## Evidencia revisada
 
 | Archivo actual | Hallazgo que afecta el plan |
@@ -28,6 +57,7 @@ y [plan](../plans/2026-09-25-control-acceso-fase1.md).
 | `Icarus/src/Clientes/Icarus.Clientes.Infrastructure/Autorizacion/VerificadorEntitlement.cs` | Verifica funcionalidades; falta una consulta de módulo y elegibilidad para el kiosco. |
 | `Icarus/src/Clientes/Icarus.Clientes.Domain/Trabajador.cs` | El cese tiene fecha y no pone `EstaActivo` a false. La elegibilidad debe comprobar ambos datos. |
 | `Icarus/src/Host/Icarus.Host/Endpoints/ClientesEndpoints.cs` | El alta actual de trabajador crea también cuenta con correo y contraseña. La fase 1 reutiliza ese alta; no cambia el modelo de cuentas. |
+| `web/src/app/navegacion.tsx` y `web/src/app/router.tsx` | Trabajadores está en la navegación del Cliente y exige ese rol, no Gestión Avícola. La pantalla actual ofrece funcionalidades avícolas: debe adaptarse a los módulos contratados. |
 | `web/src/features/auth/AuthContext.tsx` | El cierre actual borra el access token en memoria, pero no revoca el refresh del servidor. No basta para convertir una sesión administrativa en kiosco. |
 | `web/src/main.tsx` y `web/vite.config.ts` | La app registra service worker y precachea el shell. El kiosco necesita una entrada aislada que no instale ese service worker. |
 | `dev/ARGOS/ARGOS/views.py` | El contrato local de identificación admite embeddings o consulta ICARUS legacy; convierte IDs a enteros y expone candidatos/puntuaciones. No hay ruta de registro en este archivo. |
@@ -90,8 +120,8 @@ Requiere coordinación futura de DNS, HTTPS y proxy con agenteVPS.
 
 ## Pendientes delimitados
 
-- Equipo inicial del kiosco: consultado al usuario (Android, Windows o ambos).
-  No impide documentar el núcleo web; sí condiciona la aceptación operativa.
+- Plataforma inicial resuelta: Android dedicado. Quedan por comprobar modelo
+  concreto, cámara, solución de bloqueo y arranque automático en el equipo real.
 - DNS/origen definitivo, política de bloqueo y cámara: confirmar con agenteVPS
   y el equipo real antes del piloto. No se solicita despliegue en esta sesión.
 - A0 de ARGOS: decisión de prueba de vida y custodia durable, validación de

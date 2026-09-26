@@ -1,6 +1,7 @@
 # Control de acceso — plan de la fase 1
 
-Fecha: 2026-09-25. Estado: plan preparado, **ninguna tarea implementada**.
+Creado: 2026-09-25. Actualizado: 2026-09-26 con respuestas del brainstorming.
+Estado: plan preparado, **ninguna tarea implementada**.
 El usuario limita esta sesión a brainstorming, spec y plan. Este documento
 no autoriza ejecutar las tareas ni desplegar.
 
@@ -156,6 +157,10 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/AutorizacionAccesoTes
   de administración del módulo a `FuncionalidadesTrabajador`.
 - [ ] Cubrir ambos tenants, roles de plataforma, cliente suspendido, cese,
   desactivación y revocación del módulo entre dos peticiones.
+- [ ] Cubrir cliente que solo contrata ControlAcceso: alta común con correo y
+  contraseña, sin acceso avícola. Al contratar Gestión Avícola después, misma
+  cuenta/trabajador y acceso solo con funcionalidades asignadas. No crear un
+  flujo de cuenta opcional ni exigir módulo avícola para el alta.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~AutorizacionAccesoTests`.
 - [ ] Puerta y commit: `feat(control-acceso): aplica elegibilidad por tenant`.
 
@@ -176,6 +181,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/PersistenciaAccesoTes
   entre tenants, revisión que sobrescribe original y conflicto no detectado.
 - [ ] Crear schema, índice cliente/trabajador/fecha, rowversion y restricciones;
   no incluir SQL nominal ni logging de parámetros sensibles.
+- [ ] Separar origen Kiosco/ManualCliente y hora del evento/instante real de
+  creación/autor/motivo. No exigir ni inventar evidencia facial al persistir
+  un evento manual; conservar datos originales y referencias, nunca imágenes.
 - [ ] Tests usan SQL Server de Testcontainers y transacciones separadas, no
   EF InMemory, incluyendo rollback y consulta de inactivos con tenant explícito.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PersistenciaAccesoTests`.
@@ -202,6 +210,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/SesionKioscoTests.cs`
   reemplazo transaccional, revocación y salida con reautenticación del cliente.
 - [ ] Verificar errores homogéneos, limitación de intentos, vencimiento y
   ausencia de refresh administrativo en el origen dedicado.
+- [ ] Probar recuperación de cookie persistente con sesión vigente después de
+  reiniciar navegador/Android, sin nuevo login. Una sesión vencida o revocada
+  no se reactiva. El arranque automático del dispositivo se ensaya en tarea 13.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~SesionKioscoTests`.
 - [ ] Puerta y commit: `feat(control-acceso): restringe la sesión de kiosco`.
 
@@ -241,6 +252,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/EnrolamientoTests.cs`
   sustitución que activa referencia sin confirmación o imagen guardada en SQL.
 - [ ] Implementar alta/sustitución/revocación idempotentes, versiones y
   reconciliación sin transacción distribuida ni reenvío de imágenes persistidas.
+- [ ] Enrolamiento confirmado habilita automáticamente; resultado pendiente o
+  fallido no habilita. Probar deshabilitación concurrente para que una respuesta
+  tardía no la revierta. Sustituir rostro conserva cuenta e historial.
 - [ ] Probar pérdida de respuesta, reinicio, perfil inexistente, activación
   local fallida tras éxito remoto y borrado remoto después de revocación local.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~EnrolamientoTests`.
@@ -267,40 +281,65 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesTests.cs`.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesTests`.
 - [ ] Puerta y commit: `feat(control-acceso): registra marcaciones idempotentes`.
 
-## 9 — Historial paginado y ajustes auditados
+## 9 — Historial, registros manuales y ajustes auditados
 
 Crear en `Icarus.ControlAcceso.Application/Jornadas/`:
 `ListarJornadasQuery.cs`, `ListarJornadasHandler.cs`, `ObtenerJornadaQuery.cs`,
 `ObtenerJornadaHandler.cs`, `CorregirJornadaCommand.cs`,
 `CorregirJornadaHandler.cs`, `CorregirJornadaValidator.cs`.
+Crear en `Icarus.ControlAcceso.Application/Marcaciones/`:
+`RegistrarMarcacionManualCommand.cs`, `RegistrarMarcacionManualHandler.cs` y
+`RegistrarMarcacionManualValidator.cs`.
 Crear `Icarus/src/Host/Icarus.Host/Endpoints/ControlAccesoJornadasEndpoints.cs`.
-Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/HistorialCorreccionesTests.cs`.
+Mapear también el endpoint de registro manual, con política de Cliente.
+Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/HistorialCorreccionesTests.cs`
+y `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesManualesTests.cs`.
 
 - [ ] Rojo: se altera el evento original, se borran revisiones, recurso ajeno
   visible, corrección sobre versión obsoleta aceptada o intervalo futuro válido.
 - [ ] Reutilizar `Pagina<T>` y `PeticionPaginada`; IDs/nombres para UI solo por
   consultas autorizadas, nunca por logging. Conservar historia de inactivos.
 - [ ] Probar corrección concurrente con marcación y con otra corrección, anular
-  jornada, última entrada abierta y prohibición de crear días sin registros.
+  jornada y última entrada abierta. La corrección exige jornada existente; el
+  comando manual sí crea una nueva cuando no hay registros previos.
   Una marcación posterior al límite de una revisión sigue visible y participa
   en la secuencia efectiva.
+- [ ] Rojo del registro manual: exige reconocimiento facial, segunda aprobación
+  o jornada previa; permite fecha futura/tenant ajeno/motivo vacío, duplica un
+  reintento o confunde hora declarada con hora real de creación.
+- [ ] Implementar registro manual válido al guardar, actual o pasado, con
+  motivo/autor, idempotencia, control de versión y secuencia diaria. No llamar
+  a ARGOS para validarlo. Probar fallo de reconocimiento seguido de Entrada y
+  Salida manuales, y carrera con kiosco/otra petición manual al crear jornada.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~HistorialCorreccionesTests`.
-- [ ] Puerta y commit: `feat(control-acceso): consulta y corrige jornadas con trazabilidad`.
+- [ ] Dirigido manual: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesManualesTests`.
+- [ ] Puerta y commit: `feat(control-acceso): registra incidencias manuales e historial`.
 
 ## 10 — Administración en la web existente
 
 Crear en `web/src/features/control-acceso/`: `api.ts`,
 `TrabajadoresAccesoPage.tsx`, `EnrolamientoDialog.tsx`, `HistorialAccesoPage.tsx`,
-`CorreccionJornadaDialog.tsx` y `SesionKioscoPanel.tsx`, con `.test.tsx` asociados.
+`CorreccionJornadaDialog.tsx`, `MarcacionManualDialog.tsx` y `SesionKioscoPanel.tsx`,
+con `.test.tsx` asociados.
 Modificar `web/src/app/router.tsx`, `web/src/app/paginasDiferidas.tsx` y
-`web/src/app/AppLayout.tsx`. Reutilizar UI de filtros/paginación existente.
+`web/src/app/navegacion.tsx`. Revisar `web/src/app/AppLayout.tsx` como consumidor
+de navegación. Adaptar `web/src/features/trabajadores/TrabajadoresPage.tsx` y
+su test para presentar opciones según los módulos contratados, conservando
+correo/contraseña obligatorios. Reutilizar UI de filtros/paginación existente.
 
 - [ ] Rojo: menú disponible sin módulo, guardado sin motivo, envío al cancelar,
   captura retenida después de cerrar y corrección 409 que se sobrescribe.
 - [ ] Integrar listado, captura presencial, estados pendientes y error
   genérico, historial y revisión de correcciones. UI exclusivamente online,
   sin dispatcher/almacén offline y sin persistencia de TanStack Query.
+- [ ] Probar enrolamiento con cámara en directo desde teléfono/tablet/PC del
+  cliente, sin galería. El Android kiosco no sirve para administrar o enrolar.
+  Guardar con éxito habilita; sustituir no vuelve a crear trabajador/cuenta.
+- [ ] Formulario manual accesible al Cliente incluso con historial vacío:
+  Entrada/Salida, trabajador, fecha/hora BO y motivo; confirmación de guardado
+  sin segundo aprobador, etiqueta Manual y distinción de fechas en el historial.
 - [ ] Dirigido desde web: `npm run test -- src/features/control-acceso`.
+- [ ] Regresión desde web: `npm run test -- src/features/trabajadores/TrabajadoresPage.test.tsx`.
 - [ ] Integración desde web: `npm run lint` y `npm run build`.
 - [ ] Puerta y commit: `feat(control-acceso): añade administración web`.
 
@@ -318,6 +357,10 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
 - [ ] Implementar estados del spec con MUI existente y cámara HTTPS; detener
   pistas, liberar blobs, confirmaciones, countdown de propuesta y consulta de
   resultado incierto. No añadir una cola offline.
+- [ ] Resultado exitoso: nombre resuelto por el Host, Entrada/Salida y hora BO.
+  Probar que desaparecen al vencer el resultado, cambiar de intento, navegar
+  o expirar sesión. No mostrarlos antes de confirmar ni en errores; no escribir
+  nombres en registro de idempotencia, caché ni diagnósticos.
 - [ ] Probar cámara denegada/ausente, múltiples rostros rechazados por backend,
   carga lenta, recarga, tecla atrás y errores de sesión. Vitest usa cámara
   simulada; documentar que el ensayo en navegador real sigue pendiente.
@@ -336,8 +379,9 @@ Crear `docs/operacion/control-acceso-kiosco.md` como contrato de despliegue.
 
 - [ ] Rojo: centinelas sintéticos de imagen/ID/hora/motivo aparecen en logs,
   diagnóstico frontend, excepción HTTP, URL nominal o registro de EF.
-- [ ] Recorrer enrolamiento, negativo facial, éxito, corrección y caída de
-  ARGOS por el pipeline real. No reducir baselines ni exclusiones existentes.
+- [ ] Recorrer enrolamiento, negativo facial, éxito con nombre efímero,
+  registro manual, corrección y caída de ARGOS por el pipeline real.
+  No reducir baselines ni exclusiones existentes.
 - [ ] Documentar DNS, origen dedicado, proxy de rutas permitidas, cookies
   host-only, no-store, allowlist de Origin, TLS y autenticación interna ARGOS.
   Configuración productiva queda a agenteVPS; no inventar archivo de proxy local.
@@ -353,16 +397,19 @@ Modificar `docs/operacion/control-acceso-kiosco.md`, este plan y el spec con los
 resultados comprobados. Actualizar `AGENTS.md` únicamente al existir código
 real y regenerar adaptadores mediante `node quality/generar-adaptadores.mjs`.
 
-- [ ] Concretar equipo inicial y configuración de bloqueo. Android Enterprise
-  es una opción documentada, no una licencia/proveedor adquirido ni una prueba
-  pasada. Windows necesita su propia validación si se elige esa plataforma.
+- [ ] Plataforma acordada: Android dedicado. Concretar modelo, cámara, bloqueo
+  y arranque automático. Android Enterprise es una opción documentada, no una
+  licencia/proveedor adquirido ni una prueba pasada. Windows no es plataforma
+  del kiosco en esta fase; el PC sí puede ser equipo del cliente para enrolar.
 - [ ] Confirmar con agenteVPS HTTPS/origen/rutas, zonas horarias, restauración
   de sesión y almacén ARGOS, límites de proxy y ausencia de logs nominales.
 - [ ] Ensayar cámara y PAD en hardware real, rechazo de fotos/pantallas,
   ambigüedad, luz variable y latencia. Fijar criterios en A0 antes de evaluar;
   dejar resultados agregados sin muestras o identidades en git.
 - [ ] Ensayar varios pares, olvido, cambio de día, corrección, red cortada tras
-  confirmar, reinicio, revocación y expiración. Usar entorno de prueba para
+  confirmar, reinicio que abre el kiosco sin login con sesión vigente,
+  revocación y expiración. Ensayar el flujo manual retroactivo sin aprobación y
+  la limpieza del nombre tras mostrar éxito. Usar entorno de prueba para
   mover el reloj lógico, nunca cambiar el reloj del host productivo.
 - [ ] Ejecutar `./verify.ps1` y registrar resultado real. Ningún simulador
   justifica marcar la aceptación facial de producción como completada.

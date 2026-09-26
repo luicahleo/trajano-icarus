@@ -1,6 +1,7 @@
 # Control de acceso — fase 1: marcación facial online
 
-Fecha: 2026-09-25. Estado: spec técnico propuesto; solo documentación.
+Creado: 2026-09-25. Actualizado: 2026-09-26 con decisiones del brainstorming.
+Estado: reglas funcionales confirmadas; propuestas técnicas sujetas a revisión.
 No hay implementación ni autorización de despliegue en esta sesión.
 
 Referencias: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
@@ -48,15 +49,24 @@ de Clientes. Comprobar pertenencia por `ClienteId` y `TrabajadorId` explícitos:
 jamás inferir tenant del cuerpo del navegador o aceptar tenant nulo como acceso
 global. Aplicar filtros EF que fallen cerrados ante ausencia de tenant.
 
-El alta actual de trabajador sigue siendo la de Clientes (incluye cuenta).
-La cuenta no se usa para marcar. Permitir trabajadores sin correo/contraseña
-sería otro cambio; no se introduce implícitamente en esta fase.
+El alta de trabajador es común, en Clientes, e incluye siempre correo y
+contraseña. ControlAcceso puede contratarse sin Gestión Avícola y reutiliza esa
+misma alta. No se crea otra persona ni cuenta al enrolar. La cuenta no se usa
+para marcar y no concede por sí sola acceso a módulos: se exigen contratación
+por el cliente y funcionalidades asignadas. Si posteriormente contrata Gestión
+Avícola, asigna las funcionalidades sobre la cuenta existente.
+
+La pantalla común Trabajadores ofrece las opciones correspondientes a los
+módulos contratados. Mantener datos generales/cuenta disponibles para clientes
+que solo tienen ControlAcceso; no exigir ni mostrar como utilizables las
+funcionalidades avícolas sin su módulo. Las comprobaciones también son backend.
 
 ## 3. Pantallas y acciones
 
 ### Administración
 
-Dentro del módulo de la aplicación existente:
+Dentro del módulo de la aplicación existente, desde el teléfono, tablet o PC
+del cliente. El Android dedicado es exclusivamente para marcar:
 
 - Trabajadores: listado por nombre resuelto desde Clientes, estado de
   habilitación y enrolamiento; habilitar/deshabilitar, registrar, sustituir y
@@ -64,16 +74,24 @@ Dentro del módulo de la aplicación existente:
 - Enrolamiento presencial: el cliente elige trabajador, revisa su identidad y
   captura su rostro en cámara. No se importan fotos de galería. El operador ve
   la previsualización temporal; se libera al guardar, cancelar o salir.
+  Al confirmar un enrolamiento correcto queda habilitado automáticamente para
+  marcar. Un fallo o resultado pendiente no habilita. Sustituir el rostro
+  conserva la cuenta y todo el historial; el cliente puede deshabilitarlo después.
 - Kiosco: estado de sesión, revocar y abrir la dirección dedicada. Sin lista
   de dispositivos ni configuración de puntos de acceso.
 - Historial: fecha boliviana (hoy por defecto), trabajador opcional y estado;
   paginación del servidor (25 por defecto, máximo 100), intervalos y trazabilidad.
 - Corrección: valores efectivos de la jornada, motivo obligatorio y comparación
   con la revisión anterior. Acción explícita, sin tarea diaria obligatoria.
+- Registro manual ante fallo de reconocimiento: seleccionar trabajador, fecha
+  y hora bolivianas y Entrada/Salida, con motivo. Puede iniciar una jornada que
+  no exista, incluso de un día anterior. Se valida al guardar, sin aprobación
+  posterior, mostrando su origen manual.
 
-Solo el cliente consulta identidad/historial. No hay lista de personas en la
-pantalla pública del kiosco. Los datos autorizados de presentación no se
-escriben en telemetría ni almacenamiento del navegador.
+Solo el cliente consulta listados de identidad/historial. El kiosco muestra
+únicamente el nombre de la persona de la marcación exitosa durante el resultado;
+no permite buscar personas ni consultar sus jornadas. Los datos de presentación
+no se escriben en telemetría ni almacenamiento del navegador.
 
 ### Kiosco
 
@@ -88,8 +106,12 @@ cambio de acción, resultado y sin conexión. Una sola operación en curso en UI
    opaca de Salida. Mostrar «Ya tienes una entrada. ¿Registrar salida ahora?».
 6. Confirmarla registra Salida con hora nueva del servidor; no convierte una
    Entrada en Salida silenciosamente. Cancelar no registra nada.
-7. Tras éxito se muestra «Entrada/Salida registrada» durante 5 segundos, se
-   libera la captura y se vuelve a listo. Sin nombre, documento ni fotografía.
+7. Tras éxito se muestra el nombre del trabajador, «Entrada/Salida registrada»
+   y la hora boliviana durante 5 segundos (duración técnica propuesta). Después
+   se limpia todo el resultado, se libera la captura y se vuelve a listo.
+   Sin documento ni fotografía. El Host resuelve el nombre desde Clientes
+   para esta respuesta efímera, sin copiarlo al dominio o registro de operaciones.
+   También se limpia al cancelar, navegar, expirar sesión o iniciar otro intento.
 
 La propuesta dura 30 segundos, pertenece a sesión/tenant/persona/acción y solo
 se consume una vez. El backend conserva temporalmente la referencia validada,
@@ -123,6 +145,12 @@ Cookie host-only `__Host-icarus_kiosco`, Secure, HttpOnly, SameSite=Strict,
 Path=/; el servidor almacena solo su hash. Esquema de autenticación explícito
 `Kiosco`, sin rol Cliente y no admitido por las políticas Bearer habituales.
 La credencial de kiosco nunca viaja en URL ni es legible desde JavaScript.
+
+La cookie persistente y el estado del servidor permiten recuperar una sesión
+vigente al reiniciar el Android. El arranque administrado abre directamente el
+kiosco y comprueba online su validez; no exige credenciales por el solo reinicio.
+No restaura una sesión administrativa ni reactiva una revocada o vencida.
+Sin conectividad muestra indisponibilidad y no encola marcaciones.
 
 Las mutaciones usan antiforgery y validación exacta de Origin (incluidos
 hermanos bajo el mismo dominio); sin CORS permisivo. Proxy y backend validan
@@ -186,6 +214,9 @@ Trajano-Icarus conserva referencia/versión y estado, jamás foto o plantilla.
 Estados de enrolamiento: SinEnrolar, Pendiente, Vigente, RevocacionPendiente,
 Revocado. Ante resultado incierto, conservar operación durable sin biometría
 y reconciliar. Nunca activar un perfil con solo un timeout como evidencia.
+El éxito confirmado actualiza perfil vigente y habilitación conjuntamente,
+respetando la versión de configuración y la elegibilidad actual. Una respuesta
+tardía no revierte una deshabilitación o revocación realizada mientras esperaba.
 Al sustituir, se bloquea la marcación hasta confirmar la nueva versión. Revocar
 bloquea localmente de inmediato aunque ARGOS tarde en completar el borrado.
 Deshabilitar es reversible y no borra el perfil; revocar sí lo elimina.
@@ -246,7 +277,30 @@ Valores propuestos de espera: ARGOS 10 s, Host 15 s, cliente 20 s; reservar
 30 s para terminar/expirar una operación antes de iniciar otra en la sesión.
 No reintentar POST de captura automáticamente con otra clave.
 
-## 7. Correcciones y persistencia funcional
+## 7. Registros manuales, correcciones y persistencia funcional
+
+Cuando falla el reconocimiento, el cliente registra manualmente Entrada o
+Salida para un trabajador de su tenant, desde su administración online. Puede
+declarar hora/fecha de hoy o de días anteriores, sin futuro. Requiere motivo
+(1–500 caracteres) y guarda autor e instante real de creación del servidor,
+además del instante declarado convertido de Bolivia a UTC.
+
+Queda válido al guardar: sin segunda aprobación, firma de otro usuario ni
+tarea posterior obligatoria. No requiere validación positiva de ARGOS ni una
+marcación facial previa. Puede crear la jornada del día afectado. La pertenencia
+al tenant y el permiso actual del cliente se verifican siempre; el ajuste
+histórico no se bloquea simplemente porque el trabajador haya cesado después.
+
+El evento append-only tiene origen ManualCliente; un evento facial tiene
+origen Kiosco. No inventar una evidencia biométrica para registros manuales.
+Se mantienen alternancia, pares del mismo día y no solapamiento. Una Entrada
+manual puede quedar abierta; completar una Salida olvidada usa la misma regla.
+Si insertar un evento intermedio rompe la secuencia existente, usar la revisión
+de jornada para presentar todos los valores efectivos coherentes.
+
+El comando manual usa clave idempotente y versión de jornada (o ausencia
+esperada al crearla), con la misma protección de concurrencia del kiosco. La
+repetición del envío no duplica el evento ni altera fecha de creación o motivo.
 
 El cliente puede completar una salida olvidada, rectificar una hora o anular
 una marcación errónea. Cada corrección crea una revisión efectiva completa de
@@ -264,13 +318,14 @@ en la misma fecha boliviana, nunca futuros. Puede quedar una última entrada
 abierta: no se obliga a inventar el dato que falta. Una revisión puede quedar
 vacía para anular una jornada equivocada, sin borrar su historia.
 
-Solo corregir jornadas existentes y fechas iguales o anteriores a hoy. No
-crear jornadas de trabajadores ausentes en esta fase. Las correcciones del día
-actual también participan en el control de concurrencia con el kiosco. Un
-conflicto exige releer y revisar; no reintentar una corrección silenciosamente.
+Corregir actúa sobre jornadas existentes de fechas iguales o anteriores a hoy;
+el registro manual sí puede iniciar una jornada sin eventos previos. Las
+correcciones del día actual también participan en el control de concurrencia
+con el kiosco. Un conflicto exige releer y revisar; no reintentar una corrección
+silenciosamente.
 
-La UI distingue origen Kiosco y AjusteCliente; una hora añadida por el cliente
-no se presenta como validada facialmente. La secuencia siguiente se evalúa
+La UI distingue Kiosco, ManualCliente y AjusteCliente; una hora añadida por el
+cliente no se presenta como validada facialmente. La secuencia siguiente se evalúa
 sobre la última revisión efectiva. Los futuros cálculos deberán respetar esta
 distinción y las versiones de jornada.
 
@@ -293,6 +348,7 @@ en español, errores genéricos, sin eco de credenciales o muestras.
 | `GET /control-acceso/enrolamientos/{operacionId}` | Cliente: estado de reconciliación. |
 | `GET /control-acceso/jornadas` | Cliente: fecha, trabajador, estado y paginación. |
 | `GET /control-acceso/jornadas/{id}` | Cliente: revisión efectiva e historia. |
+| `POST /control-acceso/marcaciones-manuales` | Cliente: trabajador, tipo, fecha/hora BO, motivo, versión y clave idempotente; válida al guardar. |
 | `POST /control-acceso/jornadas/{id}/correcciones` | Cliente: nueva revisión con versión esperada. |
 | `GET /control-acceso/sesion-kiosco` | Cliente: estado sin credencial. |
 | `DELETE /control-acceso/sesion-kiosco` | Cliente: revocar sesión actual. |
@@ -323,10 +379,11 @@ Cache Storage ni fallback offline. Una caída de conexión después del envío
 muestra «Comprobando registro» hasta conocer resultado; no afirmar fallo si
 la transacción pudo completarse.
 
-La credencial web restringida no bloquea Android o Windows. El cierre operativo
-requiere un equipo dedicado, cámara autorizada en HTTPS, bloqueo administrado,
-recuperación tras reinicio y salida protegida por el sistema operativo. Equipo
-y solución de administración pendientes; no se compran licencias ni se
+La plataforma del kiosco es Android dedicado, exclusivamente para registro.
+La credencial web restringida no bloquea Android. El cierre operativo requiere
+cámara autorizada en HTTPS, bloqueo administrado, arranque automático tras
+reinicio y salida protegida por el sistema operativo. El modelo del equipo y
+la solución de administración siguen pendientes; no se compran licencias ni se
 configuran equipos como parte de este trabajo documental.
 
 Fuentes técnicas consultadas el 2026-09-25:
@@ -362,6 +419,17 @@ que la imagen de ARGOS desplegada la incluya ni valida su eficacia en el kiosco.
     sintéticos y los logs del proxy se revisan antes del piloto.
 14. El piloto registra resultados de cámara, bloqueo, reinicio, latencia y PAD.
     Dobles de ARGOS y tests verdes no sustituyen esta aceptación.
+15. Cliente solo con ControlAcceso crea trabajadores con correo/contraseña,
+    enrola y marca sin acceso a Gestión Avícola. Al contratarla después se
+    reutiliza la cuenta; sus funcionalidades no se conceden automáticamente.
+16. Enrolamiento por cámara desde teléfono/tablet/PC, sin galería, habilita al
+    éxito; sustituir rostro conserva cuenta e historial y no habilita tras fallo.
+17. Registro manual actual o pasado, incluso en jornada nueva, válido sin
+    segunda aprobación, distingue instante declarado/creación y origen. Futuro,
+    tenant ajeno, falta de motivo y reintento duplicado se rechazan o deduplican.
+18. Android reiniciado abre el kiosco y restaura su sesión vigente online. El
+    nombre solo aparece en resultado exitoso y desaparece al volver a inicio;
+    nunca llega a logs, caché, mensajes de error ni listados públicos.
 
 ## 11. Estado y siguientes decisiones
 

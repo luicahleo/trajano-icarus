@@ -5,6 +5,10 @@ revisar el proyecto MAUI IMCA, su documentación y el patrón modular de Gestió
 Avícola. IMCA queda como fuente histórica: no se reutiliza su aplicación ni su
 arquitectura offline.
 
+Actualización funcional del brainstorming: 2026-09-26. Se mantienen las
+decisiones iniciales y se incorporan las respuestas posteriores sobre equipos,
+cuentas compartidas, enrolamiento y registro manual.
+
 Detalle de la fase 1: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
 [spec técnico propuesto](2026-09-25-control-acceso-fase1-design.md) y
 [plan](../plans/2026-09-25-control-acceso-fase1.md). La sesión de preparación
@@ -22,6 +26,11 @@ vacaciones y permisos.
 El módulo mide asistencia y tiempo trabajado. No calcula salarios ni conserva
 importes monetarios.
 
+ControlAcceso se puede contratar sin Gestión Avícola. El alta común de
+trabajadores vive en Clientes y siempre crea cuenta con correo y contraseña.
+Ambos módulos reutilizan la misma persona y cuenta; tener credenciales no
+concede módulos ni funcionalidades no contratados/asignados.
+
 ## Actores y autorización
 
 ### Cliente
@@ -34,8 +43,15 @@ la aplicación web puede:
 - iniciar la sesión restringida del kiosco;
 - consultar marcaciones, jornadas e incidencias de su tenant;
 - corregir incidencias conservando trazabilidad;
+- registrar manualmente entradas y salidas ante fallos de reconocimiento,
+  incluso de días anteriores, con motivo y sin segunda aprobación;
 - en fases posteriores, configurar horarios, consultar reportes y administrar
   vacaciones y permisos.
+
+El cliente administra y enrola desde su teléfono, tablet o PC, exclusivamente
+con cámara en directo, sin galería. El enrolamiento correcto habilita para
+marcar automáticamente. Puede deshabilitar después o sustituir el registro
+facial conservando cuenta e historial. El Android dedicado solo sirve de kiosco.
 
 ### Trabajador
 
@@ -84,8 +100,14 @@ La pantalla inactiva muestra dos botones grandes: `Entrada` y `Salida`.
 5. ARGOS exige prueba de vida e identifica a una persona dentro del tenant.
 6. El backend comprueba que el trabajador sigue activo y habilitado, valida la
    secuencia diaria y registra la marcación.
-7. La pantalla presenta éxito o un error genérico y vuelve automáticamente al
-   estado inicial.
+7. En éxito muestra brevemente nombre, acción y hora boliviana; luego limpia el
+   resultado y vuelve al estado inicial. Los errores son genéricos y no
+   exponen identidades. No muestra documento ni fotografía.
+
+Al reiniciar el Android, debe abrir automáticamente el kiosco y recuperar su
+sesión restringida vigente sin pedir login de nuevo por el solo reinicio.
+La recuperación comprueba online la sesión; no reactiva sesiones revocadas o
+vencidas ni permite registrar sin conexión.
 
 La aplicación web no llama directamente a ARGOS. La API actúa como frontera de
 seguridad, limita tamaño y formato, aplica timeout y evita que ARGOS sea un
@@ -135,8 +157,10 @@ El agenteVPS verificó el 2026-09-25 que el host está en UTC y sincronizado por
 NTP, la API resuelve `America/La_Paz` y SQL Server opera en UTC. No se necesita
 un cambio de infraestructura.
 
-Cada marcación pertenece únicamente al día civil boliviano en que el servidor
-la recibe. No se admiten marcaciones retroactivas ni futuras desde el kiosco.
+Cada marcación del kiosco pertenece únicamente al día civil boliviano en que el
+servidor la recibe. No se admiten marcaciones retroactivas ni futuras desde el
+kiosco. El registro manual del cliente admite fecha/hora declarada pasada o
+actual, junto al instante real de creación del servidor; nunca fecha futura.
 
 ## Secuencia, pares e idempotencia
 
@@ -164,6 +188,12 @@ medianoche con una entrada abierta, la jornada anterior queda `Incompleta`:
 
 ## Correcciones e inmutabilidad
 
+Ante un fallo de reconocimiento, el cliente puede registrar manualmente una
+Entrada o Salida, incluso iniciar una jornada sin registros previos o de días
+anteriores. Exige motivo, autor y fecha real de creación, y queda válido al
+guardar sin segunda aprobación. Se distingue como ManualCliente, sin atribuirle
+validación facial. Mantiene pares del mismo día, secuencia e idempotencia.
+
 Las marcaciones originales son inmutables y nunca se eliminan físicamente. Una
 corrección crea un ajuste vinculado a la marcación o jornada afectada con:
 
@@ -189,7 +219,8 @@ Conceptos previstos para la fase 1:
 - `SesionKiosco`: credencial restringida y revocable del tenant. No representa
   un dispositivo ni un punto de acceso.
 - `Marcacion`: evento inmutable `Entrada` o `Salida`, instante UTC, fecha
-  boliviana, clave de idempotencia y origen kiosco.
+  boliviana, clave de idempotencia y origen Kiosco o ManualCliente. Para origen
+  manual conserva también hora declarada, autor, motivo y creación real.
 - `JornadaDiaria`: proyección de los pares del trabajador en una fecha
   boliviana, completa o incompleta.
 - `CorreccionJornada`: ajuste auditado efectuado por el cliente.
@@ -223,6 +254,7 @@ IndexedDB o Cache Storage.
 - sesión restringida y pantalla de kiosco;
 - entradas, salidas, varios pares diarios, idempotencia e incompletos;
 - historial diario y corrección auditada por el cliente;
+- registros manuales actuales o pasados ante fallos, válidos al guardar;
 - aislamiento por tenant, autorización, anti-enumeración y pruebas de
   arquitectura.
 
