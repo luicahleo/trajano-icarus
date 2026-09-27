@@ -173,19 +173,21 @@ Crear `Icarus/src/ControlAcceso/Icarus.ControlAcceso.Application/Autorizacion/IC
 Modificar DI de Clientes y `Icarus/src/Host/Icarus.Host/Program.cs`.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/AutorizacionAccesoTests.cs`.
 
-- [ ] Rojo: cliente sin módulo admitido, trabajador con FechaCese admitido,
+- [x] Rojo: cliente sin módulo admitido, trabajador con FechaCese admitido,
   tenant recibido en cuerpo aceptado o tenant nulo que ve datos globales.
-- [ ] Implementar consultas de pertenencia/estado/módulo y adaptador del Host.
+- [x] Implementar consultas de pertenencia/estado/módulo y adaptador del Host.
   La configuración del trabajador pertenece a ControlAcceso, sin añadir flags
   de administración del módulo a `FuncionalidadesTrabajador`.
-- [ ] Cubrir ambos tenants, roles de plataforma, cliente suspendido, cese,
+- [x] Cubrir ambos tenants, roles de plataforma, cliente suspendido, cese,
   desactivación y revocación del módulo entre dos peticiones.
-- [ ] Cubrir cliente que solo contrata ControlAcceso: alta común con correo y
+- [x] Cubrir cliente que solo contrata ControlAcceso: alta común con correo y
   contraseña, sin acceso avícola. Al contratar Gestión Avícola después, misma
   cuenta/trabajador y acceso solo con funcionalidades asignadas. No crear un
   flujo de cuenta opcional ni exigir módulo avícola para el alta.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~AutorizacionAccesoTests`.
-- [ ] Puerta y commit: `feat(control-acceso): aplica elegibilidad por tenant`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~AutorizacionAccesoTests` → 10/10 verdes.
+- [x] Puerta y commit: `feat(control-acceso): aplica elegibilidad por tenant` →
+  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
+  Integration 196/196), push a `develop` en `f6886d7`.
 
 ## 4 — Persistencia y concurrencia
 
