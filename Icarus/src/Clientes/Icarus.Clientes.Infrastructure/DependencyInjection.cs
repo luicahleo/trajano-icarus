@@ -35,6 +35,7 @@ public static class DependencyInjection
         servicios.AddScoped<IClienteActivo, EstadoCliente>();
         servicios.AddScoped<IVerificadorEntitlement, VerificadorEntitlement>();
         servicios.AddScoped<IConsultaPermisosActuales, ConsultaPermisosActuales>();
+        servicios.AddScoped<IConsultaElegibilidadControlAcceso, ConsultaElegibilidadControlAcceso>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorFuncionalidadHabilitada>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorAlgunaFuncionalidadHabilitada>();
         servicios.AddScoped<IAuthorizationHandler, ManejadorCatalogoVacunacion>();

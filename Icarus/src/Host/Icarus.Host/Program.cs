@@ -7,13 +7,16 @@ using Icarus.BuildingBlocks.Observability;
 using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
+using Icarus.ControlAcceso.Application.Autorizacion;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Infrastructure;
 using Icarus.GestionAvicola.Infrastructure.Persistencia;
+using Icarus.Host.Autorizacion;
 using Icarus.Host.Endpoints;
 using Icarus.Host.Middleware;
 using Icarus.Host.Observability;
 using Icarus.Host.Servicios;
+using Microsoft.AspNetCore.Authorization;
 using Icarus.Identity.Application.Sesiones;
 using Icarus.Identity.Infrastructure;
 using Icarus.Identity.Infrastructure.Persistencia;
@@ -50,6 +53,16 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);
 builder.Services.AddClientesInfraestructura(builder.Configuration);
 builder.Services.AddGestionAvicolaInfraestructura(builder.Configuration);
+builder.Services.AddScoped<IConsultaElegibilidadAcceso, ConsultaElegibilidadAcceso>();
+builder.Services.AddScoped<IAuthorizationHandler, ManejadorClienteConControlAcceso>();
+builder.Services.AddScoped<IAuthorizationHandler, ManejadorTrabajadorElegibleParaMarcar>();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(PoliticasControlAcceso.ClienteConControlAcceso, politica => politica
+        .RequireAuthenticatedUser()
+        .AddRequirements(new RequisitoClienteConControlAcceso()))
+    .AddPolicy(PoliticasControlAcceso.TrabajadorElegibleParaMarcar, politica => politica
+        .RequireAuthenticatedUser()
+        .AddRequirements(new RequisitoTrabajadorElegibleParaMarcar()));
 builder.Services.AddScoped<AltaCuentasServicio>();
 builder.Services.AddRateLimiter(opciones =>
 {
@@ -151,6 +164,7 @@ if (esDesarrollo)
     // Sondeo de entitlement (spec: el mecanismo se construye y se prueba en
     // este incremento aunque aún no haya endpoints de módulos de negocio).
     api.MapSondeoEntitlement();
+    api.MapControlAccesoSondeo();
 }
 
 if (ejecutarMigraciones)
