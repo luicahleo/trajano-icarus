@@ -73,8 +73,8 @@ commit desplegado hoy. No reproducir aquí filas personales ni scores nominales.
 - IDs opacos compatibles con GUID: el `int(match_id)`/`int(trabajador_id)` de
   `identify_face` no sirve directamente para las referencias del nuevo módulo.
 - Aislamiento: el backend selecciona los candidatos de su tenant; no aceptar
-  que el navegador elija tenant ni candidatos. Si ARGOS almacena perfiles,
-  namespace de aplicación y tenant se verifican también dentro de ARGOS.
+  que el navegador elija tenant ni candidatos. ARGOS autentica al consumidor
+  y procesa únicamente los candidatos recibidos, sin catálogo propio.
 - Exigir coincidencia única y prueba de vida en el nuevo flujo. No exponer
   `top_matches`, IDs ajenos ni puntuaciones al kiosco.
 - Revisar autenticación interna del nuevo contrato: el header de servicio
@@ -87,26 +87,26 @@ commit desplegado hoy. No reproducir aquí filas personales ni scores nominales.
 - Compartir servicio implica carga compartida. Medir latencia/memoria y
   concurrencia KYC+kiosco antes de fijar timeouts o afirmar capacidad suficiente.
 
-## Decisión arquitectónica reabierta: custodia de plantillas
+## Decisión arquitectónica confirmada: Trajano custodia, ARGOS procesa
 
-El borrador proponía custodia en ARGOS como si ya fuera la opción decidida.
-No fue una decisión del usuario ni describe el servicio actual. Se mantienen
-dos alternativas para cerrar el brainstorming técnico:
+El borrador proponía custodia en ARGOS sin decisión previa del usuario. Tras
+explicar las alternativas, el usuario confirmó custodia cifrada en
+Trajano-Icarus y procesamiento sin persistencia en ARGOS (2026-09-26).
 
 | Opción | Consecuencia |
 |---|---|
-| Plantillas cifradas en Trajano-Icarus; ARGOS procesa | Mantiene ARGOS como motor sin nuevo almacén durable. Trajano gestiona claves, versiones y revocación, y entrega candidatos autorizados al motor. Requiere revisar la prohibición propuesta de persistir plantillas en Trajano, sin permitir jamás biometría en logs o navegador. |
-| Plantillas bajo custodia de ARGOS | Trajano conserva referencias opacas. ARGOS necesita almacén cifrado, gestión de claves, respaldo/restauración, borrado, perfiles por tenant y operaciones versionadas. Es la ampliación planteada en el borrador. |
+| Plantillas cifradas en Trajano-Icarus; ARGOS procesa | Elegida. Trajano gestiona claves, versiones y revocación, y entrega candidatos autorizados al motor por petición. Nunca biometría en logs ni plantillas en el navegador. |
+| Plantillas bajo custodia de ARGOS | Descartada. No se le añade capa de datos, catálogo persistente ni conexión directa a base de datos. |
 
-La primera opción merece evaluarse antes de exigir un servicio de perfiles
-nuevo, por ajustarse mejor al papel actual de ARGOS. Ninguna permite enviar
-plantillas al Android, guardar fotos de cada marcación o reutilizar datos de
-identidad de Caserito como catálogo de trabajadores.
+La caché en memoria de candidatos legacy en ARGOS evitaba consultas repetidas
+al servidor antiguo; no es la caché del dispositivo IMCA usada offline. El
+nuevo flujo no usa ninguna de ellas: candidatos de cada petición, sin
+persistencia en ARGOS, sin plantillas en Android ni fotos de marcación guardadas.
+No se reutilizan datos KYC de Caserito como catálogo de trabajadores.
 
-La decisión de custodia afecta esquema, contrato y tareas 4/6/7. No ejecutarlas
-en las partes biométricas hasta cerrar A0 y actualizar los documentos. Las
-reglas funcionales aprobadas (enrolamiento, kiosco, manuales e historial) no
-cambian. No se elige ni implementa una opción en esta revisión.
+Se actualizan esquema previsto, contrato y tareas 4/6/7; las reglas funcionales
+no cambian. A0 sigue pendiente para PAD, formato/versiones y capacidad medida,
+no para decidir la custodia. Ninguna implementación se realiza en esta sesión.
 
 ## Pruebas y operación para A0
 

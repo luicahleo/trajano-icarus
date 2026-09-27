@@ -9,11 +9,10 @@ Actualización funcional del brainstorming: 2026-09-26. Se mantienen las
 decisiones iniciales y se incorporan las respuestas posteriores sobre equipos,
 cuentas compartidas, enrolamiento y registro manual.
 
-La [evaluación de ARGOS compartido](2026-09-26-control-acceso-argos-evaluacion.md)
-reabre la ubicación de la custodia biométrica. El servicio ya funciona para
-Caserito; agregarle un almacén de perfiles fue una propuesta técnica inicial,
-no una decisión aprobada. A0 debe comparar esa alternativa con plantillas
-cifradas en Trajano-Icarus y mantener el motor compartido compatible.
+Tras la [evaluación de ARGOS compartido](2026-09-26-control-acceso-argos-evaluacion.md),
+el usuario confirma plantillas cifradas bajo custodia de Trajano-Icarus y ARGOS
+solo como motor de procesamiento. Se descarta añadirle almacén o acceso directo
+a base de datos. El contrato que usa Caserito se mantiene compatible.
 
 Detalle de la fase 1: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
 [spec técnico propuesto](2026-09-25-control-acceso-fase1-design.md) y
@@ -130,25 +129,25 @@ La copia local de ARGOS revisada genera embeddings ArcFace e identifica contra
 plantillas recibidas o consultadas en ICARUS legacy. No se encontró una ruta
 actual de registro en `ARGOS/views.py`, custodia independiente para el nuevo
 módulo ni prueba de vida habilitada. La referencia de IMCA a registro no acredita
-esa capacidad actual. Si se elige custodia en ARGOS, la alternativa inicial
-necesitará un contrato interno versionado que:
+esa capacidad actual. El nuevo contrato interno versionado deberá:
 
-- registre o sustituya la referencia facial de un trabajador dentro de un
-  tenant;
-- revoque esa referencia;
-- combine prueba de vida e identificación `1:N` restringida al tenant;
-- devuelva una referencia opaca del trabajador y una decisión, sin devolver el
-  embedding al navegador ni a `ControlAcceso`;
-- no escriba imágenes, Base64, embeddings, nombres, documentos, puntuaciones
+- extraer una plantilla con prueba de vida para que el backend de
+  Trajano-Icarus la cifre y persista; nunca devolverla al navegador;
+- combinar prueba de vida e identificación `1:N` contra los candidatos que
+  Trajano-Icarus selecciona de su tenant y envía para esa petición;
+- devolver referencia opaca, versión y decisión de identificación sin
+  puntuaciones ni candidatos alternativos al kiosco;
+- no escribir imágenes, Base64, embeddings, nombres, documentos, puntuaciones
   asociadas a personas ni marcaciones nominales en logs;
-- descarte las muestras capturadas después de procesarlas.
+- descartar muestras y candidatos después de procesarlos, sin caché biométrica
+  entre peticiones, almacenamiento persistente ni consulta a ICARUS legacy.
 
-La propuesta inicial conservaba en Trajano-Icarus solo una referencia opaca de
-ARGOS y el estado de enrolamiento, con plantillas custodiadas fuera del módulo.
-La revisión posterior deja esa custodia pendiente de decisión A0. En cualquier
-alternativa no habrá biometría en el navegador o logs ni fotos persistidas de
-intentos. Los umbrales y el mecanismo de prueba de vida son configuración del
-sistema, no parámetros editables por cada cliente.
+Trajano-Icarus guarda la plantilla cifrada vinculada a cliente/trabajador y
+versión de modelo/enrolamiento; las claves se administran fuera de SQL y git.
+Sustitución y revocación son operaciones locales, sin perfiles remotos en ARGOS.
+No se conservan fotos de intentos ni se envían plantillas al kiosco o logs.
+Los umbrales y el mecanismo de prueba de vida son configuración del sistema,
+no parámetros editables por cada cliente.
 
 La indisponibilidad de ARGOS no impide arrancar Trajano-Icarus ni utilizar otros
 módulos, pero deja temporalmente inoperables el enrolamiento y el kiosco.
@@ -223,7 +222,8 @@ proyectos `Domain`, `Application` e `Infrastructure`, esquema SQL
 Conceptos previstos para la fase 1:
 
 - `ConfiguracionAccesoTrabajador`: `ClienteId`, `TrabajadorId`, estado
-  habilitado, estado de enrolamiento y referencia opaca de ARGOS.
+  habilitado, estado y versión de enrolamiento. Persistencia privada de
+  `PlantillaFacialProtegida` cifrada; no hay perfil almacenado en ARGOS.
 - `SesionKiosco`: credencial restringida y revocable del tenant. No representa
   un dispositivo ni un punto de acceso.
 - `Marcacion`: evento inmutable `Entrada` o `Salida`, instante UTC, fecha
@@ -257,8 +257,8 @@ IndexedDB o Cache Storage.
 
 - proyectos y persistencia base de `ControlAcceso`;
 - habilitación y enrolamiento facial de trabajadores por el cliente;
-- contrato ARGOS con prueba de vida, alta, sustitución, revocación e
-  identificación por tenant;
+- contrato ARGOS de extracción e identificación con prueba de vida;
+- plantillas cifradas, sustitución y revocación locales en Trajano-Icarus;
 - sesión restringida y pantalla de kiosco;
 - entradas, salidas, varios pares diarios, idempotencia e incompletos;
 - historial diario y corrección auditada por el cliente;
@@ -313,9 +313,8 @@ del kiosco.
 - reconocimiento ONNX en el navegador o dispositivo;
 - funcionamiento offline o sincronización diferida;
 - migración automática de biometría o marcaciones desde IMCA;
-- almacenamiento de fotos de cada marcación; la custodia cifrada de plantillas
-  de enrolamiento se decide en A0 (la prohibición inicial en Trajano queda
-  sujeta a esa revisión técnica);
+- almacenamiento de fotos de marcación, plantillas en la tablet o persistencia
+  biométrica en ARGOS; las plantillas cifradas se custodian en Trajano-Icarus;
 - marcaciones manuales del cliente presentadas como si fueran eventos del
   kiosco.
 

@@ -5,11 +5,11 @@ Estado: reglas funcionales confirmadas; propuestas técnicas sujetas a revisión
 No hay implementación ni autorización de despliegue en esta sesión.
 
 Revisión de ARGOS compartido: [evidencia local y VPS](2026-09-26-control-acceso-argos-evaluacion.md).
-La custodia de plantillas se reabre como decisión técnica pendiente: no fue
-aprobada por el usuario. El contrato de perfiles de la sección 5 describe la
-alternativa inicial con almacén en ARGOS, no una capacidad existente ni una
-obligación ya elegida. A0 debe resolverlo antes de ejecutar persistencia
-biométrica, adaptador real o enrolamiento.
+Decisión confirmada: Trajano-Icarus custodia las plantillas cifradas; ARGOS
+procesa cada petición sin persistencia ni acceso directo a base de datos.
+El nuevo flujo no consulta ICARUS legacy ni conserva caché biométrica entre
+peticiones en ARGOS. A0 sigue pendiente para PAD, formato y contrato del motor,
+no para elegir el custodio. Esta sesión sigue siendo solo documental.
 
 Referencias: [brainstorming](2026-09-25-control-acceso-fase1-brainstorm.md),
 [diseño general](2026-09-25-control-acceso-asistencia-design.md) y
@@ -181,28 +181,32 @@ dos imágenes y su funcionamiento está acreditado por la batería VPS del
 en la petición o consultados en ICARUS legacy, pero exige adaptación para GUID,
 privacidad y el nuevo flujo. No activa PAD ni ofrece custodia independiente.
 
-A0 decidirá entre mantener ARGOS como motor con plantillas cifradas custodiadas
-por Trajano-Icarus o añadir custodia en ARGOS. La segunda es la propuesta
-inicial desarrollada a continuación. Si se elige la primera, actualizar
-contratos/persistencia/enrolamiento antes de ejecutarlos; no cambiar nunca la
-prohibición de biometría en logs o navegador. No se trata de crear otro motor
-facial ni de reutilizar el catálogo KYC de Caserito.
+Trajano-Icarus almacena, sustituye y revoca las plantillas faciales cifradas.
+ARGOS solo extrae o compara la información recibida en la petición. No hay
+perfiles persistentes, operaciones durables ni conexiones SQL en ARGOS; tampoco
+se reutiliza el catálogo KYC de Caserito. El nuevo flujo no llama al cliente
+HTTP de ICARUS legacy ni usa su caché de cinco minutos. Esto no requiere borrar
+los endpoints legacy existentes ni cambiar el contrato de Caserito.
 
 Proponer API interna separada y versionada `/api/v2/control-acceso`, con
 autenticación entre servicios, namespace de aplicación y tenant obligatorios:
 
 | Operación propuesta | Contrato mínimo |
 |---|---|
-| `GET /capacidades` | Versión, modelos y capacidades de custodia/PAD; sin datos personales. |
-| `PUT /perfiles/{referencia}` | Alta/sustitución idempotente de referencia opaca, namespace, tenant y evidencia; devuelve versión de perfil. |
-| `DELETE /perfiles/{referencia}` | Revocación/borrado biométrico idempotente y comprobable. |
-| `GET /operaciones/{id}` | Reconciliar resultado incierto de enrolamiento/revocación, sin recuperar imágenes. |
-| `POST /identificaciones` | Tenant, namespace, desafío/operación y evidencia; decisión única, referencia y versión. |
+| `GET /capacidades` | Versión, modelo, formato/dimensión de plantilla y capacidad PAD; sin datos personales. |
+| `POST /extracciones` | Evidencia temporal y contexto autorizado; devuelve plantilla y metadatos compatibles solo al backend de Trajano, más decisión PAD. No almacena un perfil. |
+| `POST /identificaciones` | Evidencia temporal y candidatos aportados por Trajano con referencia opaca, versión y plantilla; devuelve decisión única, referencia/versión y resultado PAD. Sin persistencia. |
 
-Los identificadores son cadenas opacas, no conversiones a entero. El Host
-deriva el tenant de la sesión y envía la referencia de trabajador solo como
-valor opaco. El servicio autentica qué namespaces permite al consumidor.
-No devolver embeddings, candidatos alternativos ni puntuaciones al frontend.
+El Host deriva el tenant de la sesión y selecciona únicamente sus trabajadores
+elegibles y plantillas vigentes. Infraestructura descifra justo para la llamada;
+ARGOS recibe candidatos solo de esa petición y no los retiene para otra. Las
+referencias son opacas, no conversiones a entero; la respuesta debe pertenecer
+al conjunto enviado y conservar versión. El servicio autentica qué namespaces
+permite al consumidor. Límites de tamaño/candidatos se fijan en A0 con carga
+medida; no truncar el conjunto silenciosamente y elegir una coincidencia parcial.
+La comparación y las plantillas solo circulan entre servicios por transporte
+privado autenticado y protegido; no devolver embeddings, candidatos alternativos
+ni puntuaciones al navegador. ARGOS no recibe claves de cifrado de Trajano.
 
 Prueba de vida: se propone evaluación pasiva de una captura JPEG/PNG, máximo
 2 MiB y 1920×1920 tras decodificar, una sola cara y límites de recursos tanto
@@ -220,23 +224,36 @@ prueba de vida aprobada, coincidencia no ambigua y perfil vigente. Si faltan
 campos, la respuesta es negativa o el servicio no está disponible, no marca.
 La disponibilidad de ARGOS no condiciona el arranque de los otros módulos.
 
-Bajo la alternativa de custodia en ARGOS, este guardaría plantillas cifradas
-y versionadas, con aislamiento por
-namespace/tenant, restauración probada e invalidación inmediata de cachés al
-revocar. No retiene capturas de intentos. A0 documentará claves, volumen,
-retención de respaldos y eliminación; no se da por hecho que eso exista hoy.
+La persistencia privada del módulo conserva `PlantillaFacialProtegida` con
+ClienteId, TrabajadorId, versión de enrolamiento/modelo/formato y contenido
+cifrado con integridad autenticada. Claves fuera de SQL y git; guardar solo su
+identificador de versión. Vincular el cifrado a tenant/trabajador/versión para
+detectar sustituciones entre filas. El mecanismo concreto de protección,
+rotación y respaldo de claves se documenta en la tarea 4, sin algoritmos caseros.
+Sin imagen original, caché descifrada persistente, parámetros SQL sensibles
+en logs ni DTOs que devuelvan la plantilla al navegador. Recuperar una copia de
+SQL sin las claves no debe revelar plantillas; ensayar restauración autorizada.
 
-En esa alternativa, Trajano-Icarus conserva referencia/versión y estado, jamás
-foto o plantilla. Esto sigue sujeto a la decisión de custodia en A0.
-Estados de enrolamiento: SinEnrolar, Pendiente, Vigente, RevocacionPendiente,
-Revocado. Ante resultado incierto, conservar operación durable sin biometría
-y reconciliar. Nunca activar un perfil con solo un timeout como evidencia.
-El éxito confirmado actualiza perfil vigente y habilitación conjuntamente,
-respetando la versión de configuración y la elegibilidad actual. Una respuesta
-tardía no revierte una deshabilitación o revocación realizada mientras esperaba.
-Al sustituir, se bloquea la marcación hasta confirmar la nueva versión. Revocar
-bloquea localmente de inmediato aunque ARGOS tarde en completar el borrado.
-Deshabilitar es reversible y no borra el perfil; revocar sí lo elimina.
+Estados de enrolamiento: SinEnrolar, Pendiente, Vigente y Revocado. Tras PAD y
+extracción válidos, cifrar y confirmar plantilla/versión, habilitación y
+resultado idempotente en una transacción local. La llamada a ARGOS va fuera de
+esa transacción. Releer configuración y elegibilidad: una respuesta tardía no
+revierte deshabilitación o revocación. Al sustituir se bloquea la marcación
+hasta confirmar la versión nueva; cuenta e historial no se modifican.
+
+Las operaciones de enrolamiento son locales a Trajano. Si se pierde la
+respuesta tras el commit, consultar la operación devuelve el resultado, nunca
+el vector. Si el proceso cae antes de persistir, expira el intento y se requiere
+otra captura; no guardar imágenes para reintentar ni reconciliar contra perfiles
+remotos inexistentes. El timeout de ARGOS no habilita al trabajador.
+
+Deshabilitar conserva la plantilla cifrada y es reversible. Revocar invalida
+su versión y elimina el contenido cifrado activo en la misma transacción local;
+no hay llamada de borrado a ARGOS. Revalidar versión al confirmar una marcación
+impide aceptar una respuesta basada en una plantilla revocada o sustituida.
+Conservar solo metadatos de auditoría, nunca versiones antiguas del vector.
+Documentar retención de respaldos y evitar que restaurarlos reactive perfiles
+revocados; borrar la fila activa no equivale a eliminar todas las copias de backup.
 
 Cambios de ARGOS se ejecutarán en su propio repositorio y según su AGENTS.md.
 No romper `/api/verify`, usado por CaseritoApp, ni alterar sus consumidores.
@@ -365,7 +382,7 @@ en español, errores genéricos, sin eco de credenciales o muestras.
 | `PUT /control-acceso/trabajadores/{id}/habilitacion` | Cliente: habilitar/deshabilitar con versión. |
 | `PUT /control-acceso/trabajadores/{id}/rostro` | Cliente: captura temporal, operación idempotente de alta/sustitución. |
 | `DELETE /control-acceso/trabajadores/{id}/rostro` | Cliente: revocación idempotente. |
-| `GET /control-acceso/enrolamientos/{operacionId}` | Cliente: estado de reconciliación. |
+| `GET /control-acceso/enrolamientos/{operacionId}` | Cliente: resultado de operación local, sin plantilla. |
 | `GET /control-acceso/jornadas` | Cliente: fecha, trabajador, estado y paginación. |
 | `GET /control-acceso/jornadas/{id}` | Cliente: revisión efectiva e historia. |
 | `POST /control-acceso/marcaciones-manuales` | Cliente: trabajador, tipo, fecha/hora BO, motivo, versión y clave idempotente; válida al guardar. |
@@ -431,8 +448,9 @@ que la imagen de ARGOS desplegada la incluya ni valida su eficacia en el kiosco.
 9. Correcciones mantienen originales, validan intervalos y autor, y rechazan
    una versión obsoleta incluso si compite una marcación del kiosco.
 10. ARGOS negativo, ambiguo, sin PAD, incompatible o caído nunca produce éxito.
-11. Enrolamiento/revocación con resultado incierto se reconcilia sin imagen
-    persistida; no puede marcar un perfil pendiente o revocado.
+11. Enrolamiento con respuesta perdida recupera resultado local sin imagen ni
+    plantilla expuestas. Revocación local no depende de ARGOS; no puede marcar
+    un perfil pendiente, revocado o con versión sustituida durante la llamada.
 12. Recargar, navegar atrás, desconectar y reiniciar equipo no recupera sesión
     administrativa ni almacena biometría local.
 13. Telemetría del flujo completo supera pruebas de privacidad con centinelas
@@ -450,6 +468,11 @@ que la imagen de ARGOS desplegada la incluya ni valida su eficacia en el kiosco.
 18. Android reiniciado abre el kiosco y restaura su sesión vigente online. El
     nombre solo aparece en resultado exitoso y desaparece al volver a inicio;
     nunca llega a logs, caché, mensajes de error ni listados públicos.
+19. SQL contiene plantillas cifradas vinculadas a tenant/trabajador/versión,
+    nunca fotos o vectores legibles; cifrado manipulado, clave incorrecta o
+    intercambio de filas impiden utilizarlas. No llegan a logs o navegador.
+20. ARGOS procesa candidatos por petición sin SQL, catálogo persistente, caché
+    de plantillas entre peticiones ni llamadas a ICARUS legacy en el nuevo flujo.
 
 ## 11. Estado y siguientes decisiones
 

@@ -11,9 +11,10 @@ funcionales aprobadas están distinguidas de las propuestas técnicas y de las
 dependencias externas pendientes.
 
 Evidencia adicional: [ARGOS compartido con Caserito](../specs/2026-09-26-control-acceso-argos-evaluacion.md).
-La custodia en ARGOS no está decidida. A0 debe elegir su ubicación y actualizar
-las partes biométricas de tareas 4, 6 y 7 antes de ejecutarlas; las rutas v2
-de perfiles son una alternativa, no un requisito impuesto al servicio actual.
+Custodia confirmada: plantillas cifradas en Trajano-Icarus. ARGOS extrae y
+compara por petición, sin perfiles persistentes, base de datos ni caché
+biométrica entre peticiones en el nuevo flujo. Las tareas 4, 6 y 7 reflejan esa
+decisión. A0 sigue pendiente para PAD, formato y aceptación del contrato.
 
 ## Reglas para el futuro ejecutor
 
@@ -64,9 +65,10 @@ Las tareas 1–5 y 9 no requieren ARGOS real. Tareas 7–8 y UI pueden desarroll
 contra dobles del contrato una vez fijado A0, pero no completarse como flujo
 productivo hasta superar 6 y 13. Si A0 requiere vídeo/gestos en vez de captura
 pasiva, actualizar spec y tareas 6, 7 y 11 antes de implementar esas partes.
-No seleccionar en silencio un modelo, licencia, umbral o almacenamiento facial.
+No seleccionar en silencio un modelo, licencia, umbral o mecanismo de claves.
+El custodio ya está elegido: Trajano-Icarus, sin fotos originales persistidas.
 
-## A0 — Integración con ARGOS existente y decisión de custodia
+## A0 — Integración con ARGOS como motor sin persistencia
 
 Responsable futuro: ejecutor de ARGOS, coordinado con agenteLocal y agenteVPS.
 No se inicia ese trabajo desde esta sesión. ARGOS tiene su propio AGENTS.md:
@@ -77,24 +79,25 @@ Rutas a revisar allí: `ARGOS/views.py`, `ARGOS/api_client.py`,
 `ARGOS/decorators.py`, `ARGOS/logger.py`, `requirements.txt`, `Dockerfile` y
 `tests/test_workflows.py`. Proponer `docs/control-acceso-v2.md`,
 `ARGOS/control_acceso_v2.py` y `tests/test_control_acceso_v2.py` en su propio
-plan, después de decidir custodia/PAD; no tratar estas rutas nuevas como código
+plan, después de fijar PAD y formato; no tratar estas rutas nuevas como código
 que ya existe.
 
 - [ ] Partir de las capacidades existentes: verify 1:1, extracción e identify
   con candidatos externos; no diseñar como si no existiera reconocimiento.
   Confirmar imagen/commit desplegado actual: doc 34 acredita batería funcional
   del 2026-08-06, doc 45 calibración KYC y doc 48 solamente relojes.
-- [ ] Decidir custodia: plantillas cifradas en Trajano con ARGOS como motor,
-  o nuevo almacén de perfiles en ARGOS. Actualizar spec y tareas afectadas;
-  no ejecutar ambas alternativas ni tratar la segunda como ya aprobada.
-- [ ] Fijar contrato según custodia elegida: namespace/tenant opacos,
-  identificación y capacidades; perfiles versionados y revocación en ARGOS
-  solo si será su custodio. En ambas opciones, operaciones idempotentes.
+- [ ] Fijar contrato de capacidades, extracción con resultado solo al backend
+  e identificación contra candidatos aportados en la petición. Referencias
+  opacas compatibles con GUID y versión/modelo/formato explícitos; sin endpoints
+  de perfiles, borrado remoto ni operaciones durables en ARGOS.
+- [ ] Probar que el nuevo flujo no consulta ICARUS legacy ni una base de datos
+  y no conserva imágenes/plantillas entre peticiones. El backend deriva tenant
+  y candidatos; ARGOS devuelve únicamente una referencia del conjunto recibido.
 - [ ] Decidir modelo PAD/versión/licencia, formato de evidencia y criterios
   medibles de identificación, ambigüedad, rechazo y rendimiento con el equipo.
-- [ ] Definir almacén cifrado, claves, respaldo/restauración, eliminación y
-  aislamiento en el custodio elegido; no usar el almacén biométrico del legacy
-  como dependencia oculta.
+- [ ] Coordinar con tarea 4 formato de plantilla y compatibilidad de modelos.
+  La custodia y claves se implementarán solo en Trajano; ARGOS no recibe claves
+  SQL/de cifrado ni usa el almacén legacy como dependencia oculta.
 - [ ] Prueba roja: contrato v2 ausente, rechazo de GUID/tenant ajeno, falta de
   PAD y filtración de candidatos detectados por tests nuevos.
 - [ ] Verificación prevista en ARGOS: `python -m unittest discover -s tests -p 'test_control_acceso_v2.py' -v`,
@@ -102,8 +105,9 @@ que ya existe.
   `docker build -t argos:control-acceso-validacion .`. El runner actual es
   unittest y hoy sus tests solo cubren workflows; añadir cobertura de contrato.
   No dar estos comandos por ejecutados en la revisión documental.
-- [ ] Preservar `/api/verify` y sus contratos existentes; ensayar restauración y
-  borrado de un perfil sintético. Tests de integración no prueban precisión PAD.
+- [ ] Preservar `/api/verify` y sus contratos existentes. Los ensayos de
+  respaldo/borrado de plantillas pertenecen a Trajano (tareas 4/7/13).
+  Tests de integración no prueban precisión PAD.
 - [ ] Reproducir la regresión de Caserito: dos imágenes, códigos 400/422/500 y
   respuesta exitosa con los campos consumidos. No cambiar umbral/detector
   globales ni exigir PAD a la foto de documento por añadir el kiosco.
@@ -196,6 +200,12 @@ Generar `Migrations/*_InicialControlAcceso.cs` (timestamp generado por EF).
 Modificar Program para migraciones Dev/Testing según patrón vigente.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/PersistenciaAccesoTests.cs`.
 
+Añadir custodia privada en Infrastructure:
+`Persistencia/PlantillaFacialProtegida.cs`, `Persistencia/ConfiguracionPlantillaFacial.cs`
+y `Biometria/ProtectorPlantillas.cs`; puerto
+`Icarus.ControlAcceso.Application/Biometria/IRepositorioPlantillasFaciales.cs`.
+Test nuevo: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/ProteccionPlantillasTests.cs`.
+
 - [ ] Rojo: dos primeras entradas concurrentes generan dos jornadas, acceso
   entre tenants, revisión que sobrescribe original y conflicto no detectado.
 - [ ] Crear schema, índice cliente/trabajador/fecha, rowversion y restricciones;
@@ -203,9 +213,17 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/PersistenciaAccesoTes
 - [ ] Separar origen Kiosco/ManualCliente y hora del evento/instante real de
   creación/autor/motivo. No exigir ni inventar evidencia facial al persistir
   un evento manual; conservar datos originales y referencias, nunca imágenes.
+- [ ] Rojo de custodia: vector legible en SQL/logs, clave en la BD, intercambio
+  de filas entre tenants aceptado o contenido manipulado descifrado como válido.
+- [ ] Persistir solo plantilla cifrada con integridad y contexto
+  tenant/trabajador/versión, metadatos de modelo/formato y versión de clave.
+  Usar mecanismos criptográficos mantenidos, no algoritmos propios; documentar
+  claves fuera de SQL/git, rotación, restauración y tratamiento de revocaciones
+  en respaldos. No cachear vectores descifrados entre peticiones.
 - [ ] Tests usan SQL Server de Testcontainers y transacciones separadas, no
   EF InMemory, incluyendo rollback y consulta de inactivos con tenant explícito.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PersistenciaAccesoTests`.
+- [ ] Custodia: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~ProteccionPlantillasTests`.
 - [ ] Puerta y commit: `feat(control-acceso): persiste jornadas con concurrencia`.
 
 ## 5 — Sesión restringida y activación
@@ -248,6 +266,10 @@ Crear `Icarus.ControlAcceso.Application/Biometria/IProveedorIdentidadFacial.cs`,
   tenant/referencia ajenos o timeout tratados como coincidencia válida.
 - [ ] Adaptador HTTP con credencial interna, límites, cancelación y códigos
   genéricos; sin retry automático de captura y sin persistir evidencia.
+- [ ] Extracción entrega el vector solo al flujo de cifrado del backend; la
+  identificación envía candidatos autorizados descifrados por petición y exige
+  referencia/versión del conjunto. Probar formato/modelo incompatible, conjunto
+  excesivo sin truncado silencioso y ausencia de consultas o perfiles remotos.
 - [ ] Dobles deterministas prueban fallos; test contra servicio efímero con
   contrato A0 prueba integración real y queda separado del ensayo biométrico.
   Sin la imagen A0 no marcar ese test pasado ni poner bypass de producción.
@@ -262,20 +284,28 @@ Crear en `Icarus.ControlAcceso.Application/Trabajadores/`:
 `EnrolarTrabajadorCommand.cs`, `EnrolarTrabajadorHandler.cs`,
 `RevocarRostroCommand.cs`, `RevocarRostroHandler.cs`,
 `IRepositorioAccesoTrabajadores.cs` y validadores correspondientes.
-Crear `Icarus.ControlAcceso.Infrastructure/Argos/ReconciliadorEnrolamientos.cs`
-y persistencia de operaciones sin evidencia; nueva migración.
+Crear `Icarus.ControlAcceso.Infrastructure/Persistencia/ConfiguracionOperacionEnrolamiento.cs`
+y repositorio `Repositorios/RepositorioOperacionesEnrolamiento.cs`, sin imágenes
+en operaciones. Añadir migración para estado/resultado local e idempotencia.
+No crear un reconciliador de perfiles remotos ni persistencia en ARGOS.
 Crear `Icarus/src/Host/Icarus.Host/Endpoints/ControlAccesoTrabajadoresEndpoints.cs`.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/EnrolamientoTests.cs`.
 
 - [ ] Rojo: perfil pendiente habilitado, revocación fallida que permite marcar,
   sustitución que activa referencia sin confirmación o imagen guardada en SQL.
-- [ ] Implementar alta/sustitución/revocación idempotentes, versiones y
-  reconciliación sin transacción distribuida ni reenvío de imágenes persistidas.
+- [ ] Implementar extracción y PAD fuera de transacción; confirmar plantilla
+  cifrada, versión, habilitación y resultado idempotente en una transacción
+  local. Sustitución elimina el vector anterior, no cuenta ni historial.
+- [ ] Revocar de forma local atómica: invalidar versión y eliminar contenido
+  cifrado activo, conservando solo auditoría. No esperar a ARGOS ni enviar DELETE
+  remoto. Deshabilitar es reversible y conserva la plantilla protegida.
 - [ ] Enrolamiento confirmado habilita automáticamente; resultado pendiente o
   fallido no habilita. Probar deshabilitación concurrente para que una respuesta
   tardía no la revierta. Sustituir rostro conserva cuenta e historial.
-- [ ] Probar pérdida de respuesta, reinicio, perfil inexistente, activación
-  local fallida tras éxito remoto y borrado remoto después de revocación local.
+- [ ] Probar pérdida de respuesta tras commit (resultado local recuperable),
+  reinicio antes del commit (caduca y requiere otra captura), fallo de cifrado,
+  perfil inexistente y revocación concurrente sin resurrección por respuesta
+  tardía. No persistir capturas para reintentar ni registrar vectores retornados.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~EnrolamientoTests`.
 - [ ] Puerta y commit: `feat(control-acceso): administra enrolamiento de trabajadores`.
 
@@ -297,6 +327,8 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesTests.cs`.
 - [ ] Probar 03:59:59/04:00:00 UTC, ARGOS cruzando medianoche, éxito con respuesta
   perdida, caducidad de propuesta, revocación durante ARGOS y consulta de
   resultado solo desde la sesión autorizada.
+- [ ] Revalidar versión de la plantilla justo antes de confirmar: una respuesta
+  de ARGOS basada en plantilla revocada o sustituida no puede crear marcación.
 - [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesTests`.
 - [ ] Puerta y commit: `feat(control-acceso): registra marcaciones idempotentes`.
 
@@ -421,7 +453,8 @@ real y regenerar adaptadores mediante `node quality/generar-adaptadores.mjs`.
   licencia/proveedor adquirido ni una prueba pasada. Windows no es plataforma
   del kiosco en esta fase; el PC sí puede ser equipo del cliente para enrolar.
 - [ ] Confirmar con agenteVPS HTTPS/origen/rutas, zonas horarias, restauración
-  de sesión y almacén ARGOS, límites de proxy y ausencia de logs nominales.
+  de sesión y custodia de claves/plantillas de Trajano, límites de proxy y
+  ausencia de logs nominales. ARGOS no necesita un volumen biométrico ni SQL.
 - [ ] Ensayar cámara y PAD en hardware real, rechazo de fotos/pantallas,
   ambigüedad, luz variable y latencia. Fijar criterios en A0 antes de evaluar;
   dejar resultados agregados sin muestras o identidades en git.

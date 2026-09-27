@@ -10,8 +10,9 @@ y [plan](../plans/2026-09-25-control-acceso-fase1.md).
 
 Revisión del servicio compartido con Caserito:
 [ARGOS local y respuestas VPS](2026-09-26-control-acceso-argos-evaluacion.md).
-Se reabre la custodia de plantillas como decisión técnica: el almacenamiento
-en ARGOS fue una propuesta del borrador, no una decisión funcional del usuario.
+Custodia confirmada después de revisar el servicio: plantillas cifradas en
+Trajano-Icarus, ARGOS solo procesa. La propuesta inicial de almacén en ARGOS
+queda descartada.
 
 ## Decisiones del usuario que se conservan
 
@@ -53,6 +54,12 @@ en ARGOS fue una propuesta del borrador, no una decisión funcional del usuario.
   Se permite crear una jornada sin marcaciones previas para resolver el fallo.
 - La restricción de día actual continúa aplicándose al kiosco. Cada par,
   incluso manual, permanece dentro del mismo día civil boliviano.
+- Trajano-Icarus conserva las plantillas cifradas y administra enrolamiento,
+  sustitución y revocación. ARGOS no almacena perfiles ni conecta directamente
+  a base de datos; procesa captura y candidatos de cada petición.
+- Sin plantillas ni cola offline en la tablet. El nuevo flujo de ARGOS tampoco
+  usa la caché de candidatos del ICARUS legacy; aquella caché del servidor era
+  distinta de las plantillas locales de IMCA para reconocimiento offline.
 
 ## Evidencia revisada
 
@@ -96,9 +103,9 @@ Requiere coordinación futura de DNS, HTTPS y proxy con agenteVPS.
   evitar pedir gestos en cada marcación. Su eficacia debe medirse; el soporte
   de una biblioteca no certifica la solución ni garantiza detectar todo ataque.
 - ARGOS ya compara imágenes para Caserito y ofrece identificación con
-  candidatos externos. Antes de exigir un almacén de perfiles nuevo, comparar
-  custodia cifrada en Trajano-Icarus con custodia en ARGOS. Si se elige esta
-  última, su contrato y almacén aún deben construirse.
+  candidatos externos. Se conserva como motor: no se añade almacén de perfiles.
+  Trajano-Icarus selecciona y descifra las plantillas del tenant exclusivamente
+  para procesarlas; ni el navegador ni los logs reciben esos vectores.
 - No se elige proveedor de prueba de vida ni se inventan umbrales. La tarea
   externa A0 debe fijar modelo, versiones, licencias y criterios medibles antes
   de implementar el adaptador real.
@@ -131,9 +138,10 @@ Requiere coordinación futura de DNS, HTTPS y proxy con agenteVPS.
   concreto, cámara, solución de bloqueo y arranque automático en el equipo real.
 - DNS/origen definitivo, política de bloqueo y cámara: confirmar con agenteVPS
   y el equipo real antes del piloto. No se solicita despliegue en esta sesión.
-- A0 de ARGOS: decidir dónde se custodian las plantillas, prueba de vida,
-  rendimiento compartido con Caserito y contrato compatible. Se conoce la
-  batería VPS doc 34 y el runner unittest del repo. El plan distingue tareas
+- A0 de ARGOS: prueba de vida, rendimiento compartido con Caserito y contrato
+  compatible para extracción/identificación sin persistencia. Custodia resuelta
+  en Trajano-Icarus. Se conoce la batería VPS doc 34 y el runner unittest del
+  repo. El plan distingue tareas
   independientes del motor de las que requieren esa decisión y aceptación.
 
 El detalle técnico del spec es una propuesta para revisión e implementación
