@@ -38,6 +38,9 @@
     <ProjectReference Include="..\..\src\GestionAvicola\Icarus.GestionAvicola.Domain\Icarus.GestionAvicola.Domain.csproj" />
     <ProjectReference Include="..\..\src\GestionAvicola\Icarus.GestionAvicola.Application\Icarus.GestionAvicola.Application.csproj" />
     <ProjectReference Include="..\..\src\GestionAvicola\Icarus.GestionAvicola.Infrastructure\Icarus.GestionAvicola.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ControlAcceso\Icarus.ControlAcceso.Domain\Icarus.ControlAcceso.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ControlAcceso\Icarus.ControlAcceso.Application\Icarus.ControlAcceso.Application.csproj" />
+    <ProjectReference Include="..\..\src\ControlAcceso\Icarus.ControlAcceso.Infrastructure\Icarus.ControlAcceso.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

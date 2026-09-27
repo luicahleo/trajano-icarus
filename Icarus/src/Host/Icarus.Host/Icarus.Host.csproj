@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\Identity\Icarus.Identity.Infrastructure\Icarus.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Clientes\Icarus.Clientes.Infrastructure\Icarus.Clientes.Infrastructure.csproj" />
     <ProjectReference Include="..\..\GestionAvicola\Icarus.GestionAvicola.Infrastructure\Icarus.GestionAvicola.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\ControlAcceso\Icarus.ControlAcceso.Infrastructure\Icarus.ControlAcceso.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

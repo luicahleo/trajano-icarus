@@ -29,6 +29,18 @@ public class ReglasDeModulosTests
             string.Join(", ", clientesHaciaIdentity.FailingTypeNames ?? []));
         Assert.True(identityHaciaClientes.IsSuccessful,
             string.Join(", ", identityHaciaClientes.FailingTypeNames ?? []));
+
+        var controlAccesoHaciaOtros = Types
+            .InAssemblies(new[]
+            {
+                typeof(ControlAcceso.Domain.ControlAccesoModule).Assembly,
+                typeof(ControlAcceso.Application.IUnidadTrabajoControlAcceso).Assembly,
+                typeof(ControlAcceso.Infrastructure.DependencyInjection).Assembly,
+            })
+            .ShouldNot().HaveDependencyOnAny("Icarus.Clientes", "Icarus.Identity").GetResult();
+
+        Assert.True(controlAccesoHaciaOtros.IsSuccessful,
+            string.Join(", ", controlAccesoHaciaOtros.FailingTypeNames ?? []));
     }
 
     [Fact]
