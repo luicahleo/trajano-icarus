@@ -60,7 +60,7 @@ public class ReglasDeCapasTests
                 typeof(Identity.Application.Sesiones.IniciarSesionCommand).Assembly,
                 typeof(Clientes.Application.Clientes.CrearClienteCommand).Assembly,
                 typeof(GestionAvicola.Application.Granjas.CrearGranjaCommand).Assembly,
-                typeof(ControlAcceso.Application.IUnidadTrabajoControlAcceso).Assembly,
+                typeof(ControlAcceso.Application.Persistencia.IUnidadTrabajoControlAcceso).Assembly,
             })
             .ShouldNot()
             .HaveDependencyOnAny("Icarus.Identity.Infrastructure", "Icarus.Clientes.Infrastructure", "Icarus.GestionAvicola.Infrastructure", "Icarus.ControlAcceso.Infrastructure")

@@ -32,11 +32,13 @@ public sealed class JornadaAcceso : AggregateRoot
 
     public DateOnly FechaBoliviana { get; private set; }
 
-    public IReadOnlyCollection<Marcacion> Marcaciones => _marcaciones.AsReadOnly();
+    public bool EstaActivo { get; private set; } = true;
 
-    public IReadOnlyCollection<RevisionJornada> Revisiones => _revisiones.AsReadOnly();
+    public IReadOnlyCollection<Marcacion> Marcaciones => _marcaciones;
 
-    public uint Version { get; private set; }
+    public IReadOnlyCollection<RevisionJornada> Revisiones => _revisiones;
+
+    public int Version { get; private set; }
 
     public Marcacion RegistrarMarcacion(
         TipoMarcacion tipo,
@@ -74,7 +76,7 @@ public sealed class JornadaAcceso : AggregateRoot
     public RevisionJornada Corregir(
         DateTimeOffset instanteCorreccionUtc,
         DateOnly hoyBoliviana,
-        uint versionEsperada,
+        int versionEsperada,
         string motivo,
         Guid autorId,
         params (TipoMarcacion Tipo, DateTimeOffset InstanteUtc)[] valoresEfectivos)
@@ -91,6 +93,7 @@ public sealed class JornadaAcceso : AggregateRoot
         ValidarValoresEfectivos(valoresEfectivos);
 
         var revision = new RevisionJornada(
+            Id,
             instanteCorreccionUtc,
             _marcaciones.Count,
             motivo.Trim(),
@@ -101,6 +104,8 @@ public sealed class JornadaAcceso : AggregateRoot
         Version++;
         return revision;
     }
+
+    public void Desactivar() => EstaActivo = false;
 
     public EstadoJornadaAcceso Estado(DateOnly hoyBoliviana)
     {

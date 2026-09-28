@@ -34,7 +34,7 @@ public class ReglasDeModulosTests
             .InAssemblies(new[]
             {
                 typeof(ControlAcceso.Domain.ControlAccesoModule).Assembly,
-                typeof(ControlAcceso.Application.IUnidadTrabajoControlAcceso).Assembly,
+                typeof(ControlAcceso.Application.Persistencia.IUnidadTrabajoControlAcceso).Assembly,
                 typeof(ControlAcceso.Infrastructure.DependencyInjection).Assembly,
             })
             .ShouldNot().HaveDependencyOnAny("Icarus.Clientes", "Icarus.Identity").GetResult();

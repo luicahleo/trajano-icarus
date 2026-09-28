@@ -35,6 +35,8 @@ public sealed class ConfiguracionAccesoTrabajador : AggregateRoot
 
     public int VersionEnrolamiento { get; private set; }
 
+    public bool EstaActivo { get; private set; } = true;
+
     public void Habilitar() => Habilitado = true;
 
     public void Deshabilitar() => Habilitado = false;

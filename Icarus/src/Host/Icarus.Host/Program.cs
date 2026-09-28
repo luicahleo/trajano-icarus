@@ -8,6 +8,8 @@ using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
 using Icarus.ControlAcceso.Application.Autorizacion;
+using Icarus.ControlAcceso.Infrastructure;
+using Icarus.ControlAcceso.Infrastructure.Persistencia;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Infrastructure;
 using Icarus.GestionAvicola.Infrastructure.Persistencia;
@@ -53,6 +55,7 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddIdentidadInfraestructura(builder.Configuration);
 builder.Services.AddClientesInfraestructura(builder.Configuration);
 builder.Services.AddGestionAvicolaInfraestructura(builder.Configuration);
+builder.Services.AddControlAccesoInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IConsultaElegibilidadAcceso, ConsultaElegibilidadAcceso>();
 builder.Services.AddScoped<IAuthorizationHandler, ManejadorClienteConControlAcceso>();
 builder.Services.AddScoped<IAuthorizationHandler, ManejadorTrabajadorElegibleParaMarcar>();
@@ -181,6 +184,8 @@ if (ejecutarMigraciones)
     await clientesDb.Database.MigrateAsync();
     var avicolaDb = alcance.ServiceProvider.GetRequiredService<GestionAvicolaDbContext>();
     await avicolaDb.Database.MigrateAsync();
+    var controlAccesoDb = alcance.ServiceProvider.GetRequiredService<ControlAccesoDbContext>();
+    await controlAccesoDb.Database.MigrateAsync();
 
     if (esDesarrollo)
     {

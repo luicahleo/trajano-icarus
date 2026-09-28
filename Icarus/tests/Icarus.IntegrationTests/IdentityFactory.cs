@@ -53,6 +53,7 @@ public sealed class IdentityFactory : WebApplicationFactory<Program>, IAsyncLife
         builder.UseSetting("ConnectionStrings:Icarus", _contenedor.GetConnectionString());
         builder.UseSetting("Jwt:Clave", JwtClaveDePrueba);
         builder.UseSetting("Semilla:ContrasenaPrueba", ContrasenaDePrueba);
+        builder.UseSetting("ControlAcceso:Plantillas:ClaveCifradoBase64", "Irdz7YT9hZSPMdG0GRdbGJqLWBNmGPjtU87dHcDHqA0=");
         // Recompone el logger real de la aplicación y añade el sink de prueba.
         // ConfigureTestServices corre después de Program.cs: esta registración
         // reemplaza la del host y conserva la configuración declarativa.
