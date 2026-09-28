@@ -91,19 +91,20 @@ export function esFalloDeConectividad(error: ApiError): boolean {
   );
 }
 
-function conHeaders(init: RequestInit, cuerpo?: unknown): RequestInit {
-  const cabeceras = new Headers(init.headers);
-  cabeceras.set('X-Correlation-ID', crearCorrelationId());
-  cabeceras.set('X-Session-Id', obtenerSesionId());
+function conHeaders(init: RequestInit, cuerpo?: unknown, cabeceras?: Record<string, string>): RequestInit {
+  const cabecerasFinales = new Headers(init.headers);
+  cabecerasFinales.set('X-Correlation-ID', crearCorrelationId());
+  cabecerasFinales.set('X-Session-Id', obtenerSesionId());
+  for (const [clave, valor] of Object.entries(cabeceras ?? {})) cabecerasFinales.set(clave, valor);
   const token = getAccessToken();
-  if (token) cabeceras.set('Authorization', `Bearer ${token}`);
+  if (token) cabecerasFinales.set('Authorization', `Bearer ${token}`);
   // FormData (subida del Excel de vacunación): el navegador fija el boundary;
   // nunca forzar Content-Type ni serializar como JSON.
   const esFormData = cuerpo instanceof FormData;
-  if (cuerpo !== undefined && !esFormData) cabeceras.set('Content-Type', 'application/json');
+  if (cuerpo !== undefined && !esFormData) cabecerasFinales.set('Content-Type', 'application/json');
   return {
     ...init,
-    headers: cabeceras,
+    headers: cabecerasFinales,
     body:
       cuerpo === undefined || esFormData
         ? (cuerpo as BodyInit | undefined)
@@ -187,10 +188,14 @@ export async function peticion<T>(o: {
   ruta: string;
   metodo?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   cuerpo?: unknown;
+  cabeceras?: Record<string, string>;
 }): Promise<T> {
-  const { ruta, metodo = 'GET', cuerpo } = o;
+  const { ruta, metodo = 'GET', cuerpo, cabeceras } = o;
   const crearRequest = () =>
-    new Request(urlCompleta(ruta), conHeaders({ method: metodo, credentials: 'include' }, cuerpo));
+    new Request(
+      urlCompleta(ruta),
+      conHeaders({ method: metodo, credentials: 'include' }, cuerpo, cabeceras),
+    );
   const original = crearRequest();
   const reintentable = !esRutaDeSesion(ruta);
   const inicio = performance.now();

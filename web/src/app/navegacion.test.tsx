@@ -29,6 +29,18 @@ describe('obtenerEnlacesNavegacion', () => {
       obtenerEnlacesNavegacion('Trabajador', false, false, true).map(({ etiqueta }) => etiqueta),
     ).toEqual(['Despachos de huevo']);
   });
+
+  test('solo ofrece Control de acceso al cliente que lo contrató', () => {
+    expect(
+      obtenerEnlacesNavegacion('Cliente', false, false, false, true).map(({ etiqueta }) => etiqueta),
+    ).toContain('Control de acceso');
+    expect(
+      obtenerEnlacesNavegacion('Cliente', false, false, false, false).map(({ etiqueta }) => etiqueta),
+    ).not.toContain('Control de acceso');
+    expect(
+      obtenerEnlacesNavegacion('Trabajador', true, false, false, true).map(({ etiqueta }) => etiqueta),
+    ).not.toContain('Control de acceso');
+  });
 });
 
 describe('obtenerTituloRuta', () => {

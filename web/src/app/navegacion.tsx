@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
 import EggRoundedIcon from '@mui/icons-material/EggRounded';
+import FingerprintRoundedIcon from '@mui/icons-material/FingerprintRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
@@ -39,11 +40,18 @@ const ENLACE_DESPACHOS: EnlaceNavegacion = {
   icono: <SendRoundedIcon />,
 };
 
+const ENLACE_CONTROL_ACCESO: EnlaceNavegacion = {
+  etiqueta: 'Control de acceso',
+  ruta: '/control-acceso',
+  icono: <FingerprintRoundedIcon />,
+};
+
 export function obtenerEnlacesNavegacion(
   rol: Rol | null,
   tieneFuncionalidadAvicola: boolean,
   tienePedidoAlimento = false,
   tieneDespachoHuevo = false,
+  tieneControlAcceso = false,
 ): EnlaceNavegacion[] {
   const propios = rol ? (ENLACES_POR_ROL[rol] ?? []) : [];
   const avicola =
@@ -54,7 +62,9 @@ export function obtenerEnlacesNavegacion(
     rol === 'Cliente' || (rol === 'Trabajador' && tienePedidoAlimento) ? [ENLACE_PEDIDOS] : [];
   const despachos =
     rol === 'Cliente' || (rol === 'Trabajador' && tieneDespachoHuevo) ? [ENLACE_DESPACHOS] : [];
-  return [...propios, ...pedidos, ...despachos, ...avicola];
+  const controlAcceso =
+    rol === 'Cliente' && tieneControlAcceso ? [ENLACE_CONTROL_ACCESO] : [];
+  return [...propios, ...controlAcceso, ...pedidos, ...despachos, ...avicola];
 }
 
 export function obtenerTituloRuta(ruta: string, enlaces: EnlaceNavegacion[]): string {

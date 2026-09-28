@@ -80,3 +80,13 @@ export const AdminVacunacionPage = lazy(() =>
     default: modulo.AdminVacunacionPage,
   })),
 );
+export const ControlAccesoPage = lazy(() =>
+  import('../features/control-acceso/TrabajadoresAccesoPage').then((modulo) => ({
+    default: modulo.TrabajadoresAccesoPage,
+  })),
+);
+export const HistorialAccesoPage = lazy(() =>
+  import('../features/control-acceso/HistorialAccesoPage').then((modulo) => ({
+    default: modulo.HistorialAccesoPage,
+  })),
+);

@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -45,10 +46,22 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
+      // El shell del kiosco no entra al precache: se sirve siempre fresco y
+      // nunca comparte el service worker de la PWA administrativa.
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['**/kiosco.html', '**/kiosco-*.js', '**/kiosco-*.css'],
+      },
     }),
   ],
   build: {
+    // Dos entradas: la PWA administrativa y el kiosco aislado.
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        kiosco: fileURLToPath(new URL('./kiosco.html', import.meta.url)),
+      },
+    },
     // Los source maps solo se generan con --mode sourcemaps, ocultos (sin la
     // anotación //# sourceMappingURL) y se extraen de dist por
     // scripts/extraer-sourcemaps.mjs antes de publicar (spec: artefacto privado).

@@ -12,6 +12,8 @@ import {
   ClienteDetallePage,
   ClienteNuevoPage,
   ClientesListaPage,
+  ControlAccesoPage,
+  HistorialAccesoPage,
   InicioPage,
   LoginPage,
   NotFoundPage,
@@ -110,6 +112,30 @@ export const router = createBrowserRouter([
               <ProtectedRoute>
                 <RequiereRol roles={['Cliente']}>
                   <TrabajadoresPage />
+                </RequiereRol>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/control-acceso',
+            element: (
+              <ProtectedRoute>
+                <RequiereRol roles={['Cliente']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <ControlAccesoPage />
+                  </Suspense>
+                </RequiereRol>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/control-acceso/historial',
+            element: (
+              <ProtectedRoute>
+                <RequiereRol roles={['Cliente']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <HistorialAccesoPage />
+                  </Suspense>
                 </RequiereRol>
               </ProtectedRoute>
             ),

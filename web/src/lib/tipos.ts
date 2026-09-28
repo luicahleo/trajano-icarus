@@ -169,3 +169,58 @@ export interface NotificacionVacunacion {
   vencidasYHoy: TareaVacunacionResumen[];
   proximas: TareaVacunacionResumen[];
 }
+
+export type EstadoJornadaAcceso = 'Abierta' | 'Completa' | 'Incompleta';
+export type TipoMarcacion = 'Entrada' | 'Salida';
+export type OrigenMarcacion = 'Kiosco' | 'ManualCliente';
+
+export interface JornadaAccesoResumen {
+  id: string;
+  trabajadorId: string;
+  fechaBoliviana: string;
+  estado: EstadoJornadaAcceso;
+  cantidadMarcaciones: number;
+  version: number;
+}
+
+export interface ValorCorregido {
+  tipo: TipoMarcacion;
+  instanteUtc: string;
+}
+
+export interface MarcacionAccesoDetalle {
+  id: string;
+  tipo: TipoMarcacion;
+  origen: OrigenMarcacion;
+  instanteUtc: string;
+  horaDeclaradaUtc: string;
+  creadaEnUtc: string;
+  autorId: string | null;
+  motivo: string | null;
+}
+
+export interface RevisionJornadaDetalle {
+  id: string;
+  instanteCorreccionUtc: string;
+  hastaSecuenciaOriginal: number;
+  motivo: string;
+  autorId: string;
+  valores: ValorCorregido[];
+}
+
+export interface JornadaAccesoDetalle {
+  id: string;
+  trabajadorId: string;
+  fechaBoliviana: string;
+  estado: EstadoJornadaAcceso;
+  version: number;
+  marcaciones: MarcacionAccesoDetalle[];
+  revisiones: RevisionJornadaDetalle[];
+  valoresEfectivos: ValorCorregido[];
+}
+
+export interface ResultadoEnrolamientoAcceso {
+  exitoso: boolean;
+  versionEnrolamiento: number;
+  motivo: string | null;
+}

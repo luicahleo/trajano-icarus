@@ -28,7 +28,7 @@ const ANCHO_NAVEGACION = 248;
 const ANCHO_NAVEGACION_MOVIL = 288;
 
 export function AppLayout() {
-  const { rol, correo, cerrarSesion, tieneFuncionalidad } = useAuth();
+  const { rol, correo, cerrarSesion, tieneFuncionalidad, modulos } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const tema = useTheme();
@@ -39,6 +39,7 @@ export function AppLayout() {
     tieneFuncionalidad('ProduccionHuevos', 'Mortalidad', 'Vacunacion'),
     tieneFuncionalidad('PedidoAlimento'),
     tieneFuncionalidad('DespachoHuevo'),
+    modulos.includes('ControlAcceso'),
   );
   const titulo = obtenerTituloRuta(pathname, enlaces);
 
