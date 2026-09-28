@@ -1,9 +1,9 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-26 con respuestas del brainstorming.
-Estado: plan preparado, **ninguna tarea implementada**.
-El usuario limita esta sesión a brainstorming, spec y plan. Este documento
-no autoriza ejecutar las tareas ni desplegar.
+Creado: 2026-09-25. Actualizado: 2026-09-28 con T4 integrada y push a develop.
+Estado: **en implementación**. Tareas 1–4 completadas y pusheadas en
+`a6febc8 feat(control-acceso): persiste jornadas con concurrencia`. Esta sesión
+ya autoriza código; los límites de despliegue/master/ARGOS/Caserito siguen vigentes.
 
 Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
 [spec](../specs/2026-09-25-control-acceso-fase1-design.md). Las decisiones
@@ -134,12 +134,12 @@ y los `.csproj` de `Icarus.UnitTests`, `Icarus.IntegrationTests` y
 `Icarus/tests/Icarus.ArchitectureTests/ReglasDeCapasTests.cs` y
 `Icarus/tests/Icarus.ArchitectureTests/ReglasDeModulosTests.cs`.
 
-- [ ] Rojo: prueba de cobertura detecta módulo ausente; reglas prohíben
+- [x] Rojo: prueba de cobertura detecta módulo ausente; reglas prohíben
   referencias a Clientes/Identity y EF/HTTP dentro del dominio.
-- [ ] Crear proyectos, referencias mínimas, registro de ensamblados y unidad
+- [x] Crear proyectos, referencias mínimas, registro de ensamblados y unidad
   de trabajo propia; no crear tablas o funcionalidades de fases 2–4.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.ArchitectureTests/Icarus.ArchitectureTests.csproj`.
-- [ ] Puerta y commit: `feat(control-acceso): crea fronteras del módulo`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.ArchitectureTests/Icarus.ArchitectureTests.csproj`.
+- [x] Puerta y commit: `feat(control-acceso): crea fronteras del módulo`.
 
 ## 2 — Dominio diario, reloj y revisiones
 
@@ -152,15 +152,15 @@ TimeProvider. Crear pruebas en
 `Icarus/tests/Icarus.UnitTests/ControlAcceso/JornadaAccesoTests.cs`,
 `CorreccionJornadaTests.cs` y `RelojBoliviaTests.cs`.
 
-- [ ] Rojo: Salida inicial aceptada, evento al día equivocado, corrección que
+- [x] Rojo: Salida inicial aceptada, evento al día equivocado, corrección que
   borra original, intervalo solapado y bloqueo indebido por ayer incompleto.
-- [ ] Implementar alternancia, estado derivado Abierta/Completa/Incompleta,
+- [x] Implementar alternancia, estado derivado Abierta/Completa/Incompleta,
   revisión efectiva y originales inmutables. Pasar reloj/instante como entradas
   comprobables; sin `DateTime.Now` en dominio.
-- [ ] Cubrir pares 08:00–12:00/13:00–17:00, cancelación, medianoche BO,
+- [x] Cubrir pares 08:00–12:00/13:00–17:00, cancelación, medianoche BO,
   revisiones vacías y corrección no futura; sin introducir horarios laborales.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.UnitTests/Icarus.UnitTests.csproj --filter FullyQualifiedName~ControlAcceso`.
-- [ ] Puerta y commit: `feat(control-acceso): modela jornadas y correcciones`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.UnitTests/Icarus.UnitTests.csproj --filter FullyQualifiedName~ControlAcceso`.
+- [x] Puerta y commit: `feat(control-acceso): modela jornadas y correcciones`.
 
 ## 3 — Elegibilidad y autorización por módulo
 
@@ -186,8 +186,7 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/AutorizacionAccesoTes
   flujo de cuenta opcional ni exigir módulo avícola para el alta.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~AutorizacionAccesoTests` → 10/10 verdes.
 - [x] Puerta y commit: `feat(control-acceso): aplica elegibilidad por tenant` →
-  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
-  Integration 196/196), push a `develop` en `f6886d7`.
+  `./verify.ps1` verde, push a `develop`.
 
 ## 4 — Persistencia y concurrencia
 
@@ -208,25 +207,27 @@ y `Biometria/ProtectorPlantillas.cs`; puerto
 `Icarus.ControlAcceso.Application/Biometria/IRepositorioPlantillasFaciales.cs`.
 Test nuevo: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/ProteccionPlantillasTests.cs`.
 
-- [ ] Rojo: dos primeras entradas concurrentes generan dos jornadas, acceso
+- [x] Rojo: dos primeras entradas concurrentes generan dos jornadas, acceso
   entre tenants, revisión que sobrescribe original y conflicto no detectado.
-- [ ] Crear schema, índice cliente/trabajador/fecha, rowversion y restricciones;
+- [x] Crear schema, índice cliente/trabajador/fecha, rowversion y restricciones;
   no incluir SQL nominal ni logging de parámetros sensibles.
-- [ ] Separar origen Kiosco/ManualCliente y hora del evento/instante real de
+- [x] Separar origen Kiosco/ManualCliente y hora del evento/instante real de
   creación/autor/motivo. No exigir ni inventar evidencia facial al persistir
   un evento manual; conservar datos originales y referencias, nunca imágenes.
-- [ ] Rojo de custodia: vector legible en SQL/logs, clave en la BD, intercambio
+- [x] Rojo de custodia: vector legible en SQL/logs, clave en la BD, intercambio
   de filas entre tenants aceptado o contenido manipulado descifrado como válido.
-- [ ] Persistir solo plantilla cifrada con integridad y contexto
+- [x] Persistir solo plantilla cifrada con integridad y contexto
   tenant/trabajador/versión, metadatos de modelo/formato y versión de clave.
   Usar mecanismos criptográficos mantenidos, no algoritmos propios; documentar
   claves fuera de SQL/git, rotación, restauración y tratamiento de revocaciones
   en respaldos. No cachear vectores descifrados entre peticiones.
-- [ ] Tests usan SQL Server de Testcontainers y transacciones separadas, no
+- [x] Tests usan SQL Server de Testcontainers y transacciones separadas, no
   EF InMemory, incluyendo rollback y consulta de inactivos con tenant explícito.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PersistenciaAccesoTests`.
-- [ ] Custodia: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~ProteccionPlantillasTests`.
-- [ ] Puerta y commit: `feat(control-acceso): persiste jornadas con concurrencia`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PersistenciaAccesoTests`.
+- [x] Custodia: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~ProteccionPlantillasTests`.
+- [x] Puerta y commit: `feat(control-acceso): persiste jornadas con concurrencia` →
+  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
+  Integration 207/207), push a `develop` en `a6febc8`.
 
 ## 5 — Sesión restringida y activación
 
