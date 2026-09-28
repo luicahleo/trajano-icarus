@@ -15,6 +15,9 @@ public sealed class ControlAccesoDbContext : DbContext, IUnidadTrabajoControlAcc
     public DbSet<JornadaAcceso> JornadasAcceso => Set<JornadaAcceso>();
     public DbSet<ConfiguracionAccesoTrabajador> ConfiguracionAccesoTrabajador => Set<ConfiguracionAccesoTrabajador>();
     public DbSet<PlantillaFacialProtegida> PlantillasFaciales => Set<PlantillaFacialProtegida>();
+    public DbSet<SesionKiosco> SesionesKiosco => Set<SesionKiosco>();
+    public DbSet<OperacionEnrolamiento> OperacionesEnrolamiento => Set<OperacionEnrolamiento>();
+    public DbSet<OperacionMarcacion> OperacionesMarcacion => Set<OperacionMarcacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,5 +31,11 @@ public sealed class ControlAccesoDbContext : DbContext, IUnidadTrabajoControlAcc
             c.EstaActivo && (_clienteIdActual == null || c.ClienteId == _clienteIdActual));
         modelBuilder.Entity<PlantillaFacialProtegida>().HasQueryFilter(p =>
             _clienteIdActual == null || p.ClienteId == _clienteIdActual);
+        modelBuilder.Entity<SesionKiosco>().HasQueryFilter(s =>
+            _clienteIdActual == null || s.ClienteId == _clienteIdActual);
+        modelBuilder.Entity<OperacionEnrolamiento>().HasQueryFilter(o =>
+            _clienteIdActual == null || o.ClienteId == _clienteIdActual);
+        modelBuilder.Entity<OperacionMarcacion>().HasQueryFilter(o =>
+            _clienteIdActual == null || o.ClienteId == _clienteIdActual);
     }
 }

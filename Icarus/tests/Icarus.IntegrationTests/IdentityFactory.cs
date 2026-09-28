@@ -54,6 +54,15 @@ public sealed class IdentityFactory : WebApplicationFactory<Program>, IAsyncLife
         builder.UseSetting("Jwt:Clave", JwtClaveDePrueba);
         builder.UseSetting("Semilla:ContrasenaPrueba", ContrasenaDePrueba);
         builder.UseSetting("ControlAcceso:Plantillas:ClaveCifradoBase64", "Irdz7YT9hZSPMdG0GRdbGJqLWBNmGPjtU87dHcDHqA0=");
+        // Origen autorizado del kiosco en pruebas: permite comprobar que un
+        // origen hermano se rechaza.
+        builder.UseSetting("ControlAcceso:Kiosco:OrigenesPermitidos:0", "https://kiosco.icarus.test");
+        // La suite crea muchas sesiones desde la misma IP de TestServer: el
+        // tope anti fuerza bruta real no debe teñir las pruebas.
+        builder.UseSetting("ControlAcceso:Kiosco:MaximoActivacionesPorMinuto", "1000");
+        // Proveedor biométrico determinista: no hay ARGOS real mientras A0 no
+        // fije el contrato.
+        builder.UseSetting("ControlAcceso:Biometria:UsarDoble", "true");
         // Recompone el logger real de la aplicación y añade el sink de prueba.
         // ConfigureTestServices corre después de Program.cs: esta registración
         // reemplaza la del host y conserva la configuración declarativa.

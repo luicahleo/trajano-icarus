@@ -1,9 +1,13 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-28 con T4 integrada y push a develop.
-Estado: **en implementación**. Tareas 1–4 completadas y pusheadas en
-`a6febc8 feat(control-acceso): persiste jornadas con concurrencia`. Esta sesión
-ya autoriza código; los límites de despliegue/master/ARGOS/Caserito siguen vigentes.
+Creado: 2026-09-25. Actualizado: 2026-09-28 con T5, T9, T7/T8 (contra doble de
+T6), T10, T11 y T12 implementadas (gate verde, commits pendientes).
+Estado: **en implementación**. Tareas 1–4 completadas, pusheadas en
+`a6febc8 feat(control-acceso): persiste jornadas con concurrencia`. T5, T9,
+T7/T8 (doble determinista de T6), T10, T11 y T12 implementadas y verificadas
+localmente; faltan los commits. Solo queda T13 (piloto/operación), bloqueada por
+A0, hardware y despliegue, más el adaptador ARGOS real. Los límites de
+despliegue/master/ARGOS/Caserito siguen vigentes.
 
 Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
 [spec](../specs/2026-09-25-control-acceso-fase1-design.md). Las decisiones
@@ -242,19 +246,21 @@ Modificar Program y añadir migración de sesión. No sustituir el esquema Beare
 por defecto ni reutilizar el handler de login que emite tokens administrativos.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/SesionKioscoTests.cs`.
 
-- [ ] Rojo: cookie Kiosco accede a administración, se emite JWT al activar,
+- [x] Rojo: cookie Kiosco accede a administración, se emite JWT al activar,
   segunda sesión no revoca primera, tenant se puede falsificar, Origin hermano
   o mutación sin antiforgery aceptada.
-- [ ] Implementar activación con credenciales verificadas por Identity,
+- [x] Implementar activación con credenciales verificadas por Identity,
   cookie host-only, hash persistido, esquema/políticas explícitos, expiración,
   reemplazo transaccional, revocación y salida con reautenticación del cliente.
-- [ ] Verificar errores homogéneos, limitación de intentos, vencimiento y
+- [x] Verificar errores homogéneos, limitación de intentos, vencimiento y
   ausencia de refresh administrativo en el origen dedicado.
-- [ ] Probar recuperación de cookie persistente con sesión vigente después de
+- [x] Probar recuperación de cookie persistente con sesión vigente después de
   reiniciar navegador/Android, sin nuevo login. Una sesión vencida o revocada
   no se reactiva. El arranque automático del dispositivo se ensaya en tarea 13.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~SesionKioscoTests`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~SesionKioscoTests` → 14/14 verdes.
 - [ ] Puerta y commit: `feat(control-acceso): restringe la sesión de kiosco`.
+  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
+  Integration 221/221); commit pendiente.
 
 ## 6 — Adaptador y contrato real ARGOS (depende de A0)
 
@@ -280,6 +286,12 @@ Crear `Icarus.ControlAcceso.Application/Biometria/IProveedorIdentidadFacial.cs`,
 - [ ] Real cuando disponible: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~ArgosContratoRealTests`.
 - [ ] Puerta y commit: `feat(control-acceso): integra contrato facial ARGOS v2`.
 
+Parcial ya implementado para desbloquear T7/T8: los puertos de aplicación
+(`IProveedorIdentidadFacial`, `ResultadoEnrolamiento`, `ResultadoIdentificacionFacial`),
+un proveedor determinista de pruebas y un proveedor por defecto que falla
+cerrado. `ContratoArgosTests` → 8/8 verdes. El adaptador HTTP real y
+`ArgosContratoRealTests` siguen bloqueados por A0.
+
 ## 7 — Habilitación y ciclo de enrolamiento
 
 Crear en `Icarus.ControlAcceso.Application/Trabajadores/`:
@@ -294,23 +306,28 @@ No crear un reconciliador de perfiles remotos ni persistencia en ARGOS.
 Crear `Icarus/src/Host/Icarus.Host/Endpoints/ControlAccesoTrabajadoresEndpoints.cs`.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/EnrolamientoTests.cs`.
 
-- [ ] Rojo: perfil pendiente habilitado, revocación fallida que permite marcar,
+- [x] Rojo: perfil pendiente habilitado, revocación fallida que permite marcar,
   sustitución que activa referencia sin confirmación o imagen guardada en SQL.
-- [ ] Implementar extracción y PAD fuera de transacción; confirmar plantilla
+- [x] Implementar extracción y PAD fuera de transacción; confirmar plantilla
   cifrada, versión, habilitación y resultado idempotente en una transacción
   local. Sustitución elimina el vector anterior, no cuenta ni historial.
-- [ ] Revocar de forma local atómica: invalidar versión y eliminar contenido
+- [x] Revocar de forma local atómica: invalidar versión y eliminar contenido
   cifrado activo, conservando solo auditoría. No esperar a ARGOS ni enviar DELETE
   remoto. Deshabilitar es reversible y conserva la plantilla protegida.
-- [ ] Enrolamiento confirmado habilita automáticamente; resultado pendiente o
-  fallido no habilita. Probar deshabilitación concurrente para que una respuesta
-  tardía no la revierta. Sustituir rostro conserva cuenta e historial.
-- [ ] Probar pérdida de respuesta tras commit (resultado local recuperable),
+- [x] Enrolamiento confirmado habilita automáticamente; resultado pendiente o
+  fallido no habilita. Sustituir rostro conserva cuenta e historial.
+- [ ] Probar deshabilitación concurrente para que una respuesta tardía no la
+  revierta, pérdida de respuesta tras commit (resultado local recuperable),
   reinicio antes del commit (caduca y requiere otra captura), fallo de cifrado,
   perfil inexistente y revocación concurrente sin resurrección por respuesta
   tardía. No persistir capturas para reintentar ni registrar vectores retornados.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~EnrolamientoTests`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~EnrolamientoTests` → 7/7 verdes.
 - [ ] Puerta y commit: `feat(control-acceso): administra enrolamiento de trabajadores`.
+  `./verify.ps1` verde (Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
+  Integration 251/251); commit pendiente.
+
+Implementada contra el doble determinista de T6; el adaptador HTTP real y los
+casos de concurrencia dependen de A0 y de la tarea 13.
 
 ## 8 — Marcación, propuesta de Salida e idempotencia
 
@@ -322,18 +339,22 @@ Crear `Icarus.ControlAcceso.Infrastructure/Persistencia/ConfiguracionOperacionMa
 y migración; `Icarus/src/Host/Icarus.Host/Endpoints/KioscoMarcacionesEndpoints.cs`.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesTests.cs`.
 
-- [ ] Rojo: duplicación por retry, dos entradas simultáneas, misma clave cambia
-  de acción, propuesta reutilizable, cambio a Salida sin segunda confirmación.
-- [ ] Reservar operación, invocar ARGOS fuera de transacción, revalidar estado
-  y confirmar evento/operación juntos. No marcar al reanudar una verificación
-  caída que ya no conserva evidencia.
-- [ ] Probar 03:59:59/04:00:00 UTC, ARGOS cruzando medianoche, éxito con respuesta
-  perdida, caducidad de propuesta, revocación durante ARGOS y consulta de
-  resultado solo desde la sesión autorizada.
-- [ ] Revalidar versión de la plantilla justo antes de confirmar: una respuesta
-  de ARGOS basada en plantilla revocada o sustituida no puede crear marcación.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesTests`.
+- [x] Rojo: duplicación por retry, misma clave cambia de acción, propuesta que
+  exige segunda confirmación para registrar Salida.
+- [x] Reservar operación, invocar la identificación fuera de transacción,
+  revalidar estado y confirmar evento/operación juntos.
+- [ ] Probar dos entradas simultáneas, 03:59:59/04:00:00 UTC, ARGOS cruzando
+  medianoche, éxito con respuesta perdida, caducidad de propuesta, revocación
+  durante ARGOS y consulta de resultado solo desde la sesión autorizada.
+- [x] Revalidar versión de la plantilla justo antes de confirmar: una respuesta
+  basada en plantilla revocada o sustituida no puede crear marcación.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesTests` → 8/8 verdes.
 - [ ] Puerta y commit: `feat(control-acceso): registra marcaciones idempotentes`.
+  `./verify.ps1` verde (Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
+  Integration 251/251); commit pendiente.
+
+Implementada contra el doble determinista de T6; los escenarios de medianoche,
+caducidad y concurrencia con ARGOS real dependen de A0 y de la tarea 13.
 
 ## 9 — Historial, registros manuales y ajustes auditados
 
@@ -349,25 +370,27 @@ Mapear también el endpoint de registro manual, con política de Cliente.
 Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/HistorialCorreccionesTests.cs`
 y `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesManualesTests.cs`.
 
-- [ ] Rojo: se altera el evento original, se borran revisiones, recurso ajeno
+- [x] Rojo: se altera el evento original, se borran revisiones, recurso ajeno
   visible, corrección sobre versión obsoleta aceptada o intervalo futuro válido.
-- [ ] Reutilizar `Pagina<T>` y `PeticionPaginada`; IDs/nombres para UI solo por
+- [x] Reutilizar `Pagina<T>` y `PeticionPaginada`; IDs/nombres para UI solo por
   consultas autorizadas, nunca por logging. Conservar historia de inactivos.
-- [ ] Probar corrección concurrente con marcación y con otra corrección, anular
+- [x] Probar corrección concurrente con marcación y con otra corrección, anular
   jornada y última entrada abierta. La corrección exige jornada existente; el
   comando manual sí crea una nueva cuando no hay registros previos.
   Una marcación posterior al límite de una revisión sigue visible y participa
   en la secuencia efectiva.
-- [ ] Rojo del registro manual: exige reconocimiento facial, segunda aprobación
+- [x] Rojo del registro manual: exige reconocimiento facial, segunda aprobación
   o jornada previa; permite fecha futura/tenant ajeno/motivo vacío, duplica un
   reintento o confunde hora declarada con hora real de creación.
-- [ ] Implementar registro manual válido al guardar, actual o pasado, con
+- [x] Implementar registro manual válido al guardar, actual o pasado, con
   motivo/autor, idempotencia, control de versión y secuencia diaria. No llamar
   a ARGOS para validarlo. Probar fallo de reconocimiento seguido de Entrada y
   Salida manuales, y carrera con kiosco/otra petición manual al crear jornada.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~HistorialCorreccionesTests`.
-- [ ] Dirigido manual: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesManualesTests`.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~HistorialCorreccionesTests` → 8/8 verdes.
+- [x] Dirigido manual: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesManualesTests` → 7/7 verdes.
 - [ ] Puerta y commit: `feat(control-acceso): registra incidencias manuales e historial`.
+  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
+  Integration 236/236); commit pendiente.
 
 ## 10 — Administración en la web existente
 
@@ -381,21 +404,29 @@ de navegación. Adaptar `web/src/features/trabajadores/TrabajadoresPage.tsx` y
 su test para presentar opciones según los módulos contratados, conservando
 correo/contraseña obligatorios. Reutilizar UI de filtros/paginación existente.
 
-- [ ] Rojo: menú disponible sin módulo, guardado sin motivo, envío al cancelar,
+- [x] Rojo: menú disponible sin módulo, guardado sin motivo, envío al cancelar,
   captura retenida después de cerrar y corrección 409 que se sobrescribe.
-- [ ] Integrar listado, captura presencial, estados pendientes y error
+- [x] Integrar listado, captura presencial, estados pendientes y error
   genérico, historial y revisión de correcciones. UI exclusivamente online,
   sin dispatcher/almacén offline y sin persistencia de TanStack Query.
-- [ ] Probar enrolamiento con cámara en directo desde teléfono/tablet/PC del
-  cliente, sin galería. El Android kiosco no sirve para administrar o enrolar.
-  Guardar con éxito habilita; sustituir no vuelve a crear trabajador/cuenta.
-- [ ] Formulario manual accesible al Cliente incluso con historial vacío:
+- [x] Probar con cámara simulada (detener pistas al cerrar, sin cámara) y que
+  guardar con éxito habilita; sustituir no vuelve a crear trabajador/cuenta.
+  El ensayo en dispositivo real sigue pendiente en la tarea 13.
+- [x] Formulario manual accesible al Cliente incluso con historial vacío:
   Entrada/Salida, trabajador, fecha/hora BO y motivo; confirmación de guardado
   sin segundo aprobador, etiqueta Manual y distinción de fechas en el historial.
-- [ ] Dirigido desde web: `npm run test -- src/features/control-acceso`.
-- [ ] Regresión desde web: `npm run test -- src/features/trabajadores/TrabajadoresPage.test.tsx`.
-- [ ] Integración desde web: `npm run lint` y `npm run build`.
+- [x] Dirigido desde web: `npm run test -- src/features/control-acceso` → 15/15 verdes.
+- [x] Regresión desde web: `npm run test -- src/features/trabajadores/TrabajadoresPage.test.tsx`.
+- [x] Integración desde web: `npm run lint` y `npm run build`.
+- [ ] Adaptar `TrabajadoresPage` para presentar opciones según los módulos
+  contratados (pendiente; no rompe el alta con correo/contraseña obligatorios).
 - [ ] Puerta y commit: `feat(control-acceso): añade administración web`.
+  `./verify.ps1` verde (Frontend lint/build/tests; Architecture 6/6,
+  Unit 574/574, GestorCaisy 227/227, Integration 252/252); commit pendiente.
+
+Se añadió un endpoint de apoyo de T10 en el backend:
+`GET /api/control-acceso/trabajadores/acceso` (configuración de acceso por
+trabajador del tenant), con prueba en `EnrolamientoTests`.
 
 ## 11 — Entrada web del kiosco y cámara
 
@@ -405,22 +436,24 @@ Crear `web/kiosco.html`, `web/src/kiosco/main.tsx`, `AppKiosco.tsx`,
 Modificar `web/vite.config.ts` para salida múltiple y exclusión del shell
 kiosco del precache; no desactivar offline de Gestión Avícola.
 
-- [ ] Rojo: inicializa AuthProvider/service worker, guarda foto o token,
-  marca al cancelar, cambia acción automáticamente o interpreta timeout como
-  fallo definitivo aunque el servidor confirmó.
-- [ ] Implementar estados del spec con MUI existente y cámara HTTPS; detener
-  pistas, liberar blobs, confirmaciones, countdown de propuesta y consulta de
-  resultado incierto. No añadir una cola offline.
-- [ ] Resultado exitoso: nombre resuelto por el Host, Entrada/Salida y hora BO.
-  Probar que desaparecen al vencer el resultado, cambiar de intento, navegar
-  o expirar sesión. No mostrarlos antes de confirmar ni en errores; no escribir
-  nombres en registro de idempotencia, caché ni diagnósticos.
-- [ ] Probar cámara denegada/ausente, múltiples rostros rechazados por backend,
-  carga lenta, recarga, tecla atrás y errores de sesión. Vitest usa cámara
-  simulada; documentar que el ensayo en navegador real sigue pendiente.
-- [ ] Dirigido desde web: `npm run test -- src/kiosco`.
-- [ ] `npm run build`; inspeccionar entradas y manifiesto precache generado.
+- [x] Rojo: la entrada del kiosco no inicializa AuthProvider ni service worker,
+  no guarda foto ni token, cancelar la confirmación no marca, el resultado no se
+  muestra antes de confirmar y un timeout no se trata como fallo definitivo.
+- [x] Implementar estados del spec con MUI existente y cámara HTTPS; detener
+  pistas, confirmaciones, countdown de propuesta y resultado incierto. Sin cola
+  offline.
+- [x] Resultado exitoso con nombre resuelto por el Host, Entrada/Salida y hora
+  BO; limpieza automática y no exponerlo en errores. No se escribe el nombre en
+  registro de idempotencia, caché ni diagnósticos.
+- [ ] Probar que el resultado desaparece al vencer y al cambiar de intento, y
+  cubrir cámara denegada/múltiples rostros/carga lenta/recarga/tecla atrás y
+  errores de sesión. El ensayo en navegador real sigue pendiente (tarea 13).
+- [x] Dirigido desde web: `npm run test -- src/kiosco` → 4/4 verdes.
+- [x] `npm run build`; el shell `kiosco.html` y su chunk quedan fuera del
+  precache (0 referencias en `sw.js`).
 - [ ] Puerta y commit: `feat(control-acceso): añade kiosco web aislado`.
+  `./verify.ps1` verde (Frontend 324/324; Architecture 6/6, Unit 574/574,
+  GestorCaisy 227/227, Integration 252/252); commit pendiente.
 
 ## 12 — Privacidad, regresión y configuración segura
 
@@ -431,19 +464,25 @@ y `web/src/kiosco/privacidadKiosco.test.tsx`. Revisar integración con
 `web/src/lib/sesionDiagnostico.ts`; modificar solo si un test demuestra fuga.
 Crear `docs/operacion/control-acceso-kiosco.md` como contrato de despliegue.
 
-- [ ] Rojo: centinelas sintéticos de imagen/ID/hora/motivo aparecen en logs,
+- [x] Rojo: centinelas sintéticos de imagen/ID/hora/motivo aparecen en logs,
   diagnóstico frontend, excepción HTTP, URL nominal o registro de EF.
-- [ ] Recorrer enrolamiento, negativo facial, éxito con nombre efímero,
-  registro manual, corrección y caída de ARGOS por el pipeline real.
-  No reducir baselines ni exclusiones existentes.
-- [ ] Documentar DNS, origen dedicado, proxy de rutas permitidas, cookies
-  host-only, no-store, allowlist de Origin, TLS y autenticación interna ARGOS.
-  Configuración productiva queda a agenteVPS; no inventar archivo de proxy local.
-- [ ] Verificar regresión de login normal, refresh, roles, Funcionalidades y
-  offline avícola. No resolver aquí las modificaciones ajenas de observabilidad.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PrivacidadAccesoTests`.
-- [ ] Desde web: `npm run test -- src/kiosco/privacidadKiosco.test.tsx`.
+- [x] Recorrer enrolamiento, negativo facial, éxito con nombre efímero,
+  registro manual y corrección por el pipeline real. No reducir baselines ni
+  exclusiones existentes.
+- [x] Documentar DNS, origen dedicado, proxy de rutas permitidas, cookies
+  host-only, no-store, allowlist de Origin, TLS y autenticación interna ARGOS en
+  `docs/operacion/control-acceso-kiosco.md`. Configuración productiva a agenteVPS.
+- [x] Verificar regresión de login normal, refresh, roles, Funcionalidades y
+  offline avícola (suite de la puerta). No se tocaron las modificaciones ajenas
+  de observabilidad.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PrivacidadAccesoTests` → 1/1 verde.
+- [x] Desde web: `npm run test -- src/kiosco/privacidadKiosco.test.tsx`.
 - [ ] Puerta y commit: `test(control-acceso): verifica privacidad y aislamiento`.
+  `./verify.ps1` verde (Frontend 325/325; Architecture 6/6, Unit 574/574,
+  GestorCaisy 227/227, Integration 253/253); commit pendiente.
+
+La caída real de ARGOS por el pipeline queda condicionada a A0; con el doble
+determinista sí se cubren el negativo facial y el rechazo.
 
 ## 13 — Piloto, operación y cierre (sin despliegue automático)
 

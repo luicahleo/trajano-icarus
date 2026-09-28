@@ -7,6 +7,11 @@ public interface IConsultaElegibilidadControlAcceso
 {
     Task<ElegibilidadControlAcceso> EvaluarAsync(
         Guid clienteId, Guid? trabajadorId, CancellationToken cancellationToken = default);
+
+    // Nombre del trabajador para mostrarlo de forma efímera en el kiosco. El
+    // llamador no lo registra en logs.
+    Task<string?> ObtenerNombreTrabajadorAsync(
+        Guid clienteId, Guid trabajadorId, CancellationToken cancellationToken = default);
 }
 
 public sealed record ElegibilidadControlAcceso(

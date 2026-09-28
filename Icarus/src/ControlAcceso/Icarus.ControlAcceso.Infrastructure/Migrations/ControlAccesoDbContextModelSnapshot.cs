@@ -90,14 +90,27 @@ namespace Icarus.ControlAcceso.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AutorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("ClaveIdempotencia")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreadaEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("HoraDeclaradaUtc")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("InstanteUtc")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("JornadaAccesoId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Origen")
                         .HasColumnType("int");
@@ -111,6 +124,88 @@ namespace Icarus.ControlAcceso.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("marcaciones", "control_acceso");
+                });
+
+            modelBuilder.Entity("Icarus.ControlAcceso.Domain.OperacionEnrolamiento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClaveIdempotencia")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreadaEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TrabajadorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("VersionEnrolamiento")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId", "ClaveIdempotencia")
+                        .IsUnique();
+
+                    b.HasIndex("ClienteId", "TrabajadorId");
+
+                    b.ToTable("operaciones_enrolamiento", "control_acceso");
+                });
+
+            modelBuilder.Entity("Icarus.ControlAcceso.Domain.OperacionMarcacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Accion")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ClaveIdempotencia")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreadaEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("ExpiraEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("JornadaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TrabajadorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId", "ClaveIdempotencia")
+                        .IsUnique();
+
+                    b.HasIndex("ClienteId", "TrabajadorId");
+
+                    b.ToTable("operaciones_marcacion", "control_acceso");
                 });
 
             modelBuilder.Entity("Icarus.ControlAcceso.Domain.PlantillaFacialProtegida", b =>
@@ -194,6 +289,46 @@ namespace Icarus.ControlAcceso.Infrastructure.Migrations
                     b.HasIndex("JornadaAccesoId");
 
                     b.ToTable("revisiones_jornada", "control_acceso");
+                });
+
+            modelBuilder.Entity("Icarus.ControlAcceso.Domain.SesionKiosco", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreadaEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("EstaActiva")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("ExpiraEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("HashCredencial")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("RevocadaEnUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HashCredencial")
+                        .IsUnique();
+
+                    b.HasIndex("ClienteId", "EstaActiva");
+
+                    b.ToTable("sesiones_kiosco", "control_acceso");
                 });
 
             modelBuilder.Entity("Icarus.ControlAcceso.Domain.Marcacion", b =>

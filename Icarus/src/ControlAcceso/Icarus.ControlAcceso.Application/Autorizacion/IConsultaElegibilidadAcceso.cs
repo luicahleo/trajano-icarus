@@ -6,6 +6,9 @@ public interface IConsultaElegibilidadAcceso
 {
     Task<ElegibilidadAcceso> EvaluarAsync(
         Guid clienteId, Guid? trabajadorId, CancellationToken cancellationToken = default);
+
+    Task<string?> ObtenerNombreTrabajadorAsync(
+        Guid clienteId, Guid trabajadorId, CancellationToken cancellationToken = default);
 }
 
 public sealed record ElegibilidadAcceso(

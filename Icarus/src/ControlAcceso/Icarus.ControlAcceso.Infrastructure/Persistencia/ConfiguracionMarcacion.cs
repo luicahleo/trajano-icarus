@@ -13,6 +13,9 @@ public sealed class ConfiguracionMarcacion : IEntityTypeConfiguration<Marcacion>
         builder.Property(m => m.Tipo).HasConversion<int>();
         builder.Property(m => m.Origen).HasConversion<int>();
         builder.Property(m => m.InstanteUtc).HasColumnType("datetimeoffset");
+        builder.Property(m => m.HoraDeclaradaUtc).HasColumnType("datetimeoffset");
+        builder.Property(m => m.CreadaEnUtc).HasColumnType("datetimeoffset");
+        builder.Property(m => m.Motivo).HasMaxLength(500);
         builder.HasIndex(m => new { m.JornadaAccesoId, m.ClaveIdempotencia }).IsUnique();
     }
 }

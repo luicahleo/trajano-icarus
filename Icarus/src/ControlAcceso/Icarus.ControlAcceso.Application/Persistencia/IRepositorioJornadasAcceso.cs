@@ -13,6 +13,15 @@ public interface IRepositorioJornadasAcceso
         DateOnly fechaBoliviana,
         CancellationToken cancellationToken = default);
 
+    // Obtiene la jornada del día o la crea resolviendo la carrera entre la
+    // marcación de kiosco y el registro manual (clave única por cliente,
+    // trabajador y fecha). Nunca devuelve dos jornadas para la misma fecha.
+    Task<JornadaAcceso> ObtenerOCrearAsync(
+        Guid clienteId,
+        Guid trabajadorId,
+        DateOnly fechaBoliviana,
+        CancellationToken cancellationToken = default);
+
     Task<JornadaAcceso?> ObtenerPorIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);

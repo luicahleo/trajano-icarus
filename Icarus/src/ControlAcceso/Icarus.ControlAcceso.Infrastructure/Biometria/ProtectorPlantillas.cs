@@ -1,11 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using Icarus.ControlAcceso.Application.Biometria;
 using Icarus.ControlAcceso.Domain;
 using Microsoft.Extensions.Options;
 
 namespace Icarus.ControlAcceso.Infrastructure.Biometria;
 
-public sealed class ProtectorPlantillas
+public sealed class ProtectorPlantillas : IProtectorPlantillas
 {
     private readonly byte[] _clave;
 

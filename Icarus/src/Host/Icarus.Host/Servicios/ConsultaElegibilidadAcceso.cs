@@ -24,4 +24,8 @@ public sealed class ConsultaElegibilidadAcceso : IConsultaElegibilidadAcceso
             r.TrabajadorActivo,
             r.FechaCeseTrabajador);
     }
+
+    public Task<string?> ObtenerNombreTrabajadorAsync(
+        Guid clienteId, Guid trabajadorId, CancellationToken cancellationToken = default) =>
+        _consulta.ObtenerNombreTrabajadorAsync(clienteId, trabajadorId, cancellationToken);
 }

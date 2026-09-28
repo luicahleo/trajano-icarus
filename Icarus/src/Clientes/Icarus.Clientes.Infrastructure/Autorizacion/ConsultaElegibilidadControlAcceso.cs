@@ -44,4 +44,11 @@ public sealed class ConsultaElegibilidadControlAcceso : IConsultaElegibilidadCon
             trabajador.EstaActivo,
             trabajador.FechaCese);
     }
+
+    public async Task<string?> ObtenerNombreTrabajadorAsync(
+        Guid clienteId, Guid trabajadorId, CancellationToken cancellationToken = default) =>
+        await _db.Trabajadores.IgnoreQueryFilters().AsNoTracking()
+            .Where(t => t.Id == trabajadorId && t.ClienteId == clienteId)
+            .Select(t => t.Nombre)
+            .SingleOrDefaultAsync(cancellationToken);
 }

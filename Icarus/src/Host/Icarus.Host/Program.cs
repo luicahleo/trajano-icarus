@@ -8,7 +8,9 @@ using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
 using Icarus.ControlAcceso.Application.Autorizacion;
+using Icarus.ControlAcceso.Application.Persistencia;
 using Icarus.ControlAcceso.Infrastructure;
+using Icarus.ControlAcceso.Infrastructure.Kiosco;
 using Icarus.ControlAcceso.Infrastructure.Persistencia;
 using Icarus.GestionAvicola.Application.Granjas;
 using Icarus.GestionAvicola.Infrastructure;
@@ -18,6 +20,7 @@ using Icarus.Host.Endpoints;
 using Icarus.Host.Middleware;
 using Icarus.Host.Observability;
 using Icarus.Host.Servicios;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Icarus.Identity.Application.Sesiones;
 using Icarus.Identity.Infrastructure;
@@ -44,10 +47,10 @@ builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly,
-    typeof(CrearGranjaCommand).Assembly));
+    typeof(CrearGranjaCommand).Assembly, typeof(IUnidadTrabajoControlAcceso).Assembly));
 builder.Services.AddValidatorsFromAssemblies([
     typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly,
-    typeof(CrearGranjaCommand).Assembly]);
+    typeof(CrearGranjaCommand).Assembly, typeof(IUnidadTrabajoControlAcceso).Assembly]);
 builder.Services.AddScoped<IRegistroVuelo, RegistroVuelo>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RegistroVueloBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
@@ -57,15 +60,25 @@ builder.Services.AddClientesInfraestructura(builder.Configuration);
 builder.Services.AddGestionAvicolaInfraestructura(builder.Configuration);
 builder.Services.AddControlAccesoInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IConsultaElegibilidadAcceso, ConsultaElegibilidadAcceso>();
+builder.Services.AddScoped<ActivacionKioscoServicio>();
+builder.Services.AddScoped<FiltroAntiforgeryKiosco>();
 builder.Services.AddScoped<IAuthorizationHandler, ManejadorClienteConControlAcceso>();
 builder.Services.AddScoped<IAuthorizationHandler, ManejadorTrabajadorElegibleParaMarcar>();
+// Esquema de cookie restringida del kiosco: se suma al Bearer por defecto sin
+// sustituirlo. El handler vive en ControlAcceso.Infrastructure.
+builder.Services.AddAuthentication()
+    .AddScheme<AuthenticationSchemeOptions, AutenticacionKioscoHandler>(
+        OpcionesKiosco.Esquema, null);
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(PoliticasControlAcceso.ClienteConControlAcceso, politica => politica
         .RequireAuthenticatedUser()
         .AddRequirements(new RequisitoClienteConControlAcceso()))
     .AddPolicy(PoliticasControlAcceso.TrabajadorElegibleParaMarcar, politica => politica
         .RequireAuthenticatedUser()
-        .AddRequirements(new RequisitoTrabajadorElegibleParaMarcar()));
+        .AddRequirements(new RequisitoTrabajadorElegibleParaMarcar()))
+    .AddPolicy(PoliticasKiosco.Autenticado, politica => politica
+        .AddAuthenticationSchemes(OpcionesKiosco.Esquema)
+        .RequireAuthenticatedUser());
 builder.Services.AddScoped<AltaCuentasServicio>();
 builder.Services.AddRateLimiter(opciones =>
 {
@@ -86,6 +99,19 @@ builder.Services.AddRateLimiter(opciones =>
                 AutoReplenishment = true,
             });
     });
+    // Limita los intentos de activación del kiosco por IP (anti fuerza bruta).
+    var maximoActivaciones = builder.Configuration
+        .GetSection(OpcionesKiosco.Seccion).Get<OpcionesKiosco>()?.MaximoActivacionesPorMinuto ?? 10;
+    opciones.AddPolicy("kiosco-activacion", contexto =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            contexto.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = maximoActivaciones,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
 });
 
 var app = builder.Build();
@@ -141,6 +167,10 @@ api.MapDespachosHuevo();
 api.MapPedidosAlimento();
 api.MapBalanceAlimentos();
 api.MapDiagnosticos();
+api.MapKioscoSesion();
+api.MapControlAccesoJornadas();
+api.MapControlAccesoTrabajadores();
+api.MapKioscoMarcaciones();
 
 // sw.js, el manifiesto e index.html gobiernan qué build ejecuta la PWA: si el
 // navegador los cachea, el service worker viejo sigue sirviendo un bundle

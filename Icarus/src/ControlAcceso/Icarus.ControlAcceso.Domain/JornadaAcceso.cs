@@ -73,6 +73,35 @@ public sealed class JornadaAcceso : AggregateRoot
         return marcacion;
     }
 
+    public Marcacion RegistrarMarcacionManual(
+        TipoMarcacion tipo,
+        DateTimeOffset horaDeclaradaUtc,
+        DateOnly fechaBoliviana,
+        Guid claveIdempotencia,
+        Guid autorId,
+        string motivo,
+        DateTimeOffset creadaEnUtc)
+    {
+        if (claveIdempotencia == Guid.Empty)
+            throw new ReglaNegocioException("La marcación manual requiere una clave de idempotencia.");
+        if (ContieneClave(claveIdempotencia))
+            throw new ConflictException("La marcación ya fue registrada.");
+        if (autorId == Guid.Empty)
+            throw new ReglaNegocioException("La marcación manual requiere un autor.");
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw new ReglaNegocioException("La marcación manual requiere un motivo.");
+        if (horaDeclaradaUtc > creadaEnUtc.AddMinutes(5))
+            throw new ReglaNegocioException("No se admiten marcaciones futuras.");
+
+        var marcacion = RegistrarMarcacion(
+            tipo, horaDeclaradaUtc, fechaBoliviana, claveIdempotencia, OrigenMarcacion.ManualCliente);
+        marcacion.MarcarComoManual(autorId, motivo.Trim(), horaDeclaradaUtc, creadaEnUtc);
+        return marcacion;
+    }
+
+    public bool ContieneClave(Guid claveIdempotencia) =>
+        _marcaciones.Any(m => m.ClaveIdempotencia == claveIdempotencia);
+
     public RevisionJornada Corregir(
         DateTimeOffset instanteCorreccionUtc,
         DateOnly hoyBoliviana,
