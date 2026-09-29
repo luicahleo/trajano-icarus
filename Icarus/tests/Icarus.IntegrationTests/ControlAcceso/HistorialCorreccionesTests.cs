@@ -260,7 +260,9 @@ public class HistorialCorreccionesTests
     {
         var (clienteId, _, token) = await CrearClienteConModuloAsync();
         var trabajadorId = await CrearTrabajadorAsync(clienteId, token);
-        var entrada = DateTimeOffset.UtcNow.AddHours(-4);
+        // 16:00 UTC del día anterior equivale a mediodía en Bolivia y evita que
+        // el intervalo de tres horas cruce el cambio de día civil boliviano.
+        var entrada = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-1).AddHours(16), TimeSpan.Zero);
         var jornadaId = await RegistrarEntradaManualAsync(token, trabajadorId, entrada);
         var version = (await ObtenerJornadaAsync(token, jornadaId)).GetProperty("version").GetInt32();
 

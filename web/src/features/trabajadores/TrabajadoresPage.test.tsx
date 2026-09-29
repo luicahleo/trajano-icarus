@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import type { Rol } from '../../lib/tipos';
+import type { Modulo, Rol } from '../../lib/tipos';
 import { AuthProvider } from '../auth/AuthContext';
 import { TrabajadoresPage } from './TrabajadoresPage';
 
@@ -40,6 +40,7 @@ function baseFetch(
   rol: Rol,
   clienteId: string | null,
   reglas: Record<string, Response | Response[]>,
+  modulos: Modulo[] = [],
 ) {
   return fetchSimulado({
     'POST /api/identidad/sesion/renovar': respuesta(200, {
@@ -51,7 +52,7 @@ function baseFetch(
       rol,
       clienteId,
       trabajadorId: null,
-      modulos: [],
+      modulos,
       funcionalidades: [],
     }),
     ...reglas,
@@ -111,6 +112,17 @@ describe('TrabajadoresPage', () => {
     expect(screen.getByText('Roberto Mamani')).toBeInTheDocument();
     expect(screen.getByText('DNI-00000001')).toBeInTheDocument();
     expect(llamadaCon(fetchMock, 'GET', '/clientes/cli1/trabajadores')).toBe(true);
+  });
+
+  test('un cliente sin Gestión Avícola no puede asignar funcionalidades avícolas', async () => {
+    baseFetch('Cliente', 'cli1', {
+      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+    });
+    renderPagina('/trabajadores');
+
+    await screen.findByText('Ana Quispe');
+
+    expect(screen.queryByRole('button', { name: 'Funcionalidades' })).not.toBeInTheDocument();
   });
 
   test('el alta crea un trabajador y refresca la lista', async () => {
@@ -222,10 +234,15 @@ describe('TrabajadoresPage', () => {
 
   test('el diálogo de funcionalidades ofrece Vacunación y la envía al guardar', async () => {
     const usuario = userEvent.setup();
-    const fetchMock = baseFetch('Cliente', 'cli1', {
-      'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
-      'PUT /api/clientes/cli1/trabajadores/t1/funcionalidades': respuesta(204),
-    });
+    const fetchMock = baseFetch(
+      'Cliente',
+      'cli1',
+      {
+        'GET /api/clientes/cli1/trabajadores': respuesta(200, [trabajador]),
+        'PUT /api/clientes/cli1/trabajadores/t1/funcionalidades': respuesta(204),
+      },
+      ['GestionAvicola'],
+    );
     renderPagina('/trabajadores');
 
     await usuario.click(await screen.findByRole('button', { name: 'Funcionalidades' }));

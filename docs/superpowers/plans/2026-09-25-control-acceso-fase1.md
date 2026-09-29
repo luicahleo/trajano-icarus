@@ -1,12 +1,12 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-28 con T5, T9, T7/T8 (contra doble de
-T6), T10, T11 y T12 implementadas (gate verde, commits pendientes).
-Estado: **en implementación**. Tareas 1–4 completadas, pusheadas en
-`a6febc8 feat(control-acceso): persiste jornadas con concurrencia`. T5, T9,
-T7/T8 (doble determinista de T6), T10, T11 y T12 implementadas y verificadas
-localmente; faltan los commits. Solo queda T13 (piloto/operación), bloqueada por
-A0, hardware y despliegue, más el adaptador ARGOS real. Los límites de
+Creado: 2026-09-25. Actualizado: 2026-09-28 tras completar las verificaciones
+locales de T10 y T11.
+Estado: **pendiente de integración externa y piloto**. T1–T5 se entregaron en
+los commits `b952b6d` a `f4d139c`; T7–T9 y T12 también están en `f4d139c`; T10
+y T11 están en `9a6eea0`. El proveedor actual falla cerrado fuera de pruebas.
+Quedan A0/T6 (contrato real de ARGOS y PAD), escenarios dependientes de ese
+contrato y T13 (hardware Android, VPS y piloto). Los límites de
 despliegue/master/ARGOS/Caserito siguen vigentes.
 
 Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
@@ -258,9 +258,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/SesionKioscoTests.cs`
   reiniciar navegador/Android, sin nuevo login. Una sesión vencida o revocada
   no se reactiva. El arranque automático del dispositivo se ensaya en tarea 13.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~SesionKioscoTests` → 14/14 verdes.
-- [ ] Puerta y commit: `feat(control-acceso): restringe la sesión de kiosco`.
-  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
-  Integration 221/221); commit pendiente.
+- [x] Puerta y commit: `feat(control-acceso): restringe la sesión de kiosco`.
+  Entregado dentro de `f4d139c`; la puerta registrada en esa sesión fue verde
+  (Architecture 6/6, Unit 566/566, GestorCaisy 227/227, Integration 221/221).
 
 ## 6 — Adaptador y contrato real ARGOS (depende de A0)
 
@@ -322,9 +322,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/EnrolamientoTests.cs`
   perfil inexistente y revocación concurrente sin resurrección por respuesta
   tardía. No persistir capturas para reintentar ni registrar vectores retornados.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~EnrolamientoTests` → 7/7 verdes.
-- [ ] Puerta y commit: `feat(control-acceso): administra enrolamiento de trabajadores`.
-  `./verify.ps1` verde (Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
-  Integration 251/251); commit pendiente.
+- [x] Puerta y commit: `feat(control-acceso): administra enrolamiento de trabajadores`.
+  Entregado dentro de `f4d139c`; la puerta registrada en esa sesión fue verde
+  (Architecture 6/6, Unit 574/574, GestorCaisy 227/227, Integration 251/251).
 
 Implementada contra el doble determinista de T6; el adaptador HTTP real y los
 casos de concurrencia dependen de A0 y de la tarea 13.
@@ -349,9 +349,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesTests.cs`.
 - [x] Revalidar versión de la plantilla justo antes de confirmar: una respuesta
   basada en plantilla revocada o sustituida no puede crear marcación.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesTests` → 8/8 verdes.
-- [ ] Puerta y commit: `feat(control-acceso): registra marcaciones idempotentes`.
-  `./verify.ps1` verde (Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
-  Integration 251/251); commit pendiente.
+- [x] Puerta y commit: `feat(control-acceso): registra marcaciones idempotentes`.
+  Entregado dentro de `f4d139c`; la puerta registrada en esa sesión fue verde
+  (Architecture 6/6, Unit 574/574, GestorCaisy 227/227, Integration 251/251).
 
 Implementada contra el doble determinista de T6; los escenarios de medianoche,
 caducidad y concurrencia con ARGOS real dependen de A0 y de la tarea 13.
@@ -388,9 +388,9 @@ y `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesManualesTests.c
   Salida manuales, y carrera con kiosco/otra petición manual al crear jornada.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~HistorialCorreccionesTests` → 8/8 verdes.
 - [x] Dirigido manual: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesManualesTests` → 7/7 verdes.
-- [ ] Puerta y commit: `feat(control-acceso): registra incidencias manuales e historial`.
-  `./verify.ps1` verde (Architecture 6/6, Unit 566/566, GestorCaisy 227/227,
-  Integration 236/236); commit pendiente.
+- [x] Puerta y commit: `feat(control-acceso): registra incidencias manuales e historial`.
+  Entregado dentro de `f4d139c`; la puerta registrada en esa sesión fue verde
+  (Architecture 6/6, Unit 566/566, GestorCaisy 227/227, Integration 236/236).
 
 ## 10 — Administración en la web existente
 
@@ -418,11 +418,13 @@ correo/contraseña obligatorios. Reutilizar UI de filtros/paginación existente.
 - [x] Dirigido desde web: `npm run test -- src/features/control-acceso` → 15/15 verdes.
 - [x] Regresión desde web: `npm run test -- src/features/trabajadores/TrabajadoresPage.test.tsx`.
 - [x] Integración desde web: `npm run lint` y `npm run build`.
-- [ ] Adaptar `TrabajadoresPage` para presentar opciones según los módulos
-  contratados (pendiente; no rompe el alta con correo/contraseña obligatorios).
-- [ ] Puerta y commit: `feat(control-acceso): añade administración web`.
-  `./verify.ps1` verde (Frontend lint/build/tests; Architecture 6/6,
-  Unit 574/574, GestorCaisy 227/227, Integration 252/252); commit pendiente.
+- [x] Adaptar `TrabajadoresPage` para presentar opciones según los módulos
+  contratados: sin Gestión Avícola no ofrece funcionalidades avícolas; conserva
+  el alta común con correo/contraseña. Prueba dirigida local: 7/7 verde.
+- [x] Puerta y commit: `feat(control-acceso): añade administración web`.
+  Entregado dentro de `9a6eea0`; la puerta registrada en esa sesión fue verde
+  (Frontend lint/build/tests; Architecture 6/6, Unit 574/574,
+  GestorCaisy 227/227, Integration 252/252).
 
 Se añadió un endpoint de apoyo de T10 en el backend:
 `GET /api/control-acceso/trabajadores/acceso` (configuración de acceso por
@@ -445,15 +447,17 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
 - [x] Resultado exitoso con nombre resuelto por el Host, Entrada/Salida y hora
   BO; limpieza automática y no exponerlo en errores. No se escribe el nombre en
   registro de idempotencia, caché ni diagnósticos.
-- [ ] Probar que el resultado desaparece al vencer y al cambiar de intento, y
-  cubrir cámara denegada/múltiples rostros/carga lenta/recarga/tecla atrás y
-  errores de sesión. El ensayo en navegador real sigue pendiente (tarea 13).
+- [ ] Cubrir múltiples rostros, carga lenta, recarga, tecla atrás y errores de
+  sesión. El resultado se limpia al vencer y una cámara denegada no envía
+  marcación (prueba dirigida local: 4/4 verde). El ensayo en navegador real
+  sigue pendiente (tarea 13).
 - [x] Dirigido desde web: `npm run test -- src/kiosco` → 4/4 verdes.
 - [x] `npm run build`; el shell `kiosco.html` y su chunk quedan fuera del
   precache (0 referencias en `sw.js`).
-- [ ] Puerta y commit: `feat(control-acceso): añade kiosco web aislado`.
-  `./verify.ps1` verde (Frontend 324/324; Architecture 6/6, Unit 574/574,
-  GestorCaisy 227/227, Integration 252/252); commit pendiente.
+- [x] Puerta y commit: `feat(control-acceso): añade kiosco web aislado`.
+  Entregado dentro de `9a6eea0`; la puerta registrada en esa sesión fue verde
+  (Frontend 324/324; Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
+  Integration 252/252).
 
 ## 12 — Privacidad, regresión y configuración segura
 
@@ -477,9 +481,10 @@ Crear `docs/operacion/control-acceso-kiosco.md` como contrato de despliegue.
   de observabilidad.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~PrivacidadAccesoTests` → 1/1 verde.
 - [x] Desde web: `npm run test -- src/kiosco/privacidadKiosco.test.tsx`.
-- [ ] Puerta y commit: `test(control-acceso): verifica privacidad y aislamiento`.
-  `./verify.ps1` verde (Frontend 325/325; Architecture 6/6, Unit 574/574,
-  GestorCaisy 227/227, Integration 253/253); commit pendiente.
+- [x] Puerta y commit: `test(control-acceso): verifica privacidad y aislamiento`.
+  Entregado dentro de `f4d139c`; la puerta registrada en esa sesión fue verde
+  (Frontend 325/325; Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
+  Integration 253/253).
 
 La caída real de ARGOS por el pipeline queda condicionada a A0; con el doble
 determinista sí se cubren el negativo facial y el rechazo.

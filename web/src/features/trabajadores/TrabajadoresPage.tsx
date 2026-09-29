@@ -98,7 +98,7 @@ function etiquetaFuncionalidad(funcionalidad: FuncionalidadOperativaTrabajador):
 }
 
 export function TrabajadoresPage() {
-  const { clienteId } = useAuth();
+  const { clienteId, modulos } = useAuth();
   const queryClient = useQueryClient();
   const [abiertaAlta, setAbiertaAlta] = useState(false);
   const [cesando, setCesando] = useState<TrabajadorResumen | null>(null);
@@ -108,6 +108,7 @@ export function TrabajadoresPage() {
   const [errorAlta, setErrorAlta] = useState<string | null>(null);
   const [configurando, setConfigurando] = useState<TrabajadorResumen | null>(null);
   const [funcionalidades, setFuncionalidades] = useState<FuncionalidadOperativaTrabajador[]>([]);
+  const tieneGestionAvicola = modulos.includes('GestionAvicola');
 
   const claveTrabajadores = ['trabajadores', clienteId] as const;
 
@@ -218,7 +219,7 @@ export function TrabajadoresPage() {
           <Button size="small" variant="outlined" color="error" onClick={() => setDesactivando(t)}>
             Desactivar
           </Button>
-          {!t.fechaCese && (
+          {tieneGestionAvicola && !t.fechaCese && (
             <Button
               size="small"
               variant="outlined"
