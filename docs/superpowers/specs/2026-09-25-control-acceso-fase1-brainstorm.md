@@ -65,6 +65,13 @@ queda descartada.
 - Sin plantillas ni cola offline en la tablet. El nuevo flujo de ARGOS tampoco
   usa la caché de candidatos del ICARUS legacy; aquella caché del servidor era
   distinta de las plantillas locales de IMCA para reconocimiento offline.
+- Para A0 se estima hasta 20 trabajadores activos por cliente en el piloto.
+  Es una carga de referencia para medir identificación 1:N, no un límite de alta
+  ni motivo para recortar candidatos silenciosamente.
+- Después de la foto, el resultado debería llegar en 5 segundos y a los 10
+  segundos sin respuesta el kiosco mostrará estado incierto y consultará la
+  operación. No enviará otra foto ni creará otra marcación automáticamente.
+  La cuenta previa de 3 segundos no forma parte de esa espera.
 
 ## Evidencia revisada
 

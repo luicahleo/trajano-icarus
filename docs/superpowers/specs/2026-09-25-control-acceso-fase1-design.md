@@ -209,6 +209,8 @@ referencias son opacas, no conversiones a entero; la respuesta debe pertenecer
 al conjunto enviado y conservar versión. El servicio autentica qué namespaces
 permite al consumidor. Límites de tamaño/candidatos se fijan en A0 con carga
 medida; no truncar el conjunto silenciosamente y elegir una coincidencia parcial.
+El piloto usa 20 trabajadores activos por cliente como carga representativa,
+sin imponer ese número como límite del producto.
 La comparación y las plantillas solo circulan entre servicios por transporte
 privado autenticado y protegido; no devolver embeddings, candidatos alternativos
 ni puntuaciones al navegador. ARGOS no recibe claves de cifrado de Trajano.
@@ -316,9 +318,14 @@ servidor puede consultarse desde la sesión, sin exponer identidad; no se crea
 otra marcación automáticamente. El detalle de resultado individual en kiosco
 caduca a los 2 minutos; después solo se consulta en el historial del cliente.
 
-Valores propuestos de espera: ARGOS 10 s, Host 15 s, cliente 20 s; reservar
-30 s para terminar/expirar una operación antes de iniciar otra en la sesión.
-No reintentar POST de captura automáticamente con otra clave.
+Tras la foto, el objetivo de experiencia es recibir el resultado en 5 segundos.
+Si no hay respuesta a los 10 segundos, el kiosco muestra estado incierto y
+consulta la operación por su misma clave antes de permitir otro intento; no
+afirma éxito ni rechazo por el mero vencimiento. La cuenta de 3 segundos empieza
+antes de la foto y no se suma a este presupuesto. A0 fijará plazos internos
+coherentes para ARGOS, Host y consulta, medidos con 20 candidatos y carga
+compartida con Caserito. No reintentar POST de captura automáticamente con otra
+clave ni truncar candidatos para cumplir el tiempo.
 
 ## 7. Registros manuales, correcciones y persistencia funcional
 

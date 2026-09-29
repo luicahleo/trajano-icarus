@@ -1,6 +1,6 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-29 con las decisiones de captura de A0.
+Creado: 2026-09-25. Actualizado: 2026-09-29 con decisiones de captura y espera de A0.
 Estado: **pendiente de integración externa y piloto**. T1–T5 se entregaron en
 los commits `b952b6d` a `f4d139c`; T7–T9 y T12 también están en `f4d139c`; T10
 y T11 están en `9a6eea0`. El proveedor actual falla cerrado fuera de pruebas.
@@ -101,6 +101,11 @@ que ya existe.
   La interacción ya está decidida: PAD pasiva sobre una foto tomada tras botón
   y cuenta visible de 3 segundos, sin gestos. Falta validar que el modelo detecte
   fotos y pantallas en el hardware real; no dar por resuelto PAD por elegir la UI.
+- [ ] Medir identificación 1:N con 20 trabajadores activos por cliente y carga
+  concurrente de Caserito. Objetivo: respuesta visible dentro de 5 segundos
+  desde la foto; tras 10 segundos, estado incierto y consulta de operación.
+  Es un objetivo de piloto, no un límite duro de trabajadores ni autorización
+  para omitir candidatos. Fijar plazos internos y capacidad con mediciones.
 - [ ] Coordinar con tarea 4 formato de plantilla y compatibilidad de modelos.
   La custodia y claves se implementarán solo en Trajano; ARGOS no recibe claves
   SQL/de cifrado ni usa el almacén legacy como dependencia oculta.
@@ -348,6 +353,9 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/MarcacionesTests.cs`.
 - [ ] Probar dos entradas simultáneas, 03:59:59/04:00:00 UTC, ARGOS cruzando
   medianoche, éxito con respuesta perdida, caducidad de propuesta, revocación
   durante ARGOS y consulta de resultado solo desde la sesión autorizada.
+- [ ] Probar respuesta del Host después de los 10 segundos visibles: el kiosco
+  consulta por la clave original y no crea otra marcación ni muestra rechazo
+  definitivo mientras la operación siga incierta.
 - [x] Revalidar versión de la plantilla justo antes de confirmar: una respuesta
   basada en plantilla revocada o sustituida no puede crear marcación.
 - [x] Dirigido: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~MarcacionesTests` → 8/8 verdes.
@@ -452,7 +460,9 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
   offline.
 - [ ] Ajustar `MarcacionKioscoPage` a «Iniciar captura» tras confirmar la
   acción; esperar cámara lista, mostrar 3–2–1 y tomar una sola foto sin segundo
-  botón. Cubrir espera por permiso, cancelar y ausencia de foto válida en UI.
+  botón. Tras la foto, objetivo de 5 segundos y estado incierto al llegar a 10
+  sin respuesta, seguido de consulta de la misma operación. Cubrir espera por
+  permiso, cancelar, ausencia de foto válida y respuesta tardía en UI.
   Esta decisión de A0 es posterior a la implementación actual.
 - [x] Resultado exitoso con nombre resuelto por el Host, Entrada/Salida y hora
   BO; limpieza automática y no exponerlo en errores. No se escribe el nombre en
