@@ -41,6 +41,11 @@ queda descartada.
 - Enrolamiento exclusivamente con cámara en directo desde el equipo del
   cliente, sin subida de fotos de galería. Al completarse correctamente queda
   habilitado para marcar; se puede deshabilitar después.
+- En A0 se confirma una captura facial válida por enrolamiento, con opción de
+  repetir si no se detecta bien el rostro o falla la prueba de vida pasiva.
+- Para enrolar y marcar se pulsa «Iniciar captura»; cuando la cámara está lista
+  aparece una cuenta visible de 3 segundos y se toma una sola foto automáticamente.
+  No hay segundo botón «Capturar», vídeo grabado ni gestos guiados.
 - El cliente puede sustituir el registro facial, conservando cuenta e historial.
 - Reiniciar el Android debe devolverlo al kiosco listo para marcar con su
   sesión restringida vigente, sin un nuevo login por el mero reinicio. También
@@ -99,9 +104,10 @@ Requiere coordinación futura de DNS, HTTPS y proxy con agenteVPS.
 
 - Se conserva identificación 1:N dentro del cliente, sin elegir nombre ni
   escribir documento en el kiosco.
-- Se propone detección pasiva de presentación fraudulenta en ARGOS para
-  evitar pedir gestos en cada marcación. Su eficacia debe medirse; el soporte
-  de una biblioteca no certifica la solución ni garantiza detectar todo ataque.
+- El usuario elige detección pasiva de presentación fraudulenta en ARGOS,
+  sin gestos. Su eficacia contra fotos y pantallas debe medirse en la tablet
+  real; el soporte de una biblioteca no certifica la solución ni garantiza
+  detectar todo ataque.
 - ARGOS ya compara imágenes para Caserito y ofrece identificación con
   candidatos externos. Se conserva como motor: no se añade almacén de perfiles.
   Trajano-Icarus selecciona y descifra las plantillas del tenant exclusivamente

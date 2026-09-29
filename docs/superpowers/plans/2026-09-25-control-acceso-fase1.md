@@ -1,7 +1,6 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-28 tras completar las verificaciones
-locales de T10 y T11.
+Creado: 2026-09-25. Actualizado: 2026-09-29 con las decisiones de captura de A0.
 Estado: **pendiente de integración externa y piloto**. T1–T5 se entregaron en
 los commits `b952b6d` a `f4d139c`; T7–T9 y T12 también están en `f4d139c`; T10
 y T11 están en `9a6eea0`. El proveedor actual falla cerrado fuera de pruebas.
@@ -99,6 +98,9 @@ que ya existe.
   y candidatos; ARGOS devuelve únicamente una referencia del conjunto recibido.
 - [ ] Decidir modelo PAD/versión/licencia, formato de evidencia y criterios
   medibles de identificación, ambigüedad, rechazo y rendimiento con el equipo.
+  La interacción ya está decidida: PAD pasiva sobre una foto tomada tras botón
+  y cuenta visible de 3 segundos, sin gestos. Falta validar que el modelo detecte
+  fotos y pantallas en el hardware real; no dar por resuelto PAD por elegir la UI.
 - [ ] Coordinar con tarea 4 formato de plantilla y compatibilidad de modelos.
   La custodia y claves se implementarán solo en Trajano; ARGOS no recibe claves
   SQL/de cifrado ni usa el almacén legacy como dependencia oculta.
@@ -412,6 +414,10 @@ correo/contraseña obligatorios. Reutilizar UI de filtros/paginación existente.
 - [x] Probar con cámara simulada (detener pistas al cerrar, sin cámara) y que
   guardar con éxito habilita; sustituir no vuelve a crear trabajador/cuenta.
   El ensayo en dispositivo real sigue pendiente en la tarea 13.
+- [ ] Ajustar `EnrolamientoDialog` a «Iniciar captura» y cuenta visible 3–2–1
+  iniciada al estar lista la cámara; tomar una sola foto automáticamente,
+  permitir repetir ante rechazo y detener pistas al cerrar. Cubrir el flujo
+  con prueba de UI. Esta decisión de A0 es posterior a la implementación actual.
 - [x] Formulario manual accesible al Cliente incluso con historial vacío:
   Entrada/Salida, trabajador, fecha/hora BO y motivo; confirmación de guardado
   sin segundo aprobador, etiqueta Manual y distinción de fechas en el historial.
@@ -444,6 +450,10 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
 - [x] Implementar estados del spec con MUI existente y cámara HTTPS; detener
   pistas, confirmaciones, countdown de propuesta y resultado incierto. Sin cola
   offline.
+- [ ] Ajustar `MarcacionKioscoPage` a «Iniciar captura» tras confirmar la
+  acción; esperar cámara lista, mostrar 3–2–1 y tomar una sola foto sin segundo
+  botón. Cubrir espera por permiso, cancelar y ausencia de foto válida en UI.
+  Esta decisión de A0 es posterior a la implementación actual.
 - [x] Resultado exitoso con nombre resuelto por el Host, Entrada/Salida y hora
   BO; limpieza automática y no exponerlo en errores. No se escribe el nombre en
   registro de idempotencia, caché ni diagnósticos.

@@ -79,8 +79,11 @@ del cliente. El Android dedicado es exclusivamente para marcar:
   habilitación y enrolamiento; habilitar/deshabilitar, registrar, sustituir y
   revocar rostro. Sin copia de documento, nombre o foto en ControlAcceso.
 - Enrolamiento presencial: el cliente elige trabajador, revisa su identidad y
-  captura su rostro en cámara. No se importan fotos de galería. El operador ve
-  la previsualización temporal; se libera al guardar, cancelar o salir.
+  pulsa «Iniciar captura». Tras estar lista la cámara, ve una cuenta visible
+  de 3 segundos y se toma automáticamente una sola foto válida. Si falla la
+  detección o la prueba de vida pasiva, puede repetir. No se importan fotos de
+  galería. El operador ve la previsualización temporal; se libera al guardar,
+  cancelar o salir.
   Al confirmar un enrolamiento correcto queda habilitado automáticamente para
   marcar. Un fallo o resultado pendiente no habilita. Sustituir el rostro
   conserva la cuenta y todo el historial; el cliente puede deshabilitarlo después.
@@ -106,7 +109,9 @@ Estados: desactivado, listo, confirmación, cámara, verificando, confirmación 
 cambio de acción, resultado y sin conexión. Una sola operación en curso en UI.
 
 1. Elegir Entrada/Salida y confirmar. Cancelar no crea marcación.
-2. Capturar un único rostro; enviar evidencia temporal al Host.
+2. Pulsar «Iniciar captura»; esperar cámara lista, mostrar 3–2–1 y tomar una
+   sola foto automáticamente. Enviar evidencia temporal al Host. No pedir
+   gestos ni un segundo toque para «Capturar».
 3. Host verifica sesión/tenant y solicita identificación y prueba de vida.
 4. Si la secuencia admite la acción, guarda y responde con acción y hora BO.
 5. Si se eligió Entrada y existe entrada abierta hoy, devuelve una propuesta
@@ -208,10 +213,11 @@ La comparación y las plantillas solo circulan entre servicios por transporte
 privado autenticado y protegido; no devolver embeddings, candidatos alternativos
 ni puntuaciones al navegador. ARGOS no recibe claves de cifrado de Trajano.
 
-Prueba de vida: se propone evaluación pasiva de una captura JPEG/PNG, máximo
+Prueba de vida: se elige evaluación pasiva de una captura JPEG/PNG, máximo
 2 MiB y 1920×1920 tras decodificar, una sola cara y límites de recursos tanto
 en Host como ARGOS. El formato final depende de A0. Si la prueba adecuada exige
-vídeo o reto activo, actualizar spec y plan antes de implementar la captura.
+vídeo o reto activo, consultar al usuario y actualizar spec y plan antes de
+implementar la captura: la interacción aprobada es una sola foto sin gestos.
 
 A0 debe entregar versión fijada del motor y modelos, licencia compatible,
 umbral de identificación y margen ante candidatos ambiguos, criterio PAD,
