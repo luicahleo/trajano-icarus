@@ -530,7 +530,9 @@ real y regenerar adaptadores mediante `node quality/generar-adaptadores.mjs`.
   dejar resultados agregados sin muestras o identidades en git.
 - [ ] Medir en la única tablet la duración real de una fila de hasta 20
   trabajadores, desde el primero hasta que el último pueda terminar, con la
-  interacción humana y el retorno a pantalla lista incluidos.
+  interacción humana y el retorno a pantalla lista incluidos. Comparar con la
+  estimación inicial aceptada de 4–6 minutos más interacción; documentar si el
+  resultado real exige revisar el flujo antes de cerrar el piloto.
 - [ ] Ensayar varios pares, olvido, cambio de día, corrección, red cortada tras
   confirmar, reinicio que abre el kiosco sin login con sesión vigente,
   revocación y expiración. Ensayar el flujo manual retroactivo sin aprobación y

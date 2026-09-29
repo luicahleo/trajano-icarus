@@ -71,6 +71,9 @@ queda descartada.
 - Habrá un solo Android dedicado por cliente. Cada trabajador completa su
   marcación antes de que empiece la siguiente; si llegan juntos, hacen fila
   ante la misma tablet. La carga de 20 no supone capturas simultáneas.
+- El usuario acepta para el piloto una espera estimada de 4–6 minutos, más el
+  tiempo de interacción, cuando llegan juntos 20 trabajadores. Es una estimación
+  basada en los tiempos propuestos, no un resultado medido ni un SLA.
 - Después de la foto, el resultado debería llegar en 5 segundos y a los 10
   segundos sin respuesta el kiosco mostrará estado incierto y consultará la
   operación. No enviará otra foto ni creará otra marcación automáticamente.

@@ -110,6 +110,9 @@ cambio de acción, resultado y sin conexión. Una sola operación en curso en UI
 Hay un solo Android dedicado por cliente. Los trabajadores que llegan juntos
 hacen fila y usan el kiosco de forma secuencial; la siguiente persona comienza
 cuando la pantalla vuelve a estar lista.
+Para el piloto se acepta como estimación inicial que una fila de 20 tarde
+4–6 minutos más la interacción humana. El tiempo real se medirá con la tablet;
+esta cifra no es una garantía de rendimiento.
 
 1. Elegir Entrada/Salida y confirmar. Cancelar no crea marcación.
 2. Pulsar «Iniciar captura»; esperar cámara lista, mostrar 3–2–1 y tomar una
