@@ -358,6 +358,12 @@ registrar una marcación manual con motivo y vincularla a la incidencia, o
 descartarla con motivo si comprueba que no correspondía una marcación. Resolver
 la incidencia no marca automáticamente ni cambia el historial sin acción del
 cliente. Solo el cliente consulta y resuelve incidencias de su tenant.
+La creación de la incidencia genera en la misma operación una notificación
+interna persistente para el cliente, con enlace a su bandeja. Se emite una sola
+por incidencia, no por intento ni por reintento HTTP; el aviso visible es
+genérico y no contiene foto, plantilla, identidad supuesta ni datos nominales.
+La notificación pertenece a ControlAcceso y sigue el patrón de bandeja interna
+existente, sin acoplar el dominio a las notificaciones de pedidos avícolas.
 
 ## 7. Registros manuales, correcciones y persistencia funcional
 
@@ -498,6 +504,8 @@ que la imagen de ARGOS desplegada la incluya ni valida su eficacia en el kiosco.
     Tres rechazos definitivos en un flujo crean una sola incidencia privada, sin
     trabajador supuesto ni marcación automática; repetir la misma petición o
     reconciliar una respuesta incierta no consume intentos adicionales.
+    La incidencia produce una única notificación interna al Cliente del tenant,
+    que abre la bandeja sin exponer identidad ni evidencia facial.
 11. Enrolamiento con respuesta perdida recupera resultado local sin imagen ni
     plantilla expuestas. Revocación local no depende de ARGOS; no puede marcar
     un perfil pendiente, revocado o con versión sustituida durante la llamada.

@@ -59,6 +59,8 @@ queda descartada.
   queda inicialmente sin trabajador asignado. El cliente identifica a la
   persona al revisarla, sin pedir nombres o códigos en el kiosco ni conservar
   fotos de los intentos.
+- Al crearla, el cliente recibe una notificación interna que lleva a su bandeja
+  de incidencias. Solo se emite una por incidencia, no una por intento fallido.
 - El cliente puede registrar manualmente entradas y salidas desde su
   administración, incluso de días anteriores, nunca futuras.
 - El registro manual exige motivo, autor y fecha real de creación. Es válido

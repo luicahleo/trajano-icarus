@@ -493,7 +493,8 @@ Este bloque no está implementado por las tareas 8–11 ya entregadas. Afecta
 dominio, persistencia, API, administración y kiosco; no confundir el registro
 manual existente con una incidencia automática tras tres rechazos. Está
 confirmado que la incidencia nace sin trabajador asignado; el cliente lo
-identifica al resolverla y el kiosco no solicita nombre ni código.
+identifica al resolverla y el kiosco no solicita nombre ni código. Su creación
+también genera una notificación interna para el cliente, una por incidencia.
 
 - [ ] Pruebas en rojo: primer y segundo rechazo permiten otra captura; tercero
   crea una sola incidencia sin marcación ni identidad supuesta. Una misma clave
@@ -504,10 +505,17 @@ identifica al resolverla y el kiosco no solicita nombre ni código.
   idempotentes por captura. Guardar incidencia privada con tenant, acción, hora,
   tres rechazos y estado, sin foto, plantilla, candidatos ni trabajador inferido.
   Las fallas de red pendientes de reconciliación no son rechazo definitivo.
+- [ ] Crear junto con la incidencia una notificación interna persistente para
+  el Cliente del tenant, con referencia opaca a la bandeja. Probar atomicidad,
+  unicidad por incidencia y que reintentos HTTP no generan avisos adicionales.
+  Usar el patrón de notificación interna existente sin depender del dominio
+  de pedidos avícolas ni incluir datos nominales o evidencia facial.
 - [ ] Exponer bandeja y resolución solo al Cliente del tenant: identificar al
   trabajador, crear o vincular registro/corrección manual con motivo, o descartar
   con motivo. Resolver no genera marcación por sí solo; proteger versión y
   reintentos concurrentes. Cubrir tenant ajeno, fecha futura y doble resolución.
+- [ ] Mostrar al Cliente el aviso interno y navegar desde él a la incidencia
+  correspondiente, respetando el tenant y el módulo contratado.
 - [ ] Ajustar el kiosco para mostrar intentos restantes, repetir la captura con
   botón y cuenta 3–2–1, confirmar incidencia tras el tercero y volver a listo
   para la fila. No pedir selección de trabajador ni guardar datos en la tablet.
