@@ -364,6 +364,8 @@ por incidencia, no por intento ni por reintento HTTP; el aviso visible es
 genérico y no contiene foto, plantilla, identidad supuesta ni datos nominales.
 La notificación pertenece a ControlAcceso y sigue el patrón de bandeja interna
 existente, sin acoplar el dominio a las notificaciones de pedidos avícolas.
+El detalle ejecutable de este bloque está en el
+[spec de tres intentos e incidencias](2026-09-29-control-acceso-incidencias-design.md).
 
 ## 7. Registros manuales, correcciones y persistencia funcional
 

@@ -489,6 +489,10 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
 
 ## 11A — Tres intentos e incidencias de marcación (decisión posterior)
 
+Paquete ejecutable para este bloque: [spec](../specs/2026-09-29-control-acceso-incidencias-design.md)
+y [plan](2026-09-29-control-acceso-incidencias.md). Seguir allí las tareas y
+pruebas; esta sección conserva el mapa de dependencias de la fase completa.
+
 Este bloque no está implementado por las tareas 8–11 ya entregadas. Afecta
 dominio, persistencia, API, administración y kiosco; no confundir el registro
 manual existente con una incidencia automática tras tres rechazos. Está
