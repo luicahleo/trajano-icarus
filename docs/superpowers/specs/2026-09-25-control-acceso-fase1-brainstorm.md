@@ -52,8 +52,14 @@ queda descartada.
   hay que configurar y probar el arranque automático en Android.
 - Tras una marcación correcta se muestran brevemente nombre, acción y hora
   boliviana; después se limpia la pantalla. Sin documento ni fotografía.
-- Si falla el reconocimiento, el cliente puede registrar manualmente entradas
-  y salidas desde su administración, incluso de días anteriores, nunca futuras.
+- Para cada marcación, el trabajador dispone de hasta tres intentos de captura
+  si no se reconoce su rostro. Tras el tercero fallido se crea una incidencia
+  para que el cliente la verifique y corrija; no se inventa una marcación.
+- Como no hubo identificación facial, la incidencia queda inicialmente sin
+  trabajador asignado. El cliente identifica a la persona al revisarla, sin
+  pedir nombres o códigos en el kiosco ni conservar fotos de los intentos.
+- El cliente puede registrar manualmente entradas y salidas desde su
+  administración, incluso de días anteriores, nunca futuras.
 - El registro manual exige motivo, autor y fecha real de creación. Es válido
   al guardar, sin segunda aprobación, y se distingue de la marcación facial.
   Se permite crear una jornada sin marcaciones previas para resolver el fallo.
@@ -73,7 +79,8 @@ queda descartada.
   ante la misma tablet. La carga de 20 no supone capturas simultáneas.
 - El usuario acepta para el piloto una espera estimada de 4–6 minutos, más el
   tiempo de interacción, cuando llegan juntos 20 trabajadores. Es una estimación
-  basada en los tiempos propuestos, no un resultado medido ni un SLA.
+  basada en marcaciones sin reintentos; las incidencias alargan la fila. No es
+  un resultado medido ni un SLA.
 - Después de la foto, el resultado debería llegar en 5 segundos y a los 10
   segundos sin respuesta el kiosco mostrará estado incierto y consultará la
   operación. No enviará otra foto ni creará otra marcación automáticamente.

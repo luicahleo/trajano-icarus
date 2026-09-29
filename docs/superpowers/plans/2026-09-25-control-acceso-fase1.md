@@ -4,9 +4,9 @@ Creado: 2026-09-25. Actualizado: 2026-09-29 con decisiones de captura y espera d
 Estado: **pendiente de integración externa y piloto**. T1–T5 se entregaron en
 los commits `b952b6d` a `f4d139c`; T7–T9 y T12 también están en `f4d139c`; T10
 y T11 están en `9a6eea0`. El proveedor actual falla cerrado fuera de pruebas.
-Quedan A0/T6 (contrato real de ARGOS y PAD), escenarios dependientes de ese
-contrato y T13 (hardware Android, VPS y piloto). Los límites de
-despliegue/master/ARGOS/Caserito siguen vigentes.
+Quedan A0/T6 (contrato real de ARGOS y PAD), el flujo de tres intentos con
+incidencia, escenarios dependientes de ese contrato y T13 (hardware Android,
+VPS y piloto). Los límites de despliegue/master/ARGOS/Caserito siguen vigentes.
 
 Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
 [spec](../specs/2026-09-25-control-acceso-fase1-design.md). Las decisiones
@@ -58,8 +58,13 @@ flowchart TD
     T7 --> T10["10: administración web"]
     T9 --> T10
     T8 --> T11["11: kiosco web"]
+    T8 --> T11A["11A: tres intentos e incidencias"]
+    T9 --> T11A
+    T10 --> T11A
+    T11 --> T11A
     T10 --> T12["12: privacidad y regresión"]
     T11 --> T12
+    T11A --> T12
     T12 --> T13["13: piloto y cierre"]
     A0 --> T13
 ```
@@ -481,6 +486,34 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
   Entregado dentro de `9a6eea0`; la puerta registrada en esa sesión fue verde
   (Frontend 324/324; Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
   Integration 252/252).
+
+## 11A — Tres intentos e incidencias de marcación (decisión posterior)
+
+Este bloque no está implementado por las tareas 8–11 ya entregadas. Afecta
+dominio, persistencia, API, administración y kiosco; no confundir el registro
+manual existente con una incidencia automática tras tres rechazos.
+
+- [ ] Pruebas en rojo: primer y segundo rechazo permiten otra captura; tercero
+  crea una sola incidencia sin marcación ni identidad supuesta. Una misma clave
+  repetida, doble toque o respuesta incierta no aumenta el contador ni duplica
+  la incidencia. Indisponibilidad de cámara o servicio no consume un intento
+  facial. Éxito reinicia el flujo.
+- [ ] Persistir el flujo y su contador validado por el backend, con claves
+  idempotentes por captura. Guardar incidencia privada con tenant, acción, hora,
+  tres rechazos y estado, sin foto, plantilla, candidatos ni trabajador inferido.
+  Las fallas de red pendientes de reconciliación no son rechazo definitivo.
+- [ ] Exponer bandeja y resolución solo al Cliente del tenant: identificar al
+  trabajador, crear o vincular registro/corrección manual con motivo, o descartar
+  con motivo. Resolver no genera marcación por sí solo; proteger versión y
+  reintentos concurrentes. Cubrir tenant ajeno, fecha futura y doble resolución.
+- [ ] Ajustar el kiosco para mostrar intentos restantes, repetir la captura con
+  botón y cuenta 3–2–1, confirmar incidencia tras el tercero y volver a listo
+  para la fila. No pedir selección de trabajador ni guardar datos en la tablet.
+- [ ] Probar privacidad de la incidencia en logs, trazas y errores; medir en el
+  piloto el efecto de tres intentos fallidos sobre la duración de la fila.
+- [ ] Ejecutar pruebas dirigidas en rojo antes de implementar y `./verify.ps1`
+  completo antes de cada commit de código. No marcar este bloque como entregado
+  por las pruebas anteriores de marcación manual.
 
 ## 12 — Privacidad, regresión y configuración segura
 

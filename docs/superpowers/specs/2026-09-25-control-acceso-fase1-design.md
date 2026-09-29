@@ -97,8 +97,12 @@ del cliente. El Android dedicado es exclusivamente para marcar:
   y hora bolivianas y Entrada/Salida, con motivo. Puede iniciar una jornada que
   no exista, incluso de un día anterior. Se valida al guardar, sin aprobación
   posterior, mostrando su origen manual.
+- Incidencias de marcación: bandeja privada del cliente para verificar los
+  intentos agotados, identificar al trabajador y registrar o corregir la
+  marcación correspondiente. Una incidencia sin identificación facial queda
+  inicialmente sin trabajador asignado; no se pide un nombre o código en kiosco.
 
-Solo el cliente consulta listados de identidad/historial. El kiosco muestra
+Solo el cliente consulta listados de identidad, historial e incidencias. El kiosco muestra
 únicamente el nombre de la persona de la marcación exitosa durante el resultado;
 no permite buscar personas ni consultar sus jornadas. Los datos de presentación
 no se escriben en telemetría ni almacenamiento del navegador.
@@ -112,7 +116,7 @@ hacen fila y usan el kiosco de forma secuencial; la siguiente persona comienza
 cuando la pantalla vuelve a estar lista.
 Para el piloto se acepta como estimación inicial que una fila de 20 tarde
 4–6 minutos más la interacción humana. El tiempo real se medirá con la tablet;
-esta cifra no es una garantía de rendimiento.
+esta cifra supone marcaciones sin reintentos y no garantiza rendimiento.
 
 1. Elegir Entrada/Salida y confirmar. Cancelar no crea marcación.
 2. Pulsar «Iniciar captura»; esperar cámara lista, mostrar 3–2–1 y tomar una
@@ -130,6 +134,17 @@ esta cifra no es una garantía de rendimiento.
    Sin documento ni fotografía. El Host resuelve el nombre desde Clientes
    para esta respuesta efímera, sin copiarlo al dominio o registro de operaciones.
    También se limpia al cancelar, navegar, expirar sesión o iniciar otro intento.
+
+Si una captura procesada produce un rechazo definitivo de reconocimiento, el kiosco ofrece
+repetir hasta completar tres intentos dentro del mismo flujo de marcación. Tras
+el tercer rechazo, crea una sola incidencia y vuelve a listo para la siguiente
+persona. No se registra Entrada ni Salida por el intento fallido. Un resultado
+incierto se reconcilia antes de contar el intento o permitir otra captura; un
+reenvío de la misma operación no consume otro intento.
+La indisponibilidad del servicio o de la cámara no consume un intento facial.
+El contador pertenece al flujo abierto en esa tablet, no a una identidad que
+el sistema aún desconoce. En el tercer rechazo se confirma la creación de la
+incidencia al trabajador sin mostrar candidatos ni datos de otras personas.
 
 La propuesta dura 30 segundos, pertenece a sesión/tenant/persona/acción y solo
 se consume una vez. El backend conserva temporalmente la referencia validada,
@@ -333,6 +348,17 @@ coherentes para ARGOS, Host y consulta, medidos con 20 candidatos y carga
 compartida con Caserito. No reintentar POST de captura automáticamente con otra
 clave ni truncar candidatos para cumplir el tiempo.
 
+La incidencia por tres rechazos es un registro funcional privado de Trajano,
+distinto de un evento de acceso. Guarda tenant, acción elegida, hora boliviana
+de los intentos, cantidad de rechazos y estado pendiente/resuelta/descartada.
+No guarda imágenes, plantillas ni candidatos faciales. Se crea una sola vez por
+flujo mediante una clave idempotente; el backend valida el recuento y evita que
+recargas o reenvíos dupliquen incidencias. El cliente puede asignar trabajador,
+registrar una marcación manual con motivo y vincularla a la incidencia, o
+descartarla con motivo si comprueba que no correspondía una marcación. Resolver
+la incidencia no marca automáticamente ni cambia el historial sin acción del
+cliente. Solo el cliente consulta y resuelve incidencias de su tenant.
+
 ## 7. Registros manuales, correcciones y persistencia funcional
 
 Cuando falla el reconocimiento, el cliente registra manualmente Entrada o
@@ -406,6 +432,8 @@ en español, errores genéricos, sin eco de credenciales o muestras.
 | `GET /control-acceso/jornadas/{id}` | Cliente: revisión efectiva e historia. |
 | `POST /control-acceso/marcaciones-manuales` | Cliente: trabajador, tipo, fecha/hora BO, motivo, versión y clave idempotente; válida al guardar. |
 | `POST /control-acceso/jornadas/{id}/correcciones` | Cliente: nueva revisión con versión esperada. |
+| `GET /control-acceso/incidencias` | Cliente: incidencias de su tenant, estado y fecha; sin imágenes. |
+| `POST /control-acceso/incidencias/{id}/resolucion` | Cliente: vincular registro/corrección manual o descartar con motivo, idempotencia y versión. |
 | `GET /control-acceso/sesion-kiosco` | Cliente: estado sin credencial. |
 | `DELETE /control-acceso/sesion-kiosco` | Cliente: revocar sesión actual. |
 | `POST /kiosco/activacion` | Credenciales frescas de Cliente, limitación de intentos y origen autorizado. |
@@ -467,6 +495,9 @@ que la imagen de ARGOS desplegada la incluya ni valida su eficacia en el kiosco.
 9. Correcciones mantienen originales, validan intervalos y autor, y rechazan
    una versión obsoleta incluso si compite una marcación del kiosco.
 10. ARGOS negativo, ambiguo, sin PAD, incompatible o caído nunca produce éxito.
+    Tres rechazos definitivos en un flujo crean una sola incidencia privada, sin
+    trabajador supuesto ni marcación automática; repetir la misma petición o
+    reconciliar una respuesta incierta no consume intentos adicionales.
 11. Enrolamiento con respuesta perdida recupera resultado local sin imagen ni
     plantilla expuestas. Revocación local no depende de ARGOS; no puede marcar
     un perfil pendiente, revocado o con versión sustituida durante la llamada.
