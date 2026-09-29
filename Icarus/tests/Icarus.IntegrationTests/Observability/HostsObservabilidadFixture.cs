@@ -140,14 +140,26 @@ public sealed class HostsObservabilidadFixture : IAsyncLifetime
 public sealed class ForzarUn401StartupFilter : IStartupFilter
 {
     private static int _restantes;
+    private static int _fallarRenovacion;
 
-    public static void Activar() => Interlocked.Exchange(ref _restantes, 1);
+    public static void Activar(bool fallarRenovacion = false)
+    {
+        Interlocked.Exchange(ref _restantes, 1);
+        Volatile.Write(ref _fallarRenovacion, fallarRenovacion ? 1 : 0);
+    }
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) =>
         app =>
         {
             app.Use(async (contexto, siguiente) =>
             {
+                if (contexto.Request.Path.StartsWithSegments("/api/identidad/sesion/renovar")
+                    && Volatile.Read(ref _fallarRenovacion) == 1)
+                {
+                    contexto.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+
                 if (contexto.Request.Path.StartsWithSegments("/api/precios-alimentos")
                     && Interlocked.Decrement(ref _restantes) >= 0)
                 {

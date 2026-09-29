@@ -38,6 +38,9 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioSesionesKiosco, RepositorioSesionesKiosco>();
         servicios.AddScoped<IRepositorioAccesoTrabajadores, RepositorioOperacionesEnrolamiento>();
         servicios.AddScoped<IRepositorioOperacionesMarcacion, RepositorioOperacionesMarcacion>();
+        servicios.AddScoped<IRepositorioFlujosMarcacion, RepositorioFlujosMarcacion>();
+        servicios.AddScoped<IRepositorioCapturasMarcacion, RepositorioCapturasMarcacion>();
+        servicios.AddScoped<IRepositorioIncidenciasAcceso, RepositorioIncidenciasAcceso>();
         servicios.AddScoped<IUnidadTrabajoControlAcceso>(sp =>
             new UnidadTrabajoControlAccesoConConcurrencia(sp.GetRequiredService<ControlAccesoDbContext>()));
 

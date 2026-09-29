@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using Icarus.Identity.Infrastructure;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 using Xunit;
 
 namespace Icarus.IntegrationTests.Observability;
@@ -74,6 +76,62 @@ public sealed class CorrelacionExtremoAExtremoTests : IAsyncLifetime
         Assert.Equal(Prop(reintento, "DownstreamCorrelationId"), Prop(resumenApi, "CorrelationId"));
     }
 
+    [Fact]
+    public async Task LaImportacionMultipartComparteTrazaYCorrelacion()
+    {
+        await AccederAsync();
+        Limpiar();
+
+        var html = await _hosts.Mvc.GetStringAsync("/Precios/Importar");
+        var token = Regex.Match(html,
+            "name=\"__RequestVerificationToken\"[^>]*value=\"(?<valor>[^\"]+)\"").Groups["valor"].Value;
+        using var contenido = new ByteArrayContent(await File.ReadAllBytesAsync(RutaPdf));
+        contenido.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        using var formulario = new MultipartFormDataContent
+        {
+            { contenido, "archivo", "NotificacionPreciosMuestra.pdf" },
+            { new StringContent(token), "__RequestVerificationToken" },
+        };
+
+        await _hosts.Mvc.PostAsync("/Precios/Importar", formulario);
+
+        var envio = Assert.Single(_hosts.ColectorMvc.Eventos, e =>
+            Prop(e, "EventName") == EventoEnvio
+            && Prop(e, "RoutePattern") == "/api/precios-alimentos/importar");
+        var correlacion = Prop(envio, "DownstreamCorrelationId");
+        var resumenApi = Assert.Single(_hosts.ColectorApi.Eventos, e =>
+            Prop(e, "EventName") == EventoResumen
+            && Prop(e, "CorrelationId") == correlacion);
+        Assert.Equal(Prop(envio, "TraceId"), Prop(resumenApi, "TraceId"));
+    }
+
+    [Fact]
+    public async Task LaRenovacionFallidaNoReintentaYSoloQuedaEl401()
+    {
+        Limpiar();
+        ForzarUn401StartupFilter.Activar(fallarRenovacion: true);
+
+        var respuesta = await AccederAsync();
+
+        Assert.True(respuesta.IsSuccessStatusCode,
+            $"El acceso terminó con {respuesta.StatusCode}.");
+        var envios = _hosts.ColectorMvc.Eventos
+            .Where(e => Prop(e, "EventName") == EventoEnvio)
+            .ToList();
+        var precios = envios.Where(e => Prop(e, "RoutePattern") == PlantillaNotificaciones).ToList();
+        Assert.Single(precios);
+        Assert.Equal("401", Prop(precios[0], "StatusCode"));
+
+        var renovar = Assert.Single(envios, e => Prop(e, "RoutePattern") == PlantillaRenovar);
+        Assert.Equal("401", Prop(renovar, "StatusCode"));
+
+        var serializado = string.Join('\n', _hosts.ColectorMvc.Eventos.Select(Serializar));
+        Assert.DoesNotContain("CANARIO", serializado);
+    }
+
+    private static string RutaPdf =>
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "NotificacionPreciosMuestra.pdf");
+
     private void Limpiar()
     {
         _hosts.ColectorMvc.Limpiar();
@@ -124,4 +182,11 @@ public sealed class CorrelacionExtremoAExtremoTests : IAsyncLifetime
         evento.Properties.TryGetValue(nombre, out var valor)
             ? (valor as ScalarValue)?.Value?.ToString()
             : null;
+
+    private static string Serializar(LogEvent evento)
+    {
+        using var escritor = new StringWriter();
+        new CompactJsonFormatter().Format(evento, escritor);
+        return escritor.ToString();
+    }
 }

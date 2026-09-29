@@ -4,6 +4,7 @@ using Icarus.ControlAcceso.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Icarus.ControlAcceso.Infrastructure.Migrations
 {
     [DbContext(typeof(ControlAccesoDbContext))]
-    partial class ControlAccesoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260929133706_FlujoEIncidenciasControlAcceso")]
+    partial class FlujoEIncidenciasControlAcceso
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

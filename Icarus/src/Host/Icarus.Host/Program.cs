@@ -8,6 +8,7 @@ using Icarus.Clientes.Application.Clientes;
 using Icarus.Clientes.Infrastructure;
 using Icarus.Clientes.Infrastructure.Persistencia;
 using Icarus.ControlAcceso.Application.Autorizacion;
+using Icarus.ControlAcceso.Application.Kiosco;
 using Icarus.ControlAcceso.Application.Persistencia;
 using Icarus.ControlAcceso.Infrastructure;
 using Icarus.ControlAcceso.Infrastructure.Kiosco;
@@ -44,6 +45,7 @@ builder.Services.ConfigureHttpJsonOptions(opciones =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
+builder.Services.AddScoped<ICurrentKioscoSession, CurrentKioscoSessionService>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(IniciarSesionCommand).Assembly, typeof(CrearClienteCommand).Assembly,

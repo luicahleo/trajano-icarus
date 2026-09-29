@@ -25,7 +25,7 @@ public static class KioscoMarcacionesEndpoints
             }
 
             var resultado = await mediator.Send(new RegistrarMarcacionCommand(
-                cuerpo.Accion, muestra, cuerpo.Formato, cuerpo.ClaveIdempotencia));
+                cuerpo.Accion, muestra, cuerpo.Formato, cuerpo.ClaveIdempotencia, cuerpo.FlujoId));
             return Results.Ok(resultado);
         })
             .RequireAuthorization(PoliticasKiosco.Autenticado)
@@ -47,5 +47,6 @@ public static class KioscoMarcacionesEndpoints
         TipoMarcacion Accion,
         string MuestraBase64,
         string Formato,
-        Guid ClaveIdempotencia);
+        Guid ClaveIdempotencia,
+        Guid? FlujoId = null);
 }
