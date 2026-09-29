@@ -107,6 +107,9 @@ no se escriben en telemetría ni almacenamiento del navegador.
 
 Estados: desactivado, listo, confirmación, cámara, verificando, confirmación de
 cambio de acción, resultado y sin conexión. Una sola operación en curso en UI.
+Hay un solo Android dedicado por cliente. Los trabajadores que llegan juntos
+hacen fila y usan el kiosco de forma secuencial; la siguiente persona comienza
+cuando la pantalla vuelve a estar lista.
 
 1. Elegir Entrada/Salida y confirmar. Cancelar no crea marcación.
 2. Pulsar «Iniciar captura»; esperar cámara lista, mostrar 3–2–1 y tomar una

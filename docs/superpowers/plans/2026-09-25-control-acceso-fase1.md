@@ -106,6 +106,9 @@ que ya existe.
   desde la foto; tras 10 segundos, estado incierto y consulta de operación.
   Es un objetivo de piloto, no un límite duro de trabajadores ni autorización
   para omitir candidatos. Fijar plazos internos y capacidad con mediciones.
+- [ ] Estimar el tiempo de una fila de 20 marcaciones secuenciales en una sola
+  tablet, incluyendo confirmación, preparación de cámara, cuenta de 3 segundos,
+  respuesta facial y retorno a pantalla lista. No modelar 20 capturas a la vez.
 - [ ] Coordinar con tarea 4 formato de plantilla y compatibilidad de modelos.
   La custodia y claves se implementarán solo en Trajano; ARGOS no recibe claves
   SQL/de cifrado ni usa el almacén legacy como dependencia oculta.
@@ -525,6 +528,9 @@ real y regenerar adaptadores mediante `node quality/generar-adaptadores.mjs`.
 - [ ] Ensayar cámara y PAD en hardware real, rechazo de fotos/pantallas,
   ambigüedad, luz variable y latencia. Fijar criterios en A0 antes de evaluar;
   dejar resultados agregados sin muestras o identidades en git.
+- [ ] Medir en la única tablet la duración real de una fila de hasta 20
+  trabajadores, desde el primero hasta que el último pueda terminar, con la
+  interacción humana y el retorno a pantalla lista incluidos.
 - [ ] Ensayar varios pares, olvido, cambio de día, corrección, red cortada tras
   confirmar, reinicio que abre el kiosco sin login con sesión vigente,
   revocación y expiración. Ensayar el flujo manual retroactivo sin aprobación y

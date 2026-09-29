@@ -68,6 +68,9 @@ queda descartada.
 - Para A0 se estima hasta 20 trabajadores activos por cliente en el piloto.
   Es una carga de referencia para medir identificación 1:N, no un límite de alta
   ni motivo para recortar candidatos silenciosamente.
+- Habrá un solo Android dedicado por cliente. Cada trabajador completa su
+  marcación antes de que empiece la siguiente; si llegan juntos, hacen fila
+  ante la misma tablet. La carga de 20 no supone capturas simultáneas.
 - Después de la foto, el resultado debería llegar en 5 segundos y a los 10
   segundos sin respuesta el kiosco mostrará estado incierto y consultará la
   operación. No enviará otra foto ni creará otra marcación automáticamente.
