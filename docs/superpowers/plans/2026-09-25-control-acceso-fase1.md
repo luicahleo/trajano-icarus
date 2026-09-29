@@ -491,7 +491,9 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
 
 Este bloque no está implementado por las tareas 8–11 ya entregadas. Afecta
 dominio, persistencia, API, administración y kiosco; no confundir el registro
-manual existente con una incidencia automática tras tres rechazos.
+manual existente con una incidencia automática tras tres rechazos. Está
+confirmado que la incidencia nace sin trabajador asignado; el cliente lo
+identifica al resolverla y el kiosco no solicita nombre ni código.
 
 - [ ] Pruebas en rojo: primer y segundo rechazo permiten otra captura; tercero
   crea una sola incidencia sin marcación ni identidad supuesta. Una misma clave

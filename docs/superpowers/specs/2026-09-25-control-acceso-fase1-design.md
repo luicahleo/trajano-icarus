@@ -99,8 +99,8 @@ del cliente. El Android dedicado es exclusivamente para marcar:
   posterior, mostrando su origen manual.
 - Incidencias de marcación: bandeja privada del cliente para verificar los
   intentos agotados, identificar al trabajador y registrar o corregir la
-  marcación correspondiente. Una incidencia sin identificación facial queda
-  inicialmente sin trabajador asignado; no se pide un nombre o código en kiosco.
+  marcación correspondiente. Por decisión confirmada, la incidencia queda
+  inicialmente sin trabajador asignado; no se pide nombre ni código en kiosco.
 
 Solo el cliente consulta listados de identidad, historial e incidencias. El kiosco muestra
 únicamente el nombre de la persona de la marcación exitosa durante el resultado;

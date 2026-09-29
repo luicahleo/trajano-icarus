@@ -55,9 +55,10 @@ queda descartada.
 - Para cada marcación, el trabajador dispone de hasta tres intentos de captura
   si no se reconoce su rostro. Tras el tercero fallido se crea una incidencia
   para que el cliente la verifique y corrija; no se inventa una marcación.
-- Como no hubo identificación facial, la incidencia queda inicialmente sin
-  trabajador asignado. El cliente identifica a la persona al revisarla, sin
-  pedir nombres o códigos en el kiosco ni conservar fotos de los intentos.
+- Confirmado por el usuario: como no hubo identificación facial, la incidencia
+  queda inicialmente sin trabajador asignado. El cliente identifica a la
+  persona al revisarla, sin pedir nombres o códigos en el kiosco ni conservar
+  fotos de los intentos.
 - El cliente puede registrar manualmente entradas y salidas desde su
   administración, incluso de días anteriores, nunca futuras.
 - El registro manual exige motivo, autor y fecha real de creación. Es válido
