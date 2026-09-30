@@ -23,6 +23,7 @@ import { NavegacionPrincipal } from './NavegacionPrincipal';
 import { PendientesOffline } from './offline/PendientesOffline';
 import { PrecalentadoOffline } from './offline/PrecalentadoOffline';
 import { SelectorTema } from './SelectorTema';
+import { CampanaNotificaciones } from '../features/control-acceso/CampanaNotificaciones';
 
 const ANCHO_NAVEGACION = 248;
 const ANCHO_NAVEGACION_MOVIL = 288;
@@ -136,6 +137,7 @@ export function AppLayout() {
             </Typography>
           )}
           <SelectorTema />
+          {modulos.includes('ControlAcceso') && <CampanaNotificaciones />}
           <PendientesOffline />
           <Button color="inherit" startIcon={<LogoutRoundedIcon />} onClick={salir}>
             Cerrar sesión

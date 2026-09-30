@@ -90,3 +90,8 @@ export const HistorialAccesoPage = lazy(() =>
     default: modulo.HistorialAccesoPage,
   })),
 );
+export const IncidenciasAccesoPage = lazy(() =>
+  import('../features/control-acceso/IncidenciasAccesoPage').then((modulo) => ({
+    default: modulo.IncidenciasAccesoPage,
+  })),
+);

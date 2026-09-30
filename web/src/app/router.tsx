@@ -14,6 +14,7 @@ import {
   ClientesListaPage,
   ControlAccesoPage,
   HistorialAccesoPage,
+  IncidenciasAccesoPage,
   InicioPage,
   LoginPage,
   NotFoundPage,
@@ -135,6 +136,18 @@ export const router = createBrowserRouter([
                 <RequiereRol roles={['Cliente']}>
                   <Suspense fallback={<CargandoRuta />}>
                     <HistorialAccesoPage />
+                  </Suspense>
+                </RequiereRol>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/control-acceso/incidencias',
+            element: (
+              <ProtectedRoute>
+                <RequiereRol roles={['Cliente']}>
+                  <Suspense fallback={<CargandoRuta />}>
+                    <IncidenciasAccesoPage />
                   </Suspense>
                 </RequiereRol>
               </ProtectedRoute>

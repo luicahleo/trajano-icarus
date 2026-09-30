@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Container, Stack, Typography } from '@mui/material';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DialogoConfirmacion } from '../../app/ui/DialogoConfirmacion';
 import { EstadoCarga } from '../../app/ui/EstadoCarga';
 import { PaginaCabecera } from '../../app/ui/PaginaCabecera';
@@ -31,6 +32,7 @@ function etiquetaAcceso(acceso: AccesoTrabajadorResumen | undefined): string {
 
 export function TrabajadoresAccesoPage() {
   const { clienteId } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [enrolando, setEnrolando] = useState<TrabajadorResumen | null>(null);
   const [resultado, setResultado] = useState<ResultadoEnrolamientoAcceso | null>(null);
@@ -140,6 +142,16 @@ export function TrabajadoresAccesoPage() {
       <PaginaCabecera
         titulo="Control de acceso"
         subtitulo="Habilita trabajadores, enrola su rostro y administra el kiosco."
+        acciones={
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" size="small" onClick={() => navigate('/control-acceso/historial')}>
+              Historial
+            </Button>
+            <Button variant="outlined" size="small" onClick={() => navigate('/control-acceso/incidencias')}>
+              Incidencias
+            </Button>
+          </Stack>
+        }
       />
 
       <EstadoCarga

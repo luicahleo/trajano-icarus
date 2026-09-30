@@ -60,7 +60,7 @@ export async function activarKiosco(datos: {
   });
 }
 
-export type EstadoResultadoMarcacion = 'Registrada' | 'PropuestaSalida' | 'Rechazada';
+export type EstadoResultadoMarcacion = 'Registrada' | 'PropuestaSalida' | 'Rechazada' | 'Incidencia';
 
 export interface ResultadoMarcacionKiosco {
   estado: EstadoResultadoMarcacion;
@@ -71,6 +71,9 @@ export interface ResultadoMarcacionKiosco {
   propuestaId: string | null;
   expiraPropuestaUtc: string | null;
   motivo: string | null;
+  flujoId: string | null;
+  intentos: number | null;
+  maximoIntentos: number | null;
 }
 
 export async function marcarKiosco(datos: {
@@ -78,6 +81,7 @@ export async function marcarKiosco(datos: {
   muestraBase64: string;
   formato: string;
   claveIdempotencia: string;
+  flujoId?: string;
 }): Promise<ResultadoMarcacionKiosco> {
   return peticionKiosco<ResultadoMarcacionKiosco>('/control-acceso/kiosco/marcaciones', {
     metodo: 'POST',

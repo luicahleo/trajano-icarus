@@ -9,7 +9,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { TipoMarcacion, TrabajadorResumen } from '../../lib/tipos';
 import { nuevoId } from './identificadores';
 
@@ -26,6 +26,9 @@ interface MarcacionManualDialogProps {
   trabajadores: TrabajadorResumen[];
   pendiente: boolean;
   error: string | null;
+  titulo?: string;
+  tipoInicial?: TipoMarcacion;
+  children?: ReactNode;
   onCancelar: () => void;
   onGuardar: (datos: DatosMarcacionManual) => void;
 }
@@ -35,11 +38,14 @@ export function MarcacionManualDialog({
   trabajadores,
   pendiente,
   error,
+  titulo,
+  tipoInicial,
+  children,
   onCancelar,
   onGuardar,
 }: MarcacionManualDialogProps) {
   const [trabajadorId, setTrabajadorId] = useState('');
-  const [tipo, setTipo] = useState<TipoMarcacion>('Entrada');
+  const [tipo, setTipo] = useState<TipoMarcacion>(tipoInicial ?? 'Entrada');
   const [fechaHora, setFechaHora] = useState('');
   const [motivo, setMotivo] = useState('');
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
@@ -71,8 +77,9 @@ export function MarcacionManualDialog({
 
   return (
     <Dialog open={abierto} onClose={onCancelar} fullWidth maxWidth="sm">
-      <DialogTitle>Registrar marcación manual</DialogTitle>
+      <DialogTitle>{titulo ?? 'Registrar marcación manual'}</DialogTitle>
       <DialogContent>
+        {children}
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
             select

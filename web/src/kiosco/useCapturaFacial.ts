@@ -23,7 +23,6 @@ export function useCapturaFacial() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
       setActiva(true);
       setError(null);
     } catch {
@@ -32,6 +31,12 @@ export function useCapturaFacial() {
   }, []);
 
   useEffect(() => detener, [detener]);
+
+  useEffect(() => {
+    if (streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [activa]);
 
   const capturar = useCallback((): string | null => {
     const video = videoRef.current;

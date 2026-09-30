@@ -17,8 +17,21 @@ import type { ResultadoMarcacionKiosco } from './apiKiosco';
 import { nuevoId } from './identificadores';
 import { useCapturaFacial } from './useCapturaFacial';
 
-type Fase = 'idle' | 'confirmando' | 'capturando' | 'resultado' | 'error' | 'incierto';
+type Fase =
+  | 'idle'
+  | 'confirmando'
+  | 'capturando'
+  | 'cuenta'
+  | 'procesando'
+  | 'resultado'
+  | 'error'
+  | 'incierto'
+  | 'incidencia';
 type Accion = 'Entrada' | 'Salida';
+
+const DURACION_CUENTA = 3;
+const LIMPIEZA_EXITO_MS = 6_000;
+const LIMPIEZA_INCIDENCIA_MS = 4_000;
 
 function horaBolivia(instanteUtc: string): string {
   return new Intl.DateTimeFormat('es-BO', {
@@ -28,12 +41,20 @@ function horaBolivia(instanteUtc: string): string {
   }).format(new Date(instanteUtc));
 }
 
+function mensajeIntentos(intentos: number, maximo: number): string {
+  const restantes = maximo - intentos;
+  if (restantes === 1) return 'Último intento';
+  return `Quedan ${restantes} intentos`;
+}
+
 export function MarcacionKioscoPage() {
   const [fase, setFase] = useState<Fase>('idle');
   const [accion, setAccion] = useState<Accion>('Entrada');
   const [resultado, setResultado] = useState<ResultadoMarcacionKiosco | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
-  const [segundos, setSegundos] = useState<number | null>(null);
+  const [segundosCuenta, setSegundosCuenta] = useState<number | null>(null);
+  const [segundosPropuesta, setSegundosPropuesta] = useState<number | null>(null);
+  const [flujoId, setFlujoId] = useState<string | null>(null);
   const {
     videoRef,
     canvasRef,
@@ -44,44 +65,83 @@ export function MarcacionKioscoPage() {
     capturar,
   } = useCapturaFacial();
   const clave = useRef('');
+  const ocupado = useRef(false);
+  const [bloqueado, setBloqueado] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const limpiarTemporizadores = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
   const volver = useCallback(() => {
+    limpiarTemporizadores();
     detener();
     setResultado(null);
     setMensaje(null);
-    setSegundos(null);
+    setSegundosCuenta(null);
+    setSegundosPropuesta(null);
+    setFlujoId(null);
     setFase('idle');
-  }, [detener]);
+    ocupado.current = false;
+    setBloqueado(false);
+  }, [detener, limpiarTemporizadores]);
 
-  const procesar = useCallback((r: ResultadoMarcacionKiosco) => {
-    if (r.estado === 'Registrada') {
-      setResultado(r);
-      setFase('resultado');
-      return;
-    }
-    if (r.estado === 'PropuestaSalida') {
-      setResultado(r);
-      setSegundos(
-        r.expiraPropuestaUtc
-          ? Math.max(0, Math.round((new Date(r.expiraPropuestaUtc).getTime() - Date.now()) / 1000))
-          : null,
-      );
-      setFase('resultado');
-      return;
-    }
-    setMensaje('No se pudo registrar la marcación. Consulta con el encargado.');
-    setFase('error');
-  }, []);
+  const procesar = useCallback(
+    (r: ResultadoMarcacionKiosco) => {
+      ocupado.current = false;
+      setBloqueado(false);
+      if (r.flujoId) setFlujoId(r.flujoId);
 
-  const confirmar = async () => {
-    clave.current = nuevoId();
-    setFase('capturando');
-    await iniciar();
-  };
+      if (r.estado === 'Registrada') {
+        setResultado(r);
+        setFase('resultado');
+        detener();
+        return;
+      }
+      if (r.estado === 'PropuestaSalida') {
+        setResultado(r);
+        setSegundosPropuesta(
+          r.expiraPropuestaUtc
+            ? Math.max(0, Math.round((new Date(r.expiraPropuestaUtc).getTime() - Date.now()) / 1000))
+            : null,
+        );
+        setFase('resultado');
+        detener();
+        return;
+      }
+      if (r.estado === 'Incidencia') {
+        setFase('incidencia');
+        detener();
+        timeoutRef.current = setTimeout(volver, LIMPIEZA_INCIDENCIA_MS);
+        return;
+      }
+      if (r.estado === 'Rechazada') {
+        setMensaje(mensajeIntentos(r.intentos ?? 1, r.maximoIntentos ?? DURACION_CUENTA));
+        setFase('capturando');
+        return;
+      }
+      setMensaje('No se pudo registrar la marcación. Consulta con el encargado.');
+      setFase('error');
+      detener();
+    },
+    [volver, detener],
+  );
 
-  const capturarYEnviar = async () => {
+  const capturarYEnviar = useCallback(async () => {
+    if (ocupado.current) return;
+    ocupado.current = true;
+    setBloqueado(true);
+    limpiarTemporizadores();
+    setFase('procesando');
     const base64 = capturar() ?? '';
-    detener();
     try {
       procesar(
         await marcarKiosco({
@@ -89,10 +149,12 @@ export function MarcacionKioscoPage() {
           muestraBase64: base64,
           formato: 'image/jpeg',
           claveIdempotencia: clave.current,
+          flujoId: flujoId ?? undefined,
         }),
       );
     } catch (fallo) {
-      // No se interpreta como fallo definitivo: el servidor pudo confirmar.
+      ocupado.current = false;
+      setBloqueado(false);
       setMensaje(
         fallo instanceof ApiError
           ? (fallo.code ?? 'No se pudo confirmar la marcación.')
@@ -100,6 +162,36 @@ export function MarcacionKioscoPage() {
       );
       setFase('incierto');
     }
+  }, [accion, capturar, flujoId, limpiarTemporizadores, procesar]);
+
+  const iniciarCuenta = useCallback(() => {
+    if (ocupado.current || (fase !== 'capturando' && fase !== 'incierto')) return;
+    ocupado.current = true;
+    setBloqueado(true);
+    clave.current = nuevoId();
+    setSegundosCuenta(DURACION_CUENTA);
+    setFase('cuenta');
+    timerRef.current = setInterval(() => {
+      setSegundosCuenta((anterior) => {
+        if (anterior === null || anterior <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = null;
+          // Liberar el candado de la cuenta para que la captura real pueda ejecutarse.
+          ocupado.current = false;
+          setBloqueado(false);
+          void capturarYEnviar();
+          return null;
+        }
+        return anterior - 1;
+      });
+    }, 1_000);
+  }, [capturarYEnviar, fase]);
+
+  const confirmar = async () => {
+    clave.current = nuevoId();
+    setFlujoId(null);
+    setFase('capturando');
+    await iniciar();
   };
 
   const confirmarLaSalida = async () => {
@@ -112,7 +204,6 @@ export function MarcacionKioscoPage() {
     }
   };
 
-  // El resultado se limpia solo; la propuesta respeta su caducidad.
   useEffect(() => {
     if (fase !== 'resultado' || !resultado) return;
     if (resultado.propuestaId && resultado.expiraPropuestaUtc) {
@@ -122,14 +213,18 @@ export function MarcacionKioscoPage() {
           0,
           Math.round((new Date(expira).getTime() - Date.now()) / 1000),
         );
-        setSegundos(restantes);
+        setSegundosPropuesta(restantes);
         if (restantes <= 0) volver();
-      }, 1000);
+      }, 1_000);
       return () => clearInterval(intervalo);
     }
-    const temporizador = setTimeout(volver, 6000);
+    const temporizador = setTimeout(volver, LIMPIEZA_EXITO_MS);
     return () => clearTimeout(temporizador);
   }, [fase, resultado, volver]);
+
+  useEffect(() => limpiarTemporizadores, [limpiarTemporizadores]);
+
+  const puedeIniciarCaptura = fase === 'capturando' && activa && !bloqueado;
 
   return (
     <Stack
@@ -169,9 +264,7 @@ export function MarcacionKioscoPage() {
 
       <Dialog open={fase === 'confirmando'} onClose={() => setFase('idle')}>
         <DialogTitle>Confirmar</DialogTitle>
-        <DialogContent>
-          ¿Confirmas que deseas registrar tu {accion.toLowerCase()}?
-        </DialogContent>
+        <DialogContent>¿Confirmas que deseas registrar tu {accion.toLowerCase()}?</DialogContent>
         <DialogActions>
           <Button onClick={() => setFase('idle')}>Cancelar</Button>
           <Button variant="contained" onClick={() => void confirmar()}>
@@ -180,7 +273,7 @@ export function MarcacionKioscoPage() {
         </DialogActions>
       </Dialog>
 
-      {fase === 'capturando' && (
+      {(fase === 'capturando' || fase === 'cuenta' || fase === 'procesando') && (
         <Stack spacing={2} sx={{ width: '100%', maxWidth: 480, alignItems: 'center' }}>
           <Typography variant="h6">Mira a la cámara</Typography>
           <video
@@ -192,13 +285,24 @@ export function MarcacionKioscoPage() {
           />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           {errorCamara && <Alert severity="warning">{errorCamara}</Alert>}
+          {mensaje && <Alert severity="info">{mensaje}</Alert>}
+          {fase === 'cuenta' && segundosCuenta !== null && (
+            <Typography variant="h2" aria-live="polite">
+              {segundosCuenta}
+            </Typography>
+          )}
+          {fase === 'procesando' && <CircularProgress size={32} />}
           <Stack direction="row" spacing={2}>
             <Button onClick={volver}>Cancelar</Button>
-            <Button variant="contained" disabled={!activa} onClick={() => void capturarYEnviar()}>
-              Capturar
+            <Button
+              variant="contained"
+              disabled={!puedeIniciarCaptura}
+              onClick={() => void iniciarCuenta()}
+            >
+              Iniciar captura
             </Button>
           </Stack>
-          {!activa && !errorCamara && <CircularProgress size={24} />}
+          {!activa && !errorCamara && fase === 'capturando' && <CircularProgress size={24} />}
         </Stack>
       )}
 
@@ -216,9 +320,9 @@ export function MarcacionKioscoPage() {
                   Sí, registrar salida
                 </Button>
               </Stack>
-              {segundos !== null && (
+              {segundosPropuesta !== null && (
                 <Typography variant="body2" color="text.secondary">
-                  Caduca en {segundos} s
+                  Caduca en {segundosPropuesta} s
                 </Typography>
               )}
             </>
@@ -234,12 +338,31 @@ export function MarcacionKioscoPage() {
         </Stack>
       )}
 
+      {fase === 'incidencia' && (
+        <Stack spacing={2} sx={{ alignItems: 'center', maxWidth: 420 }}>
+          <Alert severity="info">Incidencia registrada. El encargado revisará el caso.</Alert>
+          <Button variant="contained" onClick={volver}>
+            Entendido
+          </Button>
+        </Stack>
+      )}
+
       {(fase === 'error' || fase === 'incierto') && (
         <Stack spacing={2} sx={{ alignItems: 'center', maxWidth: 420 }}>
           <Alert severity="error">{mensaje}</Alert>
-          <Button variant="contained" onClick={volver}>
-            Volver
-          </Button>
+          {fase === 'incierto' && (
+            <Typography variant="body2" color="text.secondary">
+              Comprobando registro
+            </Typography>
+          )}
+          <Stack direction="row" spacing={2}>
+            <Button onClick={volver}>Volver</Button>
+            {fase === 'incierto' && (
+              <Button variant="contained" onClick={() => void iniciarCuenta()}>
+                Iniciar captura
+              </Button>
+            )}
+          </Stack>
         </Stack>
       )}
 

@@ -178,6 +178,110 @@ public sealed class PrivacidadAccesoTests
         Assert.DoesNotContain(NombreTrabajador, registros);
     }
 
+    [Fact]
+    public async Task IncidenciasYNotificacionesNoFiltranDatosSensibles()
+    {
+        var (clienteId, email, token) = await CrearClienteConModuloAsync();
+        var trabajadorId = await CrearTrabajadorAsync(clienteId, token);
+        await EnrolarTrabajadorAsync(token, trabajadorId);
+
+        var kiosco = _factory.CreateClient();
+        var activar = new HttpRequestMessage(HttpMethod.Post, "/api/control-acceso/kiosco/sesion")
+        {
+            Content = JsonContent.Create(new { email, contrasena = IdentityFactory.ContrasenaDePrueba }),
+        };
+        activar.Headers.Add(OpcionesKiosco.EncabezadoAntiforgery, "1");
+        var respuestaActivacion = await kiosco.SendAsync(activar);
+        Assert.Equal(HttpStatusCode.NoContent, respuestaActivacion.StatusCode);
+        var cookie = respuestaActivacion.Headers.GetValues("Set-Cookie")
+            .Single(h => h.StartsWith(OpcionesKiosco.Cookie + "=", StringComparison.Ordinal))
+            .Split(';')[0];
+
+        async Task<JsonElement> CapturarAsync(string muestra, Guid? flujoId = null)
+        {
+            var cuerpo = new Dictionary<string, object>
+            {
+                ["accion"] = "Entrada",
+                ["muestraBase64"] = Base64(muestra),
+                ["formato"] = "jpg",
+                ["claveIdempotencia"] = Guid.NewGuid(),
+            };
+            if (flujoId.HasValue)
+                cuerpo["flujoId"] = flujoId.Value;
+
+            var pedido = new HttpRequestMessage(HttpMethod.Post, "/api/control-acceso/kiosco/marcaciones")
+            {
+                Content = JsonContent.Create(cuerpo),
+            };
+            pedido.Headers.Add("Cookie", cookie);
+            pedido.Headers.Add(OpcionesKiosco.EncabezadoAntiforgery, "1");
+            var respuesta = await kiosco.SendAsync(pedido);
+            Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+            return await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        }
+
+        // Limpieza justo antes del flujo de incidencias.
+        IdentityFactory.Colector.Limpiar();
+
+        var primera = await CapturarAsync("SIN_ROSTRO");
+        Assert.Equal("Rechazada", primera.GetProperty("estado").GetString());
+        var flujoId = primera.GetProperty("flujoId").GetGuid();
+        var segunda = await CapturarAsync("VARIOS_ROSTROS", flujoId);
+        Assert.Equal("Rechazada", segunda.GetProperty("estado").GetString());
+        var tercera = await CapturarAsync("PAD_FALLA", flujoId);
+        Assert.Equal("Incidencia", tercera.GetProperty("estado").GetString());
+
+        // Lista y notificaciones no exponen identidad ni evidencia facial.
+        var listarIncidencias = PedidoAutenticado(HttpMethod.Get, "/api/control-acceso/incidencias", token);
+        var respuestaIncidencias = await _factory.CreateClient().SendAsync(listarIncidencias);
+        Assert.Equal(HttpStatusCode.OK, respuestaIncidencias.StatusCode);
+        var jsonIncidencias = await respuestaIncidencias.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(NombreTrabajador, jsonIncidencias);
+        Assert.DoesNotContain(CentinelaRostro, jsonIncidencias);
+        var incidenciaId = (await respuestaIncidencias.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("items")[0].GetProperty("id").GetGuid();
+
+        var listarNotificaciones = PedidoAutenticado(HttpMethod.Get, "/api/control-acceso/notificaciones", token);
+        var respuestaNotificaciones = await _factory.CreateClient().SendAsync(listarNotificaciones);
+        Assert.Equal(HttpStatusCode.OK, respuestaNotificaciones.StatusCode);
+        var jsonNotificaciones = await respuestaNotificaciones.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(NombreTrabajador, jsonNotificaciones);
+        Assert.DoesNotContain(CentinelaRostro, jsonNotificaciones);
+
+        // Resolución con motivo centinela.
+        var resolver = PedidoAutenticado(
+            HttpMethod.Post, $"/api/control-acceso/incidencias/{incidenciaId}/resolucion", token);
+        resolver.Content = JsonContent.Create(new
+        {
+            trabajadorId,
+            tipo = "Entrada",
+            horaDeclaradaUtc = DateTimeOffset.UtcNow.AddHours(-1),
+            motivo = $"{CentinelaMotivo}-INCIDENCIA",
+            claveIdempotencia = Guid.NewGuid(),
+        });
+        Assert.Equal(HttpStatusCode.NoContent, (await _factory.CreateClient().SendAsync(resolver)).StatusCode);
+
+        var registros = SerializarTodo();
+        Assert.DoesNotContain(CentinelaRostro, registros);
+        Assert.DoesNotContain(CentinelaMotivo, registros);
+        Assert.DoesNotContain(NombreTrabajador, registros);
+    }
+
+    private async Task EnrolarTrabajadorAsync(string token, Guid trabajadorId)
+    {
+        var cliente = _factory.CreateClient();
+        var pedido = PedidoAutenticado(
+            HttpMethod.Post, $"/api/control-acceso/trabajadores/{trabajadorId}/enrolamiento", token);
+        pedido.Content = JsonContent.Create(new
+        {
+            muestraBase64 = Base64($"{CentinelaRostro}-ENROL"),
+            formato = "jpg",
+            claveIdempotencia = Guid.NewGuid(),
+        });
+        var respuesta = await cliente.SendAsync(pedido);
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+    }
+
     private static string SerializarTodo()
     {
         using var escritor = new StringWriter();

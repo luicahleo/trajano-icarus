@@ -1,4 +1,5 @@
 using Icarus.ControlAcceso.Application.Incidencias;
+using Icarus.ControlAcceso.Application.Notificaciones;
 using Icarus.ControlAcceso.Domain;
 using Icarus.Host.Autorizacion;
 using MediatR;
@@ -46,7 +47,41 @@ public static class ControlAccesoIncidenciasEndpoints
             return Results.NoContent();
         }).RequireAuthorization(PoliticasControlAcceso.ClienteConControlAcceso);
 
+        grupo.MapGet("/notificaciones", async (
+            ISender mediator, HttpContext contexto, DateTime? since,
+            CancellationToken cancellationToken) =>
+        {
+            var notificaciones = await mediator.Send(new ListarNotificacionesAccesoQuery(), cancellationToken);
+            var contador = notificaciones.Count(n => !n.Leida);
+            var etag = CalcularEtag(notificaciones, contador);
+            contexto.Response.Headers.CacheControl = "no-cache";
+            if (contexto.Request.Headers.IfNoneMatch.ToString().Contains(etag, StringComparison.Ordinal))
+                return Results.StatusCode(StatusCodes.Status304NotModified);
+            contexto.Response.Headers.ETag = etag;
+            var visibles = since is { } corte
+                ? notificaciones.Where(n => n.FechaUtc > corte).ToList()
+                : notificaciones;
+            return Results.Ok(new { items = visibles, contador });
+        }).RequireAuthorization(PoliticasControlAcceso.ClienteConControlAcceso);
+
+        grupo.MapPost("/notificaciones/{id:guid}/marcar-leida", async (
+            Guid id, ISender mediator, CancellationToken cancellationToken) =>
+        {
+            await mediator.Send(new MarcarNotificacionAccesoLeidaCommand(id), cancellationToken);
+            return Results.NoContent();
+        }).RequireAuthorization(PoliticasControlAcceso.ClienteConControlAcceso);
+
         return app;
+    }
+
+    private static string CalcularEtag(IReadOnlyList<NotificacionAccesoResumen> notificaciones, int contador)
+    {
+        var maxima = notificaciones.Count == 0
+            ? DateTime.MinValue
+            : notificaciones.Max(n => n.FechaUtc);
+        var huella = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{maxima.Ticks}:{contador}");
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(huella));
+        return $"\"{Convert.ToHexString(bytes)[..16]}\"";
     }
 
     private sealed record ResolverIncidenciaRequest(
