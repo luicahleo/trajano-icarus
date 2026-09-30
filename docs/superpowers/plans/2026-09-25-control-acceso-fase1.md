@@ -1,12 +1,13 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-29 con decisiones de captura y espera de A0.
+Creado: 2026-09-25. Actualizado: 2026-09-30 con spec/plan propios para A0 y cierre de T11A.
 Estado: **pendiente de integración externa y piloto**. T1–T5 se entregaron en
 los commits `b952b6d` a `f4d139c`; T7–T9 y T12 también están en `f4d139c`; T10
-y T11 están en `9a6eea0`. El proveedor actual falla cerrado fuera de pruebas.
-Quedan A0/T6 (contrato real de ARGOS y PAD), el flujo de tres intentos con
-incidencia, escenarios dependientes de ese contrato y T13 (hardware Android,
-VPS y piloto). Los límites de despliegue/master/ARGOS/Caserito siguen vigentes.
+y T11 están en `9a6eea0`; T11A (tres intentos, incidencias y notificación interna)
+se entregó en `dfd573a`, `cf5aa8b` y `e3c7346`. El proveedor actual falla cerrado
+fuera de pruebas. Quedan A0/T6 (contrato real de ARGOS y PAD) y T13 (hardware
+Android, VPS y piloto). Los límites de despliegue/master/ARGOS/Caserito siguen
+vigentes.
 
 Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
 [spec](../specs/2026-09-25-control-acceso-fase1-design.md). Las decisiones
@@ -79,16 +80,22 @@ El custodio ya está elegido: Trajano-Icarus, sin fotos originales persistidas.
 ## A0 — Integración con ARGOS como motor sin persistencia
 
 Responsable futuro: ejecutor de ARGOS, coordinado con agenteLocal y agenteVPS.
-No se inicia ese trabajo desde esta sesión. ARGOS tiene su propio AGENTS.md:
-PR hacia su rama permanente develop, pruebas e imagen Docker antes de integrar,
-despliegue de producción únicamente manual y autorizado.
+ARGOS tiene su propio AGENTS.md: PR hacia su rama permanente develop, pruebas e
+imagen Docker antes de integrar, despliegue de producción únicamente manual y
+autorizado.
+
+El contrato v2 ya está especificado en
+[2026-09-30-control-acceso-argos-contrato-v2-design.md](../specs/2026-09-30-control-acceso-argos-contrato-v2-design.md)
+y el plan ejecutable para A0/T6 en
+[2026-09-30-control-acceso-argos-contrato-v2.md](2026-09-30-control-acceso-argos-contrato-v2.md).
+No iniciar la implementación sin leer ambos documentos y sin las respuestas del
+agenteVPS.
 
 Rutas a revisar allí: `ARGOS/views.py`, `ARGOS/api_client.py`,
 `ARGOS/decorators.py`, `ARGOS/logger.py`, `requirements.txt`, `Dockerfile` y
-`tests/test_workflows.py`. Proponer `docs/control-acceso-v2.md`,
-`ARGOS/control_acceso_v2.py` y `tests/test_control_acceso_v2.py` en su propio
-plan, después de fijar PAD y formato; no tratar estas rutas nuevas como código
-que ya existe.
+`tests/test_workflows.py`. Proponer `ARGOS/control_acceso_v2.py` y
+`tests/test_control_acceso_v2.py` en el plan de ARGOS, después de fijar PAD y
+formato; no tratar estas rutas nuevas como código que ya existe.
 
 - [ ] Partir de las capacidades existentes: verify 1:1, extracción e identify
   con candidatos externos; no diseñar como si no existiera reconocimiento.
@@ -487,48 +494,54 @@ kiosco del precache; no desactivar offline de Gestión Avícola.
   (Frontend 324/324; Architecture 6/6, Unit 574/574, GestorCaisy 227/227,
   Integration 252/252).
 
-## 11A — Tres intentos e incidencias de marcación (decisión posterior)
+## 11A — Tres intentos e incidencias de marcación (completado)
 
 Paquete ejecutable para este bloque: [spec](../specs/2026-09-29-control-acceso-incidencias-design.md)
-y [plan](2026-09-29-control-acceso-incidencias.md). Seguir allí las tareas y
-pruebas; esta sección conserva el mapa de dependencias de la fase completa.
+y [plan](2026-09-29-control-acceso-incidencias.md). Este bloque ya se entregó
+en `dfd573a` (tres intentos), `cf5aa8b` (incidencias y notificación) y
+`e3c7346` (UI web, privacidad y cierre). Afecta dominio, persistencia, API,
+administración y kiosco; no confundir el registro manual existente con una
+incidencia automática tras tres rechazos. Está confirmado que la incidencia
+nace sin trabajador asignado; el cliente lo identifica al resolverla y el kiosco
+no solicita nombre ni código. Su creación también genera una notificación
+interna para el cliente, una por incidencia.
 
-Este bloque no está implementado por las tareas 8–11 ya entregadas. Afecta
-dominio, persistencia, API, administración y kiosco; no confundir el registro
-manual existente con una incidencia automática tras tres rechazos. Está
-confirmado que la incidencia nace sin trabajador asignado; el cliente lo
-identifica al resolverla y el kiosco no solicita nombre ni código. Su creación
-también genera una notificación interna para el cliente, una por incidencia.
-
-- [ ] Pruebas en rojo: primer y segundo rechazo permiten otra captura; tercero
+- [x] Pruebas en rojo: primer y segundo rechazo permiten otra captura; tercero
   crea una sola incidencia sin marcación ni identidad supuesta. Una misma clave
   repetida, doble toque o respuesta incierta no aumenta el contador ni duplica
   la incidencia. Indisponibilidad de cámara o servicio no consume un intento
   facial. Éxito reinicia el flujo.
-- [ ] Persistir el flujo y su contador validado por el backend, con claves
+- [x] Persistir el flujo y su contador validado por el backend, con claves
   idempotentes por captura. Guardar incidencia privada con tenant, acción, hora,
   tres rechazos y estado, sin foto, plantilla, candidatos ni trabajador inferido.
   Las fallas de red pendientes de reconciliación no son rechazo definitivo.
-- [ ] Crear junto con la incidencia una notificación interna persistente para
+- [x] Crear junto con la incidencia una notificación interna persistente para
   el Cliente del tenant, con referencia opaca a la bandeja. Probar atomicidad,
   unicidad por incidencia y que reintentos HTTP no generan avisos adicionales.
   Usar el patrón de notificación interna existente sin depender del dominio
   de pedidos avícolas ni incluir datos nominales o evidencia facial.
-- [ ] Exponer bandeja y resolución solo al Cliente del tenant: identificar al
+- [x] Exponer bandeja y resolución solo al Cliente del tenant: identificar al
   trabajador, crear o vincular registro/corrección manual con motivo, o descartar
   con motivo. Resolver no genera marcación por sí solo; proteger versión y
   reintentos concurrentes. Cubrir tenant ajeno, fecha futura y doble resolución.
-- [ ] Mostrar al Cliente el aviso interno y navegar desde él a la incidencia
+- [x] Mostrar al Cliente el aviso interno y navegar desde él a la incidencia
   correspondiente, respetando el tenant y el módulo contratado.
-- [ ] Ajustar el kiosco para mostrar intentos restantes, repetir la captura con
+- [x] Ajustar el kiosco para mostrar intentos restantes, repetir la captura con
   botón y cuenta 3–2–1, confirmar incidencia tras el tercero y volver a listo
   para la fila. No pedir selección de trabajador ni guardar datos en la tablet.
-- [ ] Probar privacidad de la incidencia en logs, trazas y errores; medir en el
+- [x] Probar privacidad de la incidencia en logs, trazas y errores; medir en el
   piloto el efecto de tres intentos fallidos sobre la duración de la fila.
-- [ ] Ejecutar pruebas dirigidas en rojo antes de implementar y `./verify.ps1`
+- [x] Ejecutar pruebas dirigidas en rojo antes de implementar y `./verify.ps1`
   completo antes de cada commit de código. No marcar este bloque como entregado
   por las pruebas anteriores de marcación manual.
 
+
+Resultados reales registrados en el plan de incidencias: `IntentosMarcacionTests`
+6/6, `IncidenciasAccesoTests` 8/8, `MarcacionKioscoPage.test.tsx` 8/8,
+`IncidenciasAccesoPage.test.tsx` 4/4, `CampanaNotificaciones.test.tsx` 2/2,
+`PrivacidadAccesoTests` 2/2, `privacidadKiosco.test.tsx` 2/2, y puerta verde
+(frontend 339 tests; backend 6 arquitectura, 574 unit, 227 GestorCaisy,
+268 integración).
 ## 12 — Privacidad, regresión y configuración segura
 
 Crear `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/PrivacidadAccesoTests.cs`
