@@ -74,7 +74,7 @@ La última es solo referencia de patrón: pertenece a pedidos avícolas.
   idempotentes y admiten `VersionEsperada`.
 - [x] Ejecutar `dotnet test ... --filter FullyQualifiedName~IncidenciasAccesoTests`:
   8/8 verdes. Luego `./verify.ps1` verde (frontend OK; backend: 6 arquitectura,
-  574 unit, 227 GestorCaisy, 267 integración). Commit y push directos a develop
+  574 unit, 227 GestorCaisy, 268 integración). Commit y push directos a develop
   con `feat(control-acceso): registra y notifica incidencias`.
 
 ## 3. Web: kiosco y administración
@@ -106,7 +106,7 @@ Entrada/Salida ni propuesta de Salida.
 - [x] Ejecutar desde `web/`:
   `npm run test -- src/kiosco src/features/control-acceso` (12/12 verdes),
   `npm run lint` y `npm run build` verdes. Luego `./verify.ps1` verde.
-  Commit previsto: `feat(control-acceso): completa kiosco y bandeja de incidencias`.
+  Commit real: `feat(control-acceso): completa kiosco, bandeja de incidencias y privacidad`.
 
 ## 4. Integración, privacidad y cierre de este bloque
 
@@ -124,9 +124,10 @@ Entrada/Salida ni propuesta de Salida.
   - `MarcacionKioscoPage.test.tsx`: 8/8 verdes.
   - `IncidenciasAccesoPage.test.tsx`: 4/4 verdes.
   - A0/T6 (ARGOS real/PAD) y T13 (tablet física/piloto) quedan pendientes.
-- [x] Ejecutar `./verify.ps1`: verde. No declarar terminados A0/T6 ni T13:
-  ARGOS real, PAD, tablet física, capacidad y despliegue pertenecen a esos
-  bloques pendientes.
+- [x] Ejecutar `./verify.ps1`: verde (frontend 339 tests; backend: 6
+  arquitectura, 574 unit, 227 GestorCaisy, 268 integración). No declarar
+  terminados A0/T6 ni T13: ARGOS real, PAD, tablet física, capacidad y
+  despliegue pertenecen a esos bloques pendientes.
 
 El agente debe detenerse y comunicar un bloqueo concreto si falta una decisión
 externa indispensable; no inventar contratos de ARGOS ni declarar piloto verde
