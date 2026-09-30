@@ -14,7 +14,8 @@ Fuentes consultadas:
 - ARGOS local: `C:/Users/lrcahuana/source/repos/dev/ARGOS`, rama `develop`, commit
   `80ef1cf`, árbol limpio.
 - Correspondencia con agenteVPS:
-  `C:/Users/lrcahuana/source/repos/dev/DocumentacionProyectos/preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS`.
+  `C:/Users/lrcahuana/source/repos/dev/DocumentacionProyectos/preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS`
+  (docs 15, 26, 28, 32, 34, 45, 48, 49 y 50).
 
 ## Alcance
 
@@ -62,17 +63,33 @@ A0 y por la disponibilidad del hardware.
 | Autenticación de llamadas entrantes | No existe en el código revisado. | El nuevo contrato v2 debe agregarla sin romper `/api/verify`. |
 | Compatibilidad de GUID como referencias opacas | `identify_face` usa `int(match_id)`/`int(trabajador_id)`. | Hay que adaptar el contrato v2 para aceptar y devolver strings/GUID. |
 
+### Estado real de ARGOS en producción (doc 50)
+
+| Aspecto | Valor observado | Implicación para v2 |
+|---|---|---|
+| Imagen desplegada | `argos:latest` (`sha256:12f6b1e7dcf8…`), construida 2026-08-06; contenedor en marcha desde entonces. | Es la misma imagen de la batería del doc 34; el contrato v2 requiere un nuevo build. |
+| Modelo/métrica/umbral | `ArcFace`, `cosine`, `0.68`. | Coincide con la propuesta del spec; `modelo_formato` puede fijarse como `arcface-cosine-512`. |
+| Detector | `opencv` (OpenCV 4.14.0.94). | Se mantiene; cambiarlo requeriría recalibrar umbral y mediciones. |
+| Hardware | CPU; sin GPU. | Latencia depende de CPU; el objetivo de 5 s debe medirse en VPS. |
+| Memoria | Sin límite (`Memory: 0`); host con 8 GB (~3,5 GB disponibles). | Se recomienda fijar `mem_limit=2g` en el nuevo despliegue para proteger al resto. |
+| Workers Gunicorn | 2. | Suficiente para arrancar; medir concurrencia KYC+kiosco antes de aumentar. |
+| Red | `trajano-shared-network`; puerto 5000 no publicado. | Trajano-Icarus puede llamar a `http://argos:5000` internamente. |
+| Autenticación | No hay mTLS; se puede agregar `CONTROL_ACCESO_API_KEY` en `.env.production`. | Opción A (API key) confirmada como viable. |
+| Carga actual `/api/verify` | 20 llamadas totales (baterías de agosto), cero tráfico de producción desde entonces. | El kiosco parte de una base desocupada; el cuello de botella será inferencia CPU. |
+| Logs | `/app/logs/`, sin retención (`access.log` 81 MB). | Al redesplegar v2 se debe añadir rotación y `max-size` del log del contenedor. |
+| PAD | Ningún modelo instalado. DeepFace 0.0.100 soporta `anti_spoofing=True` (FASNet), pero descarga pesos en primer uso. | Hay que pre-hornear los pesos en la imagen Docker y ensayar en tablet real. |
+
 ## Contrato v2
 
 ### Autenticación interna
 
-- **Opción recomendada (A):** API key compartida. Trajano-Icarus envía
-  `Authorization: Bearer <service-key>` o `X-Service-Key: <service-key>` en cada
-  llamada v2. ARGOS valida la clave mediante variable de entorno
-  `CONTROL_ACCESO_API_KEY` y un decorador exclusivo de las rutas v2.
-- **Opción futura (B):** mTLS entre servicios en la red Docker compartida. Se
-  deja documentada para reforzar la seguridad si el piloto o auditoría lo exigen,
-  pero no se implementa en A0 para no bloquear la integración.
+- **Opción elegida (A):** API key compartida. Trajano-Icarus envía
+  `Authorization: Bearer <service-key>` en cada llamada v2. ARGOS valida la clave
+  mediante la variable de entorno `CONTROL_ACCESO_API_KEY` (configurada en
+  `.env.production` del contenedor) y un decorador exclusivo de las rutas v2.
+- **Opción descartada (B):** mTLS entre servicios. El agenteVPS confirmó que no
+  hay plan ni implementación de mTLS en la red compartida; introducirlo sería
+  trabajo nuevo que bloquearía A0 sin ganar proporcional.
 - `/api/verify` y los endpoints existentes de Caserito no se modifican ni exigen
   la API key de Control de acceso.
 
@@ -89,18 +106,19 @@ A0 y por la disponibilidad del hardware.
 
 ### Formato de plantilla/modelo
 
-- Trajano-Icarus almacena `ModeloFormato` (string, p. ej. `arcface-cosine-512`) y
-  `VersionModelo` (int). El contrato v2 los intercambia explícitamente para detectar
-  incompatibilidades.
-- El vector se transmite como array de `float` (no base64 ni bytes opacos).
+- Trajano-Icarus almacena `ModeloFormato` (string) y `VersionModelo` (int). El
+  valor inicial acordado es `arcface-cosine-512` y `version_modelo: 1`. El contrato
+  v2 los intercambia explícitamente para detectar incompatibilidades.
+- El vector se transmite como array de `float` (no base64 ni bytes opacos). ArcFace
+  en la imagen desplegada produce vectores de 512 dimensiones.
 - `GET /api/v2/control-acceso/capacidades` anuncia:
-  - `modelo` (p. ej. `ArcFace`).
-  - `detector_backend` (p. ej. `opencv`).
-  - `embedding_size` (dimensión del vector).
-  - `distance_metric` (p. ej. `cosine`).
-  - `threshold` (umbral de identificación).
-  - `pad_disponible` (booleano, solo cuando esté probado en tablet real).
-  - `version_contrato` (p. ej. `2.0`).
+  - `modelo`: `ArcFace`.
+  - `detector_backend`: `opencv`.
+  - `embedding_size`: `512`.
+  - `distance_metric`: `cosine`.
+  - `threshold`: `0.68`.
+  - `pad_disponible`: `false` hasta acreditarlo en tablet real.
+  - `version_contrato`: `2.0`.
 
 ### Extracción
 
@@ -246,9 +264,11 @@ Response negativa (200 con `identificado: false`):
 
 ### Opciones evaluadas
 
-1. **DeepFace anti-spoofing** (si la versión 0.0.100 o la elegida lo expone):
-   - Ventaja: menor fricción de dependencias.
-   - Riesgo: sin evidencia de eficacia en tablet real ni en el entorno ARGOS actual.
+1. **DeepFace FASNet (`anti_spoofing=True`)**:
+   - Ventaja: ya disponible en `deepface 0.0.100` (soporte añadido en ≥0.0.87);
+     menor fricción de dependencias.
+   - Riesgo: descarga pesos en el primer uso, por lo que hay que pre-hornearlos en
+     la imagen Docker; sin evidencia de eficacia en tablet real.
 2. **Silent-Face-Anti-Spoofing** u otro paquete dedicado:
    - Ventaja: modelos específicos para ataque con foto/pantalla.
    - Riesgo: añade dependencia, licencia y tiempo de evaluación en hardware real.
@@ -258,11 +278,12 @@ Response negativa (200 con `identificado: false`):
 
 ### Decisión propuesta
 
-- **Objetivo del piloto:** opción 1 (DeepFace anti-spoofing si está disponible) u
-  opción 2 (paquete dedicado) si los ensayos en tablet real lo justifican.
-- **Fallback:** opción 3 si los ensayos no alcanzan un umbral mínimo aceptable,
-  documentando que el piloto carece de PAD hasta la siguiente iteración.
-- **No se afirma que ninguna opción funcione** sin ensayos en la tablet física.
+- **Objetivo del piloto:** opción 1 (DeepFace FASNet). Pre-descargar los pesos en
+  el `Dockerfile` de ARGOS para que el contenedor no dependa de internet en runtime.
+- **Fallback:** opción 3 si los ensayos en tablet real no alcanzan un umbral mínimo
+  aceptable, documentando que el piloto carece de PAD hasta la siguiente iteración.
+- **No se afirma que FASNet funcione** sin ensayos en la tablet física contra fotos
+  impresas y pantallas.
 
 ## Mediciones y pruebas necesarias
 
@@ -270,16 +291,19 @@ Todas las mediciones deben realizarse en el VPS y/o en la tablet real; no se
 aceptan resultados de dobles de prueba como evidencia de producción.
 
 1. **Latencia 1:N:** 20 candidatos, medir p95 y p99 de tiempo desde que ARGOS
-   recibe la imagen hasta que responde.
+   recibe la imagen hasta que responde. El log de Gunicorn actual no incluye
+   duración; el plan de ARGOS debe añadir `%D` al formato de log de v2.
 2. **Precisión:** tasa de falsos positivos, falsos negativos y ambigüedad con
    fotos reales de trabajadores (sintéticas en pruebas unitarias).
-3. **PAD:** ataques con foto impresa y pantalla (móvil/tablet) contra el modelo
-   elegido.
-4. **Carga compartida:** 1 petición KYC concurrente con N kioscos simultáneos.
+3. **PAD:** ataques con foto impresa y pantalla (móvil/tablet) contra FASNet.
+4. **Carga compartida:** 1 petición KYC concurrente con N kioscos simultáneos en
+   CPU con 2 workers y memoria limitada a 2 GB.
 5. **Fila real:** 20 marcaciones secuenciales en la tablet, incluyendo interacción
    humana, cuenta 3–2–1, respuesta facial y retorno a pantalla lista.
 6. **Regresión Caserito:** re-ejecutar la batería del doc 28 contra `/api/verify`
    tras cualquier cambio en ARGOS.
+7. **Operación:** validar rotación de logs, límite de memoria y health check tras
+   el redeploy de v2.
 
 ## Criterios de aceptación de A0
 
@@ -298,8 +322,10 @@ aceptan resultados de dobles de prueba como evidencia de producción.
 
 ## Dependencias
 
-- Respuestas del agenteVPS sobre imagen desplegada, recursos del VPS y
-  configuración de red/secrets.
-- Ensayos en tablet Android real para PAD y latencia percibida.
-- Aprobación de este contrato por parte del usuario antes de implementar A0 en
+- [x] Respuestas del agenteVPS sobre imagen desplegada, recursos del VPS y
+  configuración de red/secrets (doc 50).
+- [ ] Acuerdo con agenteVPS sobre `CONTROL_ACCESO_API_KEY`, límite de memoria,
+  formato de log con `%D` y rotación de logs para el redeploy de v2.
+- [ ] Ensayos en tablet Android real para PAD y latencia percibida.
+- [ ] Aprobación de este contrato por parte del usuario antes de implementar A0 en
   ARGOS y T6 en Trajano-Icarus.

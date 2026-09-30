@@ -46,8 +46,16 @@ contrato v2.
     `docs/superpowers/plans/2026-09-29-control-acceso-incidencias.md`.
   - ARGOS local:
     `C:/Users/lrcahuana/source/repos/dev/ARGOS`.
-  - Correspondencia VPS: doc 49 en
+  - Correspondencia VPS: docs 49 y 50 en
     `C:/Users/lrcahuana/source/repos/dev/DocumentacionProyectos/preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS`.
+- Valores reales del entorno (doc 50): imagen `argos:latest` 2026-08-06, CPU sin
+  GPU, workers Gunicorn 2, sin límite de memoria (recomendar 2 GB al redeploy),
+  red interna `trajano-shared-network`, puerto 5000 no publicado, modelo
+  `ArcFace`/`opencv`/`cosine`/`0.68`, embedding 512.
+- Autenticación: API key compartida vía `CONTROL_ACCESO_API_KEY` en
+  `.env.production` de ARGOS; `Authorization: Bearer <key>` desde Trajano-Icarus.
+- PAD: usar DeepFace FASNet (`anti_spoofing=True`) si los ensayos en tablet lo
+  justifican; pre-descargar pesos en el `Dockerfile`.
 
 ---
 
@@ -63,7 +71,8 @@ contrato v2.
 
 **Interfaces:**
 
-- Consumes: `CONTROL_ACCESO_API_KEY` env var; existing `logger`/`log_request`.
+- Consumes: `CONTROL_ACCESO_API_KEY` env var (en producción desde
+  `.env.production` del contenedor); existing `logger`/`log_request`.
 - Produces: blueprint `control_acceso_v2` con prefix `/api/v2/control-acceso`;
   decorator `requiere_control_acceso_auth` que devuelve 401/403 genéricos.
 
@@ -209,9 +218,10 @@ contrato v2.
       })
   ```
 
-  Nota: `embedding_size` debe derivarse del modelo real (ArcFace = 512). Dejar
-  hardcodeado a 512 solo si el modelo es ArcFace; de lo contrario, obtener de
-  `DeepFace.build_model(MODEL_NAME)` una vez al inicio.
+  Notas:
+  - `embedding_size` es 512 porque la imagen desplegada usa ArcFace (doc 50).
+  - `pad_disponible` inicia en `false`; pasará a `true` solo después de acreditar
+    PAD en tablet real.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -458,17 +468,20 @@ contrato v2.
 
 ---
 
-## Task 6: ARGOS — regresión Caserito y build Docker
+## Task 6: ARGOS — regresión Caserito, build Docker y ajustes operativos
 
 **Files:**
 
-- Modify: `ARGOS/Dockerfile` (si se añade dependencia PAD más adelante)
+- Modify: `ARGOS/Dockerfile` (pre-descargar pesos PAD si se habilita FASNet;
+  añadir `%D` al formato de log de Gunicorn)
+- Modify: `ARGOS/requirements.txt` (solo si se añade dependencia PAD)
 - Test: `ARGOS/tests/test_workflows.py` (ya existe)
 
 **Interfaces:**
 
 - Consumes: `/api/verify` existente.
-- Produces: confirmación de que Caserito sigue funcionando.
+- Produces: confirmación de que Caserito sigue funcionando; imagen lista para
+  despliegue con límite de memoria y logging configurados.
 
 - [ ] **Step 1: Write/extend the regression test**
 
@@ -491,14 +504,24 @@ contrato v2.
   Run: `docker build -t argos:control-acceso-validacion .`
   Expected: SUCCESS.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Ajustar Dockerfile para operación**
+
+  - Si se habilita PAD con FASNet, añadir una línea que invoque
+    `DeepFace.extract_faces(..., anti_spoofing=True)` o similar para forzar la
+    descarga de pesos durante el build (evitar descargas en runtime).
+  - Cambiar el formato de log de Gunicorn para incluir `%D` (duración en µs):
+    `"--access-logformat", "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s %(D)s"`.
+
+- [ ] **Step 5: Commit**
 
   ```bash
-  git add ARGOS/tests/test_control_acceso_v2.py
+  git add ARGOS/Dockerfile ARGOS/tests/test_control_acceso_v2.py
   git commit -m "test(argos): regresion de /api/verify y build docker"
   ```
 
-  Luego abrir PR a `develop` en ARGOS según su `AGENTS.md`.
+  Luego abrir PR a `develop` en ARGOS según su `AGENTS.md`. Coordinar con
+  agenteVPS para el despliegue con `mem_limit=2g`, `CONTROL_ACCESO_API_KEY` en
+  `.env.production` y rotación de logs.
 
 ---
 
