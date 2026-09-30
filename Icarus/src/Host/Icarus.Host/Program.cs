@@ -173,6 +173,7 @@ api.MapKioscoSesion();
 api.MapControlAccesoJornadas();
 api.MapControlAccesoTrabajadores();
 api.MapKioscoMarcaciones();
+api.MapControlAccesoIncidencias();
 
 // sw.js, el manifiesto e index.html gobiernan qué build ejecuta la PWA: si el
 // navegador los cachea, el service worker viejo sigue sirviendo un bundle

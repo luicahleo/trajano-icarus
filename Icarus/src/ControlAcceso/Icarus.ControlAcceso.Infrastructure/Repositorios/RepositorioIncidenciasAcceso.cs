@@ -20,10 +20,20 @@ public sealed class RepositorioIncidenciasAcceso(ControlAccesoDbContext db)
 
     public Task<IReadOnlyList<IncidenciaAcceso>> ListarPendientesAsync(
         Guid clienteId, CancellationToken cancellationToken = default) =>
-        db.IncidenciasAcceso
-            .Where(i => i.ClienteId == clienteId && i.Estado == EstadoIncidenciaAcceso.Pendiente)
+        ListarAsync(clienteId, EstadoIncidenciaAcceso.Pendiente, cancellationToken);
+
+    public async Task<IReadOnlyList<IncidenciaAcceso>> ListarAsync(
+        Guid clienteId,
+        EstadoIncidenciaAcceso? estado = null,
+        CancellationToken cancellationToken = default)
+    {
+        var consulta = db.IncidenciasAcceso.Where(i => i.ClienteId == clienteId);
+        if (estado.HasValue)
+            consulta = consulta.Where(i => i.Estado == estado.Value);
+
+        return await consulta
             .OrderByDescending(i => i.TercerRechazoUtc)
             .ThenByDescending(i => i.Id)
-            .ToListAsync(cancellationToken)
-            .ContinueWith(t => (IReadOnlyList<IncidenciaAcceso>)t.Result, cancellationToken);
+            .ToListAsync(cancellationToken);
+    }
 }

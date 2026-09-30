@@ -3,6 +3,7 @@ using Icarus.BuildingBlocks.Observability;
 using Icarus.ControlAcceso.Application.Biometria;
 using Icarus.ControlAcceso.Application.Kiosco;
 using Icarus.ControlAcceso.Application.Marcaciones;
+using Icarus.ControlAcceso.Application.Notificaciones;
 using Icarus.ControlAcceso.Application.Persistencia;
 using Icarus.ControlAcceso.Application.Tiempo;
 using Icarus.ControlAcceso.Application.Trabajadores;
@@ -41,6 +42,7 @@ public static class DependencyInjection
         servicios.AddScoped<IRepositorioFlujosMarcacion, RepositorioFlujosMarcacion>();
         servicios.AddScoped<IRepositorioCapturasMarcacion, RepositorioCapturasMarcacion>();
         servicios.AddScoped<IRepositorioIncidenciasAcceso, RepositorioIncidenciasAcceso>();
+        servicios.AddScoped<INotificacionesInternasAcceso, RepositorioNotificacionesInternasAcceso>();
         servicios.AddScoped<IUnidadTrabajoControlAcceso>(sp =>
             new UnidadTrabajoControlAccesoConConcurrencia(sp.GetRequiredService<ControlAccesoDbContext>()));
 

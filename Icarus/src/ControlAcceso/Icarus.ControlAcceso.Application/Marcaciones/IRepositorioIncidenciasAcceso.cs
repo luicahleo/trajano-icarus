@@ -14,4 +14,9 @@ public interface IRepositorioIncidenciasAcceso
 
     Task<IReadOnlyList<IncidenciaAcceso>> ListarPendientesAsync(
         Guid clienteId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<IncidenciaAcceso>> ListarAsync(
+        Guid clienteId,
+        EstadoIncidenciaAcceso? estado = null,
+        CancellationToken cancellationToken = default);
 }

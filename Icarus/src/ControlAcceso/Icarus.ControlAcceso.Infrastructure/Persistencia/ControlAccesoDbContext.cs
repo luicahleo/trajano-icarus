@@ -21,6 +21,7 @@ public sealed class ControlAccesoDbContext : DbContext, IUnidadTrabajoControlAcc
     public DbSet<FlujoMarcacion> FlujosMarcacion => Set<FlujoMarcacion>();
     public DbSet<CapturaMarcacion> CapturasMarcacion => Set<CapturaMarcacion>();
     public DbSet<IncidenciaAcceso> IncidenciasAcceso => Set<IncidenciaAcceso>();
+    public DbSet<NotificacionInternaAcceso> NotificacionesInternasAcceso => Set<NotificacionInternaAcceso>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,5 +45,7 @@ public sealed class ControlAccesoDbContext : DbContext, IUnidadTrabajoControlAcc
             _clienteIdActual == null || f.ClienteId == _clienteIdActual);
         modelBuilder.Entity<IncidenciaAcceso>().HasQueryFilter(i =>
             _clienteIdActual == null || i.ClienteId == _clienteIdActual);
+        modelBuilder.Entity<NotificacionInternaAcceso>().HasQueryFilter(n =>
+            _clienteIdActual == null || n.ClienteId == _clienteIdActual);
     }
 }

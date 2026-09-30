@@ -3,6 +3,7 @@ using Icarus.BuildingBlocks.Domain;
 using Icarus.ControlAcceso.Application.Autorizacion;
 using Icarus.ControlAcceso.Application.Biometria;
 using Icarus.ControlAcceso.Application.Kiosco;
+using Icarus.ControlAcceso.Application.Notificaciones;
 using Icarus.ControlAcceso.Application.Persistencia;
 using Icarus.ControlAcceso.Application.Tiempo;
 using Icarus.ControlAcceso.Application.Trabajadores;
@@ -29,6 +30,7 @@ public sealed class RegistrarMarcacionHandler
     private readonly IRepositorioFlujosMarcacion _flujos;
     private readonly IRepositorioCapturasMarcacion _capturas;
     private readonly IRepositorioIncidenciasAcceso _incidencias;
+    private readonly INotificacionesInternasAcceso _notificaciones;
     private readonly IRepositorioJornadasAcceso _jornadas;
     private readonly IRepositorioAccesoTrabajadores _trabajadores;
     private readonly IRepositorioPlantillasFaciales _plantillas;
@@ -46,6 +48,7 @@ public sealed class RegistrarMarcacionHandler
         IRepositorioFlujosMarcacion flujos,
         IRepositorioCapturasMarcacion capturas,
         IRepositorioIncidenciasAcceso incidencias,
+        INotificacionesInternasAcceso notificaciones,
         IRepositorioJornadasAcceso jornadas,
         IRepositorioAccesoTrabajadores trabajadores,
         IRepositorioPlantillasFaciales plantillas,
@@ -62,6 +65,7 @@ public sealed class RegistrarMarcacionHandler
         _flujos = flujos;
         _capturas = capturas;
         _incidencias = incidencias;
+        _notificaciones = notificaciones;
         _jornadas = jornadas;
         _trabajadores = trabajadores;
         _plantillas = plantillas;
@@ -187,6 +191,7 @@ public sealed class RegistrarMarcacionHandler
                 clienteId, flujo.Id, flujo.SesionKioscoId, flujo.Accion,
                 primerRechazo, tercerRechazo, ahora);
             _incidencias.Agregar(incidencia);
+            _notificaciones.Agregar(NotificacionInternaAcceso.ParaIncidencia(incidencia.Id, clienteId));
         }
 
         try

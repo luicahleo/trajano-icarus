@@ -1,6 +1,6 @@
 # Plan — tres intentos, incidencias y notificación interna
 
-Estado: pendiente de implementación. Ejecutar **solo este bloque** del módulo
+Estado: bloque 2 completado; bloques 3 y 4 pendientes para otra sesión. Ejecutar **solo este bloque** del módulo
 ControlAcceso. Leer primero el [spec](../specs/2026-09-29-control-acceso-incidencias-design.md),
 el [plan general](2026-09-25-control-acceso-fase1.md), `AGENTS.md` y
 `docs/dominio/glosario-avicola.md`. El historial de chat no es requisito.
@@ -62,21 +62,22 @@ Rutas de partida:
 `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/NotificacionInterna.cs`.
 La última es solo referencia de patrón: pertenece a pedidos avícolas.
 
-- [ ] Crear `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/IncidenciasAccesoTests.cs`.
-  Rojo esperado: tercero sin aviso, duplicación de aviso, acceso entre tenants,
+- [x] Crear `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/IncidenciasAccesoTests.cs`.
+  Rojo verificado: tercero sin aviso, duplicación de aviso, acceso entre tenants,
   resolución sin motivo, corrección fallida que cierra incidencia, descarte que
   crea marcación y doble resolución concurrente.
-- [ ] Persistir notificación propia de ControlAcceso en la misma operación que
+- [x] Persistir notificación propia de ControlAcceso en la misma operación que
   crea la incidencia; unicidad por incidencia, destinatario tenant y enlace
   opaco. Si falla la escritura, no dejar incidencia sin aviso. Texto genérico.
-- [ ] Crear endpoints de lista/detalle/resolución en
-  `Icarus/src/Host/Icarus.Host/Endpoints/` con política Cliente y módulo
-  ControlAcceso. Resolver vincula una marcación/corrección manual existente o
-  ejecuta esa acción con las mismas validaciones; descartar exige motivo.
-  Versionar y hacer idempotentes las mutaciones.
-- [ ] Ejecutar `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~IncidenciasAccesoTests`.
-  Luego `./verify.ps1`, commit y push. Commit previsto:
-  `feat(control-acceso): registra y notifica incidencias`.
+- [x] Crear endpoints de lista/detalle/resolución/descarte en
+  `Icarus/src/Host/Icarus.Host/Endpoints/ControlAccesoIncidenciasEndpoints.cs`
+  con política `ClienteConControlAcceso`. Resolver vincula una marcación manual
+  con las mismas validaciones; descartar exige motivo. Las mutaciones son
+  idempotentes y admiten `VersionEsperada`.
+- [x] Ejecutar `dotnet test ... --filter FullyQualifiedName~IncidenciasAccesoTests`:
+  8/8 verdes. Luego `./verify.ps1` verde (frontend OK; backend: 6 arquitectura,
+  574 unit, 227 GestorCaisy, 267 integración). Commit y push directos a develop
+  con `feat(control-acceso): registra y notifica incidencias`.
 
 ## 3. Web: kiosco y administración
 
