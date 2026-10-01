@@ -93,6 +93,12 @@ A0 y por la disponibilidad del hardware.
   `Authorization: Bearer <service-key>` en cada llamada v2. ARGOS valida la clave
   mediante la variable de entorno `CONTROL_ACCESO_API_KEY` (configurada en
   `.env.production` del contenedor) y un decorador exclusivo de las rutas v2.
+- **Custodia de la clave:** el valor no sale de la VPS. El agenteVPS lo mantiene
+  en `/var/apps/icarus/microservicios/argos/.env.production` (chmod 600) y, al
+  desplegar el adaptador `T6`, añade `ArgosControlAcceso__ApiKey` con el mismo
+  valor a `/var/apps/trajano-icarus/.env`. La clave no viaja por git, logs,
+  documentos ni chat. Para desarrollo local, el operador con acceso root puede
+  leerla directamente en la VPS; no se pide al agenteVPS que la exponga.
 - **Opción descartada (B):** mTLS entre servicios. El agenteVPS confirmó que no
   hay plan ni implementación de mTLS en la red compartida; introducirlo sería
   trabajo nuevo que bloquearía A0 sin ganar proporcional.
@@ -335,9 +341,9 @@ aceptan resultados de dobles de prueba como evidencia de producción.
   configuración de red/secrets (docs 50 y 52).
 - [x] Acuerdo con agenteVPS sobre `CONTROL_ACCESO_API_KEY`, límite de memoria y
   rotación de logs para el redeploy de v2.
-- [~] Transferencia segura del valor de `CONTROL_ACCESO_API_KEY` a la
-  configuración de Trajano-Icarus (solicitada al agenteVPS en doc 53; pendiente
-  de entrega por canal seguro).
+- [x] Acuerdo sobre custodia de `CONTROL_ACCESO_API_KEY`: el valor permanece en
+  la VPS; el agenteVPS configurará `ArgosControlAcceso__ApiKey` en el entorno de
+  Trajano-Icarus al desplegar (doc 54).
 - [ ] Ensayos en tablet Android real para PAD y latencia percibida.
 - [ ] Aprobación de este contrato por parte del usuario antes de implementar A0 en
   ARGOS y T6 en Trajano-Icarus.

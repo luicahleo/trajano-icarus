@@ -534,9 +534,16 @@ contrato v2.
   ```
 
   El script debe:
-  1. Levantar `argos-v2-candidate`.
-  2. Ejecutar batería de humo de `/api/verify` y `/api/v2/control-acceso/*`.
-  3. Solo si pasa: `docker stop argos && docker rm argos && docker rename argos-v2-candidate argos`.
+  1. Etiquetar la imagen actual como `argos:previous` para rollback inmediato.
+  2. Levantar `argos-v2-candidate` con `--restart unless-stopped`.
+  3. Ejecutar batería de humo de `/api/verify` y `/api/v2/control-acceso/*`.
+  4. Solo si pasa: `docker stop argos && docker rm argos && docker rename argos-v2-candidate argos` y retiquetar la imagen nueva como `argos:latest`.
+  5. Si falla: destruir `argos-v2-candidate` y recrear `argos` desde `argos:previous`.
+
+  **Ejecución:** el agenteVPS ejecuta este procedimiento en la VPS; el
+  agenteLocal solo debe asegurar que el código esté mergeado en `develop` de
+  ARGOS y que `deploy-production.sh` incluya `--memory 2g`, `--log-opt`, restart
+  y la etiqueta de rollback.
 
 - [ ] **Step 6: Commit**
 
@@ -545,8 +552,9 @@ contrato v2.
   git commit -m "feat(argos): ajustes operativos y regresion para v2"
   ```
 
-  Luego abrir PR a `develop` en ARGOS según su `AGENTS.md`. Coordinar con
-  agenteVPS para el swap del contenedor candidato.
+  Luego abrir PR a `develop` en ARGOS según su `AGENTS.md`. Una vez mergeado,
+  coordinar con agenteVPS para que ejecute el build, el candidato, la batería y
+  el swap en la VPS.
 
 ---
 
@@ -613,11 +621,14 @@ contrato v2.
 
 - [ ] **Step 5: Configurar la API key**
 
-  Solicitar el valor de `CONTROL_ACCESO_API_KEY` al agenteVPS por canal seguro
-  (no por este documento ni por chat). La petición quedó documentada en
+  En producción el agenteVPS añade `ArgosControlAcceso__ApiKey` a
+  `/var/apps/trajano-icarus/.env` al desplegar; el valor permanece en la VPS y
+  no se transfiere por documentos ni chat (respuesta 54). Para desarrollo local,
+  el operador puede leer el valor directamente en
+  `/var/apps/icarus/microservicios/argos/.env.production` (chmod 600) y exponerlo
+  como variable de entorno o user secret, nunca en `appsettings.json` ni git.
+  La petición original quedó en
   `preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS/53_peticion_agente_local_argos_contrato_v2_apikey_deploy_2026-10-01.md`.
-  Añadirlo a la configuración de Trajano-Icarus bajo `ArgosControlAcceso:ApiKey`
-  (fuera de git; por ejemplo, variable de entorno o secreto del host).
 
 - [ ] **Step 6: Commit**
 
@@ -983,8 +994,11 @@ Which approach?
 - El PR `luicahleo/argos#2` (rama `feature/control-acceso-v2-doc` → `develop`)
   pasó los checks `validar` y GitGuardian y fue mergeado en `0da2879`; el
   documento `docs/control-acceso-v2.md` ya está en `develop` de ARGOS.
+- Se incorporó la respuesta 54 (API key no sale de la VPS; agenteVPS configura
+  `ArgosControlAcceso__ApiKey` en el entorno de Trajano-Icarus; deploy con
+  candidato, etiqueta `argos:previous` para rollback, y swap ejecutado por el
+  agenteVPS en la misma semana).
 - La implementación de código de A0/T6 no comenzó en esta sesión; sigue
-  condicionada a la aprobación del contrato, a la recepción de la API key y a
-  los ensayos en tablet real.
+  condicionada a la aprobación del contrato y a los ensayos en tablet real.
 - Los límites de no tocar `master`, no desplegar servicios y no implementar T6
   ni T13 en código se respetaron.
