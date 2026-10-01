@@ -981,8 +981,8 @@ Which approach?
   de `CONTROL_ACCESO_API_KEY` por canal seguro y confirmando el procedimiento de
   deploy candidato.
 - El PR `luicahleo/argos#2` (rama `feature/control-acceso-v2-doc` → `develop`)
-  pasó los checks `validar` y GitGuardian; su merge queda pendiente de la
-  revisión/review requerida por la protección de `develop`.
+  pasó los checks `validar` y GitGuardian y fue mergeado en `0da2879`; el
+  documento `docs/control-acceso-v2.md` ya está en `develop` de ARGOS.
 - La implementación de código de A0/T6 no comenzó en esta sesión; sigue
   condicionada a la aprobación del contrato, a la recepción de la API key y a
   los ensayos en tablet real.
