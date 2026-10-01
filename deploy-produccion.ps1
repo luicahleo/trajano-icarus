@@ -46,7 +46,18 @@ function Test-Programa {
 
 function Invoke-Git {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Argumentos)
-    $salida = & git @Argumentos 2>&1
+    # PowerShell 5.1 convierte el stderr de un ejecutable nativo en una
+    # excepcion terminante cuando $ErrorActionPreference es 'Stop' (p. ej. el
+    # progreso normal de "git fetch" o "Switched to branch"). Se baja a
+    # 'Continue' solo para esta llamada y se revisa $LASTEXITCODE a mano.
+    $preferenciaErrores = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $salida = & git @Argumentos 2>&1
+    }
+    finally {
+        $ErrorActionPreference = $preferenciaErrores
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "git $Argumentos falló: $salida"
     }
@@ -203,8 +214,16 @@ if ($Watch) {
     if ($run -and $run[0].headSha -eq $shaRelease) {
         $runId = $run[0].databaseId
         Write-Host "Monitoreando deploy (run $runId)..."
-        gh run watch $runId --exit-status
-        if ($LASTEXITCODE -ne 0) {
+        $preferenciaErrores = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            gh run watch $runId --exit-status
+            $codigoWatch = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $preferenciaErrores
+        }
+        if ($codigoWatch -ne 0) {
             $repo = $env:GITHUB_REPOSITORY
             if (-not $repo) {
                 $repo = gh repo view --json nameWithOwner -q '.nameWithOwner'
