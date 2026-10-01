@@ -1,13 +1,14 @@
 # Control de acceso — plan de la fase 1
 
-Creado: 2026-09-25. Actualizado: 2026-09-30 con spec/plan propios para A0 y cierre de T11A.
-Estado: **pendiente de integración externa y piloto**. T1–T5 se entregaron en
-los commits `b952b6d` a `f4d139c`; T7–T9 y T12 también están en `f4d139c`; T10
-y T11 están en `9a6eea0`; T11A (tres intentos, incidencias y notificación interna)
-se entregó en `dfd573a`, `cf5aa8b` y `e3c7346`. El proveedor actual falla cerrado
-fuera de pruebas. Quedan A0/T6 (contrato real de ARGOS y PAD) y T13 (hardware
-Android, VPS y piloto). Los límites de despliegue/master/ARGOS/Caserito siguen
-vigentes.
+Creado: 2026-09-25. Actualizado: 2026-10-01 con cierre de A0/T6 y T11A.
+Estado: **contrato ARGOS v2 y adaptador implementados; pendientes T13 y los
+ensayos abiertos de fase 1**. A0/T6 quedó implementado en ARGOS y Trajano-Icarus:
+ARGOS PR #4 (`cf53e58`) y commits Icarus `f1adb79`, `46869a8`, `142f6ca`,
+`ac251d0` y `50a2bec`. Hubo pruebas del contrato y build Docker de ARGOS; la
+integración de Icarus usa un servidor HTTP efímero y no acredita llamada al
+servicio desplegado. T1–T5 se entregaron en `b952b6d` a `f4d139c`; T7–T9 y T12
+anteriores en `f4d139c`; T10 y T11 en `9a6eea0`; T11A en `dfd573a`, `cf5aa8b` y
+`e3c7346`. No se desplegó producción ni se tocó `master`.
 
 Leer [brainstorming](../specs/2026-09-25-control-acceso-fase1-brainstorm.md) y
 [spec](../specs/2026-09-25-control-acceso-fase1-design.md). Las decisiones
@@ -17,8 +18,9 @@ dependencias externas pendientes.
 Evidencia adicional: [ARGOS compartido con Caserito](../specs/2026-09-26-control-acceso-argos-evaluacion.md).
 Custodia confirmada: plantillas cifradas en Trajano-Icarus. ARGOS extrae y
 compara por petición, sin perfiles persistentes, base de datos ni caché
-biométrica entre peticiones en el nuevo flujo. Las tareas 4, 6 y 7 reflejan esa
-decisión. A0 sigue pendiente para PAD, formato y aceptación del contrato.
+biométrica entre peticiones en el nuevo flujo. El contrato v2 fue aprobado y
+su implementación de código quedó integrada el 2026-10-01. La validación PAD
+con hardware real y el despliegue siguen pendientes de T13.
 
 ## Reglas para el futuro ejecutor
 
@@ -70,45 +72,45 @@ flowchart TD
     A0 --> T13
 ```
 
-Las tareas 1–5 y 9 no requieren ARGOS real. Tareas 7–8 y UI pueden desarrollarse
-contra dobles del contrato una vez fijado A0, pero no completarse como flujo
-productivo hasta superar 6 y 13. Si A0 requiere vídeo/gestos en vez de captura
-pasiva, actualizar spec y tareas 6, 7 y 11 antes de implementar esas partes.
-No seleccionar en silencio un modelo, licencia, umbral o mecanismo de claves.
-El custodio ya está elegido: Trajano-Icarus, sin fotos originales persistidas.
+Las tareas 1–12 del plan ejecutable del contrato se completaron contra el
+contrato aprobado y dobles cuando corresponde. El flujo aún no está habilitado para producción: T13 debe
+validar PAD, rendimiento y operación real. No seleccionar en silencio un
+modelo, licencia, umbral o mecanismo de claves. El custodio ya está elegido:
+Trajano-Icarus, sin fotos originales persistidas.
 
 ## A0 — Integración con ARGOS como motor sin persistencia
 
-Responsable futuro: ejecutor de ARGOS, coordinado con agenteLocal y agenteVPS.
-ARGOS tiene su propio AGENTS.md: PR hacia su rama permanente develop, pruebas e
-imagen Docker antes de integrar, despliegue de producción únicamente manual y
-autorizado.
+Estado: **completado para el contrato y el código; operación de producción
+pendiente de T13**. ARGOS tiene su propio AGENTS.md: cambios integrados mediante
+PR a `develop`, con pruebas e imagen Docker; no se ejecutó despliegue.
 
 El contrato v2 ya está especificado en
 [2026-09-30-control-acceso-argos-contrato-v2-design.md](../specs/2026-09-30-control-acceso-argos-contrato-v2-design.md)
 y el plan ejecutable para A0/T6 en
 [2026-09-30-control-acceso-argos-contrato-v2.md](2026-09-30-control-acceso-argos-contrato-v2.md).
-No iniciar la implementación sin leer ambos documentos y sin las respuestas del
-agenteVPS.
+La implementación siguió esos documentos aprobados y la correspondencia
+verificada con agenteVPS. La integración de código no valida PAD ni rendimiento
+en hardware real.
 
-Rutas a revisar allí: `ARGOS/views.py`, `ARGOS/api_client.py`,
-`ARGOS/decorators.py`, `ARGOS/logger.py`, `requirements.txt`, `Dockerfile` y
-`tests/test_workflows.py`. Proponer `ARGOS/control_acceso_v2.py` y
-`tests/test_control_acceso_v2.py` en el plan de ARGOS, después de fijar PAD y
-formato; no tratar estas rutas nuevas como código que ya existe.
+Rutas modificadas: `ARGOS/control_acceso_v2.py`, `ARGOS/auth_control_acceso.py`,
+`ARGOS/views.py`, `ARGOS/logger.py`, `ARGOS/deploy-production.sh` y sus tests.
+La implementación conserva las rutas existentes de Caserito y `/api/verify`.
 
-- [ ] Partir de las capacidades existentes: verify 1:1, extracción e identify
+Esta lista registra el contrato y el código ya terminados. Las mediciones en
+hardware/con carga real que continúan vacías son tareas operativas de T13.
+
+- [x] Partir de las capacidades existentes: verify 1:1, extracción e identify
   con candidatos externos; no diseñar como si no existiera reconocimiento.
   Confirmar imagen/commit desplegado actual: doc 34 acredita batería funcional
   del 2026-08-06, doc 45 calibración KYC y doc 48 solamente relojes.
-- [ ] Fijar contrato de capacidades, extracción con resultado solo al backend
+- [x] Fijar contrato de capacidades, extracción con resultado solo al backend
   e identificación contra candidatos aportados en la petición. Referencias
   opacas compatibles con GUID y versión/modelo/formato explícitos; sin endpoints
   de perfiles, borrado remoto ni operaciones durables en ARGOS.
-- [ ] Probar que el nuevo flujo no consulta ICARUS legacy ni una base de datos
+- [x] Probar que el nuevo flujo no consulta ICARUS legacy ni una base de datos
   y no conserva imágenes/plantillas entre peticiones. El backend deriva tenant
   y candidatos; ARGOS devuelve únicamente una referencia del conjunto recibido.
-- [ ] Decidir modelo PAD/versión/licencia, formato de evidencia y criterios
+- [ ] Validar modelo PAD/versión/licencia y criterios medibles
   medibles de identificación, ambigüedad, rechazo y rendimiento con el equipo.
   La interacción ya está decidida: PAD pasiva sobre una foto tomada tras botón
   y cuenta visible de 3 segundos, sin gestos. Falta validar que el modelo detecte
@@ -121,30 +123,30 @@ formato; no tratar estas rutas nuevas como código que ya existe.
 - [ ] Estimar el tiempo de una fila de 20 marcaciones secuenciales en una sola
   tablet, incluyendo confirmación, preparación de cámara, cuenta de 3 segundos,
   respuesta facial y retorno a pantalla lista. No modelar 20 capturas a la vez.
-- [ ] Coordinar con tarea 4 formato de plantilla y compatibilidad de modelos.
+- [x] Coordinar con tarea 4 formato de plantilla y compatibilidad de modelos.
   La custodia y claves se implementarán solo en Trajano; ARGOS no recibe claves
   SQL/de cifrado ni usa el almacén legacy como dependencia oculta.
-- [ ] Prueba roja: contrato v2 ausente, rechazo de GUID/tenant ajeno, falta de
+- [x] Prueba roja: contrato v2 ausente, rechazo de GUID/tenant ajeno, falta de
   PAD y filtración de candidatos detectados por tests nuevos.
-- [ ] Verificación prevista en ARGOS: `python -m unittest discover -s tests -p 'test_control_acceso_v2.py' -v`,
+- [x] Verificación en ARGOS: `python -m unittest discover -s tests -p 'test_control_acceso_v2.py' -v`,
   `python -m unittest discover -s tests -p 'test_*.py' -v` y
   `docker build -t argos:control-acceso-validacion .`. El runner actual es
-  unittest y hoy sus tests solo cubren workflows; añadir cobertura de contrato.
-  No dar estos comandos por ejecutados en la revisión documental.
-- [ ] Preservar `/api/verify` y sus contratos existentes. Los ensayos de
+  unittest; cobertura v2 y build Docker ejecutados antes de integrar.
+- [x] Preservar `/api/verify` y sus contratos existentes. Los ensayos de
   respaldo/borrado de plantillas pertenecen a Trajano (tareas 4/7/13).
   Tests de integración no prueban precisión PAD.
-- [ ] Reproducir la regresión de Caserito: dos imágenes, códigos 400/422/500 y
+- [x] Reproducir la regresión de Caserito: dos imágenes, códigos 400/422/500 y
   respuesta exitosa con los campos consumidos. No cambiar umbral/detector
   globales ni exigir PAD a la foto de documento por añadir el kiosco.
-  Medir carga concurrente KYC+kiosco y planificar la interrupción del servicio
-  compartido cuando se autorice despliegue; no desplegar en esta sesión.
-- [ ] Entregar contrato firmado por versión y matriz de ensayos, sin biometría
+  Las pruebas concurrentes y el despliegue siguen en T13.
+- [x] Entregar contrato aprobado por versión y matriz de ensayos, sin biometría
   ni secretos en el repositorio de Trajano-Icarus.
 
-Commit documental de salida previsto aquí: `docs(control-acceso): fija contrato ARGOS v2`.
-Hasta ese resultado, el adaptador real está condicionado, no implementable por
-suposición.
+Resultado: contrato v2 implementado en ARGOS y consumido por el adaptador
+Trajano-Icarus. Los endpoints, errores, límites, regresión de Caserito y
+despliegue candidato tienen cobertura en ARGOS. El adaptador tiene cobertura
+unitaria e integración con doble HTTP efímero. Pendientes operativos: prueba PAD
+en tablet, despliegue VPS autorizado y piloto (T13).
 
 ## 1 — Proyectos, composición y fronteras
 
@@ -284,7 +286,7 @@ Tests: `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/SesionKioscoTests.cs`
   Entregado dentro de `f4d139c`; la puerta registrada en esa sesión fue verde
   (Architecture 6/6, Unit 566/566, GestorCaisy 227/227, Integration 221/221).
 
-## 6 — Adaptador y contrato real ARGOS (depende de A0)
+## 6 — Adaptador y contrato ARGOS (completado; depende de T13 para operación)
 
 Crear `Icarus.ControlAcceso.Application/Biometria/IProveedorIdentidadFacial.cs`,
 `ResultadoIdentificacionFacial.cs` y `ResultadoEnrolamiento.cs` en esa carpeta;
@@ -293,26 +295,25 @@ Crear `Icarus.ControlAcceso.Application/Biometria/IProveedorIdentidadFacial.cs`,
 `Icarus/tests/Icarus.UnitTests/ControlAcceso/ContratoArgosTests.cs` y
 `Icarus/tests/Icarus.IntegrationTests/ControlAcceso/ArgosContratoRealTests.cs`.
 
-- [ ] Rojo: ausencia de PAD/campos, respuesta ambigua, versión incompatible,
+- [x] Rojo: ausencia de PAD/campos, respuesta ambigua, versión incompatible,
   tenant/referencia ajenos o timeout tratados como coincidencia válida.
-- [ ] Adaptador HTTP con credencial interna, límites, cancelación y códigos
+- [x] Adaptador HTTP con credencial interna, cancelación y códigos
   genéricos; sin retry automático de captura y sin persistir evidencia.
-- [ ] Extracción entrega el vector solo al flujo de cifrado del backend; la
+- [x] Extracción entrega el vector solo al flujo de cifrado del backend; la
   identificación envía candidatos autorizados descifrados por petición y exige
   referencia/versión del conjunto. Probar formato/modelo incompatible, conjunto
   excesivo sin truncado silencioso y ausencia de consultas o perfiles remotos.
-- [ ] Dobles deterministas prueban fallos; test contra servicio efímero con
-  contrato A0 prueba integración real y queda separado del ensayo biométrico.
-  Sin la imagen A0 no marcar ese test pasado ni poner bypass de producción.
-- [ ] Dirigido: `dotnet test Icarus/tests/Icarus.UnitTests/Icarus.UnitTests.csproj --filter FullyQualifiedName~ContratoArgosTests`.
-- [ ] Real cuando disponible: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~ArgosContratoRealTests`.
-- [ ] Puerta y commit: `feat(control-acceso): integra contrato facial ARGOS v2`.
+- [x] Dobles deterministas prueban fallos; la integración usa un servidor HTTP
+  efímero con respuestas sintéticas. No representa una llamada a ARGOS desplegado
+  ni un ensayo biométrico.
+- [x] Dirigido: `dotnet test Icarus/tests/Icarus.UnitTests/Icarus.UnitTests.csproj --filter FullyQualifiedName~ContratoArgosTests`.
+- [x] Integración: `dotnet test Icarus/tests/Icarus.IntegrationTests/Icarus.IntegrationTests.csproj --filter FullyQualifiedName~ArgosContratoRealTests`.
+- [x] Puerta completa y commits por tarea: `./verify.ps1`; adaptador en `develop`.
 
-Parcial ya implementado para desbloquear T7/T8: los puertos de aplicación
-(`IProveedorIdentidadFacial`, `ResultadoEnrolamiento`, `ResultadoIdentificacionFacial`),
-un proveedor determinista de pruebas y un proveedor por defecto que falla
-cerrado. `ContratoArgosTests` → 8/8 verdes. El adaptador HTTP real y
-`ArgosContratoRealTests` siguen bloqueados por A0.
+El adaptador está implementado. No persiste muestras, vectores, claves ni
+credenciales en configuración versionada. El nombre `ArgosContratoRealTests`
+se conserva por compatibilidad del plan; usa un doble HTTP efímero y no prueba
+el servicio desplegado. PAD real, deployment y piloto permanecen en T13.
 
 ## 7 — Habilitación y ciclo de enrolamiento
 

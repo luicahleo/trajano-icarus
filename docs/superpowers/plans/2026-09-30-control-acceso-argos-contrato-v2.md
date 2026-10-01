@@ -1,7 +1,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:subagent-driven-development` (recommended) or
 > `superpowers:executing-plans` to implement this plan task-by-task. Steps use
-> checkbox (`- [ ]`) syntax for tracking.
+> checkbox syntax for tracking: `[x]` means completed; `[ ]` means pending.
 
 # Plan — contrato v2 ARGOS (A0) y adaptador Trajano-Icarus (T6)
 
@@ -76,7 +76,7 @@ contrato v2.
 - Produces: blueprint `control_acceso_v2` con prefix `/api/v2/control-acceso`;
   decorator `requiere_control_acceso_auth` que devuelve 401/403 genéricos.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   En `ARGOS/tests/test_control_acceso_v2.py`:
 
@@ -101,12 +101,12 @@ contrato v2.
           self.assertEqual(response.status_code, 401)
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Run: `python -m unittest ARGOS.tests.test_control_acceso_v2 -v`
   Expected: FAIL with 404 (la ruta no existe todavía) o 200 si no hay auth.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   En `ARGOS/auth_control_acceso.py`:
 
@@ -150,12 +150,12 @@ contrato v2.
   app.register_blueprint(control_acceso_v2)
   ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Run: `python -m unittest ARGOS.tests.test_control_acceso_v2 -v`
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add ARGOS/control_acceso_v2.py ARGOS/auth_control_acceso.py ARGOS/__init__.py ARGOS/tests/test_control_acceso_v2.py
@@ -178,7 +178,7 @@ contrato v2.
 - Produces: JSON con `modelo`, `detector_backend`, `embedding_size`,
   `distance_metric`, `threshold`, `pad_disponible`, `version_contrato`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   ```python
   def test_capacidades_incluye_modelo_y_version(self):
@@ -193,11 +193,11 @@ contrato v2.
       self.assertIn("pad_disponible", data)
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — falta `embedding_size` o `pad_disponible`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   En `ARGOS/control_acceso_v2.py`:
 
@@ -223,11 +223,11 @@ contrato v2.
   - `pad_disponible` inicia en `false`; pasará a `true` solo después de acreditar
     PAD en tablet real.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add ARGOS/control_acceso_v2.py ARGOS/tests/test_control_acceso_v2.py
@@ -250,7 +250,7 @@ contrato v2.
 - Produces: 200 con `exitoso: true`, `vector`, `modelo_formato`, `version_modelo`,
   `pad_aprobado`; o 422 con `codigo` genérico.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   ```python
   import base64
@@ -279,11 +279,11 @@ contrato v2.
       self.assertEqual(response.get_json()["codigo"], "sin_rostro")
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — endpoint no implementado o falta mapeo de errores.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   Reutilizar `decode_base64_image` de `ARGOS/views.py` (o mover a un módulo
   compartido). Implementar:
@@ -322,12 +322,12 @@ contrato v2.
           return jsonify({"exitoso": False, "codigo": "extraccion_fallida"}), 500
   ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS. Si el fixture no tiene rostro real, ajustar para usar una
   imagen sintética con rostro generada por PIL o un fixture pequeño.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add ARGOS/control_acceso_v2.py ARGOS/tests/test_control_acceso_v2.py
@@ -351,7 +351,7 @@ contrato v2.
 - Produces: 200 con `identificado: true/false`, `trabajador_id` (si aplica),
   `codigo` (si negativo), `modelo_formato`, `version_modelo`, `pad_aprobado`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   ```python
   def test_identificacion_coincide_con_candidato(self):
@@ -390,11 +390,11 @@ contrato v2.
       self.assertEqual(response.get_json()["codigo"], "sin_coincidencia")
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — endpoint no implementado.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   Implementar `identificar` siguiendo la lógica de `/api/identify` pero:
 
@@ -407,11 +407,11 @@ contrato v2.
   - Si hay segundo candidato dentro de `margen_ambiguedad`, `ambigua`.
   - No devolver `top_matches`, distancias ni puntuaciones.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add ARGOS/control_acceso_v2.py ARGOS/tests/test_control_acceso_v2.py
@@ -431,7 +431,7 @@ contrato v2.
 - Consumes: endpoints v2.
 - Produces: cobertura de 400, 401, 403, 413, 422, 503 (simulado).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
   Añadir tests para:
 
@@ -442,11 +442,11 @@ contrato v2.
   - Dos candidatos con vectores iguales → `ambigua`.
   - Verificar que logs no contienen vectores ni GUID de trabajador.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
   Expected: FAIL — validaciones de tamaño y ambigüedad no implementadas.
 
-- [ ] **Step 3: Implementar validaciones**
+- [x] **Step 3: Implementar validaciones**
 
   En `control_acceso_v2.py`:
 
@@ -455,11 +455,11 @@ contrato v2.
   - Implementar lógica de ambigüedad.
   - Asegurar que `log_request` no reciba vectores ni GUID personales.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add ARGOS/control_acceso_v2.py ARGOS/tests/test_control_acceso_v2.py
@@ -485,7 +485,7 @@ contrato v2.
 - Produces: confirmación de que Caserito sigue funcionando; imagen lista para
   despliegue con memoria, logging y health actualizados.
 
-- [ ] **Step 1: Write/extend the regression test**
+- [x] **Step 1: Write/extend the regression test**
 
   En `ARGOS/tests/test_control_acceso_v2.py` o un nuevo
   `ARGOS/tests/test_caserito_regression.py`:
@@ -501,23 +501,27 @@ contrato v2.
       self.assertNotIn("icarus_api", data)
   ```
 
-- [ ] **Step 2: Run test suite**
+- [x] **Step 2: Run test suite**
 
   Run: `python -m unittest discover -s tests -p 'test_*.py' -v`
   Expected: PASS.
 
-- [ ] **Step 3: Build Docker image**
+- [x] **Step 3: Build Docker image**
 
   Run: `docker build -t argos:control-acceso-validacion .`
   Expected: SUCCESS.
 
 - [ ] **Step 4: Ajustar Dockerfile para PAD**
 
+  Pendiente deliberadamente para T13: PAD permanece desactivado hasta validar
+  el modelo en hardware real; no se incorporan pesos ni dependencias de PAD
+  antes de esa decisión operativa.
+
   - Si se habilita PAD con FASNet, añadir una línea que invoque
     `DeepFace.extract_faces(..., anti_spoofing=True)` o similar para forzar la
     descarga de pesos durante el build (evitar descargas en runtime).
 
-- [ ] **Step 5: Ajustar `deploy-production.sh` para v2**
+- [x] **Step 5: Ajustar `deploy-production.sh` para v2**
 
   Añadir/modificar el `docker run`:
 
@@ -545,7 +549,7 @@ contrato v2.
   ARGOS y que `deploy-production.sh` incluya `--memory 2g`, `--log-opt`, restart
   y la etiqueta de rollback.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   ```bash
   git add ARGOS/Dockerfile ARGOS/deploy-production.sh ARGOS/views.py ARGOS/tests/test_control_acceso_v2.py
@@ -575,7 +579,7 @@ contrato v2.
   configuración exclusiva del lado de ARGOS (no viaja en la petición ni se lee
   de `/capacidades`), así que no se modela aquí.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   En `ContratoArgosTests.cs`:
 
@@ -587,11 +591,11 @@ contrato v2.
   }
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — opciones no existen.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   En `OpcionesArgosControlAcceso.cs`:
 
@@ -616,11 +620,14 @@ contrato v2.
       services.AddSingleton<IProveedorIdentidadFacial, ProveedorIdentidadFacialNoDisponible>();
   ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS.
 
 - [ ] **Step 5: Configurar la API key**
+
+  Pendiente del despliegue VPS de T13. La clave no se copia a archivos ni al
+  repositorio; en operación se inyectará como `ArgosControlAcceso__ApiKey`.
 
   En producción el agenteVPS añade `ArgosControlAcceso__ApiKey` a
   `/var/apps/trajano-icarus/.env` al desplegar; el valor permanece en la VPS y
@@ -631,7 +638,7 @@ contrato v2.
   La petición original quedó en
   `preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS/53_peticion_agente_local_argos_contrato_v2_apikey_deploy_2026-10-01.md`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   ```bash
   git add Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/Argos/OpcionesArgosControlAcceso.cs Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/DependencyInjection.cs
@@ -653,7 +660,7 @@ contrato v2.
 - Produces: `ResultadoEnrolamiento` (éxito con vector/modelo/version o rechazo
   con motivo genérico).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   Usar `HttpMessageHandler` doble para simular respuesta 200:
 
@@ -672,11 +679,11 @@ contrato v2.
   }
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — `ClienteArgosControlAcceso` no existe.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   ```csharp
   public sealed class ClienteArgosControlAcceso : IProveedorIdentidadFacial
@@ -708,11 +715,11 @@ contrato v2.
   }
   ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/Argos/ClienteArgosControlAcceso.cs Icarus/tests/Icarus.UnitTests/ControlAcceso/ContratoArgosTests.cs
@@ -733,7 +740,7 @@ contrato v2.
 - Consumes: `MuestraFacial`, `IReadOnlyList<CandidatoFacial>`.
 - Produces: `ResultadoIdentificacionFacial`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   ```csharp
   [Fact]
@@ -751,11 +758,11 @@ contrato v2.
   }
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — `IdentificarAsync` no implementado o no mapea GUID.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
   En `ClienteArgosControlAcceso.cs`:
 
@@ -781,11 +788,11 @@ contrato v2.
   }
   ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/Argos/ClienteArgosControlAcceso.cs Icarus/tests/Icarus.UnitTests/ControlAcceso/ContratoArgosTests.cs
@@ -805,7 +812,7 @@ contrato v2.
 - Consumes: `ClienteArgosControlAcceso`.
 - Produces: cobertura de 401, 403, 413, 422, 503, timeout, mapeo de códigos.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
   Añadir tests para:
 
@@ -821,11 +828,11 @@ contrato v2.
   - `modelo_incompatible` → motivo `modelo_incompatible`.
   - Código desconocido o ausente → motivo `proveedor_no_disponible` (fallback).
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
   Expected: FAIL — manejo de errores no completo.
 
-- [ ] **Step 3: Implementar manejo de errores**
+- [x] **Step 3: Implementar manejo de errores**
 
   En `ClienteArgosControlAcceso.cs`:
 
@@ -849,11 +856,11 @@ contrato v2.
   Envolver llamadas en try/catch para `TaskCanceledException` (timeout) y
   `HttpRequestException`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/Argos/ClienteArgosControlAcceso.cs Icarus/tests/Icarus.UnitTests/ControlAcceso/ContratoArgosTests.cs
@@ -875,7 +882,7 @@ contrato v2.
   efímero con ARGOS v2.
 - Produces: prueba real de extracción e identificación con datos sintéticos.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   ```csharp
   [Fact]
@@ -887,22 +894,22 @@ contrato v2.
   }
   ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
   Expected: FAIL — el test está deshabilitado o no hay ARGOS disponible.
 
-- [ ] **Step 3: Implementar fixture efímera**
+- [x] **Step 3: Implementar fixture efímera**
 
   Si se usa Testcontainers para levantar ARGOS, configurar `Dockerfile` local
   como imagen base. Si no, usar un `WebApplicationFactory` con un doble HTTP
   mínimo que verifique el contrato serializado. El test real contra contenedor
   debe quedar condicionado a `ArgosControlAcceso:Url` configurado en testing.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
   Expected: PASS contra doble o contenedor real según disponibilidad.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add Icarus/tests/Icarus.IntegrationTests/ControlAcceso/ArgosContratoRealTests.cs
@@ -922,7 +929,7 @@ contrato v2.
 - Consumes: `./verify.ps1`.
 - Produces: confirmación de que todo el módulo sigue verde.
 
-- [ ] **Step 1: Run directed tests**
+- [x] **Step 1: Run directed tests**
 
   Run:
 
@@ -933,18 +940,18 @@ contrato v2.
 
   Expected: PASS.
 
-- [ ] **Step 2: Run full verification gate**
+- [x] **Step 2: Run full verification gate**
 
   Run: `./verify.ps1` (Docker activo).
   Expected: verde.
 
-- [ ] **Step 3: Update general plan and handoff**
+- [x] **Step 3: Update general plan and handoff**
 
   Marcar A0/T6 como completados en
   `docs/superpowers/plans/2026-09-25-control-acceso-fase1.md` y actualizar
   `docs/ai/HANDOFF.md` con resultados reales.
 
-- [ ] **Step 4: Commit and push**
+- [x] **Step 4: Commit and push**
 
   ```bash
   git add .
