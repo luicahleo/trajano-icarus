@@ -6,7 +6,10 @@ param(
     [switch]$SoloLocal,
     [switch]$Logs,
     [switch]$RecrearDatos,
-    [switch]$ConfirmarBorradoDatos
+    [switch]$ConfirmarBorradoDatos,
+    [string[]]$ComposeExtra,
+    [int]$EsperaSaludSegundosExtra = 0,
+    [string[]]$ServiciosLogsExtra
 )
 
 $ErrorActionPreference = 'Stop'
@@ -160,6 +163,9 @@ $archivosCompose = @(
     '-f', 'docker-compose.prodlocal.yml',
     '-f', "docker-compose.$Perfil.yml"
 )
+foreach ($archivoExtra in $ComposeExtra) {
+    $archivosCompose += @('-f', $archivoExtra)
+}
 Construir-ContenidoProduccion
 
 if ($RecrearDatos) {
@@ -204,9 +210,14 @@ for ($intento = 0; $intento -lt 30 -and -not (Test-Path $certificado); $intento+
     Start-Sleep -Seconds 1
 }
 
+# Un overlay de -ComposeExtra puede añadir un servicio del que "web" dependa
+# (depends_on con condition: service_healthy); ese servicio puede tardar más
+# en arrancar que el resto, de ahí $EsperaSaludSegundosExtra.
+$intentosSaludMax = 30 + $EsperaSaludSegundosExtra
+
 $urlSalud = "https://$hostLan/api/health"
 $saludable = $false
-for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
+for ($intento = 0; $intento -lt $intentosSaludMax -and -not $saludable; $intento++) {
     try {
         # Un handshake puede fallar mientras Caddy arranca. curl lo informa por
         # stderr, pero aquí debe provocar un reintento, no detener el script.
@@ -223,7 +234,7 @@ for ($intento = 0; $intento -lt 30 -and -not $saludable; $intento++) {
 if (-not $saludable) {
     try {
         $ErrorActionPreference = 'Continue'
-        $serviciosLogs = @('gateway', 'web', 'gestor-caisy')
+        $serviciosLogs = @('gateway', 'web', 'gestor-caisy') + $ServiciosLogsExtra
         & docker compose @archivosCompose logs --tail 50 @serviciosLogs
     }
     finally {

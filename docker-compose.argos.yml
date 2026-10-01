@@ -1,0 +1,28 @@
+# Overlay opcional para probar el contrato v2 de ARGOS en local, contra el
+# código real (no el doble determinista de los tests). Se activa con
+# -ConArgos en iniciar-pcN.ps1. Requiere el repo hermano ARGOS clonado en
+# ../dev/ARGOS relativo a este repo (mismo layout que las demás máquinas del
+# desarrollador).
+#
+# La clave de este bloque es solo de desarrollo local, dentro de la red
+# Docker interna (el puerto 5000 de ARGOS no se publica al host). Nunca es la
+# clave de producción, que permanece exclusivamente en la VPS (ver
+# docs/superpowers/specs/2026-09-30-control-acceso-argos-contrato-v2-design.md
+# y los documentos 53/54 de correspondencia con el agenteVPS).
+services:
+  argos:
+    build:
+      context: ../dev/ARGOS
+      dockerfile: Dockerfile
+    image: trajano-argos-local
+    environment:
+      CONTROL_ACCESO_API_KEY: "${ARGOS_DEV_API_KEY:-clave-dev-local-argos}"
+    restart: unless-stopped
+
+  web:
+    environment:
+      ArgosControlAcceso__Url: "http://argos:5000"
+      ArgosControlAcceso__ApiKey: "${ARGOS_DEV_API_KEY:-clave-dev-local-argos}"
+    depends_on:
+      argos:
+        condition: service_healthy
