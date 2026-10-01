@@ -472,8 +472,10 @@ contrato v2.
 
 **Files:**
 
-- Modify: `ARGOS/Dockerfile` (pre-descargar pesos PAD si se habilita FASNet;
-  añadir `%D` al formato de log de Gunicorn)
+- Modify: `ARGOS/Dockerfile` (pre-descargar pesos PAD si se habilita FASNet)
+- Modify: `ARGOS/deploy-production.sh` (límite de memoria 2g, log-opt,
+  `--name argos-v2-candidate` para validación, quitar chequeo legacy del health)
+- Modify: `ARGOS/views.py` (quitar dependencia `icarus_api` del `/health`)
 - Modify: `ARGOS/requirements.txt` (solo si se añade dependencia PAD)
 - Test: `ARGOS/tests/test_workflows.py` (ya existe)
 
@@ -481,7 +483,7 @@ contrato v2.
 
 - Consumes: `/api/verify` existente.
 - Produces: confirmación de que Caserito sigue funcionando; imagen lista para
-  despliegue con límite de memoria y logging configurados.
+  despliegue con memoria, logging y health actualizados.
 
 - [ ] **Step 1: Write/extend the regression test**
 
@@ -492,6 +494,11 @@ contrato v2.
   def test_verify_sigue_respondiendo(self):
       response = self.client.post("/api/verify", json={"image1": "...", "image2": "..."})
       self.assertIn(response.status_code, [200, 422, 500])
+
+  def test_health_no_reporta_icarus_api(self):
+      response = self.client.get("/health")
+      data = response.get_json()
+      self.assertNotIn("icarus_api", data)
   ```
 
 - [ ] **Step 2: Run test suite**
@@ -504,24 +511,42 @@ contrato v2.
   Run: `docker build -t argos:control-acceso-validacion .`
   Expected: SUCCESS.
 
-- [ ] **Step 4: Ajustar Dockerfile para operación**
+- [ ] **Step 4: Ajustar Dockerfile para PAD**
 
   - Si se habilita PAD con FASNet, añadir una línea que invoque
     `DeepFace.extract_faces(..., anti_spoofing=True)` o similar para forzar la
     descarga de pesos durante el build (evitar descargas en runtime).
-  - Cambiar el formato de log de Gunicorn para incluir `%D` (duración en µs):
-    `"--access-logformat", "%(h)s %(l)s %(u)s %(t)s \"%(r)s\" %(s)s %(b)s %(D)s"`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Ajustar `deploy-production.sh` para v2**
+
+  Añadir/modificar el `docker run`:
 
   ```bash
-  git add ARGOS/Dockerfile ARGOS/tests/test_control_acceso_v2.py
-  git commit -m "test(argos): regresion de /api/verify y build docker"
+  docker run -d \
+      --name argos-v2-candidate \
+      --network trajano-shared-network \
+      --restart unless-stopped \
+      --memory 2g \
+      --log-opt max-size=10m --log-opt max-file=5 \
+      --env-file .env.production \
+      -v $(pwd)/logs:/app/logs \
+      argos:control-acceso-validacion
+  ```
+
+  El script debe:
+  1. Levantar `argos-v2-candidate`.
+  2. Ejecutar batería de humo de `/api/verify` y `/api/v2/control-acceso/*`.
+  3. Solo si pasa: `docker stop argos && docker rm argos && docker rename argos-v2-candidate argos`.
+
+- [ ] **Step 6: Commit**
+
+  ```bash
+  git add ARGOS/Dockerfile ARGOS/deploy-production.sh ARGOS/views.py ARGOS/tests/test_control_acceso_v2.py
+  git commit -m "feat(argos): ajustes operativos y regresion para v2"
   ```
 
   Luego abrir PR a `develop` en ARGOS según su `AGENTS.md`. Coordinar con
-  agenteVPS para el despliegue con `mem_limit=2g`, `CONTROL_ACCESO_API_KEY` en
-  `.env.production` y rotación de logs.
+  agenteVPS para el swap del contenedor candidato.
 
 ---
 
@@ -586,7 +611,15 @@ contrato v2.
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Configurar la API key**
+
+  Solicitar el valor de `CONTROL_ACCESO_API_KEY` al agenteVPS por canal seguro
+  (no por este documento ni por chat). La petición quedó documentada en
+  `preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS/53_peticion_agente_local_argos_contrato_v2_apikey_deploy_2026-10-01.md`.
+  Añadirlo a la configuración de Trajano-Icarus bajo `ArgosControlAcceso:ApiKey`
+  (fuera de git; por ejemplo, variable de entorno o secreto del host).
+
+- [ ] **Step 6: Commit**
 
   ```bash
   git add Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/Argos/OpcionesArgosControlAcceso.cs Icarus/src/ControlAcceso/Icarus.ControlAcceso.Infrastructure/DependencyInjection.cs
@@ -937,3 +970,21 @@ Two execution options:
    `superpowers:executing-plans`, batch execution with checkpoints.
 
 Which approach?
+
+## Resultados observados de la sesión documental (2026-10-01)
+
+- Se incorporó la respuesta 52 del agenteVPS al spec y al plan (API key ya en
+  `.env.production`, `mem_limit=2g` confirmado, logrotate configurado, host de
+  build con internet para pre-descargar pesos PAD, sin staging, deploy con
+  contenedor candidato aislado).
+- Se creó el documento 53 de correspondencia con el agenteVPS pidiendo el valor
+  de `CONTROL_ACCESO_API_KEY` por canal seguro y confirmando el procedimiento de
+  deploy candidato.
+- El PR `luicahleo/argos#2` (rama `feature/control-acceso-v2-doc` → `develop`)
+  pasó los checks `validar` y GitGuardian; su merge queda pendiente de la
+  revisión/review requerida por la protección de `develop`.
+- La implementación de código de A0/T6 no comenzó en esta sesión; sigue
+  condicionada a la aprobación del contrato, a la recepción de la API key y a
+  los ensayos en tablet real.
+- Los límites de no tocar `master`, no desplegar servicios y no implementar T6
+  ni T13 en código se respetaron.

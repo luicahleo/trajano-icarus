@@ -15,7 +15,7 @@ Fuentes consultadas:
   `80ef1cf`, árbol limpio.
 - Correspondencia con agenteVPS:
   `C:/Users/lrcahuana/source/repos/dev/DocumentacionProyectos/preguntasrespuestasCaseritoApp_AgenteLocal_AgenteVPS`
-  (docs 15, 26, 28, 32, 34, 45, 48, 49 y 50).
+  (docs 15, 26, 28, 32, 34, 45, 48, 49, 50 y 52).
 
 ## Alcance
 
@@ -78,6 +78,12 @@ A0 y por la disponibilidad del hardware.
 | Carga actual `/api/verify` | 20 llamadas totales (baterías de agosto), cero tráfico de producción desde entonces. | El kiosco parte de una base desocupada; el cuello de botella será inferencia CPU. |
 | Logs | `/app/logs/`, sin retención (`access.log` 81 MB). | Al redesplegar v2 se debe añadir rotación y `max-size` del log del contenedor. |
 | PAD | Ningún modelo instalado. DeepFace 0.0.100 soporta `anti_spoofing=True` (FASNet), pero descarga pesos en primer uso. | Hay que pre-hornear los pesos en la imagen Docker y ensayar en tablet real. |
+| API key | `CONTROL_ACCESO_API_KEY` ya añadida a `.env.production` (chmod 600). | El valor se transfiere por canal seguro; tomará efecto al redeployar v2. |
+| Memoria | `mem_limit=2g` confirmado. | Aplicar en `deploy-production.sh` del repo ARGOS (`--memory 2g`). |
+| Logs | `logrotate` configurado en VPS; `log-opt` pendiente en `deploy-production.sh`. | Añadir `--log-opt max-size=10m --log-opt max-file=5` al `docker run`. |
+| Health check | Se recomienda quitar el chequeo `icarus_api` legacy de `/health`. | Modificar `ARGOS/views.py` en v2 para no depender de `icarus-api:5090`. |
+| Staging | No existe entorno de staging. | Usar contenedor candidato aislado (`argos-v2-candidate`) en la misma red antes del swap. |
+| Pesos PAD | Host de build tiene internet. | Pre-hornear pesos FASNet durante el build del Dockerfile. |
 
 ## Contrato v2
 
@@ -259,6 +265,9 @@ Response negativa (200 con `identificado: false`):
 - No se cambian umbrales ni detector globales.
 - El nuevo contrato v2 y `/api/verify` no comparten estado ni caché.
 - Se ensaya regresión de Caserito antes de cualquier despliegue compartido.
+- El despliegue de v2 se hará con un contenedor candidato aislado
+  (`argos-v2-candidate`) en la misma red interna; solo tras la batería de humo
+  se realiza el swap, sin interrumpir Caserito antes de tiempo.
 
 ## Modelo PAD pasivo y licencia
 
@@ -323,9 +332,12 @@ aceptan resultados de dobles de prueba como evidencia de producción.
 ## Dependencias
 
 - [x] Respuestas del agenteVPS sobre imagen desplegada, recursos del VPS y
-  configuración de red/secrets (doc 50).
-- [ ] Acuerdo con agenteVPS sobre `CONTROL_ACCESO_API_KEY`, límite de memoria,
-  formato de log con `%D` y rotación de logs para el redeploy de v2.
+  configuración de red/secrets (docs 50 y 52).
+- [x] Acuerdo con agenteVPS sobre `CONTROL_ACCESO_API_KEY`, límite de memoria y
+  rotación de logs para el redeploy de v2.
+- [~] Transferencia segura del valor de `CONTROL_ACCESO_API_KEY` a la
+  configuración de Trajano-Icarus (solicitada al agenteVPS en doc 53; pendiente
+  de entrega por canal seguro).
 - [ ] Ensayos en tablet Android real para PAD y latencia percibida.
 - [ ] Aprobación de este contrato por parte del usuario antes de implementar A0 en
   ARGOS y T6 en Trajano-Icarus.
