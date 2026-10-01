@@ -345,5 +345,5 @@ aceptan resultados de dobles de prueba como evidencia de producción.
   la VPS; el agenteVPS configurará `ArgosControlAcceso__ApiKey` en el entorno de
   Trajano-Icarus al desplegar (doc 54).
 - [ ] Ensayos en tablet Android real para PAD y latencia percibida.
-- [ ] Aprobación de este contrato por parte del usuario antes de implementar A0 en
-  ARGOS y T6 en Trajano-Icarus.
+- [x] Aprobación de este contrato por parte del usuario antes de implementar A0 en
+  ARGOS y T6 en Trajano-Icarus (2026-10-01).
