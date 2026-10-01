@@ -570,8 +570,10 @@ contrato v2.
 **Interfaces:**
 
 - Consumes: `IConfiguration` y `IProveedorIdentidadFacial`.
-- Produces: `OpcionesArgosControlAcceso` con `Url`, `ApiKey`, `Timeout`,
-  `MargenAmbiguedad`; registro condicional de `ClienteArgosControlAcceso`.
+- Produces: `OpcionesArgosControlAcceso` con `Url`, `ApiKey`, `Timeout`;
+  registro condicional de `ClienteArgosControlAcceso`. `margen_ambiguedad` es
+  configuración exclusiva del lado de ARGOS (no viaja en la petición ni se lee
+  de `/capacidades`), así que no se modela aquí.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -600,7 +602,6 @@ contrato v2.
       public string Url { get; set; } = string.Empty;
       public string ApiKey { get; set; } = string.Empty;
       public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
-      public double MargenAmbiguedad { get; set; } = 0.05;
   }
   ```
 
@@ -810,10 +811,15 @@ contrato v2.
 
   - 422 `sin_rostro` → `ResultadoEnrolamiento.Rechazado("sin_rostro")`.
   - 422 `pad_fallido` → `ResultadoIdentificacionFacial.SinCoincidencia("pad_fallido")`.
+  - 422 `extraccion_fallida` → `ResultadoEnrolamiento.Rechazado("extraccion_fallida")`.
+  - 422 `formato_invalido` → `ResultadoEnrolamiento.Rechazado("formato_invalido")`.
+  - 422 `imagen_muy_grande` → `ResultadoEnrolamiento.Rechazado("imagen_muy_grande")`.
+  - 422 `sin_candidatos` → `ResultadoIdentificacionFacial.SinCoincidencia("sin_candidatos")`.
   - 503 → `ResultadoIdentificacionFacial.SinCoincidencia("proveedor_no_disponible")`.
   - Timeout → `ResultadoIdentificacionFacial.SinCoincidencia("proveedor_no_disponible")`.
   - `ambigua` → motivo `ambigua`.
   - `modelo_incompatible` → motivo `modelo_incompatible`.
+  - Código desconocido o ausente → motivo `proveedor_no_disponible` (fallback).
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -829,9 +835,13 @@ contrato v2.
       "sin_rostro" => "sin_rostro",
       "varios_rostros" => "varios_rostros",
       "pad_fallido" => "pad_fallido",
+      "extraccion_fallida" => "extraccion_fallida",
+      "formato_invalido" => "formato_invalido",
+      "imagen_muy_grande" => "imagen_muy_grande",
       "ambigua" => "ambigua",
       "modelo_incompatible" => "modelo_incompatible",
       "sin_coincidencia" => "sin_coincidencia",
+      "sin_candidatos" => "sin_candidatos",
       _ => "proveedor_no_disponible"
   };
   ```

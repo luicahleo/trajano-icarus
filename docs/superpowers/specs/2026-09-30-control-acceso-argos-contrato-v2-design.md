@@ -228,7 +228,9 @@ Response negativa (200 con `identificado: false`):
 - **PAD pasiva:** se evalúa sobre la imagen enviada. Si el modelo no puede
   determinar que es una persona real, la respuesta es `pad_fallido`.
 - **Ambigüedad:** configurable por `margen_ambiguedad` (default: 0.05 en distancia
-  coseno). Si dos o más candidatos están dentro del margen, `ambigua`.
+  coseno), **exclusivamente del lado de ARGOS**. El cliente no lo envía en la
+  petición ni lo recibe en `/capacidades`; Trajano-Icarus no necesita una opción
+  propia para esto. Si dos o más candidatos están dentro del margen, `ambigua`.
 - **Rechazo:** si la mejor distancia supera el umbral, `sin_coincidencia`.
 - **Sin rostro / varios rostros:** se detectan antes de comparar y devuelven
   `sin_rostro` / `varios_rostros`.
@@ -241,7 +243,7 @@ Response negativa (200 con `identificado: false`):
 | 401 | `no_autenticado` | Falta o es inválida la API key. |
 | 403 | `aplicacion_no_permitida` | Aplicación o namespace no autorizado. |
 | 413 | `payload_muy_grande` | Imagen o lista de candidatos excede límite. |
-| 422 | `sin_rostro`, `varios_rostros`, `pad_fallido`, `extraccion_fallida`, `sin_coincidencia`, `ambigua`, `modelo_incompatible` | Negocio facial negativo. |
+| 422 | `sin_rostro`, `varios_rostros`, `pad_fallido`, `extraccion_fallida`, `formato_invalido`, `imagen_muy_grande`, `sin_coincidencia`, `ambigua`, `modelo_incompatible`, `sin_candidatos` | Negocio facial negativo. |
 | 503 | `proveedor_no_disponible` | ARGOS no puede atender la petición. |
 | 500 | `error_interno` | No mapeado; sin detalles nominales. |
 
