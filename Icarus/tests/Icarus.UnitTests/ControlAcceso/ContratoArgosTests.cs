@@ -1,4 +1,6 @@
 using System.Text;
+using System.Net;
+using System.Text.Json;
 using Icarus.ControlAcceso.Application.Biometria;
 using Icarus.ControlAcceso.Infrastructure;
 using Icarus.ControlAcceso.Infrastructure.Argos;
@@ -15,6 +17,48 @@ public class ContratoArgosTests
 
     private static MuestraFacial Muestra(string contenido) =>
         new(Encoding.ASCII.GetBytes(contenido), "jpg");
+
+    [Fact]
+    public async Task ClienteArgos_Extraer_mapea_respuesta_exitosa_y_envia_contrato_v2()
+    {
+        HttpRequestMessage? solicitud = null;
+        var handler = new TestHandler(request =>
+        {
+            solicitud = request;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"exitoso":true,"vector":[0.1,-0.2],"modelo_formato":"arcface-cosine-512","version_modelo":1,"pad_aprobado":true}""")
+            };
+        });
+        var cliente = new ClienteArgosControlAcceso(
+            new HttpClient(handler),
+            Options.Create(new OpcionesArgosControlAcceso { Url = "http://argos", ApiKey = "clave-prueba" }));
+
+        var imagen = new byte[] { 1, 2, 3 };
+        var resultado = await cliente.ExtraerAsync(new MuestraFacial(imagen, "jpeg"));
+
+        Assert.True(resultado.Exitoso);
+        Assert.Equal("arcface-cosine-512", resultado.ModeloFormato);
+        Assert.Equal(1, resultado.VersionModelo);
+        Assert.Equal(new[] { 0.1f, -0.2f }.SelectMany(BitConverter.GetBytes), resultado.Vector);
+        Assert.NotNull(solicitud);
+        Assert.Equal(HttpMethod.Post, solicitud.Method);
+        Assert.Equal("/api/v2/control-acceso/extracciones", solicitud.RequestUri!.AbsolutePath);
+        Assert.Equal("Bearer", solicitud.Headers.Authorization!.Scheme);
+        Assert.Equal("clave-prueba", solicitud.Headers.Authorization.Parameter);
+        using var body = JsonDocument.Parse(await solicitud.Content!.ReadAsStringAsync());
+        Assert.Equal("trajano-icarus-control-acceso", body.RootElement.GetProperty("aplicacion").GetString());
+        Assert.Equal(Guid.Empty.ToString(), body.RootElement.GetProperty("tenant_id").GetString());
+        Assert.Equal(Convert.ToBase64String(imagen), body.RootElement.GetProperty("imagen").GetString());
+        Assert.Equal("jpeg", body.RootElement.GetProperty("formato").GetString());
+    }
+
+    private sealed class TestHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(responder(request));
+    }
 
     [Fact]
     public async Task ExtraccionDevuelveVectorConModeloExplicito()
