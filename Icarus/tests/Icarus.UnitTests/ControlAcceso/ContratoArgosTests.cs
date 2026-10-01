@@ -1,6 +1,10 @@
 using System.Text;
 using Icarus.ControlAcceso.Application.Biometria;
+using Icarus.ControlAcceso.Infrastructure;
 using Icarus.ControlAcceso.Infrastructure.Argos;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Icarus.UnitTests.ControlAcceso;
@@ -91,5 +95,65 @@ public class ContratoArgosTests
         var resultado = await _proveedor.IdentificarAsync(Muestra("rostro-A"), []);
 
         Assert.False(resultado.Identificado);
+    }
+
+    [Fact]
+    public void CuandoNoHayUrl_UsaProveedorNoDisponible()
+    {
+        var configuracion = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>())
+            .Build();
+        var servicios = new ServiceCollection();
+        servicios.AddControlAccesoInfrastructure(configuracion);
+
+        using var proveedorServicios = servicios.BuildServiceProvider();
+
+        Assert.IsType<ProveedorIdentidadFacialNoDisponible>(
+            proveedorServicios.GetRequiredService<IProveedorIdentidadFacial>());
+        Assert.Equal(TimeSpan.FromSeconds(15),
+            proveedorServicios.GetRequiredService<IOptions<OpcionesArgosControlAcceso>>().Value.Timeout);
+    }
+
+    [Fact]
+    public void CuandoHayUrl_ResuelveClienteYVinculaOpciones()
+    {
+        var configuracion = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{OpcionesArgosControlAcceso.Seccion}:Url"] = "http://argos.example",
+                [$"{OpcionesArgosControlAcceso.Seccion}:ApiKey"] = "clave-de-prueba",
+                [$"{OpcionesArgosControlAcceso.Seccion}:Timeout"] = "00:00:09"
+            })
+            .Build();
+        var servicios = new ServiceCollection();
+        servicios.AddControlAccesoInfrastructure(configuracion);
+
+        using var proveedorServicios = servicios.BuildServiceProvider();
+
+        Assert.IsType<ClienteArgosControlAcceso>(
+            proveedorServicios.GetRequiredService<IProveedorIdentidadFacial>());
+        var opciones = proveedorServicios.GetRequiredService<IOptions<OpcionesArgosControlAcceso>>().Value;
+        Assert.Equal("http://argos.example", opciones.Url);
+        Assert.Equal("clave-de-prueba", opciones.ApiKey);
+        Assert.Equal(TimeSpan.FromSeconds(9), opciones.Timeout);
+    }
+
+    [Fact]
+    public void CuandoSeSolicitaDoble_PriorizaElDobleAunqueHayaUrl()
+    {
+        var configuracion = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{OpcionesBiometria.Seccion}:UsarDoble"] = "true",
+                [$"{OpcionesArgosControlAcceso.Seccion}:Url"] = "http://argos.example"
+            })
+            .Build();
+        var servicios = new ServiceCollection();
+        servicios.AddControlAccesoInfrastructure(configuracion);
+
+        using var proveedorServicios = servicios.BuildServiceProvider();
+
+        Assert.IsType<ProveedorIdentidadFacialDoble>(
+            proveedorServicios.GetRequiredService<IProveedorIdentidadFacial>());
     }
 }

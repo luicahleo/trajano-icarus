@@ -61,8 +61,15 @@ public static class DependencyInjection
             .Bind(configuracion.GetSection(OpcionesBiometria.Seccion));
         var biometria = configuracion.GetSection(OpcionesBiometria.Seccion).Get<OpcionesBiometria>()
             ?? new OpcionesBiometria();
+        servicios.AddOptions<OpcionesArgosControlAcceso>()
+            .Bind(configuracion.GetSection(OpcionesArgosControlAcceso.Seccion));
+        var argos = configuracion.GetSection(OpcionesArgosControlAcceso.Seccion)
+            .Get<OpcionesArgosControlAcceso>() ?? new OpcionesArgosControlAcceso();
         if (biometria.UsarDoble)
             servicios.AddSingleton<IProveedorIdentidadFacial, ProveedorIdentidadFacialDoble>();
+        else if (!string.IsNullOrWhiteSpace(argos.Url))
+            servicios.AddHttpClient<IProveedorIdentidadFacial, ClienteArgosControlAcceso>(cliente =>
+                cliente.Timeout = argos.Timeout);
         else
             servicios.AddSingleton<IProveedorIdentidadFacial, ProveedorIdentidadFacialNoDisponible>();
 
