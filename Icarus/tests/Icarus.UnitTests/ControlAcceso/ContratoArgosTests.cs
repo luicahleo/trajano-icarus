@@ -53,6 +53,43 @@ public class ContratoArgosTests
         Assert.Equal("jpeg", body.RootElement.GetProperty("formato").GetString());
     }
 
+    [Fact]
+    public async Task ClienteArgos_Identificar_mapea_solo_trabajador_y_envia_candidatos_v2()
+    {
+        HttpRequestMessage? solicitud = null;
+        var trabajadorId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var handler = new TestHandler(request =>
+        {
+            solicitud = request;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"identificado":true,"trabajador_id":"11111111-1111-1111-1111-111111111111","modelo_formato":"arcface-cosine-512","version_modelo":1,"pad_aprobado":true,"similitud":0.99}""")
+            };
+        });
+        var cliente = new ClienteArgosControlAcceso(
+            new HttpClient(handler),
+            Options.Create(new OpcionesArgosControlAcceso { Url = "http://argos", ApiKey = "clave-prueba" }));
+        var candidatos = new List<CandidatoFacial>
+        {
+            new(trabajadorId, new float[] { 0.1f, -0.2f }.SelectMany(BitConverter.GetBytes).ToArray(), "arcface-cosine-512", 1, 7)
+        };
+
+        var resultado = await cliente.IdentificarAsync(new MuestraFacial(new byte[] { 1, 2 }, "jpeg"), candidatos);
+
+        Assert.True(resultado.Identificado);
+        Assert.Equal(trabajadorId, resultado.TrabajadorId);
+        Assert.NotNull(solicitud);
+        Assert.Equal(HttpMethod.Post, solicitud.Method);
+        Assert.Equal("/api/v2/control-acceso/identificaciones", solicitud.RequestUri!.AbsolutePath);
+        using var body = JsonDocument.Parse(await solicitud.Content!.ReadAsStringAsync());
+        Assert.Equal("arcface-cosine-512", body.RootElement.GetProperty("modelo_formato_esperado").GetString());
+        Assert.Equal(1, body.RootElement.GetProperty("version_modelo_esperada").GetInt32());
+        var candidato = Assert.Single(body.RootElement.GetProperty("candidatos").EnumerateArray());
+        Assert.Equal(trabajadorId.ToString(), candidato.GetProperty("trabajador_id").GetString());
+        Assert.Equal(7, candidato.GetProperty("version_enrolamiento").GetInt32());
+        Assert.Equal(new[] { (double)0.1f, (double)-0.2f }, candidato.GetProperty("vector").EnumerateArray().Select(x => x.GetDouble()));
+    }
+
     private sealed class TestHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(

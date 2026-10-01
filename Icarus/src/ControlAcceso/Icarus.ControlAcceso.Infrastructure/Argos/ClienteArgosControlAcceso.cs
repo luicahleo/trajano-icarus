@@ -11,6 +11,7 @@ namespace Icarus.ControlAcceso.Infrastructure.Argos;
 public sealed class ClienteArgosControlAcceso : IProveedorIdentidadFacial
 {
     private const string RutaExtracciones = "/api/v2/control-acceso/extracciones";
+    private const string RutaIdentificaciones = "/api/v2/control-acceso/identificaciones";
     private readonly HttpClient _httpClient;
 
     public ClienteArgosControlAcceso(
@@ -59,11 +60,43 @@ public sealed class ClienteArgosControlAcceso : IProveedorIdentidadFacial
         }
     }
 
-    public Task<ResultadoIdentificacionFacial> IdentificarAsync(
+    public async Task<ResultadoIdentificacionFacial> IdentificarAsync(
         MuestraFacial muestra,
         IReadOnlyList<CandidatoFacial> candidatos,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(ResultadoIdentificacionFacial.SinCoincidencia("proveedor_no_disponible"));
+        CancellationToken cancellationToken = default)
+    {
+        var solicitud = new SolicitudIdentificacion(
+            "trajano-icarus-control-acceso",
+            Guid.Empty,
+            Convert.ToBase64String(muestra.Contenido),
+            muestra.Formato,
+            candidatos.FirstOrDefault()?.ModeloFormato ?? "arcface-cosine-512",
+            1,
+            candidatos.Select(c => new CandidatoIdentificacion(
+                c.TrabajadorId.ToString(),
+                MemoryMarshal.Cast<byte, float>(c.Vector.AsSpan()).ToArray().Select(v => (double)v).ToArray(),
+                c.ModeloFormato,
+                c.VersionEnrolamiento)).ToArray());
+
+        using var respuesta = await _httpClient.PostAsJsonAsync(
+            RutaIdentificaciones, solicitud, cancellationToken);
+        if (!respuesta.IsSuccessStatusCode)
+            return ResultadoIdentificacionFacial.SinCoincidencia("proveedor_no_disponible");
+
+        try
+        {
+            var cuerpo = await respuesta.Content.ReadFromJsonAsync<RespuestaIdentificacion>(
+                cancellationToken: cancellationToken);
+            if (cuerpo is { Identificado: true } && Guid.TryParse(cuerpo.TrabajadorId, out var trabajadorId))
+                return ResultadoIdentificacionFacial.Coincide(trabajadorId);
+
+            return ResultadoIdentificacionFacial.SinCoincidencia("sin_coincidencia");
+        }
+        catch (JsonException)
+        {
+            return ResultadoIdentificacionFacial.SinCoincidencia("proveedor_no_disponible");
+        }
+    }
 
     private sealed record SolicitudExtraccion(
         [property: JsonPropertyName("aplicacion")] string Aplicacion,
@@ -77,4 +110,23 @@ public sealed class ClienteArgosControlAcceso : IProveedorIdentidadFacial
         [property: JsonPropertyName("modelo_formato")] string? ModeloFormato,
         [property: JsonPropertyName("version_modelo")] int VersionModelo,
         [property: JsonPropertyName("pad_aprobado")] bool PadAprobado);
+
+    private sealed record SolicitudIdentificacion(
+        [property: JsonPropertyName("aplicacion")] string Aplicacion,
+        [property: JsonPropertyName("tenant_id")] Guid TenantId,
+        [property: JsonPropertyName("imagen")] string Imagen,
+        [property: JsonPropertyName("formato")] string Formato,
+        [property: JsonPropertyName("modelo_formato_esperado")] string ModeloFormatoEsperado,
+        [property: JsonPropertyName("version_modelo_esperada")] int VersionModeloEsperada,
+        [property: JsonPropertyName("candidatos")] IReadOnlyList<CandidatoIdentificacion> Candidatos);
+
+    private sealed record CandidatoIdentificacion(
+        [property: JsonPropertyName("trabajador_id")] string TrabajadorId,
+        [property: JsonPropertyName("vector")] double[] Vector,
+        [property: JsonPropertyName("modelo_formato")] string ModeloFormato,
+        [property: JsonPropertyName("version_enrolamiento")] int VersionEnrolamiento);
+
+    private sealed record RespuestaIdentificacion(
+        [property: JsonPropertyName("identificado")] bool Identificado,
+        [property: JsonPropertyName("trabajador_id")] string? TrabajadorId);
 }
