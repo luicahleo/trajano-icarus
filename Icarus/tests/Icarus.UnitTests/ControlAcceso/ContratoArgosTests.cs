@@ -90,6 +90,136 @@ public class ContratoArgosTests
         Assert.Equal(new[] { (double)0.1f, (double)-0.2f }, candidato.GetProperty("vector").EnumerateArray().Select(x => x.GetDouble()));
     }
 
+    [Theory]
+    [InlineData("sin_rostro", "sin_rostro", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("varios_rostros", "varios_rostros", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("extraccion_fallida", "extraccion_fallida", HttpStatusCode.InternalServerError)]
+    [InlineData("formato_invalido", "formato_invalido", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("imagen_muy_grande", "imagen_muy_grande", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("codigo_interno", "proveedor_no_disponible", HttpStatusCode.UnprocessableEntity)]
+    [InlineData(null, "proveedor_no_disponible", HttpStatusCode.UnprocessableEntity)]
+    public async Task ClienteArgos_Extraer_mapea_codigo_de_error_limitado(string? codigo, string motivo, HttpStatusCode estado)
+    {
+        var cliente = CrearCliente(new HttpResponseMessage(estado)
+        {
+            Content = new StringContent(codigo is null ? "{}" : $"{{\"codigo\":\"{codigo}\"}}")
+        });
+
+        var resultado = await cliente.ExtraerAsync(Muestra("sintetica"));
+
+        Assert.False(resultado.Exitoso);
+        Assert.Equal(motivo, resultado.Motivo);
+    }
+
+    [Theory]
+    [InlineData("pad_fallido", "pad_fallido", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("sin_rostro", "sin_rostro", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("ambigua", "ambigua", HttpStatusCode.OK)]
+    [InlineData("modelo_incompatible", "modelo_incompatible", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("sin_coincidencia", "sin_coincidencia", HttpStatusCode.OK)]
+    [InlineData("sin_candidatos", "sin_candidatos", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("codigo_interno", "proveedor_no_disponible", HttpStatusCode.UnprocessableEntity)]
+    [InlineData(null, "proveedor_no_disponible", HttpStatusCode.UnprocessableEntity)]
+    public async Task ClienteArgos_Identificar_mapea_codigo_de_error_limitado(string? codigo, string motivo, HttpStatusCode estado)
+    {
+        string cuerpo;
+        if (codigo is null)
+            cuerpo = "{}";
+        else if (estado == HttpStatusCode.OK)
+            cuerpo = $"{{\"identificado\":false,\"codigo\":\"{codigo}\"}}";
+        else
+            cuerpo = $"{{\"codigo\":\"{codigo}\"}}";
+        var cliente = CrearCliente(new HttpResponseMessage(estado)
+        {
+            Content = new StringContent(cuerpo)
+        });
+
+        var resultado = await cliente.IdentificarAsync(Muestra("sintetica"), []);
+
+        Assert.False(resultado.Identificado);
+        Assert.Equal(motivo, resultado.Motivo);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.RequestEntityTooLarge)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task ClienteArgos_Identificar_falla_cerrado_en_status_http(HttpStatusCode estado)
+    {
+        var cliente = CrearCliente(new HttpResponseMessage(estado)
+        {
+            Content = new StringContent("{\"codigo\":\"sin_rostro\"}")
+        });
+
+        var resultado = await cliente.IdentificarAsync(Muestra("sintetica"), []);
+
+        Assert.False(resultado.Identificado);
+        Assert.Equal("proveedor_no_disponible", resultado.Motivo);
+    }
+
+    [Fact]
+    public async Task ClienteArgos_Extraer_falla_cerrado_en_status_no_exitoso()
+    {
+        var cliente = CrearCliente(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+        {
+            Content = new StringContent("{\"codigo\":\"sin_rostro\"}")
+        });
+
+        var resultado = await cliente.ExtraerAsync(Muestra("sintetica"));
+
+        Assert.False(resultado.Exitoso);
+        Assert.Equal("proveedor_no_disponible", resultado.Motivo);
+    }
+
+    [Fact]
+    public async Task ClienteArgos_Extraer_falla_cerrado_en_timeout()
+    {
+        var cliente = CrearCliente(error: new TaskCanceledException());
+
+        var resultado = await cliente.ExtraerAsync(Muestra("sintetica"));
+
+        Assert.False(resultado.Exitoso);
+        Assert.Equal("proveedor_no_disponible", resultado.Motivo);
+    }
+
+    [Fact]
+    public async Task ClienteArgos_Identificar_falla_cerrado_en_timeout()
+    {
+        var cliente = CrearCliente(error: new TaskCanceledException());
+
+        var resultado = await cliente.IdentificarAsync(Muestra("sintetica"), []);
+
+        Assert.False(resultado.Identificado);
+        Assert.Equal("proveedor_no_disponible", resultado.Motivo);
+    }
+
+    [Fact]
+    public async Task ClienteArgos_Extraer_falla_cerrado_en_error_de_transporte()
+    {
+        var cliente = CrearCliente(error: new HttpRequestException());
+
+        var resultado = await cliente.ExtraerAsync(Muestra("sintetica"));
+
+        Assert.False(resultado.Exitoso);
+        Assert.Equal("proveedor_no_disponible", resultado.Motivo);
+    }
+
+    [Fact]
+    public async Task ClienteArgos_Identificar_falla_cerrado_en_error_de_transporte()
+    {
+        var cliente = CrearCliente(error: new HttpRequestException());
+
+        var resultado = await cliente.IdentificarAsync(Muestra("sintetica"), []);
+
+        Assert.False(resultado.Identificado);
+        Assert.Equal("proveedor_no_disponible", resultado.Motivo);
+    }
+
+    private static ClienteArgosControlAcceso CrearCliente(HttpResponseMessage? respuesta = null, Exception? error = null) =>
+        new(new HttpClient(new TestHandler(_ => error is not null ? throw error : respuesta!)),
+            Options.Create(new OpcionesArgosControlAcceso { Url = "http://argos", ApiKey = "clave-prueba" }));
+
     private sealed class TestHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
