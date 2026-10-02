@@ -151,6 +151,41 @@ a { color: var(--aqua-oscuro); }
     color: var(--aqua-oscuro);
 }
 
+.lateral__grupo + .lateral__grupo {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--borde);
+}
+
+.lateral__grupo-titulo {
+    display: block;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--neutro);
+}
+
+.lateral__grupo .lateral__enlace {
+    border-left: 3px solid transparent;
+    padding-left: 9px;
+}
+
+.lateral__grupo--alimento .lateral__enlace--activo {
+    border-left-color: var(--aqua);
+}
+
+.lateral__grupo--huevo .lateral__enlace:hover {
+    background-color: rgba(215, 90, 45, 0.08);
+}
+
+.lateral__grupo--huevo .lateral__enlace--activo {
+    background-color: rgba(215, 90, 45, 0.12);
+    color: var(--terracota-oscura);
+    border-left-color: var(--terracota);
+}
+
 .contenido {
     flex-grow: 1;
     min-width: 0;
