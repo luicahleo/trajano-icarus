@@ -33,4 +33,18 @@ public class LayoutTests
         var ico = await cliente.GetAsync("/favicon.ico");
         Assert.Equal(HttpStatusCode.OK, ico.StatusCode);
     }
+
+    [Fact]
+    public async Task ElMenuLateralAgrupaAlimentoYHuevoConRotuloDeDominio()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync(funcCaisy: 3);
+
+        var html = await cliente.GetStringAsync("/Precios");
+
+        Assert.Contains("lateral__grupo--alimento", html);
+        Assert.Contains("lateral__grupo--huevo", html);
+        Assert.Contains("lateral__grupo-titulo\">Alimento</span>", html);
+        Assert.Contains("lateral__grupo-titulo\">Huevo</span>", html);
+    }
 }

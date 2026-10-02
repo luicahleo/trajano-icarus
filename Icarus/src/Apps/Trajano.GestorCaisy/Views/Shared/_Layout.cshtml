@@ -40,25 +40,31 @@
             <nav class="lateral" aria-label="Navegación principal">
                 @if (ReclamosCaisy.TieneGestorPedidoAlimento(User))
                 {
-                    <a asp-controller="Precios" asp-action="Index"
-                       class="lateral__enlace @(seccion == "precios" ? "lateral__enlace--activo" : "")">
-                        Precios de alimento
-                    </a>
-                    <a asp-controller="Pedidos" asp-action="Index"
-                       class="lateral__enlace @(seccion == "pedidos" ? "lateral__enlace--activo" : "")">
-                        Pedidos de alimento
-                    </a>
+                    <div class="lateral__grupo lateral__grupo--alimento">
+                        <span class="lateral__grupo-titulo">Alimento</span>
+                        <a asp-controller="Precios" asp-action="Index"
+                           class="lateral__enlace @(seccion == "precios" ? "lateral__enlace--activo" : "")">
+                            Precios de alimento
+                        </a>
+                        <a asp-controller="Pedidos" asp-action="Index"
+                           class="lateral__enlace @(seccion == "pedidos" ? "lateral__enlace--activo" : "")">
+                            Pedidos de alimento
+                        </a>
+                    </div>
                 }
                 @if (ReclamosCaisy.TieneGestorRecepcionHuevos(User))
                 {
-                    <a asp-controller="PreciosHuevo" asp-action="Index"
-                       class="lateral__enlace @(seccion == "precios-huevo" ? "lateral__enlace--activo" : "")">
-                        Precios de huevo
-                    </a>
-                    <a asp-controller="RecepcionesHuevo" asp-action="Index"
-                       class="lateral__enlace @(seccion == "recepciones-huevo" ? "lateral__enlace--activo" : "")">
-                        Recepción de huevo
-                    </a>
+                    <div class="lateral__grupo lateral__grupo--huevo">
+                        <span class="lateral__grupo-titulo">Huevo</span>
+                        <a asp-controller="PreciosHuevo" asp-action="Index"
+                           class="lateral__enlace @(seccion == "precios-huevo" ? "lateral__enlace--activo" : "")">
+                            Precios de huevo
+                        </a>
+                        <a asp-controller="RecepcionesHuevo" asp-action="Index"
+                           class="lateral__enlace @(seccion == "recepciones-huevo" ? "lateral__enlace--activo" : "")">
+                            Recepción de huevo
+                        </a>
+                    </div>
                 }
             </nav>
         }
