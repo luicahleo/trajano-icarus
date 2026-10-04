@@ -81,9 +81,14 @@ public sealed record ObtenerNotificacionPreciosQuery(Guid NotificacionId)
 public sealed record ObtenerPrecioVigenteQuery(DateOnly? Fecha)
     : IRequest<NotificacionPreciosDetalle?>;
 
+// PrecioAnteriorEsperado es informativo (spec 2026-09-15, alineado con
+// precios de huevo): el PrecioFinalPor40Kg de la publicación vigente a la
+// fecha del documento para el mismo tipo y presentación. No se persiste ni
+// bloquea publicar; solo alimenta la advertencia visual.
 public sealed record DetallePrecioResumen(
     Guid Id, string TipoAlimento, string Presentacion, decimal PrecioFinalPor40Kg,
-    decimal? PrecioActualDocumento, int? EdadDesdeDias, int? EdadHastaDias, string Codigo);
+    decimal? PrecioActualDocumento, int? EdadDesdeDias, int? EdadHastaDias, string Codigo,
+    decimal? PrecioAnteriorEsperado = null);
 
 public sealed record NotificacionPreciosDetalle(
     Guid Id, DateOnly FechaDocumento, DateOnly VigenteDesde, string Estado,
@@ -315,7 +320,8 @@ public sealed class ObtenerNotificacionPreciosHandler(IRepositorioNotificaciones
     {
         var notificacion = await repositorio.ObtenerPorIdAsync(request.NotificacionId, cancellationToken)
             ?? throw new NotFoundException("Notificación de precios", request.NotificacionId);
-        return MapeadorPrecios.Mapear(notificacion);
+        var anterior = await repositorio.ObtenerVigenteAsync(notificacion.FechaDocumento, cancellationToken);
+        return MapeadorPrecios.Mapear(notificacion, anterior);
     }
 }
 
@@ -329,7 +335,10 @@ public sealed class ObtenerPrecioVigenteHandler(IRepositorioNotificacionesPrecio
     {
         var vigente = await repositorio.ObtenerVigenteAsync(
             request.Fecha ?? FechasNegocio.Hoy(), cancellationToken);
-        return vigente is null ? null : MapeadorPrecios.Mapear(vigente);
+        if (vigente is null)
+            return null;
+        var anterior = await repositorio.ObtenerVigenteAsync(vigente.FechaDocumento, cancellationToken);
+        return MapeadorPrecios.Mapear(vigente, anterior);
     }
 }
 
@@ -352,8 +361,14 @@ public sealed class DescargarDocumentoOriginalHandler(
 
 internal static class MapeadorPrecios
 {
-    public static NotificacionPreciosDetalle Mapear(NotificacionPreciosAlimentos notificacion) =>
-        new(notificacion.Id, notificacion.FechaDocumento, notificacion.VigenteDesde,
+    public static NotificacionPreciosDetalle Mapear(
+        NotificacionPreciosAlimentos notificacion, NotificacionPreciosAlimentos? anterior = null)
+    {
+        var preciosAnteriores = new Dictionary<(TipoAlimento, PresentacionAlimento), decimal>();
+        if (anterior is not null)
+            foreach (var detalle in anterior.Detalles)
+                preciosAnteriores[(detalle.TipoAlimento, detalle.Presentacion)] = detalle.PrecioFinalPor40Kg;
+        return new(notificacion.Id, notificacion.FechaDocumento, notificacion.VigenteDesde,
             notificacion.Estado.ToString(), notificacion.AporteCaisy, notificacion.Fondo,
             notificacion.Servicios, notificacion.DocumentoOriginalId,
             notificacion.Detalles
@@ -361,6 +376,10 @@ internal static class MapeadorPrecios
                 .Select(d => new DetallePrecioResumen(
                     d.Id, d.TipoAlimento.ToString(), d.Presentacion.ToString(),
                     d.PrecioFinalPor40Kg, d.PrecioActualDocumento, d.EdadDesdeDias, d.EdadHastaDias,
-                    CatalogoAlimentosCaisy.CodigoDe(d.TipoAlimento, d.Presentacion)))
+                    CatalogoAlimentosCaisy.CodigoDe(d.TipoAlimento, d.Presentacion),
+                    preciosAnteriores.TryGetValue((d.TipoAlimento, d.Presentacion), out var precioAnterior)
+                        ? precioAnterior
+                        : null))
                 .ToList());
+    }
 }
