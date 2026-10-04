@@ -274,13 +274,13 @@ public class PreciosAlimentosEndpointsTests
     }
 
     [Fact]
-    public async Task ElPrecioActualDiscrepanteBloqueaLaPublicacion()
+    public async Task ElPrecioActualDiscrepanteYaNoBloqueaLaPublicacion()
     {
         var (cliente, token) = await CrearCuentaCaisyConFuncion();
 
         // Publicación base: rige desde antes de la fecha del segundo documento,
         // de modo que la columna «Precio actual» del segundo tenga contra qué
-        // controlarse. (176.50 es el precio nuevo del documento base.)
+        // compararse. (176.50 es el precio nuevo del documento base.)
         var baseVigente = await ImportarConAsync(
             cliente, token, FixtureConFechas(FechaDocumentoControl, VigenciaBaseline));
         Assert.Equal(HttpStatusCode.NoContent, await PublicarAsync(cliente, token, baseVigente));
@@ -289,13 +289,12 @@ public class PreciosAlimentosEndpointsTests
             cliente, token, FixtureConFechas(FechaDocumentoControl, VigenciaUnica()));
         var respuesta = await PublicarAsync(cliente, token, borrador);
 
-        Assert.Equal(HttpStatusCode.BadRequest, respuesta);
-        var detalle = await cliente.SendAsync(Pedido(
-            HttpMethod.Get, $"/api/precios-alimentos/{borrador}", token));
-        Assert.Equal(HttpStatusCode.OK, detalle.StatusCode);
-        // La extracción del borrador no se ve afectada: sigue editable.
-        var cuerpo = await detalle.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("Borrador", cuerpo.GetProperty("estado").GetString());
+        // El chequeo ya no bloquea (spec 2026-09-15, alineado con precios de
+        // huevo): publicar tiene éxito aunque la columna «Precio actual» no
+        // coincida con la vigente a la fecha del documento.
+        Assert.Equal(HttpStatusCode.NoContent, respuesta);
+        var detalle = await ObtenerAsync(cliente, token, $"/api/precios-alimentos/{borrador}");
+        Assert.Equal("Publicada", detalle.GetProperty("estado").GetString());
     }
 
     [Fact]

@@ -1,4 +1,3 @@
-using System.Globalization;
 using FluentValidation;
 using FluentValidation.Results;
 using Icarus.BuildingBlocks.Application;
@@ -230,8 +229,11 @@ public sealed class ActualizarBorradorPreciosHandler(
 }
 
 // La publicación exige confirmación explícita (spec SP8): unicidad de
-// vigencia activa, control de la columna «Precio actual» contra la vigente y
-// sellado inmediato del borrador. Nunca se publica automáticamente.
+// vigencia activa y sellado inmediato del borrador. La columna «Precio
+// actual» ya no bloquea publicar (spec 2026-09-15, alineado con precios de
+// huevo): queda solo como advertencia informativa en la consulta (ver
+// ObtenerNotificacionPreciosHandler / ObtenerPrecioVigenteHandler más abajo).
+// Nunca se publica automáticamente.
 public sealed class PublicarNotificacionPreciosHandler(
     IRepositorioNotificacionesPrecios repositorio,
     IRegistroVuelo registroVuelo,
@@ -246,12 +248,6 @@ public sealed class PublicarNotificacionPreciosHandler(
                 notificacion.VigenteDesde, notificacion.Id, cancellationToken))
             throw new ConflictException("Ya existe una publicación activa con esa vigencia.");
 
-        var vigente = await repositorio.ObtenerVigenteAsync(notificacion.FechaDocumento, cancellationToken);
-        var discrepancias = BuscarDiscrepancias(notificacion, vigente);
-        if (discrepancias.Count > 0)
-            throw new ValidationException(discrepancias.Select(d => new ValidationFailure(
-                $"Detalles[{d.DetalleId}].PrecioActualDocumento", d.Mensaje())));
-
         notificacion.Publicar();
         registroVuelo.Decidir(
             DescriptorOperacionRegistroVuelo.Crear("avicola.precios.publicar",
@@ -259,39 +255,6 @@ public sealed class PublicarNotificacionPreciosHandler(
             "publicacion", "aplicada",
             new Dictionary<string, object?> { ["CantidadDetalles"] = notificacion.Detalles.Count });
         await unidadTrabajo.SaveChangesAsync(cancellationToken);
-    }
-
-    // La interfaz de CAISY es en español (Bolivia): los precios de la
-    // discrepancia se muestran con coma decimal.
-    private static readonly CultureInfo CulturaInterfaz = CultureInfo.GetCultureInfo("es-BO");
-
-    private static List<DiscrepanciaPrecio> BuscarDiscrepancias(
-        NotificacionPreciosAlimentos notificacion, NotificacionPreciosAlimentos? vigente)
-    {
-        if (vigente is null)
-            return [];
-        var preciosVigentes = vigente.Detalles.ToDictionary(
-            d => (d.TipoAlimento, d.Presentacion), d => d.PrecioFinalPor40Kg);
-        return notificacion.Detalles
-            .Where(d => d.PrecioActualDocumento is { } precioActual
-                && preciosVigentes.TryGetValue((d.TipoAlimento, d.Presentacion), out var precioVigente)
-                && precioActual != precioVigente)
-            .Select(d => new DiscrepanciaPrecio(
-                d.Id, d.TipoAlimento, d.Presentacion, d.PrecioActualDocumento!.Value,
-                preciosVigentes[(d.TipoAlimento, d.Presentacion)]))
-            .ToList();
-    }
-
-    // El borrador es editable: la discrepancia se identifica por tipo y
-    // presentación, nunca por la fila original del Excel (spec 2026-09-15).
-    private sealed record DiscrepanciaPrecio(
-        Guid DetalleId, TipoAlimento Tipo, PresentacionAlimento Presentacion,
-        decimal PrecioBorrador, decimal PrecioVigente)
-    {
-        public string Mensaje() =>
-            $"Tipo: {Tipo}; presentación: {Presentacion}; columna: PRECIO ACTUAL; " +
-            $"valor del borrador: {PrecioBorrador.ToString("0.00", CulturaInterfaz)}; " +
-            $"valor vigente esperado: {PrecioVigente.ToString("0.00", CulturaInterfaz)}.";
     }
 }
 
