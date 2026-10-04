@@ -121,6 +121,22 @@ public class FlujoPreciosTests
     }
 
     [Fact]
+    public async Task DetallesAdvierteDiferenciasDePrecioActualSinBloquearPublicar()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync();
+        var id = Guid.NewGuid();
+        aplicacion.Api.DetalleActual = ApiIcarusFalsa.CrearDetalle(id, "Borrador");
+
+        var html = await cliente.GetStringAsync($"/Precios/{id}");
+
+        Assert.Contains("Precio actual esperado", html);
+        Assert.Contains("117.00", html);
+        Assert.Contains("advertencia", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"/Precios/{id}/Publicar", html);
+    }
+
+    [Fact]
     public async Task AnularUnaPublicacionFutura()
     {
         using var aplicacion = new AplicacionDePruebas();

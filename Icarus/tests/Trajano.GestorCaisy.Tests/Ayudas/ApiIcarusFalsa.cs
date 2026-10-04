@@ -535,10 +535,12 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
             id, new(2025, 11, 2), DateOnly.Parse(vigenteDesde, CultureInfo.InvariantCulture), estado,
             1.20m, 0.60m, 0.75m, Guid.NewGuid(),
             [
+                // La fila Preiniciador difiere del precio anterior esperado y la
+                // fila PosturaDos coincide, para probar ambos casos visuales.
                 new DetallePrecioApi(
-                    Guid.NewGuid(), "Preiniciador", "Bolsa", 118.50m, 115.00m, 1, 21),
+                    Guid.NewGuid(), "Preiniciador", "Bolsa", 118.50m, 115.00m, 1, 21, 117.00m),
                 new DetallePrecioApi(
-                    Guid.NewGuid(), "PosturaDos", "Granel", 112.75m, 110.25m, null, null),
+                    Guid.NewGuid(), "PosturaDos", "Granel", 112.75m, 110.25m, null, null, 110.25m),
             ]);
 
     public static PublicacionPrecioHuevoDetalleApi CrearDetalleHuevo(
