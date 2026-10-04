@@ -58,6 +58,7 @@ Definidos en
 | Pedido de alimento | Solicitud compartida del tenant que Cliente o Trabajador con `PedidoAlimento` prepara como borrador y envía a CAISY. Solo el borrador se edita o se borra lógicamente. |
 | Notificación de Precios de Alimentos | Publicación global de CAISY con vigencia desde una fecha y un precio final por cada tipo/presentación. Sigue vigente hasta la entrada en vigor de otra publicación. |
 | Precio final por 40 kg | Unidad canónica del precio, tanto para bolsa como para granel. Incluye aporte CAISY, fondo y servicios; se congela al enviar el pedido. |
+| Precio actual del documento (alimento) | Columna «Precio Actual» del PDF o Excel importado: control informativo contra la publicación vigente a la fecha del documento, para el mismo tipo y presentación. No bloquea la publicación (spec 2026-09-15, igual que huevo). |
 | Bolsa de alimento | Presentación cerrada de 40 kg. Se solicita en número entero de bolsas. |
 | Alimento a granel | Presentación solicitada en toneladas enteras. Un pedido exige al menos 2 t por tipo y 6 t en total; una tonelada equivale a 25 unidades de 40 kg. |
 | Devolución para corrección | Decisión no terminal de CAISY que devuelve el mismo pedido a `Borrador`, con motivo obligatorio, para que el tenant lo corrija y reenvíe. |
@@ -79,7 +80,7 @@ Catálogo global gestionado por el Gestor CAISY con la funcionalidad
 | Tamaño de huevo | Clasificación del huevo de la tabla de CAISY: `Extra`, `Primera`, `Segunda`, `Tercera`, `Cuarta`, `Quinta`. Un tamaño tiene un solo precio por publicación. |
 | Servicio | Valor único por publicación (no por tamaño), confirmado contra el documento real de CAISY: la boleta de recepción usa el mismo servicio para las seis filas. El importador rechaza el archivo si las filas difieren. |
 | Precio al productor | El precio oficial por tamaño que llega con 4 decimales (p. ej. `0.7957`). Es la base sobre la que se calcula el precio unitario. |
-| Precio actual del documento | Columna «Precio Actual» del Excel de CAISY: control informativo contra la publicación vigente. A diferencia de alimento, **no bloquea** la publicación. |
+| Precio actual del documento | Columna «Precio Actual» del Excel de CAISY: control informativo contra la publicación vigente. No bloquea la publicación. |
 | Precio unitario | `Precio al productor + Servicio`. Es el monto que se congela en los despachos (SP9B) a la fecha de éstos y el dato que el recibo y el crédito de SP9C consumen. |
 
 ## Despacho de huevo (SP9B)
