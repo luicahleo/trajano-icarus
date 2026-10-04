@@ -274,13 +274,14 @@ public class PreciosAlimentosEndpointsTests
     }
 
     [Fact]
-    public async Task ElPrecioActualDiscrepanteYaNoBloqueaLaPublicacion()
+    public async Task ElPrecioActualDiscrepanteYaNoBloqueaYQuedaComoAdvertencia()
     {
         var (cliente, token) = await CrearCuentaCaisyConFuncion();
 
         // Publicación base: rige desde antes de la fecha del segundo documento,
         // de modo que la columna «Precio actual» del segundo tenga contra qué
-        // compararse. (176.50 es el precio nuevo del documento base.)
+        // compararse. (176.50 es el precio nuevo de Iniciador/Bolsa en el
+        // documento base.)
         var baseVigente = await ImportarConAsync(
             cliente, token, FixtureConFechas(FechaDocumentoControl, VigenciaBaseline));
         Assert.Equal(HttpStatusCode.NoContent, await PublicarAsync(cliente, token, baseVigente));
@@ -291,10 +292,15 @@ public class PreciosAlimentosEndpointsTests
 
         // El chequeo ya no bloquea (spec 2026-09-15, alineado con precios de
         // huevo): publicar tiene éxito aunque la columna «Precio actual» no
-        // coincida con la vigente a la fecha del documento.
+        // coincida con la vigente a la fecha del documento; el valor esperado
+        // queda expuesto como advertencia informativa.
         Assert.Equal(HttpStatusCode.NoContent, respuesta);
         var detalle = await ObtenerAsync(cliente, token, $"/api/precios-alimentos/{borrador}");
         Assert.Equal("Publicada", detalle.GetProperty("estado").GetString());
+        var linea = detalle.GetProperty("detalles").EnumerateArray().Single(d =>
+            d.GetProperty("tipoAlimento").GetString() == "Iniciador"
+            && d.GetProperty("presentacion").GetString() == "Bolsa");
+        Assert.Equal(176.50m, linea.GetProperty("precioAnteriorEsperado").GetDecimal());
     }
 
     [Fact]
