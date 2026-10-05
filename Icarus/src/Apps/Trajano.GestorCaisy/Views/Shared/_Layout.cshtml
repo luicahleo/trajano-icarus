@@ -27,11 +27,38 @@
             {
                 <span class="barra__cuenta" title="@correo">@correo</span>
             }
+            @if (ReclamosCaisy.TieneGestorPedidoAlimento(User) || ReclamosCaisy.TieneGestorRecepcionHuevos(User))
+            {
+                <div class="campana" data-campana>
+                    <button type="button" class="campana__boton" data-campana-boton aria-label="Notificaciones">
+                        🔔<span class="campana__badge" data-campana-badge hidden>0</span>
+                    </button>
+                    <div class="campana__menu" data-campana-menu hidden></div>
+                    @if (ReclamosCaisy.TieneGestorPedidoAlimento(User))
+                    {
+                        <span hidden data-fuente-novedades="@Url.Action("ContadorNotificaciones", "Pedidos")"
+                              data-pagina="@Url.Action("Index", "Pedidos")" data-dominio="Pedidos de alimento"></span>
+                    }
+                    @if (ReclamosCaisy.TieneGestorRecepcionHuevos(User))
+                    {
+                        <span hidden data-fuente-novedades="@Url.Action("ContadorNotificaciones", "RecepcionesHuevo")"
+                              data-pagina="@Url.Action("Index", "RecepcionesHuevo")" data-dominio="Recepción de huevo"></span>
+                    }
+                </div>
+            }
             <form class="barra__salir" asp-controller="Sesion" asp-action="Salir" method="post">
                 <button type="submit" class="boton boton--claro">Cerrar sesión</button>
             </form>
         }
     </header>
+    @if (User.Identity?.IsAuthenticated == true
+        && (ReclamosCaisy.TieneGestorPedidoAlimento(User) || ReclamosCaisy.TieneGestorRecepcionHuevos(User)))
+    {
+        <div class="alerta alerta--aviso banner-notificaciones" role="note" data-banner-notificaciones hidden>
+            <p>Activa los avisos del navegador para enterarte de nuevos pedidos y recepciones sin tener que revisar la página.</p>
+            <button type="button" class="boton boton--neutro" data-banner-activar>Activar notificaciones</button>
+        </div>
+    }
     <div class="cuerpo">
         @if (User.Identity?.IsAuthenticated == true
             && (ReclamosCaisy.TieneGestorPedidoAlimento(User)
