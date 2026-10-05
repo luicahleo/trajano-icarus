@@ -330,13 +330,29 @@ public sealed class PedidosController(IApiIcarusClient api) : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // Sondeo del badge: devuelve solo el número, sin volver a renderizar la
-    // bandeja. La vista sigue pintando la lista al cargar.
+    // Sondeo del badge por página (sin cambios de contrato: sigue leyendo
+    // .contador) y de la campanita global (spec 2026-10-05, lee además
+    // .items). Los primeros 5 por fecha bastan para el desplegable; la
+    // bandeja completa de la página sigue siendo la fuente de verdad.
     [HttpGet("Notificaciones/Contador")]
     public async Task<IActionResult> ContadorNotificaciones(CancellationToken token)
     {
         var notificaciones = await api.ListarNotificacionesPedidoAsync(token);
-        return Json(new { contador = notificaciones.Contador });
+        return Json(new
+        {
+            contador = notificaciones.Contador,
+            items = notificaciones.Items
+                .OrderByDescending(n => n.FechaUtc)
+                .Take(5)
+                .Select(n => new
+                {
+                    id = n.Id,
+                    mensaje = EtiquetasNotificacionPedido.Texto(n.Tipo),
+                    chip = EtiquetasNotificacionPedido.Chip(n.Tipo),
+                    fechaUtc = n.FechaUtc,
+                    pedidoId = n.PedidoId,
+                }),
+        });
     }
 
     // RETIRADO por la corrección 2026-09-14: el saldo del cliente es privado

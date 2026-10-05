@@ -371,4 +371,38 @@ public class PedidosControllerTests
         var contador = json.Value!.GetType().GetProperty("contador")!.GetValue(json.Value);
         Assert.Equal(7, contador);
     }
+
+    [Fact]
+    public async Task ElContadorDeNotificacionesIncluyeLosItemsTraducidosOrdenadosYLimitados()
+    {
+        var antigua = Guid.NewGuid();
+        var reciente = Guid.NewGuid();
+        var pedidoAntiguo = Guid.NewGuid();
+        var pedidoReciente = Guid.NewGuid();
+        _api.NotificacionesDePedidos = new(
+            [
+                new NotificacionPedidoApi(
+                    antigua, "PedidoSolicitado", pedidoAntiguo,
+                    new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc), false, null),
+                new NotificacionPedidoApi(
+                    reciente, "PedidoDevuelto", pedidoReciente,
+                    new DateTime(2026, 10, 5, 14, 30, 0, DateTimeKind.Utc), false, null),
+            ],
+            2);
+
+        var resultado = await _controlador.ContadorNotificaciones(CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(resultado);
+        var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(
+            json.Value!.GetType().GetProperty("items")!.GetValue(json.Value));
+        var lista = items.Cast<object>().ToList();
+        Assert.Equal(2, lista.Count);
+        var primero = lista[0].GetType();
+        Assert.Equal(reciente, primero.GetProperty("id")!.GetValue(lista[0]));
+        Assert.Equal("Devolución", primero.GetProperty("mensaje")!.GetValue(lista[0]));
+        Assert.Equal("borrador", primero.GetProperty("chip")!.GetValue(lista[0]));
+        Assert.Equal(pedidoReciente, primero.GetProperty("pedidoId")!.GetValue(lista[0]));
+        var segundo = lista[1].GetType();
+        Assert.Equal(antigua, segundo.GetProperty("id")!.GetValue(lista[1]));
+    }
 }
