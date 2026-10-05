@@ -116,7 +116,7 @@ public class FlujoPreciosHuevoTests
     }
 
     [Fact]
-    public async Task DetallesAdvierteDiferenciasDePrecioActualSinBloquearPublicar()
+    public async Task DetallesDelBorradorOfrecePublicar()
     {
         using var aplicacion = new AplicacionDePruebas();
         var cliente = await aplicacion.AccederAsync(funcCaisy: 2);
@@ -125,9 +125,6 @@ public class FlujoPreciosHuevoTests
 
         var html = await cliente.GetStringAsync($"/PreciosHuevo/{id}");
 
-        Assert.Contains("Precio actual esperado", html);
-        Assert.Contains("0.0445", html);
-        Assert.Contains("advertencia", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains($"/PreciosHuevo/{id}/Publicar", html);
     }
 

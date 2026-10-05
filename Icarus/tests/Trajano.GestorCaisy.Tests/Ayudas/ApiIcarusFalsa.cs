@@ -535,12 +535,11 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
             id, new(2025, 11, 2), DateOnly.Parse(vigenteDesde, CultureInfo.InvariantCulture), estado,
             1.20m, 0.60m, 0.75m, Guid.NewGuid(),
             [
-                // La fila Preiniciador difiere del precio anterior esperado y la
-                // fila PosturaDos coincide, para probar ambos casos visuales.
+                // Dos filas distintas para cubrir casos variados.
                 new DetallePrecioApi(
-                    Guid.NewGuid(), "Preiniciador", "Bolsa", 118.50m, 115.00m, 1, 21, 117.00m),
+                    Guid.NewGuid(), "Preiniciador", "Bolsa", 118.50m, 115.00m, 1, 21),
                 new DetallePrecioApi(
-                    Guid.NewGuid(), "PosturaDos", "Granel", 112.75m, 110.25m, null, null, 110.25m),
+                    Guid.NewGuid(), "PosturaDos", "Granel", 112.75m, 110.25m, null, null),
             ]);
 
     public static PublicacionPrecioHuevoDetalleApi CrearDetalleHuevo(
@@ -549,11 +548,10 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
             id, new(2025, 11, 2), DateOnly.Parse(fechaVigencia, CultureInfo.InvariantCulture), estado,
             0.50m, Guid.NewGuid(),
             [
-                // La fila Primera difiere del precio anterior esperado y la
-                // fila Extra coincide, para probar ambos casos visuales.
+                // Dos filas distintas para cubrir casos variados.
                 new DetallePrecioHuevoApi(
-                    Guid.NewGuid(), "Primera", 0.045m, 0.044m, 0.545m, 0.0445m),
+                    Guid.NewGuid(), "Primera", 0.045m, 0.044m, 0.545m),
                 new DetallePrecioHuevoApi(
-                    Guid.NewGuid(), "Extra", 0.050m, 0.049m, 0.550m, 0.049m),
+                    Guid.NewGuid(), "Extra", 0.050m, 0.049m, 0.550m),
             ]);
 }

@@ -12,13 +12,9 @@ public sealed record NotificacionPreciosResumenApi(
     Guid Id, DateOnly FechaDocumento, DateOnly VigenteDesde, string Estado,
     int CantidadDetalles, bool TieneDocumentoOriginal);
 
-// PrecioAnteriorEsperado (spec 2026-09-15, alineado con precios de huevo) es
-// el PrecioFinalPor40Kg vigente a la fecha del documento para el mismo tipo y
-// presentación; solo alimenta la advertencia visual y nunca bloquea publicar.
 public sealed record DetallePrecioApi(
     Guid Id, string TipoAlimento, string Presentacion, decimal PrecioFinalPor40Kg,
-    decimal? PrecioActualDocumento, int? EdadDesdeDias, int? EdadHastaDias,
-    decimal? PrecioAnteriorEsperado = null);
+    decimal? PrecioActualDocumento, int? EdadDesdeDias, int? EdadHastaDias);
 
 public sealed record NotificacionPreciosDetalleApi(
     Guid Id, DateOnly FechaDocumento, DateOnly VigenteDesde, string Estado,
@@ -44,13 +40,9 @@ public sealed record PublicacionPrecioHuevoResumenApi(
     Guid Id, DateOnly FechaNotificacion, DateOnly FechaVigencia, string Estado,
     int CantidadDetalles, bool TieneDocumentoOriginal);
 
-// PrecioAnteriorEsperado (spec 2026-09-15) es el PrecioAlProductor vigente a
-// la fecha de notificación para el mismo tamaño; solo alimenta la advertencia
-// visual y nunca bloquea publicar. Anulable para no romper respuestas de una
-// API que aún no lo envía.
 public sealed record DetallePrecioHuevoApi(
     Guid Id, string Tamano, decimal PrecioAlProductor, decimal? PrecioActualDocumento,
-    decimal PrecioUnitario, decimal? PrecioAnteriorEsperado = null);
+    decimal PrecioUnitario);
 
 public sealed record PublicacionPrecioHuevoDetalleApi(
     Guid Id, DateOnly FechaNotificacion, DateOnly FechaVigencia, string Estado,

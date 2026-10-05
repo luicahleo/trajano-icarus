@@ -234,49 +234,6 @@ public class ApiIcarusClientTests
     }
 
     [Fact]
-    public async Task ObtenerPublicacionHuevoParseaElPrecioAnteriorEsperado()
-    {
-        var id = Guid.NewGuid();
-        _manejador.Responder(HttpStatusCode.OK,
-            $$"""
-            {"id":"{{id}}","fechaNotificacion":"2025-11-02","fechaVigencia":"2025-12-01",
-             "estado":"Borrador","servicio":0.40,"documentoOriginalId":null,
-             "detalles":[{"id":"11111111-1111-1111-1111-111111111111","tamano":"Primera",
-                         "precioAlProductor":0.046,"precioActualDocumento":0.045,
-                         "precioUnitario":0.446,"precioAnteriorEsperado":0.0445}]}
-            """);
-
-        var publicacion = await _cliente.ObtenerPublicacionHuevoAsync(id);
-
-        var detalle = Assert.Single(publicacion.Detalles);
-        Assert.Equal(0.0445m, detalle.PrecioAnteriorEsperado);
-        Assert.Equal($"{BaseApi}precios-huevo-caisy/{id}", _manejador.Peticiones[0].Uri.ToString());
-    }
-
-    [Fact]
-    public async Task ObtenerNotificacionParseaElPrecioAnteriorEsperado()
-    {
-        var id = Guid.NewGuid();
-        _manejador.Responder(HttpStatusCode.OK,
-            $$"""
-            {"id":"{{id}}","fechaDocumento":"2025-11-02","vigenteDesde":"2025-12-01",
-             "estado":"Borrador","aporteCaisy":1.20,"fondo":0.60,"servicios":0.75,
-             "documentoOriginalId":null,
-             "detalles":[{"id":"11111111-1111-1111-1111-111111111111",
-                         "tipoAlimento":"Iniciador","presentacion":"Bolsa",
-                         "precioFinalPor40Kg":176.50,"precioActualDocumento":179.00,
-                         "edadDesdeDias":22,"edadHastaDias":35,
-                         "precioAnteriorEsperado":180.00}]}
-            """);
-
-        var notificacion = await _cliente.ObtenerNotificacionAsync(id);
-
-        var detalle = Assert.Single(notificacion.Detalles);
-        Assert.Equal(180.00m, detalle.PrecioAnteriorEsperado);
-        Assert.Equal($"{BaseApi}precios-alimentos/{id}", _manejador.Peticiones[0].Uri.ToString());
-    }
-
-    [Fact]
     public async Task ListarNotificacionesEnviaBearerYParseaLaColeccion()
     {
         _manejador.Responder(HttpStatusCode.OK,
