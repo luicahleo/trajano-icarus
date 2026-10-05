@@ -186,4 +186,38 @@ public class RecepcionesHuevoControllerTests
         Assert.Equal(1, _api.VecesMarcarLeidaHuevo);
         Assert.Equal(id, _api.UltimaNotificacionHuevoMarcada);
     }
+
+    [Fact]
+    public async Task ElContadorDeNotificacionesIncluyeLosItemsTraducidosOrdenadosYLimitados()
+    {
+        var antigua = Guid.NewGuid();
+        var reciente = Guid.NewGuid();
+        var despachoAntiguo = Guid.NewGuid();
+        var despachoReciente = Guid.NewGuid();
+        _api.NotificacionesDeDespachosHuevo = new(
+            [
+                new NotificacionDespachoHuevoApi(
+                    antigua, "AlgunTipo", despachoAntiguo,
+                    new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc), false, null),
+                new NotificacionDespachoHuevoApi(
+                    reciente, "OtroTipo", despachoReciente,
+                    new DateTime(2026, 10, 5, 9, 0, 0, DateTimeKind.Utc), false, null),
+            ],
+            2);
+
+        var resultado = await _controlador.ContadorNotificaciones(CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(resultado);
+        var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(
+            json.Value!.GetType().GetProperty("items")!.GetValue(json.Value));
+        var lista = items.Cast<object>().ToList();
+        Assert.Equal(2, lista.Count);
+        var primero = lista[0].GetType();
+        Assert.Equal(reciente, primero.GetProperty("id")!.GetValue(lista[0]));
+        // EtiquetasNotificacionDespachoHuevo.Texto es un stub (tipo => tipo):
+        // no hay traduccion real hasta que exista un tipo activo para esta bandeja.
+        Assert.Equal("OtroTipo", primero.GetProperty("mensaje")!.GetValue(lista[0]));
+        Assert.Equal("borrador", primero.GetProperty("chip")!.GetValue(lista[0]));
+        Assert.Equal(despachoReciente, primero.GetProperty("despachoHuevoId")!.GetValue(lista[0]));
+    }
 }
