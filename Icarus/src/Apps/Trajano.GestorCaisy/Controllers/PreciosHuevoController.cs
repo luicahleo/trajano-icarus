@@ -17,7 +17,7 @@ public sealed class PreciosHuevoController(IApiIcarusClient api) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken token) =>
-        View(await api.ListarPublicacionesHuevoAsync(token));
+        View(VistaHistorialPreciosHuevo.Crear(await api.ListarPublicacionesHuevoAsync(token)));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Detalles(Guid id, CancellationToken token)

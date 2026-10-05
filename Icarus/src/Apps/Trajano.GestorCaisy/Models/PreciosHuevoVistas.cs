@@ -73,3 +73,18 @@ public sealed class FormularioCorregirHuevoVista
     [StringLength(500, ErrorMessage = "El motivo no puede superar los 500 caracteres.")]
     public string Motivo { get; set; } = string.Empty;
 }
+
+// Historial de precios de huevo con la publicación vigente destacada (spec
+// 2026-10-05): mismo criterio que VistaHistorialPrecios para alimento.
+public sealed record VistaHistorialPreciosHuevo(
+    IReadOnlyList<PublicacionPrecioHuevoResumenApi> Publicaciones, Guid? VigenteId)
+{
+    public static VistaHistorialPreciosHuevo Crear(
+        IReadOnlyList<PublicacionPrecioHuevoResumenApi> publicaciones)
+    {
+        var hoy = FechasDeOficina.Hoy();
+        var vigente = publicaciones.FirstOrDefault(
+            p => p.Estado == "Publicada" && p.FechaVigencia <= hoy);
+        return new VistaHistorialPreciosHuevo(publicaciones, vigente?.Id);
+    }
+}

@@ -1,4 +1,4 @@
-@model IReadOnlyList<PublicacionPrecioHuevoResumenApi>
+@model VistaHistorialPreciosHuevo
 @{
     ViewData["Titulo"] = "Precios de huevo";
     ViewData["Seccion"] = "precios-huevo";
@@ -14,7 +14,7 @@
     <a asp-action="Importar" class="boton">Importar Excel</a>
 </div>
 <partial name="_Avisos" />
-@if (Model.Count == 0)
+@if (Model.Publicaciones.Count == 0)
 {
     <section class="tarjeta vacio">
         <h2>Aún no hay publicaciones</h2>
@@ -37,12 +37,18 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var publicacion in Model)
+                @foreach (var publicacion in Model.Publicaciones)
                 {
-                    <tr>
+                    <tr class="@(publicacion.Id == Model.VigenteId ? "fila--vigente" : null)">
                         <td>@publicacion.FechaNotificacion.ToString("dd/MM/yyyy")</td>
                         <td>@publicacion.FechaVigencia.ToString("dd/MM/yyyy")</td>
-                        <td><span class="chip chip--@publicacion.Estado.ToLowerInvariant()">@publicacion.Estado</span></td>
+                        <td>
+                            <span class="chip chip--@publicacion.Estado.ToLowerInvariant()">@publicacion.Estado</span>
+                            @if (publicacion.Id == Model.VigenteId)
+                            {
+                                <span class="chip chip--vigente-ahora">Vigente ahora</span>
+                            }
+                        </td>
                         <td>@publicacion.CantidadDetalles</td>
                         <td>@(publicacion.TieneDocumentoOriginal ? "Sí" : "—")</td>
                         <td>
