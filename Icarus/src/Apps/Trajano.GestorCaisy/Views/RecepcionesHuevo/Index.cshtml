@@ -31,7 +31,7 @@
             {
                 <li>
                     <div>
-                        <span class="chip chip--@EtiquetaChip(notificacion.Tipo)">@EtiquetaNotificacion(notificacion.Tipo)</span>
+                        <span class="chip chip--@EtiquetasNotificacionDespachoHuevo.Chip(notificacion.Tipo)">@EtiquetasNotificacionDespachoHuevo.Texto(notificacion.Tipo)</span>
                         <span>@notificacion.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                     </div>
                     <div class="novedades__acciones">
@@ -147,18 +147,6 @@
     }
 </section>
 @functions {
-    // Esta bandeja es global de CAISY (ClienteId nulo en la consulta). El
-    // único tipo que se creaba con ese alcance era CreditoInsuficiente, y la
-    // corrección 2026-09-14 dejó de emitirlo: no se manda ninguna alerta por
-    // saldo. Las filas ya existentes en base se conservan y caen en la rama
-    // por defecto. El valor 1 del enum queda reservado y no se renumera.
-    private static string EtiquetaNotificacion(string tipo) => tipo;
-
-    private static string EtiquetaChip(string tipo) => tipo switch
-    {
-        _ => "borrador",
-    };
-
     private static string ClaseChipEstado(string estado) => estado switch
     {
         "Despachado" => "solicitado",

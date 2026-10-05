@@ -128,3 +128,29 @@ public interface IFormularioConCredito
 // pasarle null al partial: así el modelo del partial nunca es nulo y el
 // propio partial decide qué mostrar.
 public sealed record BloqueCreditoVista(CreditoHuevoPedidoApi? Credito);
+
+// Traduce el tipo de notificación de pedido a texto legible y a la clase de
+// chip visual; lo usa tanto la vista (bandeja inline) como el endpoint JSON
+// del sondeo global de la campanita (spec 2026-10-05).
+public static class EtiquetasNotificacionPedido
+{
+    public static string Texto(string tipo) => tipo switch
+    {
+        "PedidoSolicitado" => "Pedido solicitado",
+        "PedidoReenviado" => "Pedido reenviado",
+        "PedidoDevuelto" => "Devolución",
+        "PedidoRechazado" => "Rechazo",
+        "PedidoAceptado" => "Aceptación",
+        "EntregaEstimadaActualizada" => "Entrega estimada",
+        _ => tipo,
+    };
+
+    public static string Chip(string tipo) => tipo switch
+    {
+        "PedidoSolicitado" or "PedidoReenviado" => "solicitado",
+        "PedidoDevuelto" => "borrador",
+        "PedidoRechazado" => "rechazado",
+        "PedidoAceptado" or "EntregaEstimadaActualizada" => "aceptado",
+        _ => "borrador",
+    };
+}

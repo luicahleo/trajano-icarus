@@ -31,7 +31,7 @@
             {
                 <li>
                     <div>
-                        <span class="chip chip--@EtiquetaChip(notificacion.Tipo)">@EtiquetaNotificacion(notificacion.Tipo)</span>
+                        <span class="chip chip--@EtiquetasNotificacionPedido.Chip(notificacion.Tipo)">@EtiquetasNotificacionPedido.Texto(notificacion.Tipo)</span>
                         <span>@notificacion.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                     </div>
                     <div class="novedades__acciones">
@@ -153,24 +153,3 @@
         </p>
     }
 </section>
-@functions {
-    private static string EtiquetaNotificacion(string tipo) => tipo switch
-    {
-        "PedidoSolicitado" => "Pedido solicitado",
-        "PedidoReenviado" => "Pedido reenviado",
-        "PedidoDevuelto" => "Devolución",
-        "PedidoRechazado" => "Rechazo",
-        "PedidoAceptado" => "Aceptación",
-        "EntregaEstimadaActualizada" => "Entrega estimada",
-        _ => tipo,
-    };
-
-    private static string EtiquetaChip(string tipo) => tipo switch
-    {
-        "PedidoSolicitado" or "PedidoReenviado" => "solicitado",
-        "PedidoDevuelto" => "borrador",
-        "PedidoRechazado" => "rechazado",
-        "PedidoAceptado" or "EntregaEstimadaActualizada" => "aceptado",
-        _ => "borrador",
-    };
-}
