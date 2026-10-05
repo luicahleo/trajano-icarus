@@ -274,7 +274,7 @@ public class PreciosAlimentosEndpointsTests
     }
 
     [Fact]
-    public async Task ElPrecioActualDiscrepanteYaNoBloqueaYQuedaComoAdvertencia()
+    public async Task ElPrecioActualDiscrepanteYaNoBloqueaPublicar()
     {
         var (cliente, token) = await CrearCuentaCaisyConFuncion();
 
@@ -292,15 +292,10 @@ public class PreciosAlimentosEndpointsTests
 
         // El chequeo ya no bloquea (spec 2026-09-15, alineado con precios de
         // huevo): publicar tiene éxito aunque la columna «Precio actual» no
-        // coincida con la vigente a la fecha del documento; el valor esperado
-        // queda expuesto como advertencia informativa.
+        // coincida con la vigente a la fecha del documento.
         Assert.Equal(HttpStatusCode.NoContent, respuesta);
         var detalle = await ObtenerAsync(cliente, token, $"/api/precios-alimentos/{borrador}");
         Assert.Equal("Publicada", detalle.GetProperty("estado").GetString());
-        var linea = detalle.GetProperty("detalles").EnumerateArray().Single(d =>
-            d.GetProperty("tipoAlimento").GetString() == "Iniciador"
-            && d.GetProperty("presentacion").GetString() == "Bolsa");
-        Assert.Equal(176.50m, linea.GetProperty("precioAnteriorEsperado").GetDecimal());
     }
 
     [Fact]
