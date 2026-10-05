@@ -20,7 +20,16 @@ public static class FuncionalidadesModulos
         _ => Modulos.Ninguno,
     };
 
-    public static Funcionalidades FuncionalidadesDelModulo(Modulos modulo) => modulo switch
+    public static Funcionalidades FuncionalidadesDelModulo(Modulos modulos)
+    {
+        var acumulado = Funcionalidades.Ninguno;
+        foreach (var modulo in Enum.GetValues<Modulos>())
+            if (modulo != Modulos.Ninguno && modulos.HasFlag(modulo))
+                acumulado |= FuncionalidadesDeUnModulo(modulo);
+        return acumulado;
+    }
+
+    private static Funcionalidades FuncionalidadesDeUnModulo(Modulos modulo) => modulo switch
     {
         Modulos.GestionAvicola => Funcionalidades.Granjas | Funcionalidades.Galpones
             | Funcionalidades.ProduccionHuevos | Funcionalidades.Mortalidad

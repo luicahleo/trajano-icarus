@@ -28,7 +28,7 @@ public sealed class ConsultaPermisosActuales : IConsultaPermisosActuales
                 return new PermisosActuales([], []);
             var efectivas = contexto.Funcionalidades
                 & FuncionalidadesTrabajador.Asignables
-                & FuncionalidadesDe(contexto.ModulosHabilitados);
+                & FuncionalidadesModulos.FuncionalidadesDelModulo(contexto.ModulosHabilitados);
             return new PermisosActuales([], NombresFuncionalidades(efectivas));
         }
 
@@ -37,16 +37,9 @@ public sealed class ConsultaPermisosActuales : IConsultaPermisosActuales
             .Select(c => (Modulos?)c.ModulosHabilitados)
             .SingleOrDefaultAsync(cancellationToken);
         var habilitados = modulos ?? Modulos.Ninguno;
-        return new PermisosActuales(NombresModulos(habilitados), NombresFuncionalidades(FuncionalidadesDe(habilitados)));
-    }
-
-    private static Funcionalidades FuncionalidadesDe(Modulos modulos)
-    {
-        var acumulado = Funcionalidades.Ninguno;
-        foreach (var modulo in Enum.GetValues<Modulos>())
-            if (modulo != Modulos.Ninguno && modulos.HasFlag(modulo))
-                acumulado |= FuncionalidadesModulos.FuncionalidadesDelModulo(modulo);
-        return acumulado;
+        return new PermisosActuales(
+            NombresModulos(habilitados),
+            NombresFuncionalidades(FuncionalidadesModulos.FuncionalidadesDelModulo(habilitados)));
     }
 
     private static IReadOnlyList<string> NombresModulos(Modulos modulos) =>

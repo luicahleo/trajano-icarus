@@ -78,4 +78,16 @@ public class FuncionalidadesTests
                 | Funcionalidades.DespachoHuevo,
             FuncionalidadesTrabajador.Asignables);
     }
+
+    [Fact]
+    public void FuncionalidadesDelModuloConCombinacionIncluyeLasDeGestionAvicola()
+    {
+        var combinado = FuncionalidadesModulos.FuncionalidadesDelModulo(
+            Modulos.GestionAvicola | Modulos.ControlAcceso);
+
+        Assert.Equal(
+            FuncionalidadesModulos.FuncionalidadesDelModulo(Modulos.GestionAvicola),
+            combinado);
+        Assert.True(combinado.HasFlag(Funcionalidades.PedidoAlimento));
+    }
 }

@@ -346,4 +346,23 @@ public class EntitlementTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
+
+    [Fact]
+    public async Task TrabajadorDeClienteConModulosCombinadosMantieneSusFuncionalidades()
+    {
+        // Bug 2026-10-05: FuncionalidadesModulos.FuncionalidadesDelModulo
+        // (switch de valor exacto) devolvía Ninguno para cualquier
+        // combinación de módulos, dejando sin acceso a trabajadores de
+        // Clientes con más de un módulo habilitado.
+        var (clienteId, tokenCliente) = await CrearClienteConCuenta(
+            ["GestionAvicola", "ControlAcceso"]);
+        var (_, tokenTrabajador, _) = await CrearTrabajadorConCuenta(
+            clienteId, ["produccionhuevos"], tokenCliente);
+        var cliente = _factory.CreateClient();
+
+        var respuesta = await cliente.SendAsync(
+            PedidoAutenticado(HttpMethod.Get, "/api/clientes/sondeo/funcionalidad/produccionhuevos", tokenTrabajador));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+    }
 }
