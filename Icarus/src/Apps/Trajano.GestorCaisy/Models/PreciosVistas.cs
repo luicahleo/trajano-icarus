@@ -67,3 +67,20 @@ public sealed class FormularioBorradorVista
 
     public List<FilaDetalleVista> Detalles { get; set; } = [];
 }
+
+// Historial de precios de alimento con la publicación vigente destacada
+// (spec 2026-10-05): la vigente es la primera Publicada con vigencia ya
+// iniciada en una lista ya ordenada por vigencia descendente — el mismo
+// criterio que ObtenerVigenteAsync en el backend, sin llamar a la API de
+// nuevo.
+public sealed record VistaHistorialPrecios(
+    IReadOnlyList<NotificacionPreciosResumenApi> Notificaciones, Guid? VigenteId)
+{
+    public static VistaHistorialPrecios Crear(IReadOnlyList<NotificacionPreciosResumenApi> notificaciones)
+    {
+        var hoy = FechasDeOficina.Hoy();
+        var vigente = notificaciones.FirstOrDefault(
+            n => n.Estado == "Publicada" && n.VigenteDesde <= hoy);
+        return new VistaHistorialPrecios(notificaciones, vigente?.Id);
+    }
+}

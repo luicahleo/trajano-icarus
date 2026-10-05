@@ -36,9 +36,43 @@ public class PreciosControllerTests
 
         var vista = await _controlador.Index(default);
 
-        var modelo = Assert.IsAssignableFrom<IReadOnlyList<NotificacionPreciosResumenApi>>(
-            ((ViewResult)vista).Model);
-        Assert.Equal(_api.Resumenes.Count, modelo.Count);
+        var modelo = Assert.IsType<VistaHistorialPrecios>(((ViewResult)vista).Model);
+        Assert.Equal(_api.Resumenes.Count, modelo.Notificaciones.Count);
+    }
+
+    [Fact]
+    public async Task IndexMarcaComoVigenteLaPublicacionMasRecienteYaIniciada()
+    {
+        var hoy = FechasDeOficina.Hoy();
+        var vigenteId = Guid.NewGuid();
+        // Orden descendente por VigenteDesde, igual que ListarHistorialAsync:
+        // la vigente es la primera Publicada con vigencia ya iniciada.
+        _api.Resumenes.Add(new(
+            Guid.NewGuid(), hoy.AddMonths(-2), hoy.AddMonths(1), "Publicada", 10, true));
+        _api.Resumenes.Add(new(
+            vigenteId, hoy.AddMonths(-1), hoy.AddDays(-5), "Publicada", 10, true));
+        _api.Resumenes.Add(new(
+            Guid.NewGuid(), hoy.AddMonths(-3), hoy.AddMonths(-2), "Publicada", 10, true));
+
+        var vista = await _controlador.Index(default);
+
+        var modelo = Assert.IsType<VistaHistorialPrecios>(((ViewResult)vista).Model);
+        Assert.Equal(vigenteId, modelo.VigenteId);
+    }
+
+    [Fact]
+    public async Task IndexSinNingunaPublicacionVigenteNoMarcaNinguna()
+    {
+        var hoy = FechasDeOficina.Hoy();
+        _api.Resumenes.Add(new(
+            Guid.NewGuid(), hoy, hoy.AddMonths(1), "Publicada", 10, true));
+        _api.Resumenes.Add(new(
+            Guid.NewGuid(), hoy, hoy, "Borrador", 10, false));
+
+        var vista = await _controlador.Index(default);
+
+        var modelo = Assert.IsType<VistaHistorialPrecios>(((ViewResult)vista).Model);
+        Assert.Null(modelo.VigenteId);
     }
 
     [Fact]

@@ -18,7 +18,7 @@ public sealed class PreciosController(IApiIcarusClient api) : Controller
     [HttpGet("~/")]
     [HttpGet("~/Precios")]
     public async Task<IActionResult> Index(CancellationToken token) =>
-        View(await api.ListarNotificacionesAsync(token));
+        View(VistaHistorialPrecios.Crear(await api.ListarNotificacionesAsync(token)));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Detalles(Guid id, CancellationToken token)

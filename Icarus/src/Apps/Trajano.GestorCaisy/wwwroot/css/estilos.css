@@ -290,6 +290,10 @@ a { color: var(--aqua-oscuro); }
 .chip--aceptado { background-color: #DDEBDC; color: #2C5E3F; }
 .chip--rechazado { background-color: #F8E3DA; color: var(--terracota-oscura); }
 
+/* Publicación vigente destacada en el historial (spec 2026-10-05) */
+.fila--vigente { background-color: var(--aqua-claro); border-left: 3px solid var(--aqua); }
+.chip--vigente-ahora { background-color: var(--aqua); color: var(--papel); margin-left: 6px; }
+
 /* Novedades de la bandeja de pedidos (SP8B) */
 .novedades { list-style: none; margin: 0; padding: 0; }
 

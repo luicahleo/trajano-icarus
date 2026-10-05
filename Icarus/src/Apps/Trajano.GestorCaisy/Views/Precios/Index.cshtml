@@ -1,4 +1,4 @@
-@model IReadOnlyList<NotificacionPreciosResumenApi>
+@model VistaHistorialPrecios
 @{
     ViewData["Titulo"] = "Precios de alimento";
     ViewData["Seccion"] = "precios";
@@ -14,7 +14,7 @@
     <a asp-action="Importar" class="boton">Importar PDF o Excel</a>
 </div>
 <partial name="_Avisos" />
-@if (Model.Count == 0)
+@if (Model.Notificaciones.Count == 0)
 {
     <section class="tarjeta vacio">
         <h2>Aún no hay notificaciones</h2>
@@ -37,12 +37,18 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var notificacion in Model)
+                @foreach (var notificacion in Model.Notificaciones)
                 {
-                    <tr>
+                    <tr class="@(notificacion.Id == Model.VigenteId ? "fila--vigente" : null)">
                         <td>@notificacion.FechaDocumento.ToString("dd/MM/yyyy")</td>
                         <td>@notificacion.VigenteDesde.ToString("dd/MM/yyyy")</td>
-                        <td><span class="chip chip--@notificacion.Estado.ToLowerInvariant()">@notificacion.Estado</span></td>
+                        <td>
+                            <span class="chip chip--@notificacion.Estado.ToLowerInvariant()">@notificacion.Estado</span>
+                            @if (notificacion.Id == Model.VigenteId)
+                            {
+                                <span class="chip chip--vigente-ahora">Vigente ahora</span>
+                            }
+                        </td>
                         <td>@notificacion.CantidadDetalles</td>
                         <td>@(notificacion.TieneDocumentoOriginal ? "Sí" : "—")</td>
                         <td>
