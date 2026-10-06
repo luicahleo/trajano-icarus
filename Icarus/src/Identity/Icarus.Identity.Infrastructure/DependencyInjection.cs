@@ -76,6 +76,9 @@ public static class DependencyInjection
                 politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Administrador)))
             .AddPolicy(PoliticasAutorizacion.GestionTrabajadores,
                 politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Cliente)))
+            .AddPolicy(PoliticasAutorizacion.ConsultaNombresTrabajadores,
+                politica => politica.RequireClaim(
+                    ClaimsIdentidad.Rol, nameof(Rol.Cliente), nameof(Rol.Trabajador)))
             .AddPolicy(PoliticasAutorizacion.SoloCliente,
                 politica => politica.RequireClaim(ClaimsIdentidad.Rol, nameof(Rol.Cliente)));
 

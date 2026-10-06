@@ -10,6 +10,11 @@ public static class PoliticasAutorizacion
     // empresa (el filtro de tenant del módulo Clientes acota la segunda parte).
     public const string GestionTrabajadores = "GestionTrabajadores";
 
+    // Nombres de trabajadores para resolver autoría en pantallas compartidas
+    // por Cliente y Trabajador (pedidos de alimento, despachos de huevo):
+    // nunca expone documento de identidad ni funcionalidades.
+    public const string ConsultaNombresTrabajadores = "ConsultaNombresTrabajadores";
+
     // Operaciones de gestión que el trabajador no ejecuta aunque tenga la
     // funcionalidad (spec SP7: cancelar tareas de vacunación).
     public const string SoloCliente = "SoloCliente";

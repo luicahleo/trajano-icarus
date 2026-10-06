@@ -52,13 +52,13 @@ public class TrabajadoresEndpointsTests
         return (clienteId, await LoginComo(email));
     }
 
-    private static object CuerpoTrabajador(string documento) => new
+    private static object CuerpoTrabajador(string documento, string? email = null) => new
     {
         nombre = "Nombre Ficticio",
         documentoIdentidad = documento,
         cargo = "Operario",
         fechaIngreso = "2026-01-15",
-        email = $"trabajador-{Guid.NewGuid():N}@icarus.test",
+        email = email ?? $"trabajador-{Guid.NewGuid():N}@icarus.test",
         contrasena = IdentityFactory.ContrasenaDePrueba,
     };
 
@@ -286,5 +286,32 @@ public class TrabajadoresEndpointsTests
             .Select(f => f.GetString()).ToList();
         Assert.Contains("ProduccionHuevos", funcionalidades);
         Assert.Contains("Mortalidad", funcionalidades);
+    }
+
+    [Fact]
+    public async Task UnTrabajadorConsultaNombresDeSuPropiaEmpresaYNoVeDatosSensibles()
+    {
+        var (clienteId, tokenCliente) = await CrearClienteConCuenta();
+        var cliente = _factory.CreateClient();
+
+        var documento = $"8{Random.Shared.Next(10000000, 99999999)}";
+        var email = $"trabajador-{Guid.NewGuid():N}@icarus.test";
+        var altaTrabajador = PedidoAutenticado(
+            HttpMethod.Post, $"/api/clientes/{clienteId}/trabajadores", tokenCliente);
+        altaTrabajador.Content = JsonContent.Create(CuerpoTrabajador(documento, email));
+        var respuestaAlta = await cliente.SendAsync(altaTrabajador);
+        Assert.Equal(HttpStatusCode.Created, respuestaAlta.StatusCode);
+
+        var tokenTrabajador = await LoginComo(email);
+        var consulta = PedidoAutenticado(
+            HttpMethod.Get, $"/api/clientes/{clienteId}/trabajadores/nombres", tokenTrabajador);
+        var respuesta = await cliente.SendAsync(consulta);
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var cuerpo = await respuesta.Content.ReadFromJsonAsync<JsonElement>();
+        var primero = cuerpo.EnumerateArray().Single();
+        Assert.Equal("Nombre Ficticio", primero.GetProperty("nombre").GetString());
+        Assert.False(primero.TryGetProperty("documentoIdentidad", out _));
+        Assert.False(primero.TryGetProperty("funcionalidades", out _));
     }
 }

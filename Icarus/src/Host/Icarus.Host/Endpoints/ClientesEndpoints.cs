@@ -62,6 +62,10 @@ public static class ClientesEndpoints
             Results.Ok(await mediator.Send(new ListarTrabajadoresQuery(clienteId))))
             .RequireAuthorization(PoliticasAutorizacion.GestionTrabajadores);
 
+        grupo.MapGet("/{clienteId:guid}/trabajadores/nombres", async (Guid clienteId, ISender mediator) =>
+            Results.Ok(await mediator.Send(new ListarNombresTrabajadoresQuery(clienteId))))
+            .RequireAuthorization(PoliticasAutorizacion.ConsultaNombresTrabajadores);
+
         grupo.MapPut("/{clienteId:guid}/trabajadores/{trabajadorId:guid}/funcionalidades",
             async (Guid clienteId, Guid trabajadorId, DefinirFuncionalidadesRequest cuerpo, ISender mediator) =>
             {
