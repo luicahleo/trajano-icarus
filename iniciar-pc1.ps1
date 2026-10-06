@@ -10,7 +10,7 @@ param(
 
 $argumentos = @{
     Perfil = 'pc1'
-    SsidMobil = 'aseproda'
+    SsidMobil = 'Madic-Aseproda'
 }
 if ($Ip) { $argumentos.Ip = $Ip }
 if ($Logs) { $argumentos.Logs = $true }

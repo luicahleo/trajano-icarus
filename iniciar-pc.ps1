@@ -1,3 +1,5 @@
+# .\iniciar-pc.ps1 -Perfil pc1 -SsidMobil 'Madic-Aseproda'
+
 param(
     [ValidateSet('pc1', 'pc2', 'pc3')]
     [string]$Perfil,
