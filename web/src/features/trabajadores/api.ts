@@ -1,8 +1,16 @@
 import { peticion } from '../../lib/http';
-import type { FuncionalidadOperativaTrabajador, TrabajadorResumen } from '../../lib/tipos';
+import type {
+  FuncionalidadOperativaTrabajador,
+  TrabajadorNombreResumen,
+  TrabajadorResumen,
+} from '../../lib/tipos';
 
 export async function listarTrabajadores(clienteId: string): Promise<TrabajadorResumen[]> {
   return peticion<TrabajadorResumen[]>({ ruta: `/clientes/${clienteId}/trabajadores` });
+}
+
+export async function listarNombresTrabajadores(clienteId: string): Promise<TrabajadorNombreResumen[]> {
+  return peticion<TrabajadorNombreResumen[]>({ ruta: `/clientes/${clienteId}/trabajadores/nombres` });
 }
 
 export async function crearTrabajador(

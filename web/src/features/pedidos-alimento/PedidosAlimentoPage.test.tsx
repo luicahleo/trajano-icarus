@@ -49,7 +49,7 @@ function baseFetch(reglas: Record<string, Response | Response[]>) {
     }),
     'GET /api/pedidos-alimento/notificaciones': respuesta(200, { items: [], contador: 0 }),
     'GET /api/granjas': respuesta(200, [{ id: 'g1', nombre: 'Granja Uno' }]),
-    'GET /api/clientes/cli1/trabajadores': respuesta(200, [{ id: 't1', nombre: 'Ana Quispe' }]),
+    'GET /api/clientes/cli1/trabajadores/nombres': respuesta(200, [{ id: 't1', nombre: 'Ana Quispe' }]),
     ...reglas,
   });
 }

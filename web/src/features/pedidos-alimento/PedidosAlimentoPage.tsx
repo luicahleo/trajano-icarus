@@ -28,7 +28,7 @@ import type { Columna } from '../../app/ui/TablaDatos';
 import { TAMANO_PAGINA_POR_DEFECTO } from '../../lib/paginacion';
 import { INTERVALO_SONDEO_MS } from '../../lib/sondeo';
 import { useAuth } from '../auth/AuthContext';
-import { listarTrabajadores } from '../trabajadores/api';
+import { listarNombresTrabajadores } from '../trabajadores/api';
 import {
   listarGranjas,
   listarNotificaciones,
@@ -83,7 +83,7 @@ export function PedidosAlimentoPage() {
   // cacheada, no una por fila.
   const { data: trabajadores } = useQuery({
     queryKey: ['pedidos-alimento', 'trabajadores', clienteId],
-    queryFn: () => listarTrabajadores(clienteId!),
+    queryFn: () => listarNombresTrabajadores(clienteId!),
     enabled: clienteId !== null,
   });
 

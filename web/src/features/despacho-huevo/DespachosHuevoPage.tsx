@@ -27,7 +27,7 @@ import type { Columna } from '../../app/ui/TablaDatos';
 import { TAMANO_PAGINA_POR_DEFECTO } from '../../lib/paginacion';
 import { INTERVALO_SONDEO_MS } from '../../lib/sondeo';
 import { useAuth } from '../auth/AuthContext';
-import { listarTrabajadores } from '../trabajadores/api';
+import { listarNombresTrabajadores } from '../trabajadores/api';
 import {
   listarDespachos,
   listarGranjas,
@@ -75,7 +75,7 @@ export function DespachosHuevoPage() {
   // Trabajadores, no una consulta por fila.
   const { data: trabajadores } = useQuery({
     queryKey: ['despachos-huevo', 'trabajadores', clienteId],
-    queryFn: () => listarTrabajadores(clienteId!),
+    queryFn: () => listarNombresTrabajadores(clienteId!),
     enabled: clienteId !== null,
   });
 

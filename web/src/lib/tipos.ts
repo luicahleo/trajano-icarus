@@ -125,6 +125,11 @@ export interface TrabajadorResumen {
   funcionalidades: Funcionalidad[];
 }
 
+export interface TrabajadorNombreResumen {
+  id: string;
+  nombre: string;
+}
+
 export type EstadoTareaVacunacion = 'Pendiente' | 'Completada' | 'Cancelada';
 
 export interface ProgramaVacunacionResumen {
