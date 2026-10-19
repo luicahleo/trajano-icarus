@@ -199,11 +199,13 @@ export const router = createBrowserRouter([
             path: '/avicola/galpones/:galponId/eficiencia',
             element: (
               <ProtectedRoute>
-                <RequiereFuncionalidad funcionalidades={['ProduccionHuevos']}>
-                  <Suspense fallback={<CargandoRuta />}>
-                    <EficienciaPage />
-                  </Suspense>
-                </RequiereFuncionalidad>
+                <RequiereRol roles={['Administrador', 'Cliente']}>
+                  <RequiereFuncionalidad funcionalidades={['ProduccionHuevos']}>
+                    <Suspense fallback={<CargandoRuta />}>
+                      <EficienciaPage />
+                    </Suspense>
+                  </RequiereFuncionalidad>
+                </RequiereRol>
               </ProtectedRoute>
             ),
           },

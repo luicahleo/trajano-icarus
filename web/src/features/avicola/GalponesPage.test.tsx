@@ -111,6 +111,29 @@ describe('GalponesPage', () => {
       '/avicola/galpones/ga1',
     );
   });
+  test('el Trabajador no ve la eficiencia ni la consulta', async () => {
+    const fetchMock = baseFetchAvicolaConFuncionalidades(
+      ['Galpones', 'ProduccionHuevos'],
+      {
+        'GET /api/granjas': respuesta(200, [granja]),
+        'GET /api/granjas/gr1/galpones': respuesta(200, [galpon]),
+        'GET /api/galpones/ga1/eficiencia': respuesta(200, {
+          galponId: 'ga1',
+          desde: '2026-08-19',
+          hasta: '2026-08-19',
+          dias: [{ fecha: '2026-08-19', eficiencia: 0, bajoUmbral: true }],
+        }),
+      },
+      'Trabajador',
+    );
+    renderPagina('/avicola/galpones');
+    expect(await screen.findByText('Galpón 1')).toBeInTheDocument();
+    // Margen para que una consulta indebida de eficiencia alcance a resolverse.
+    await new Promise((resolver) => setTimeout(resolver, 100));
+    expect(screen.queryByText(/bajo umbral/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ %/)).not.toBeInTheDocument();
+    expect(llamadaCon(fetchMock, 'GET', '/galpones/ga1/eficiencia')).toBe(false);
+  });
   test('estado vacío invita a crear', async () => {
     baseFetchAvicola({
       'GET /api/granjas': respuesta(200, [granja]),

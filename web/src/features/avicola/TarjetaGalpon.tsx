@@ -2,17 +2,20 @@ import { Box, Card, CardActionArea, CardContent, Chip, Typography } from '@mui/m
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { Galpon } from '../../lib/tipos';
+import { useAuth } from '../auth/AuthContext';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
 import { obtenerEficiencia } from './api';
 import { hoyIso } from './constantes';
 
 export function TarjetaGalpon({ galpon }: { galpon: Galpon }) {
   const hoy = hoyIso();
-  const puedeProduccion = useFuncionalidad('ProduccionHuevos');
+  const { tieneRol } = useAuth();
+  // El Trabajador registra producción pero no consulta la eficiencia.
+  const veEficiencia = useFuncionalidad('ProduccionHuevos') && !tieneRol('Trabajador');
   const eficiencia = useQuery({
     queryKey: ['avicola', 'eficiencia', galpon.id, hoy, hoy],
     queryFn: () => obtenerEficiencia(galpon.id, hoy, hoy),
-    enabled: puedeProduccion,
+    enabled: veEficiencia,
   });
   const dia = eficiencia.data?.dias?.[0];
 

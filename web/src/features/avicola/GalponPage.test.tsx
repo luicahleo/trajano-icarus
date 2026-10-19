@@ -130,6 +130,20 @@ describe('GalponPage con registros pendientes', () => {
     expect(screen.getByLabelText('Maples')).toHaveValue('3');
   });
 
+  test('el Trabajador no ve ni consulta la eficiencia', async () => {
+    const fetchMock = prepararFetch();
+    renderPagina();
+
+    expect(await screen.findByRole('heading', { name: 'Galpón 3' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ver eficiencia/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/bajo umbral/i)).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([arg]) =>
+        (arg instanceof Request ? arg.url : String(arg)).endsWith('/galpones/g1/eficiencia'),
+      ),
+    ).toBe(false);
+  });
+
   test('eliminar un pendiente lo descarta de la cola, sin llamar a la API', async () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     const fetchMock = prepararFetch();

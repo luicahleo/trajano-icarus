@@ -25,6 +25,7 @@ import type {
 } from '../../lib/tipos';
 import type { OperacionPendiente } from '../../lib/offline/tipos';
 import { ApiError } from '../../lib/http';
+import { useAuth } from '../auth/AuthContext';
 import { useFuncionalidad } from '../auth/useFuncionalidad';
 import { descartarOperacion } from '../../app/offline/coordinador';
 import { useOperacionesPendientes } from '../../app/offline/useOperacionesPendientes';
@@ -84,7 +85,10 @@ export function GalponPage() {
     queryFn: () => obtenerGalpon(galponId),
     enabled: Boolean(galponId),
   });
+  const { tieneRol } = useAuth();
   const puedeProduccion = useFuncionalidad('ProduccionHuevos');
+  // El Trabajador registra producción pero no consulta la eficiencia.
+  const veEficiencia = puedeProduccion && !tieneRol('Trabajador');
   const puedeMortalidad = useFuncionalidad('Mortalidad');
   const puedeVacunacion = useFuncionalidad('Vacunacion');
   const puedeEstructura = useFuncionalidad('Galpones');
@@ -101,7 +105,7 @@ export function GalponPage() {
   const eficiencia = useQuery({
     queryKey: ['avicola', 'eficiencia', galponId, fecha, fecha],
     queryFn: () => obtenerEficiencia(galponId, fecha, fecha),
-    enabled: Boolean(galponId) && puedeProduccion,
+    enabled: Boolean(galponId) && veEficiencia,
   });
   const tareasVacunacion = useQuery({
     queryKey: [...CLAVE_TAREAS_VACUNACION, galponId],
@@ -308,13 +312,13 @@ export function GalponPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}>
-          {puedeProduccion && dia && (
+          {veEficiencia && dia && (
             <Typography>{dia.eficiencia.toLocaleString('es-ES')} %</Typography>
           )}
-          {puedeProduccion && dia?.bajoUmbral && (
+          {veEficiencia && dia?.bajoUmbral && (
             <Chip size="small" color="error" label="Bajo umbral — considerar descarte" />
           )}
-          {puedeProduccion && (
+          {veEficiencia && (
             <Button component={Link} to={`/avicola/galpones/${galponId}/eficiencia`}>
               Ver eficiencia
             </Button>
