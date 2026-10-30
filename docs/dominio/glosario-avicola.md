@@ -109,8 +109,9 @@ app de oficina Trajano.GestorCaisy.
 |---|---|
 | Confirmación de recepción | Cierre del despacho sin recuento por línea: el transportista solo verifica visualmente, no hay reconteo formal. Fija la fecha de recepción (fecha de negocio del servidor) y notifica al tenant en la misma operación. Solo un despacho `Despachado` se puede recibir; el reintento responde 409 sin repetir la transición ni la notificación. |
 | Recibo de recepción | PDF imprimible generado sobre datos ya persistidos, disponible solo una vez confirmada la recepción y solicitables las veces que haga falta. Lleva las líneas por tamaño (amarras, unidades sueltas, huevos, precio congelado y subtotal), los totales y la firma y sello de CAISY. |
-| Crédito por despacho | Saldo calculado al consultar (sin tabla de saldo persistida): suma el total de los despachos `Recibido` cuya recepción tiene más de 14 días y resta el gasto real reconocido de alimento (`RecibidoConforme` o `RecibidoConDiferencias`). El dinero queda disponible recién **catorce días después de la recepción**; el desfase es una constante de dominio, no configurable. |
-| Advertencia de crédito insuficiente | Al enviar un pedido de alimento, si el saldo proyectado (saldo disponible menos total solicitado) queda negativo, CAISY recibe una notificación interna en la misma transacción del envío. Es una advertencia, no un bloqueo: el pedido se envía igual. |
+| Crédito por despacho | Saldo calculado al consultar (sin tabla de saldo persistida): suma el total de todos los despachos `Recibido`, resta el gasto real reconocido de alimento (`RecibidoConforme` o `RecibidoConDiferencias`) y suma los ajustes por corrección de precio. El ingreso está disponible desde la recepción; los pedidos de alimento aún no recibidos no descuentan. Es privado del rol Cliente. |
+| Recibido reciente | Parte de los ingresos cuya recepción ocurrió dentro de los últimos 14 días. Es una referencia informativa del ritmo de liquidación, no un plazo de disponibilidad ni un componente que se reste del saldo. |
+| Marca de crédito insuficiente | Al enviar un pedido de alimento, si el saldo proyectado queda negativo, se deja una marca sin cifras en el historial del pedido. No bloquea el envío, no exige confirmación ni genera una alerta separada para CAISY. |
 
 ## Unidades
 

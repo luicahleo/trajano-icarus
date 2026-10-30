@@ -11,9 +11,11 @@ archivo de proxy local. Diseño de referencia:
 - Un único kiosco web por cliente, offline prohibido: siempre online.
 - La aplicación administrativa (PWA) y el kiosco comparten API pero **no** la
   sesión: el kiosco usa una cookie restringida, nunca un token administrativo.
-- A0 (contrato real de ARGOS con prueba de vida) sigue pendiente. Mientras no
-  se fije, el proveedor biométrico por defecto falla cerrado y el enrolamiento y
-  el kiosco no son productivos.
+- El adaptador ARGOS v2 con prueba de vida está implementado y se configura con
+  `ArgosControlAcceso:Url` y su API key. Sin esa configuración, el proveedor por
+  defecto falla cerrado; el doble determinista es solo para pruebas/desarrollo.
+  La aceptación de PAD y latencia en tablet Android real sigue siendo una
+  verificación operativa independiente.
 
 ## Dominio y origen
 
@@ -83,8 +85,8 @@ avícola siguen verdes con `./verify.ps1` (Docker para los tests de integración
 
 ## Pendientes de operación
 
-- A0: fijar PAD, formato y aceptación del contrato ARGOS antes de considerar el
-  kiosco productivo.
+- Validar PAD, formato y latencia del contrato ARGOS v2 en hardware real antes
+  de dar por superada la aceptación operativa del kiosco.
 - Plataforma Android dedicada (Android Enterprise/EMM) y arranque automático;
   Windows no es plataforma del kiosco en esta fase.
 - Ensayo en hardware real (cámara, PAD, luz, latencia) y arranque tras reinicio

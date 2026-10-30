@@ -13,6 +13,10 @@ pagar contexto inútil.
 
 ## Documentos
 
+La referencia funcional y técnica del sistema vigente está en
+[docs/proyecto/README.md](../proyecto/README.md). Este directorio documenta el
+proceso de trabajo; `docs/proyecto/` documenta el producto.
+
 | Documento | Cuándo leerlo |
 |---|---|
 | [WORKFLOW.md](WORKFLOW.md) | Antes de una feature, un bloque de fase o un cambio arquitectónico |
