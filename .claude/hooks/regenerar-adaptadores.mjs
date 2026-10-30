@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Hook PostToolUse: cuando se edita AGENTS.md, regenera los adaptadores.
+// Hook PostToolUse: cuando se edita AGENTS.md o un rol, regenera los adaptadores.
 // Sin esto, el gate de adaptadores falla por olvido en vez de por un problema
 // real. Nunca falla el hook: un error acá no debe bloquear la sesión.
 
@@ -26,7 +26,8 @@ const archivo = evento?.tool_input?.file_path;
 if (typeof archivo !== 'string') process.exit(0);
 
 const normalizado = archivo.replace(/\\/g, '/');
-if (!normalizado.endsWith('/AGENTS.md') && normalizado !== 'AGENTS.md') process.exit(0);
+const esNucleo = normalizado.endsWith('/AGENTS.md') || normalizado === 'AGENTS.md';
+if (!esNucleo && !normalizado.includes('docs/ai/agentes/roles/')) process.exit(0);
 
 spawnSync(process.execPath, [join(raiz, 'quality', 'generar-adaptadores.mjs')], {
   cwd: raiz,

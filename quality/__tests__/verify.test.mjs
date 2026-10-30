@@ -56,6 +56,12 @@ test('informa el código del gate que falló', () => {
   assert.equal(resultado.ejecutados[0].codigo, 7);
 });
 
+test('el gate de tareas está en la lista y corre antes que los de build', () => {
+  const nombres = GATES.map((g) => g.nombre);
+  assert.ok(nombres.includes('Tareas'));
+  assert.ok(nombres.indexOf('Tareas') < nombres.indexOf('Frontend lint'));
+});
+
 test('el gate de adaptadores está en la lista y corre antes que mojibake', () => {
   const nombres = GATES.map((g) => g.nombre);
   assert.ok(nombres.includes('Adaptadores'));

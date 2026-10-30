@@ -25,6 +25,8 @@ proceso de trabajo; `docs/proyecto/` documenta el producto.
 | [ECONOMIA_TOKENS.md](ECONOMIA_TOKENS.md) | Al planificar la sesión: qué modelo y qué tamaño |
 | [CONTEXT-EFFICIENCY.md](CONTEXT-EFFICIENCY.md) | Al explorar un repositorio que no conocés |
 | [HANDOFF.template.md](HANDOFF.template.md) | Al cerrar una sesión con trabajo a medias |
+| [agentes/README.md](agentes/README.md) | Al trabajar con los agentes por rol o relevar a otro proveedor |
+| [agentes/PROTOCOLO.md](agentes/PROTOCOLO.md) | Al actuar en una tarea gestionada |
 
 ## Qué leer al iniciar
 
@@ -53,6 +55,9 @@ El núcleo es siempre el mismo archivo. Cambia solo cómo llega a cada herramien
 
 Esos adaptadores están **generados**. No se editan a mano: se edita `AGENTS.md`
 y se corre `node quality/generar-adaptadores.mjs`.
+
+Los agentes por rol siguen el mismo patrón: la fuente vive en `agentes/roles/` y
+el generador produce los archivos de Claude Code y de Kimi Code.
 
 Las capacidades particulares de cada proveedor —memoria, hooks, subagentes,
 comandos— son optimizaciones opcionales. Nunca deben ser necesarias para

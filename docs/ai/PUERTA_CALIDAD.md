@@ -23,9 +23,10 @@ resto corre en segundos.
 | Gate | Qué comprueba | Cómo se arregla un fallo |
 |---|---|---|
 | Tests de la puerta | Que los propios scripts de `quality/` estén verdes | Según el mensaje del test |
-| Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore`) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
+| Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore` y los agentes por rol) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 | Mojibake | Ausencia del carácter de reemplazo y de las secuencias que delatan UTF-8 leído como Latin-1, en todo archivo versionado que git clasifique como texto | Escribir el carácter correcto en UTF-8 |
 | Enlaces | Que todo enlace relativo de los `.md` versionados apunte a un archivo existente | Corregir el enlace o crear el destino |
+| Tareas | Que cada bitácora de `docs/ai/tareas/` sea una historia legal, con aprobaciones humanas y sin credenciales reconocibles | Registrar eventos con `quality/tarea.mjs`; una bitácora no se edita a mano |
 | Frontend lint | ESLint (flat config) sobre `web/` (`npm run lint`) | Según el error de ESLint |
 | Frontend build | `tsc -b && vite build` sobre `web/` (los errores de tipos son errores) | Según el error del compilador o del bundler |
 | Frontend tests | Vitest + Testing Library sobre `web/` (`npm run test`) | Según el test que falla |

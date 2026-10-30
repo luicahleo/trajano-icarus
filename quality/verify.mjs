@@ -35,6 +35,7 @@ export const GATES = [
   { nombre: 'Adaptadores', comando: 'node', args: ['quality/check-adaptadores.mjs'] },
   { nombre: 'Mojibake', comando: 'node', args: ['quality/check-mojibake.mjs'] },
   { nombre: 'Enlaces', comando: 'node', args: ['quality/check-enlaces.mjs'] },
+  { nombre: 'Tareas', comando: 'node', args: ['quality/check-tareas.mjs'] },
   { nombre: 'Frontend lint', ...gateNpm('lint') },
   { nombre: 'Frontend build', ...gateNpm('build') },
   { nombre: 'Frontend tests', ...gateNpm('test') },

@@ -30,6 +30,17 @@ mano: editar este, y correr `node quality/generar-adaptadores.mjs`.
 - No crear ramas de trabajo salvo pedido explícito.
 - Detalle en `docs/ai/FLUJO_GIT.md`.
 
+## Agentes por rol
+
+- Seis roles portables entre proveedores: orquestador, planificador,
+  desarrollador, verificador, revisor y operaciones. La fuente está en
+  `docs/ai/agentes/roles/`; `.claude/agents/` y `.kimi-code/agents/` son
+  adaptadores generados.
+- Si existe `.local/agentes/tarea-activa.json`, antes de cambiar nada leer
+  `docs/ai/agentes/PROTOCOLO.md` y ejecutar `node quality/tarea.mjs resumen`.
+- Ningún agente aprueba una funcionalidad: la aprobación es una prueba manual
+  del usuario.
+
 ## Descubrimiento eficiente
 
 1. Empezar solo con `git status --short --branch` y `git log -5 --oneline`.

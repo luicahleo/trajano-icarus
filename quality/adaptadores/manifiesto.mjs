@@ -6,6 +6,10 @@
 // Codex y Kimi CLI no aparecen: descubren AGENTS.md de forma nativa y
 // jerárquica, así que no necesitan adaptador. DeepSeek tampoco: es un modelo,
 // no un harness, y hereda el archivo del harness que lo hospeda.
+//
+// Los agentes por rol se generan aparte, desde docs/ai/agentes/roles/.
+
+import { adaptadoresDeRoles } from './roles.mjs';
 
 export const AVISO =
   'Archivo generado por quality/generar-adaptadores.mjs. No editar a mano: editar AGENTS.md.';
@@ -67,4 +71,5 @@ reglas propias, que divergirían del núcleo.
   { harness: 'Cline', ruta: '.clineignore', contenido: IGNORADOS },
   { harness: 'Cursor', ruta: '.cursorignore', contenido: IGNORADOS },
   { harness: 'Gemini CLI', ruta: '.geminiignore', contenido: IGNORADOS },
+  ...adaptadoresDeRoles(),
 ];
