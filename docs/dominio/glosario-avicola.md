@@ -33,7 +33,7 @@ Definidas en el spec del subproyecto 5
 |---|---|
 | Granja | La explotación avícola del cliente. **Un cliente tiene una sola granja activa**: las granjas reales son muy grandes y agrupan todos los galpones. En el legacy se llamaba `GestorAvicola` y arrastraba contadores derivados; es un error, la entidad es `Granja` y es limpia. |
 | Galpón | Nave dentro de la granja que alberga **un lote** de gallinas ponedoras. Tiene capacidad máxima e inventario de gallinas vivas (`0 ≤ GallinasActuales ≤ CapacidadMaxima`). |
-| Lote | Grupo de gallinas que puebla un galpón. No hay lotes mezclados en un galpón. La `FechaNacimientoLote` es la fecha en que se pobló el galpón. |
+| Lote | Grupo de gallinas que puebla un galpón. No hay lotes mezclados en un galpón. La `FechaNacimientoLote` es la fecha en que se pobló el galpón. Es editable: corregirla actualiza el dato del galpón pero **no reprograma** las tareas de vacunación ya materializadas (cada tarea guarda su propia `FechaProgramada`). La `FechaDescarteLote` (opcional, nunca futura ni anterior al poblado) registra cuándo se descartaron las gallinas del lote y se conserva para auditorías. |
 
 ## Vacunación (SP7)
 

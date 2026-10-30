@@ -19,7 +19,7 @@ public class ActualizarGalponHandlerTests
     public async Task GalponInexistenteLanzaNotFound()
     {
         _galpones.ObtenerPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Galpon?)null);
-        var ex = await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(new ActualizarGalponCommand(Guid.NewGuid(), "2", null, 6000), CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(new ActualizarGalponCommand(Guid.NewGuid(), "2", null, 6000, Ayer, null), CancellationToken.None));
         Assert.Equal("Galpon no encontrado.", ex.Message);
     }
 
@@ -28,7 +28,7 @@ public class ActualizarGalponHandlerTests
     {
         _galpones.ObtenerPorIdAsync(_galpon.Id, Arg.Any<CancellationToken>()).Returns(_galpon);
         _galpones.ExisteNumeroAsync(_galpon.GranjaId, "2", Arg.Any<CancellationToken>()).Returns(true);
-        var ex = await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(new ActualizarGalponCommand(_galpon.Id, "2", null, 6000), CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(new ActualizarGalponCommand(_galpon.Id, "2", null, 6000, Ayer, null), CancellationToken.None));
         Assert.Equal("No se pudo actualizar el galpón.", ex.Message);
     }
 
@@ -37,8 +37,10 @@ public class ActualizarGalponHandlerTests
     {
         _galpones.ObtenerPorIdAsync(_galpon.Id, Arg.Any<CancellationToken>()).Returns(_galpon);
         _galpones.ExisteNumeroAsync(_galpon.GranjaId, "2", Arg.Any<CancellationToken>()).Returns(false);
-        await _handler.Handle(new ActualizarGalponCommand(_galpon.Id, " 2 ", "Sur", 6000), CancellationToken.None);
+        var pobladoCorregido = Ayer.AddDays(-30);
+        await _handler.Handle(new ActualizarGalponCommand(_galpon.Id, " 2 ", "Sur", 6000, pobladoCorregido, Ayer), CancellationToken.None);
         Assert.Equal("2", _galpon.Numero); Assert.Equal("Sur", _galpon.Descripcion); Assert.Equal(6000, _galpon.CapacidadMaxima);
+        Assert.Equal(pobladoCorregido, _galpon.FechaNacimientoLote); Assert.Equal(Ayer, _galpon.FechaDescarteLote);
         await _unidadTrabajo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

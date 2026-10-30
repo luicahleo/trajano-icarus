@@ -84,6 +84,7 @@ const galpon = {
   capacidadMaxima: 5000,
   gallinasActuales: 4800,
   fechaNacimientoLote: '2026-01-15',
+  fechaDescarteLote: null,
   descripcion: null,
 };
 

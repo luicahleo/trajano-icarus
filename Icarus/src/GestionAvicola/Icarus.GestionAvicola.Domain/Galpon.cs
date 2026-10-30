@@ -51,11 +51,15 @@ public sealed class Galpon : AggregateRoot
 
     public DateOnly FechaNacimientoLote { get; private set; }
 
+    public DateOnly? FechaDescarteLote { get; private set; }
+
     public string? Descripcion { get; private set; }
 
     public bool EstaActivo { get; private set; }
 
-    public void ActualizarDatos(string numero, string? descripcion, int capacidadMaxima)
+    public void ActualizarDatos(
+        string numero, string? descripcion, int capacidadMaxima,
+        DateOnly fechaNacimientoLote, DateOnly? fechaDescarteLote)
     {
         if (string.IsNullOrWhiteSpace(numero))
             throw new ReglaNegocioException("El número del galpón es obligatorio.");
@@ -64,10 +68,19 @@ public sealed class Galpon : AggregateRoot
         if (capacidadMaxima < GallinasActuales)
             throw new ReglaNegocioException(
                 "La capacidad máxima no puede ser menor que las gallinas actuales.");
+        if (fechaNacimientoLote > Hoy())
+            throw new ReglaNegocioException("La fecha de nacimiento del lote no puede ser futura.");
+        if (fechaDescarteLote > Hoy())
+            throw new ReglaNegocioException("La fecha de descarte del lote no puede ser futura.");
+        if (fechaDescarteLote < fechaNacimientoLote)
+            throw new ReglaNegocioException(
+                "La fecha de descarte no puede ser anterior a la fecha de nacimiento del lote.");
 
         Numero = numero.Trim();
         Descripcion = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion.Trim();
         CapacidadMaxima = capacidadMaxima;
+        FechaNacimientoLote = fechaNacimientoLote;
+        FechaDescarteLote = fechaDescarteLote;
     }
 
     public void AjustarInventarioGallinas(int nuevoTotal)

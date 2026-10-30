@@ -19,6 +19,7 @@ const galpones: Galpon[] = [
     capacidadMaxima: 5000,
     gallinasActuales: 4800,
     fechaNacimientoLote: '2026-08-01',
+    fechaDescarteLote: null,
     descripcion: null,
   },
 ];

@@ -47,7 +47,13 @@ export const obtenerGalpon = (id: string) =>
   conCacheLectura(`galpones/${id}`, () => peticion<Galpon>({ ruta: `/galpones/${id}` }));
 export const actualizarGalpon = (
   id: string,
-  d: { numero: string; descripcion: string | null; capacidadMaxima: number },
+  d: {
+    numero: string;
+    descripcion: string | null;
+    capacidadMaxima: number;
+    fechaNacimientoLote: string;
+    fechaDescarteLote: string | null;
+  },
 ) => peticion<void>({ ruta: `/galpones/${id}`, metodo: 'PUT', cuerpo: d });
 export const ajustarInventarioGalpon = (id: string, gallinasActuales: number) =>
   peticion<void>({

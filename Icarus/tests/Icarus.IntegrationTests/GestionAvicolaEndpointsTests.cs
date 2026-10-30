@@ -110,6 +110,56 @@ public class GestionAvicolaEndpointsTests
     }
 
     [Fact]
+    public async Task ActualizarGalponCorrigePobladoYRegistraDescarte()
+    {
+        var token = await LoginComo(SemillaIdentidad.EmailCliente);
+        using var cliente = _factory.CreateClient();
+        var granjas = await cliente.SendAsync(Autenticado(HttpMethod.Get, "/api/granjas", token));
+        var granjaId = (await granjas.Content.ReadFromJsonAsync<JsonElement>())[0].GetProperty("id").GetGuid();
+        var galpones = await cliente.SendAsync(Autenticado(HttpMethod.Get, $"/api/granjas/{granjaId}/galpones", token));
+        var galpon = (await galpones.Content.ReadFromJsonAsync<JsonElement>())[0];
+        var galponId = galpon.GetProperty("id").GetGuid();
+        var numero = galpon.GetProperty("numero").GetString();
+        var poblado = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-200).ToString("yyyy-MM-dd");
+        var descarte = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1).ToString("yyyy-MM-dd");
+        var actualizacion = await cliente.SendAsync(Autenticado(HttpMethod.Put, $"/api/galpones/{galponId}", token, new
+        {
+            numero,
+            descripcion = (string?)null,
+            capacidadMaxima = 5000,
+            fechaNacimientoLote = poblado,
+            fechaDescarteLote = descarte,
+        }));
+        Assert.Equal(HttpStatusCode.NoContent, actualizacion.StatusCode);
+        var consulta = await cliente.SendAsync(Autenticado(HttpMethod.Get, $"/api/galpones/{galponId}", token));
+        var actualizado = await consulta.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(poblado, actualizado.GetProperty("fechaNacimientoLote").GetString());
+        Assert.Equal(descarte, actualizado.GetProperty("fechaDescarteLote").GetString());
+    }
+
+    [Fact]
+    public async Task ActualizarGalponConDescarteAnteriorAlPobladoDevuelve400()
+    {
+        var token = await LoginComo(SemillaIdentidad.EmailCliente);
+        using var cliente = _factory.CreateClient();
+        var granjas = await cliente.SendAsync(Autenticado(HttpMethod.Get, "/api/granjas", token));
+        var granjaId = (await granjas.Content.ReadFromJsonAsync<JsonElement>())[0].GetProperty("id").GetGuid();
+        var galpones = await cliente.SendAsync(Autenticado(HttpMethod.Get, $"/api/granjas/{granjaId}/galpones", token));
+        var galponSemilla = (await galpones.Content.ReadFromJsonAsync<JsonElement>())[0];
+        var galponId = galponSemilla.GetProperty("id").GetGuid();
+        var numero = galponSemilla.GetProperty("numero").GetString();
+        var respuesta = await cliente.SendAsync(Autenticado(HttpMethod.Put, $"/api/galpones/{galponId}", token, new
+        {
+            numero,
+            descripcion = (string?)null,
+            capacidadMaxima = 5000,
+            fechaNacimientoLote = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-10).ToString("yyyy-MM-dd"),
+            fechaDescarteLote = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-20).ToString("yyyy-MM-dd"),
+        }));
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
     public async Task SinTokenDevuelve401()
     {
         using var cliente = _factory.CreateClient();

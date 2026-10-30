@@ -47,6 +47,7 @@ import { RegistrarRecogidaDialog } from './RegistrarRecogidaDialog';
 import { EditarBajasDialog } from './EditarBajasDialog';
 import { EditarRecogidaDialog } from './EditarRecogidaDialog';
 import { AsignarPlanDialog } from './AsignarPlanDialog';
+import { GalponAcciones } from './GalponAcciones';
 
 function diaEficiencia(dias: EficienciaDia[] | undefined): EficienciaDia | undefined {
   return dias?.[0];
@@ -323,6 +324,7 @@ export function GalponPage() {
               Ver eficiencia
             </Button>
           )}
+          <GalponAcciones galpon={galpon.data} />
         </Box>
       </Box>
       <TextField

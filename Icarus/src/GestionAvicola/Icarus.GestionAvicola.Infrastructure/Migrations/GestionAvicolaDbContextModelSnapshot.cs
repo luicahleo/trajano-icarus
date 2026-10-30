@@ -473,6 +473,9 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
                     b.Property<bool>("EstaActivo")
                         .HasColumnType("bit");
 
+                    b.Property<DateOnly?>("FechaDescarteLote")
+                        .HasColumnType("date");
+
                     b.Property<DateOnly>("FechaNacimientoLote")
                         .HasColumnType("date");
 

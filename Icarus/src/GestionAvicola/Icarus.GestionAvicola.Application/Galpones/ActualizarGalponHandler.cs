@@ -16,7 +16,7 @@ public sealed class ActualizarGalponHandler : IRequestHandler<ActualizarGalponCo
             throw new ConflictException("No se pudo actualizar el galpón.");
         }
 
-        galpon.ActualizarDatos(numero, request.Descripcion, request.CapacidadMaxima);
+        galpon.ActualizarDatos(numero, request.Descripcion, request.CapacidadMaxima, request.FechaNacimientoLote, request.FechaDescarteLote);
         await _unidadTrabajo.SaveChangesAsync(cancellationToken);
     }
 }

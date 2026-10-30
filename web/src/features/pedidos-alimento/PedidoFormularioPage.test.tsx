@@ -338,6 +338,7 @@ describe('PedidoFormularioPage', () => {
             capacidadMaxima: 5000,
             gallinasActuales: 4800,
             fechaNacimientoLote: fechafutura,
+            fechaDescarteLote: null,
             descripcion: null,
           },
         ]),

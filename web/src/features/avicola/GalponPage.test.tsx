@@ -168,4 +168,55 @@ describe('GalponPage con registros pendientes', () => {
     const huboDelete = fetchMock.mock.calls.some(([arg]) => (arg as Request).method === 'DELETE');
     expect(huboDelete).toBe(false);
   });
+
+  test('el Cliente con Galpones ve las acciones de edición en la cabecera', async () => {
+    fetchSimulado({
+      'POST /api/identidad/sesion/renovar': respuesta(200, {
+        accessToken: 't',
+        expiraEnSegundos: 900,
+      }),
+      'GET /api/identidad/me': respuesta(200, {
+        usuarioId: 'u1',
+        rol: 'Cliente',
+        clienteId: 'cli1',
+        trabajadorId: null,
+        modulos: ['GestionAvicola'],
+        funcionalidades: ['Galpones', 'ProduccionHuevos', 'Mortalidad'],
+      }),
+      'GET /api/galpones/g1': respuesta(200, {
+        id: 'g1',
+        numero: 3,
+        gallinasActuales: 100,
+        capacidadMaxima: 200,
+        fechaNacimientoLote: '2026-01-15',
+        fechaDescarteLote: null,
+        descripcion: null,
+      }),
+      'GET /api/galpones/g1/produccion': [
+        respuesta(200, {
+          galponId: 'g1',
+          fecha: '2026-08-31',
+          recogidas: [],
+          totalMaples: 0,
+          totalUnidadesIncompletas: 0,
+          totalVendible: 0,
+          totalMaplesDescarte: 0,
+          totalUnidadesDescarte: 0,
+          totalDescarte: 0,
+        }),
+      ],
+      'GET /api/galpones/g1/mortalidad': [
+        respuesta(200, { galponId: 'g1', fecha: '2026-08-31', registros: [], totalMuertas: 0 }),
+      ],
+      'GET /api/galpones/g1/eficiencia': [respuesta(200, { dias: [] })],
+    });
+
+    renderPagina();
+
+    expect(await screen.findByRole('heading', { name: 'Galpón 3' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(await screen.findByRole('heading', { name: 'Editar galpón' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Fecha de poblado del lote')).toHaveValue('2026-01-15');
+    expect(screen.getByLabelText('Fecha de descarte del lote')).toHaveValue('');
+  });
 });

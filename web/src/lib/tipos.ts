@@ -44,6 +44,7 @@ export interface Galpon {
   capacidadMaxima: number;
   gallinasActuales: number;
   fechaNacimientoLote: string;
+  fechaDescarteLote: string | null;
   descripcion: string | null;
 }
 

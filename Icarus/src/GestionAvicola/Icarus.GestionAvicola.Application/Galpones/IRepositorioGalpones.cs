@@ -13,4 +13,4 @@ public interface IRepositorioGalpones
 
 public sealed record GalponResumen(
     Guid Id, string Numero, int CapacidadMaxima, int GallinasActuales,
-    DateOnly FechaNacimientoLote, string? Descripcion);
+    DateOnly FechaNacimientoLote, DateOnly? FechaDescarteLote, string? Descripcion);

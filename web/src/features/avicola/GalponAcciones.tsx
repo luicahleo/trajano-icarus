@@ -18,7 +18,10 @@ export function GalponAcciones({ galpon }: { galpon: Galpon }) {
   const [numero, setNumero] = useState(galpon.numero),
     [descripcion, setDescripcion] = useState(galpon.descripcion ?? ''),
     [capacidad, setCapacidad] = useState(String(galpon.capacidadMaxima)),
+    [poblado, setPoblado] = useState(galpon.fechaNacimientoLote),
+    [descarte, setDescarte] = useState(galpon.fechaDescarteLote ?? ''),
     [gallinas, setGallinas] = useState(String(galpon.gallinasActuales));
+  const hoy = new Date().toISOString().slice(0, 10);
   const cerrar = () => setDialogo(null);
   const refrescar = () => {
     void qc.invalidateQueries({ queryKey: ['avicola', 'galpones'] });
@@ -30,6 +33,8 @@ export function GalponAcciones({ galpon }: { galpon: Galpon }) {
         numero,
         descripcion: descripcion || null,
         capacidadMaxima: Number(capacidad),
+        fechaNacimientoLote: poblado,
+        fechaDescarteLote: descarte || null,
       }),
     onSuccess: refrescar,
   });
@@ -47,19 +52,51 @@ export function GalponAcciones({ galpon }: { galpon: Galpon }) {
       <Button onClick={() => setDialogo('editar')}>Editar</Button>
       <Button onClick={() => setDialogo('inventario')}>Inventario</Button>
       <Button onClick={() => setDialogo('desactivar')}>Desactivar</Button>
-      <Dialog open={dialogo === 'editar'} onClose={cerrar}>
+      <Dialog open={dialogo === 'editar'} onClose={cerrar} fullWidth maxWidth="xs">
         <DialogTitle>Editar galpón</DialogTitle>
         <DialogContent>
-          <TextField label="Número" value={numero} onChange={(e) => setNumero(e.target.value)} />
+          <TextField
+            label="Número"
+            value={numero}
+            onChange={(e) => setNumero(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
           <TextField
             label="Descripción"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
+            fullWidth
+            margin="dense"
           />
           <TextField
             label="Capacidad máxima"
             value={capacidad}
             onChange={(e) => setCapacidad(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+          <TextField
+            label="Fecha de poblado del lote"
+            type="date"
+            value={poblado}
+            onChange={(e) => setPoblado(e.target.value)}
+            slotProps={{ htmlInput: { max: hoy }, inputLabel: { shrink: true } }}
+            fullWidth
+            margin="dense"
+          />
+          <TextField
+            label="Fecha de descarte del lote"
+            type="date"
+            value={descarte}
+            onChange={(e) => setDescarte(e.target.value)}
+            slotProps={{
+              htmlInput: { min: poblado || undefined, max: hoy },
+              inputLabel: { shrink: true },
+            }}
+            helperText="Opcional; se conserva para auditorías. Dejar vacía si el lote sigue activo."
+            fullWidth
+            margin="dense"
           />
         </DialogContent>
         <DialogActions>
@@ -67,13 +104,15 @@ export function GalponAcciones({ galpon }: { galpon: Galpon }) {
           <Button onClick={() => editar.mutate()}>Guardar</Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={dialogo === 'inventario'} onClose={cerrar}>
+      <Dialog open={dialogo === 'inventario'} onClose={cerrar} fullWidth maxWidth="xs">
         <DialogTitle>Ajustar inventario</DialogTitle>
         <DialogContent>
           <TextField
             label="Gallinas actuales"
             value={gallinas}
             onChange={(e) => setGallinas(e.target.value)}
+            fullWidth
+            margin="dense"
           />
         </DialogContent>
         <DialogActions>

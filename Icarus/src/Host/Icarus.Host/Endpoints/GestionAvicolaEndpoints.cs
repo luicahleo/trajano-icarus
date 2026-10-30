@@ -35,7 +35,7 @@ public static class GestionAvicolaEndpoints
         granjas.MapGet("/{granjaId:guid}/galpones", async (Guid granjaId, ISender mediator) => Results.Ok(await mediator.Send(new ListarGalponesPorGranjaQuery(granjaId)))).RequireAuthorization(politicaEstructura);
         var galpones = app.MapGroup("/galpones");
         galpones.MapGet("/{id:guid}", async (Guid id, ISender mediator) => Results.Ok(await mediator.Send(new ObtenerGalponQuery(id)))).RequireAuthorization(politicaEstructura);
-        galpones.MapPut("/{id:guid}", async (Guid id, ActualizarGalponRequest c, ISender mediator) => { await mediator.Send(new ActualizarGalponCommand(id, c.Numero, c.Descripcion, c.CapacidadMaxima)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);
+        galpones.MapPut("/{id:guid}", async (Guid id, ActualizarGalponRequest c, ISender mediator) => { await mediator.Send(new ActualizarGalponCommand(id, c.Numero, c.Descripcion, c.CapacidadMaxima, c.FechaNacimientoLote, c.FechaDescarteLote)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);
         galpones.MapPut("/{id:guid}/inventario", async (Guid id, InventarioGalponRequest c, ISender mediator) => { await mediator.Send(new AjustarInventarioGalponCommand(id, c.GallinasActuales)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);
         galpones.MapDelete("/{id:guid}", async (Guid id, ISender mediator) => { await mediator.Send(new DesactivarGalponCommand(id)); return Results.NoContent(); }).RequireAuthorization(politicaGalpones);
         galpones.MapPost("/{galponId:guid}/produccion", async (Guid galponId, RegistrarProduccionRequest c, ISender mediator) => { var id = await mediator.Send(new RegistrarProduccionCommand(galponId, c.Hora, c.CantidadMaples, c.UnidadesIncompletas, c.MaplesDescarte, c.UnidadesDescarte, c.IdempotencyKey)); return Results.Created($"/produccion/{id}", new { id }); }).RequireAuthorization(politicaProduccion);
@@ -127,7 +127,7 @@ public static class GestionAvicolaEndpoints
     private sealed record CrearGranjaRequest(string Nombre);
     private sealed record RenombrarGranjaRequest(string Nombre);
     private sealed record CrearGalponRequest(string Numero, int CapacidadMaxima, int GallinasActuales, DateOnly FechaNacimientoLote, string? Descripcion);
-    private sealed record ActualizarGalponRequest(string Numero, string? Descripcion, int CapacidadMaxima);
+    private sealed record ActualizarGalponRequest(string Numero, string? Descripcion, int CapacidadMaxima, DateOnly FechaNacimientoLote, DateOnly? FechaDescarteLote);
     private sealed record InventarioGalponRequest(int GallinasActuales);
     private sealed record RegistrarProduccionRequest(TimeOnly? Hora, int CantidadMaples, int UnidadesIncompletas, int MaplesDescarte, int UnidadesDescarte, Guid? IdempotencyKey);
     private sealed record EditarProduccionRequest(TimeOnly Hora, int CantidadMaples, int UnidadesIncompletas, int MaplesDescarte, int UnidadesDescarte);

@@ -92,6 +92,9 @@ acoplamiento y contención innecesarios.
   - `CapacidadMaxima` (int, > 0).
   - `GallinasActuales` (int, ≥ 0).
   - `FechaNacimientoLote` (`DateOnly`, obligatoria, nunca futura).
+  - `FechaDescarteLote` (`DateOnly?`, opcional, nunca futura ni anterior al
+    poblado; agregada posteriormente para registrar el descarte del lote con
+    fines de auditoría).
   - `Descripcion` (string?, opcional, máx 500).
   - `EstaActivo` (bool, soft delete).
 - Invariantes de dominio (también reflejadas como check constraints en EF):
@@ -102,8 +105,11 @@ acoplamiento y contención innecesarios.
     Clientes).
 - Unicidad: `(GranjaId, Numero)` único **incluyendo inactivos**.
 - Operaciones de dominio: crear (ctor), `ActualizarDatos(numero, descripcion,
-  capacidadMaxima)`, `AjustarInventarioGallinas(nuevoTotal)` (total absoluto, no
-  delta), `Desactivar()`.
+  capacidadMaxima, fechaNacimientoLote, fechaDescarteLote)` (ampliada después
+  de SP5: la fecha de poblado es editable para correcciones y la fecha de
+  descarte, opcional, queda persistida para auditorías; ambas nunca futuras y
+  el descarte nunca anterior al poblado), `AjustarInventarioGallinas(nuevoTotal)`
+  (total absoluto, no delta), `Desactivar()`.
 - Reglas de consistencia con la granja (en los handlers de Application):
   - Crear un galpón exige que la granja exista, esté activa y sea del mismo
     tenant; si no, `NotFoundException` genérico (anti-enumeración).

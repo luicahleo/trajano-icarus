@@ -57,7 +57,7 @@ public class GalponTests
     public void ActualizarDatosCapacidadMenorQueInventarioLanzaReglaNegocio()
     {
         var galpon = GalponValido();
-        var ex = Assert.Throws<ReglaNegocioException>(() => galpon.ActualizarDatos("1", null, 4000));
+        var ex = Assert.Throws<ReglaNegocioException>(() => galpon.ActualizarDatos("1", null, 4000, Ayer, null));
         Assert.Equal("La capacidad máxima no puede ser menor que las gallinas actuales.", ex.Message);
     }
 
@@ -65,10 +65,62 @@ public class GalponTests
     public void ActualizarDatosValidoRecorta()
     {
         var galpon = GalponValido();
-        galpon.ActualizarDatos(" B ", " Sur ", 6000);
+        galpon.ActualizarDatos(" B ", " Sur ", 6000, Ayer, null);
         Assert.Equal("B", galpon.Numero);
         Assert.Equal("Sur", galpon.Descripcion);
         Assert.Equal(6000, galpon.CapacidadMaxima);
+    }
+
+    [Fact]
+    public void ActualizarDatosCorrigeFechaDePoblado()
+    {
+        var galpon = GalponValido();
+        var pobladoCorregido = Ayer.AddDays(-30);
+        galpon.ActualizarDatos("1", null, 5000, pobladoCorregido, null);
+        Assert.Equal(pobladoCorregido, galpon.FechaNacimientoLote);
+    }
+
+    [Fact]
+    public void ActualizarDatosFechaDePobladoFuturaLanzaReglaNegocio()
+    {
+        var galpon = GalponValido();
+        var manana = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        var ex = Assert.Throws<ReglaNegocioException>(() => galpon.ActualizarDatos("1", null, 5000, manana, null));
+        Assert.Equal("La fecha de nacimiento del lote no puede ser futura.", ex.Message);
+    }
+
+    [Fact]
+    public void ActualizarDatosRegistraFechaDeDescarte()
+    {
+        var galpon = GalponValido();
+        galpon.ActualizarDatos("1", null, 5000, Ayer, Ayer);
+        Assert.Equal(Ayer, galpon.FechaDescarteLote);
+    }
+
+    [Fact]
+    public void ActualizarDatosDescarteNuloLimpiaLaFecha()
+    {
+        var galpon = GalponValido();
+        galpon.ActualizarDatos("1", null, 5000, Ayer, Ayer);
+        galpon.ActualizarDatos("1", null, 5000, Ayer, null);
+        Assert.Null(galpon.FechaDescarteLote);
+    }
+
+    [Fact]
+    public void ActualizarDatosDescarteFuturoLanzaReglaNegocio()
+    {
+        var galpon = GalponValido();
+        var manana = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        var ex = Assert.Throws<ReglaNegocioException>(() => galpon.ActualizarDatos("1", null, 5000, Ayer, manana));
+        Assert.Equal("La fecha de descarte del lote no puede ser futura.", ex.Message);
+    }
+
+    [Fact]
+    public void ActualizarDatosDescarteAnteriorAlPobladoLanzaReglaNegocio()
+    {
+        var galpon = GalponValido();
+        var ex = Assert.Throws<ReglaNegocioException>(() => galpon.ActualizarDatos("1", null, 5000, Ayer, Ayer.AddDays(-1)));
+        Assert.Equal("La fecha de descarte no puede ser anterior a la fecha de nacimiento del lote.", ex.Message);
     }
 
     [Fact]

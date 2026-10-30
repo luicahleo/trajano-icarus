@@ -67,6 +67,7 @@ function renderConGalpon() {
             capacidadMaxima: 5000,
             gallinasActuales: 4800,
             fechaNacimientoLote: '2026-01-15',
+            fechaDescarteLote: null,
             descripcion: null,
           }}
         />
@@ -85,7 +86,7 @@ function llamadaCon(fetchMock: ReturnType<typeof vi.fn>, metodo: string, sufijo:
 describe('GalponAcciones', () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  test('editar manda numero, descripcion y capacidad', async () => {
+  test('editar manda numero, descripcion, capacidad y fechas del lote', async () => {
     const usuario = userEvent.setup();
     const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], {
       'PUT /api/galpones/ga1': respuesta(204),
@@ -100,6 +101,36 @@ describe('GalponAcciones', () => {
       numero: '2',
       descripcion: null,
       capacidadMaxima: 5000,
+      fechaNacimientoLote: '2026-01-15',
+      fechaDescarteLote: null,
+    });
+  });
+
+  test('editar permite corregir el poblado y registrar el descarte', async () => {
+    const usuario = userEvent.setup();
+    const fetchMock = baseFetchAvicolaConFuncionalidades(['Granjas', 'Galpones'], {
+      'PUT /api/galpones/ga1': respuesta(204),
+    });
+    renderConGalpon();
+    await usuario.click(await screen.findByRole('button', { name: 'Editar' }));
+    // El descarte no admite fechas anteriores al poblado (el backend valida igual).
+    expect(screen.getByLabelText('Fecha de descarte del lote')).toHaveAttribute(
+      'min',
+      '2026-01-15',
+    );
+    const poblado = screen.getByLabelText('Fecha de poblado del lote');
+    await usuario.clear(poblado);
+    await usuario.type(poblado, '2026-01-10');
+    const descarte = screen.getByLabelText('Fecha de descarte del lote');
+    await usuario.type(descarte, '2026-01-20');
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+    const llamada = fetchMock.mock.calls.find(([arg]) => (arg as Request).method === 'PUT');
+    expect(JSON.parse(await (llamada![0] as Request).clone().text())).toEqual({
+      numero: '1',
+      descripcion: null,
+      capacidadMaxima: 5000,
+      fechaNacimientoLote: '2026-01-10',
+      fechaDescarteLote: '2026-01-20',
     });
   });
 
