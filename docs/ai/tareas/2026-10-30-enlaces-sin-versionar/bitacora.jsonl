@@ -1,0 +1,16 @@
+{"ts":"2026-10-30T16:47:46.117Z","tipo":"creada","rol":"orquestador","proveedor":"anthropic","titulo":"El gate de enlaces revisa los .md nuevos sin versionar"}
+{"ts":"2026-10-30T16:47:46.225Z","tipo":"decision","rol":"orquestador","proveedor":"anthropic","texto":"Piloto de la fase 2. Tarea pequeña: pasa directo a desarrollo, sin planificación."}
+{"ts":"2026-10-30T16:47:46.670Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"RECIBIDA","a":"DESARROLLO","commit":"03c53a8"}
+{"ts":"2026-10-30T16:48:08.554Z","tipo":"nota","rol":"desarrollador","proveedor":"anthropic","texto":"Prueba vista en rojo. archivosMarkdown usa cached, others y exclude-standard."}
+{"ts":"2026-10-30T16:48:09.055Z","tipo":"estado","rol":"desarrollador","proveedor":"anthropic","de":"DESARROLLO","a":"VERIFICACION","commit":"03c53a8"}
+{"ts":"2026-10-30T16:48:25.954Z","tipo":"estado","rol":"verificador","proveedor":"anthropic","de":"VERIFICACION","a":"DESARROLLO","commit":"03c53a8","nota":"Falta actualizar la descripción del gate en PUERTA_CALIDAD."}
+{"ts":"2026-10-30T16:48:27.378Z","tipo":"estado","rol":"desarrollador","proveedor":"anthropic","de":"DESARROLLO","a":"VERIFICACION","commit":"03c53a8"}
+{"ts":"2026-10-30T16:48:38.808Z","tipo":"nota","rol":"orquestador","proveedor":"anthropic","texto":"Fuera de alcance: el gate de mojibake usa git grep sin untracked y comparte el punto ciego."}
+{"ts":"2026-10-30T16:56:40.820Z","tipo":"verificacion","rol":"verificador","proveedor":"anthropic","resultado":"verde","codigo":0,"arbol":"e7d590221ab77793d941668e57eedb8ff80b8381","commit":"03c53a8","limpio":false,"log":"logs/puerta-2026-10-30-enlaces-sin-versionar-20261030-164838.log","duracionMs":481643}
+{"ts":"2026-10-30T16:57:22.198Z","tipo":"estado","rol":"verificador","proveedor":"anthropic","de":"VERIFICACION","a":"REVISION","commit":"03c53a8","nota":"Cambio en quality: revisar que no relaje ningún gate."}
+{"ts":"2026-10-30T16:57:53.581Z","tipo":"relevo","rol":"orquestador","proveedor":"moonshot","anterior":"anthropic","motivo":"piloto de la fase 2"}
+{"ts":"2026-10-30T16:59:08.764Z","tipo":"nota","rol":"revisor","proveedor":"moonshot","texto":"Revisión sin hallazgos. El diff limita el cambio a archivosMarkdown, su prueba y la documentación: agrega Markdown no versionado con --others, conserva el versionado con --cached y aplica --exclude-standard. No toca autorización, datos, migraciones ni máquinas de estados, y no relaja gates. Evidencia verde vigente contrastada con HEAD 03c53a8 y los tres archivos modificados."}
+{"ts":"2026-10-30T16:59:09.255Z","tipo":"estado","rol":"revisor","proveedor":"moonshot","de":"REVISION","a":"ENTORNO","commit":"03c53a8","nota":"Revisión sin hallazgos bloqueantes; evidencia verde vigente."}
+{"ts":"2026-10-30T17:00:11.400Z","tipo":"relevo","rol":"orquestador","proveedor":"anthropic","anterior":"moonshot","motivo":"Fin de la revisión en el piloto de la fase 2"}
+{"ts":"2026-10-30T17:00:12.199Z","tipo":"comando","rol":"operaciones","proveedor":"anthropic","texto":"Prueba real: un .md sin versionar con enlace roto hace fallar el gate; al borrarlo vuelve a verde."}
+{"ts":"2026-10-30T17:00:12.294Z","tipo":"nota","rol":"operaciones","proveedor":"anthropic","texto":"Cambio solo en la puerta: no hay aplicación que levantar, iniciar-pc1.ps1 no aplica."}

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Gate de enlaces: en los .md versionados, todo enlace relativo debe apuntar a
-// un archivo existente. Los enlaces http(s) no se comprueban: verificar la red
-// haría el gate lento y no determinista.
+// Gate de enlaces: en los .md del árbol, versionados o nuevos y salvo los que
+// excluye .gitignore, todo enlace relativo debe apuntar a un archivo existente.
+// Los enlaces http(s) no se comprueban: verificar la red haría el gate lento y
+// no determinista.
 
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -48,8 +49,10 @@ export function rutaDelDestino(destino) {
   }
 }
 
-export function archivosMarkdown() {
-  const { codigo, salida } = ejecutar('git', ['ls-files', '-z', '--', '*.md'], {
+export function archivosMarkdown({ cwd } = {}) {
+  const args = ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '*.md'];
+  const { codigo, salida } = ejecutar('git', args, {
+    cwd,
     silencioso: true,
     sinShell: true,
   });

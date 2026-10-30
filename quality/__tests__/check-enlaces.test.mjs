@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extraerEnlaces, esRelativo, rutaDelDestino } from '../check-enlaces.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { archivosMarkdown, extraerEnlaces, esRelativo, rutaDelDestino } from '../check-enlaces.mjs';
 
 test('extrae un enlace en línea con su número de línea', () => {
   const md = 'Intro\n\nVer el [mapa](docs/ai/README.md) del proceso.\n';
@@ -50,4 +54,25 @@ test('rutaDelDestino recorta el ancla', () => {
 
 test('rutaDelDestino decodifica los espacios escapados', () => {
   assert.equal(rutaDelDestino('docs/un%20archivo.md'), 'docs/un archivo.md');
+});
+
+test('archivosMarkdown incluye los .md nuevos y respeta .gitignore', () => {
+  const raiz = mkdtempSync(join(tmpdir(), 'enlaces-'));
+  const git = (...a) => execFileSync('git', a, { cwd: raiz });
+  try {
+    git('init', '-q');
+    writeFileSync(join(raiz, '.gitignore'), 'ignorada/\n');
+    writeFileSync(join(raiz, 'versionado.md'), '# a\n');
+    git('add', '.');
+    mkdirSync(join(raiz, 'ignorada'));
+    writeFileSync(join(raiz, 'ignorada', 'fuera.md'), '# b\n');
+    writeFileSync(join(raiz, 'nuevo.md'), '# c\n');
+
+    const { ok, archivos } = archivosMarkdown({ cwd: raiz });
+
+    assert.equal(ok, true);
+    assert.deepEqual(archivos.sort(), ['nuevo.md', 'versionado.md']);
+  } finally {
+    rmSync(raiz, { recursive: true, force: true });
+  }
 });
