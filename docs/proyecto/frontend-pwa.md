@@ -30,7 +30,6 @@ páginas de otra; las rutas se declaran centralmente en `src/app/router.tsx`.
 | `/login` | Pública | Inicio de sesión y entrada offline del trabajador. |
 | `/`, `/inicio` | Autenticado | Redirección o inicio según rol/permisos. |
 | `/admin/clientes`, `/nuevo`, `/:id` | Administrador | Tenants, módulos y cuentas. |
-| `/admin/vacunacion` | Administrador | Catálogo global de programas. |
 | `/trabajadores` | Cliente | Personal y funcionalidades. |
 | `/control-acceso` | Cliente | Habilitación, enrolamiento y sesión kiosco. |
 | `/control-acceso/historial` | Cliente | Jornadas, marcación manual y correcciones. |
@@ -114,7 +113,6 @@ flowchart LR
 |---|---|
 | `auth` | Login, contexto, permisos y guardas. |
 | `admin/clientes` | Alta, detalle, suspensión/reactivación y módulos. |
-| `admin/vacunacion` | Programas globales e importación Excel. |
 | `trabajadores` | Alta, cese, desactivación y asignación de funciones. |
 | `avicola` | Granjas, galpones, recogidas, mortalidad, eficiencia y vacunación. |
 | `pedidos-alimento` | Borradores, envío, historial, documentos y recepción. |

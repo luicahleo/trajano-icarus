@@ -186,6 +186,10 @@ a { color: var(--aqua-oscuro); }
     border-left-color: var(--terracota);
 }
 
+.lateral__grupo--sanidad .lateral__enlace--activo {
+    border-left-color: var(--grafito);
+}
+
 .contenido {
     flex-grow: 1;
     min-width: 0;
@@ -284,6 +288,10 @@ a { color: var(--aqua-oscuro); }
 .chip--borrador { background-color: var(--bruma); border-color: var(--borde); color: var(--neutro); }
 .chip--publicada { background-color: var(--aqua-claro); color: var(--aqua-oscuro); }
 .chip--anulada { background-color: #F8E3DA; color: var(--terracota-oscura); }
+
+/* Estados de los programas de vacunación (spec 2026-10-30) */
+.chip--publicado { background-color: var(--aqua-claro); color: var(--aqua-oscuro); }
+.chip--inactivo { background-color: var(--bruma); border-color: var(--borde); color: var(--grafito); }
 
 /* Estados de los pedidos de alimento (SP8B) */
 .chip--solicitado { background-color: var(--aqua-claro); color: var(--aqua-oscuro); }

@@ -75,11 +75,6 @@ export const DespachoHuevoFormularioPage = lazy(() =>
     default: modulo.DespachoHuevoFormularioPage,
   })),
 );
-export const AdminVacunacionPage = lazy(() =>
-  import('../features/admin/vacunacion/AdminVacunacionPage').then((modulo) => ({
-    default: modulo.AdminVacunacionPage,
-  })),
-);
 export const ControlAccesoPage = lazy(() =>
   import('../features/control-acceso/TrabajadoresAccesoPage').then((modulo) => ({
     default: modulo.TrabajadoresAccesoPage,

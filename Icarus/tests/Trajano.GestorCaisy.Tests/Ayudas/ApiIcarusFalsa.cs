@@ -484,6 +484,88 @@ public sealed class ApiIcarusFalsa : IApiIcarusClient
         return Task.CompletedTask;
     }
 
+    // Programas de vacunación (spec 2026-10-30).
+    public List<ProgramaVacunacionGestionResumenApi> ResumenesVacunacion { get; } = [];
+    public ProgramaVacunacionGestionDetalleApi? DetalleVacunacionActual { get; set; }
+    public Guid IdDeProgramaCreado { get; set; } = Guid.NewGuid();
+    public int ItemsImportadosVacunacion { get; set; } = 2;
+    public Exception? ErrorDeVacunacion { get; set; }
+    public int VecesCrearPrograma { get; private set; }
+    public int VecesActualizarPrograma { get; private set; }
+    public int VecesImportarCronograma { get; private set; }
+    public int VecesPublicarPrograma { get; private set; }
+    public int VecesEliminarPrograma { get; private set; }
+    public int VecesDesactivarPrograma { get; private set; }
+    public DatosProgramaVacunacionApi? UltimosDatosPrograma { get; private set; }
+    public byte[]? UltimoCronogramaImportado { get; private set; }
+
+    public Task<IReadOnlyList<ProgramaVacunacionGestionResumenApi>> ListarProgramasVacunacionAsync(
+        CancellationToken token = default) =>
+        Task.FromResult<IReadOnlyList<ProgramaVacunacionGestionResumenApi>>(ResumenesVacunacion);
+
+    public Task<ProgramaVacunacionGestionDetalleApi> ObtenerProgramaVacunacionAsync(
+        Guid id, CancellationToken token = default) =>
+        Task.FromResult(DetalleVacunacionActual ?? CrearDetalleVacunacion(id, "Borrador"));
+
+    public Task<Guid> CrearProgramaVacunacionAsync(
+        DatosProgramaVacunacionApi datos, CancellationToken token = default)
+    {
+        VecesCrearPrograma++;
+        UltimosDatosPrograma = datos;
+        if (ErrorDeVacunacion is not null) throw ErrorDeVacunacion;
+        return Task.FromResult(IdDeProgramaCreado);
+    }
+
+    public Task ActualizarProgramaVacunacionAsync(
+        Guid id, DatosProgramaVacunacionApi datos, CancellationToken token = default)
+    {
+        VecesActualizarPrograma++;
+        UltimosDatosPrograma = datos;
+        if (ErrorDeVacunacion is not null) throw ErrorDeVacunacion;
+        return Task.CompletedTask;
+    }
+
+    public Task<int> ImportarCronogramaVacunacionAsync(
+        Guid id, Stream contenido, string nombreArchivo, CancellationToken token = default)
+    {
+        VecesImportarCronograma++;
+        using var memoria = new MemoryStream();
+        contenido.CopyTo(memoria);
+        UltimoCronogramaImportado = memoria.ToArray();
+        if (ErrorDeVacunacion is not null) throw ErrorDeVacunacion;
+        return Task.FromResult(ItemsImportadosVacunacion);
+    }
+
+    public Task PublicarProgramaVacunacionAsync(Guid id, CancellationToken token = default)
+    {
+        VecesPublicarPrograma++;
+        if (ErrorDeVacunacion is not null) throw ErrorDeVacunacion;
+        return Task.CompletedTask;
+    }
+
+    public Task EliminarBorradorProgramaVacunacionAsync(Guid id, CancellationToken token = default)
+    {
+        VecesEliminarPrograma++;
+        if (ErrorDeVacunacion is not null) throw ErrorDeVacunacion;
+        return Task.CompletedTask;
+    }
+
+    public Task DesactivarProgramaVacunacionAsync(Guid id, CancellationToken token = default)
+    {
+        VecesDesactivarPrograma++;
+        if (ErrorDeVacunacion is not null) throw ErrorDeVacunacion;
+        return Task.CompletedTask;
+    }
+
+    public static ProgramaVacunacionGestionDetalleApi CrearDetalleVacunacion(
+        Guid id, string estado, bool estaActivo = true, int cantidadItems = 2) =>
+        new(id, "PROGRAMA DE VACUNACION PARA 1000 AVES", new DateOnly(2026, 8, 6), 1000, null,
+            estado, estaActivo,
+            Enumerable.Range(1, cantidadItems)
+                .Select(i => new ItemProgramaVacunacionApi(
+                    Guid.NewGuid(), i * 7, $"VACUNA {i}", "Agua de bebida", null, null))
+                .ToList());
+
     public static DespachoHuevoDetalleApi CrearDespachoHuevo(
         Guid id, string estado = "Despachado") =>
         new(

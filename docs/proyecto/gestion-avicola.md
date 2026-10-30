@@ -51,7 +51,9 @@ Las consultas EF vuelven a filtrar por tenant y estado activo.
 
 ## 3. Catálogo global de vacunación
 
-El Administrador gestiona programas emitidos por CAISY. Un programa contiene:
+El Gestor CAISY con `GestorVeterinario` gestiona, desde
+Trajano.GestorCaisy, los programas emitidos por CAISY. Un programa
+contiene:
 
 - nombre único;
 - cantidad de aves > 0;
@@ -64,6 +66,24 @@ El cronograma se importa desde Excel y se valida completo: una fila inválida
 rechaza la importación sin guardar cambios. La edad no se repite entre ítems
 activos. Al reemplazar el cronograma, los ítems anteriores se desactivan; las
 tareas ya asignadas conservan su snapshot.
+
+El programa nace como borrador. Solo el borrador se edita, recibe el
+cronograma y se elimina (borrado lógico). Publicar exige cronograma; el
+publicado es inmutable y es el único que cliente y trabajador ven y asignan.
+Desactivar solo aplica a un publicado. El gestor ve borradores, publicados e
+inactivos, pero nunca asignaciones por galpón ni tareas; el Administrador de
+plataforma ya no interviene en el catálogo.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Borrador: crear
+    Borrador --> Borrador: editar / importar Excel
+    Borrador --> Publicado: publicar (exige cronograma)
+    Borrador --> Eliminado: eliminar (borrado lógico)
+    Publicado --> Inactivo: desactivar (retira pendientes)
+    Eliminado --> [*]
+    Inactivo --> [*]
+```
 
 ### Asignación a galpón
 
@@ -131,6 +151,7 @@ No hay jobs ni notificaciones push; la consulta es la fuente de verdad.
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/Granja.cs`
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/Galpon.cs`
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/ProgramaVacunacion.cs`
+- `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/EstadoProgramaVacunacion.cs`
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Domain/TareaVacunacion.cs`
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Application/Vacunacion/`
 - `Icarus/src/GestionAvicola/Icarus.GestionAvicola.Infrastructure/Persistencia/ConfiguracionGranja.cs`

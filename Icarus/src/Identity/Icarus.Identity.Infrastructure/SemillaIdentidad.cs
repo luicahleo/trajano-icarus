@@ -36,10 +36,12 @@ public static class SemillaIdentidad
     public const string EmailTrabajadorT4 = "t4@icarus.test";
 
     // Cuentas de oficina de CAISY, solo Development: las mismas que
-    // crear-usuario-caisy.ps1 y crear-usuario-gestor-recepcion-huevos.ps1
-    // levantan a mano contra la VPS. En local ya no hace falta correrlos.
+    // crear-usuario-caisy.ps1, crear-usuario-gestor-recepcion-huevos.ps1 y
+    // crear-usuario-gestor-veterinario.ps1 levantan a mano contra la VPS.
+    // En local ya no hace falta correrlos.
     public const string EmailGestorPedidoAlimento = "gpa@icarus.test";
     public const string EmailGestorRecepcionHuevos = "grh@icarus.test";
+    public const string EmailGestorVeterinario = "gve@icarus.test";
 
     public static async Task SembrarAsync(IServiceProvider servicios, string contrasenaPrueba)
     {
@@ -77,13 +79,15 @@ public static class SemillaIdentidad
             FuncionalidadesCaisy.GestorPedidoAlimento, contrasenaPrueba);
         await CrearCuentaCaisySiNoExiste(usuarios, EmailGestorRecepcionHuevos,
             FuncionalidadesCaisy.GestorRecepcionHuevos, contrasenaPrueba);
+        await CrearCuentaCaisySiNoExiste(usuarios, EmailGestorVeterinario,
+            FuncionalidadesCaisy.GestorVeterinario, contrasenaPrueba);
 
         foreach (var email in new[]
         {
             EmailAdmin, EmailCliente, EmailTrabajador, EmailClienteC1, EmailTrabajadorT1,
             EmailClienteC2, EmailTrabajadorT2, EmailClienteC3, EmailTrabajadorT3,
             EmailClienteC4, EmailTrabajadorT4,
-            EmailGestorPedidoAlimento, EmailGestorRecepcionHuevos,
+            EmailGestorPedidoAlimento, EmailGestorRecepcionHuevos, EmailGestorVeterinario,
         })
         {
             await AlinearContrasena(usuarios, email, contrasenaPrueba);

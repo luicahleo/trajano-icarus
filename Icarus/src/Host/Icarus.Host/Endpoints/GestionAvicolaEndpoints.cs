@@ -50,39 +50,17 @@ public static class GestionAvicolaEndpoints
         mortalidad.MapPut("/{id:guid}", async (Guid id, EditarMortalidadRequest c, ISender mediator) => { await mediator.Send(new EditarMortalidadCommand(id, c.Hora, c.CantidadMuertas)); return Results.NoContent(); }).RequireAuthorization(politicaMortalidad);
         mortalidad.MapDelete("/{id:guid}", async (Guid id, ISender mediator) => { await mediator.Send(new DesactivarMortalidadCommand(id)); return Results.NoContent(); }).RequireAuthorization(politicaMortalidad);
 
-        // Catálogo global de programas (spec SP7): escritura solo
-        // Administrador; lectura con la política CatalogoVacunacion
-        // (funcionalidad Vacunacion o rol de plataforma).
+        // Catálogo global de programas (spec SP7 y spec 2026-10-30): el tenant
+        // solo consulta los publicados activos. La gestión vive en
+        // ProgramasVacunacionCaisyEndpoints, reservada al Gestor CAISY con
+        // GestorVeterinario; el Administrador ya no participa.
         var programasVacunacion = app.MapGroup("/vacunacion/programas");
-        programasVacunacion.MapPost("/", async (CrearProgramaVacunacionRequest c, ISender mediator) =>
-        {
-            var id = await mediator.Send(new CrearProgramaVacunacionCommand(c.Nombre, c.CantidadAves, c.Observaciones));
-            return Results.Created($"/vacunacion/programas/{id}", new { id });
-        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
-        programasVacunacion.MapGet("/", async (bool? incluirInactivos, ISender mediator) =>
-            Results.Ok(await mediator.Send(new ListarProgramasVacunacionQuery(incluirInactivos ?? false))))
+        programasVacunacion.MapGet("/", async (ISender mediator) =>
+            Results.Ok(await mediator.Send(new ListarProgramasVacunacionQuery())))
             .RequireAuthorization(PoliticasClientes.CatalogoVacunacion);
         programasVacunacion.MapGet("/{id:guid}", async (Guid id, ISender mediator) =>
             Results.Ok(await mediator.Send(new ObtenerProgramaVacunacionQuery(id))))
             .RequireAuthorization(PoliticasClientes.CatalogoVacunacion);
-        programasVacunacion.MapPut("/{id:guid}", async (Guid id, ActualizarProgramaVacunacionRequest c, ISender mediator) =>
-        {
-            await mediator.Send(new ActualizarProgramaVacunacionCommand(id, c.Nombre, c.CantidadAves, c.Observaciones));
-            return Results.NoContent();
-        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
-        programasVacunacion.MapDelete("/{id:guid}", async (Guid id, ISender mediator) =>
-        {
-            await mediator.Send(new DesactivarProgramaVacunacionCommand(id));
-            return Results.NoContent();
-        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador);
-        // Subida del Excel que reemplaza el cronograma completo. Sin
-        // antiforgery: la autenticación es Bearer, no cookie.
-        programasVacunacion.MapPost("/{id:guid}/cronograma-excel", async (Guid id, IFormFile archivo, ISender mediator, CancellationToken cancellationToken) =>
-        {
-            await using var contenido = archivo.OpenReadStream();
-            var importados = await mediator.Send(new ImportarCronogramaExcelCommand(id, contenido), cancellationToken);
-            return Results.Ok(new { itemsImportados = importados });
-        }).RequireAuthorization(PoliticasAutorizacion.SoloAdministrador).DisableAntiforgery();
 
         // Asignar/quitar plan: decisión estructural del cliente (los
         // trabajadores nunca tienen la funcionalidad Galpones).
@@ -119,8 +97,6 @@ public static class GestionAvicolaEndpoints
 
         return app;
     }
-    private sealed record CrearProgramaVacunacionRequest(string Nombre, int CantidadAves, string? Observaciones);
-    private sealed record ActualizarProgramaVacunacionRequest(string Nombre, int CantidadAves, string? Observaciones);
     private sealed record AsignarPlanVacunacionRequest(Guid ProgramaId);
     private sealed record CompletarTareaVacunacionRequest(DateOnly? FechaAplicacion, int? AvesVacunadas, string? Observaciones);
     private sealed record CancelarTareaVacunacionRequest(string? Motivo);

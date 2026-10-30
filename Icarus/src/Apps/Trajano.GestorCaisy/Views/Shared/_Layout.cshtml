@@ -61,8 +61,7 @@
     }
     <div class="cuerpo">
         @if (User.Identity?.IsAuthenticated == true
-            && (ReclamosCaisy.TieneGestorPedidoAlimento(User)
-                || ReclamosCaisy.TieneGestorRecepcionHuevos(User)))
+            && ReclamosCaisy.TieneAlgunaFuncionalidad(User))
         {
             <nav class="lateral" aria-label="Navegación principal">
                 @if (ReclamosCaisy.TieneGestorPedidoAlimento(User))
@@ -90,6 +89,16 @@
                         <a asp-controller="RecepcionesHuevo" asp-action="Index"
                            class="lateral__enlace @(seccion == "recepciones-huevo" ? "lateral__enlace--activo" : "")">
                             Recepción de huevo
+                        </a>
+                    </div>
+                }
+                @if (ReclamosCaisy.TieneGestorVeterinario(User))
+                {
+                    <div class="lateral__grupo lateral__grupo--sanidad">
+                        <span class="lateral__grupo-titulo">Sanidad</span>
+                        <a asp-controller="ProgramasVacunacion" asp-action="Index"
+                           class="lateral__enlace @(seccion == "programas-vacunacion" ? "lateral__enlace--activo" : "")">
+                            Programas de vacunación
                         </a>
                     </div>
                 }

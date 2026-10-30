@@ -4,7 +4,7 @@
 
 | Rol | Tenant | Propósito |
 |---|---|---|
-| `Administrador` | Sin tenant | Alta/suspensión de clientes, módulos, cuentas CAISY y catálogo global de vacunación. |
+| `Administrador` | Sin tenant | Alta/suspensión de clientes, módulos y cuentas CAISY. |
 | `Cliente` | Propio `ClienteId` | Administra su empresa y dispone de las funcionalidades de los módulos habilitados. |
 | `Trabajador` | Propio `ClienteId` + `TrabajadorId` | Opera únicamente funcionalidades asignadas y vigentes. |
 | `GestorCaisy` | Sin tenant | Oficina CAISY; sus facultades se componen con `FuncionalidadesCaisy`. |
@@ -167,6 +167,7 @@ concede administración de estructura ni ajuste manual de inventario.
 |---|---:|---|
 | `GestorPedidoAlimento` | 1 | Precios de alimento y bandeja/despacho de pedidos. |
 | `GestorRecepcionHuevos` | 2 | Precios de huevo, recepción y consulta de crédito. |
+| `GestorVeterinario` | 4 | Programas de vacunación: borrador, cronograma, publicación y desactivación. |
 
 La policy exige simultáneamente rol `GestorCaisy` y bit en `funcCaisy`. El rol por
 sí solo no habilita operaciones. En GestorCaisy se vuelve a comprobar rol y bit

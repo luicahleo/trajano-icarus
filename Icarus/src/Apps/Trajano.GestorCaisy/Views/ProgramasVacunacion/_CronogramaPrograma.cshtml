@@ -1,0 +1,34 @@
+@model ProgramaVacunacionGestionDetalleApi
+<section class="tarjeta tarjeta--tabla">
+    <h2>Cronograma</h2>
+    @if (Model.Items.Count == 0)
+    {
+        <p class="vacio">Aún no tiene cronograma: importe el Excel de CAISY.</p>
+    }
+    else
+    {
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Edad (días)</th>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Vacuna o manejo</th>
+                    <th scope="col">Modo de aplicación</th>
+                    <th scope="col">Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.EdadDia</td>
+                        <td>@(item.Fecha?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td>@item.Vacuna</td>
+                        <td>@(item.ModoAplicacion ?? "—")</td>
+                        <td>@(item.Observaciones ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>

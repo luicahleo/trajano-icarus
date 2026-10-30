@@ -1,0 +1,53 @@
+@model VistaProgramasVacunacion
+@{
+    ViewData["Titulo"] = "Programas de vacunación";
+    ViewData["Seccion"] = "programas-vacunacion";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Programas de vacunación</h1>
+        <p class="pagina-cabecera__detalle">
+            Catálogo global de CAISY. Los clientes solo ven y asignan los programas
+            publicados; un borrador se completa con su cronograma antes de publicarse.
+        </p>
+    </div>
+    <a asp-action="Nuevo" class="boton">Nuevo programa</a>
+</div>
+<partial name="_Avisos" />
+@if (Model.Programas.Count == 0)
+{
+    <section class="tarjeta vacio">
+        <h2>Aún no hay programas de vacunación</h2>
+        <p>Cree el primer programa como borrador e importe su cronograma desde el Excel de CAISY.</p>
+    </section>
+}
+else
+{
+    <div class="tarjeta tarjeta--tabla">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th scope="col">Programa</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Aves</th>
+                    <th scope="col">Emisión</th>
+                    <th scope="col">Ítems</th>
+                    <th scope="col"><span class="solo-lectores">Acciones</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var fila in Model.Programas)
+                {
+                    <tr>
+                        <td>@fila.Programa.Nombre</td>
+                        <td><span class="chip @fila.ClaseChip">@fila.Etiqueta</span></td>
+                        <td>@fila.Programa.CantidadAves</td>
+                        <td>@(fila.Programa.FechaEmision?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td>@fila.Programa.CantidadItems</td>
+                        <td><a class="enlace" asp-action="Detalles" asp-route-id="@fila.Programa.Id">Ver</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

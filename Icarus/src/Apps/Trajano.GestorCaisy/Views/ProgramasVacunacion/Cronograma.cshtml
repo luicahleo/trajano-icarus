@@ -1,0 +1,33 @@
+@model VistaDetallesProgramaVacunacion
+@{
+    var programa = Model.Programa;
+    ViewData["Titulo"] = "Importar cronograma";
+    ViewData["Seccion"] = "programas-vacunacion";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Importar cronograma</h1>
+        <p class="pagina-cabecera__detalle">
+            Cargue el Excel del programa «@programa.Nombre» con las columnas FECHA,
+            EDAD, VACUNA, MODO DE APLICACION y OBSERVACIONES. Reemplaza el
+            cronograma completo del borrador. Si una fila es inválida no se guarda
+            nada y se indica cada fila con error.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <div asp-validation-summary="All" class="alerta alerta--error" role="alert"></div>
+    <form asp-action="Cronograma" asp-route-id="@programa.Id" method="post" enctype="multipart/form-data" class="forma">
+        <div class="campo">
+            <label for="archivo">Archivo Excel del cronograma</label>
+            <input type="file" id="archivo" name="archivo" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+            <p class="campo__ayuda">Tamaño máximo: 5 MB. Solo se acepta .xlsx.</p>
+        </div>
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Importar</button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@programa.Id">Cancelar</a>
+        </div>
+    </form>
+</section>
+<partial name="_CronogramaPrograma" model="programa" />

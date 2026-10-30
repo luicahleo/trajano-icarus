@@ -88,14 +88,16 @@ Los trabajadores `t2`, `t3` y `t4` tienen todas las funcionalidades. Los de la
 base común conservan solo `ProduccionHuevos` porque las pruebas de entitlement
 dependen de esa limitación.
 
-También se siembran las dos cuentas de oficina de CAISY, así que ya no hace
-falta correr `crear-usuario-caisy.ps1` ni
-`crear-usuario-gestor-recepcion-huevos.ps1` en local:
+También se siembran las tres cuentas de oficina de CAISY, así que ya no hace
+falta correr `crear-usuario-caisy.ps1`,
+`crear-usuario-gestor-recepcion-huevos.ps1` ni
+`crear-usuario-gestor-veterinario.ps1` en local:
 
 | Cuenta | Funcionalidad | Para qué |
 |---|---|---|
 | `gpa@icarus.test` | `GestorPedidoAlimento` | Precios de alimento y bandeja de pedidos entrantes |
 | `grh@icarus.test` | `GestorRecepcionHuevos` | Precios de huevo y recepción de despachos |
+| `gve@icarus.test` | `GestorVeterinario` | Programas de vacunación |
 
 Para arrancar con la base completamente limpia y todo esto ya sembrado:
 

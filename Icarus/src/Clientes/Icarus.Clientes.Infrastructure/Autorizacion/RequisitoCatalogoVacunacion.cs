@@ -6,10 +6,11 @@ using Microsoft.AspNetCore.Http;
 
 namespace Icarus.Clientes.Infrastructure.Autorizacion;
 
-// Lectura del catálogo global de programas de vacunación (spec SP7): la pasa
-// quien tiene la funcionalidad Vacunacion (cliente por el módulo, trabajador
-// por asignación) o el rol de plataforma que lo gestiona. El nombre del rol
-// es contrato del JWT: Clientes no referencia Identity (regla de módulos).
+// Lectura del catálogo global de programas de vacunación (spec SP7 y spec
+// 2026-10-30-gestor-veterinario-vacunacion): la pasa solo quien tiene la
+// funcionalidad Vacunacion (cliente por el módulo, trabajador por
+// asignación). El Administrador de plataforma ya no la pasa: el catálogo lo
+// gestiona el Gestor CAISY por sus propias rutas.
 public sealed class RequisitoCatalogoVacunacion : IAuthorizationRequirement
 {
 }
@@ -28,14 +29,7 @@ public sealed class ManejadorCatalogoVacunacion : AuthorizationHandler<Requisito
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context, RequisitoCatalogoVacunacion requisito)
     {
-        if (!_usuario.EstaAutenticado)
-            return;
-        if (string.Equals(_usuario.Rol, "Administrador", StringComparison.Ordinal))
-        {
-            context.Succeed(requisito);
-            return;
-        }
-        if (_usuario.ClienteId is not { } clienteId)
+        if (!_usuario.EstaAutenticado || _usuario.ClienteId is not { } clienteId)
             return;
         var cancelacion = context.Resource is HttpContext http
             ? http.RequestAborted

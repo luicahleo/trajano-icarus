@@ -1,0 +1,31 @@
+@model VistaDetallesProgramaVacunacion
+@{
+    var programa = Model.Programa;
+    ViewData["Titulo"] = "Desactivar programa";
+    ViewData["Seccion"] = "programas-vacunacion";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Desactivar programa</h1>
+        <p class="pagina-cabecera__detalle">
+            El programa dejará de ser asignable y sus tareas pendientes se
+            retirarán de todos los galpones donde esté asignado. Las tareas ya
+            completadas o canceladas se conservan como historial sanitario. Esta
+            acción no se puede deshacer.
+        </p>
+    </div>
+    <span class="chip @Model.ClaseChip">@Model.Etiqueta</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <dl class="ficha">
+        <div><dt>Programa</dt><dd>@programa.Nombre</dd></div>
+        <div><dt>Fecha de emisión</dt><dd>@(programa.FechaEmision?.ToString("dd/MM/yyyy") ?? "—")</dd></div>
+    </dl>
+</section>
+<section class="tarjeta">
+    <form asp-action="Desactivar" asp-route-id="@programa.Id" method="post" class="acciones">
+        <button type="submit" class="boton boton--secundario">Desactivar programa</button>
+        <a class="enlace" asp-action="Detalles" asp-route-id="@programa.Id">Cancelar</a>
+    </form>
+</section>

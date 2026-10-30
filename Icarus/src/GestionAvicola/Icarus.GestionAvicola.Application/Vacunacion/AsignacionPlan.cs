@@ -41,12 +41,15 @@ public sealed class AsignarPlanVacunacionHandler(
         // El filtro global garantiza galpón activo del tenant; id ajeno = 404.
         var galpon = await galpones.ObtenerPorIdAsync(request.GalponId, cancellationToken)
             ?? throw new NotFoundException("Galpon", request.GalponId);
-        // ObtenerPorIdAsync respeta EstaActivo: un programa inactivo no es asignable (404 genérico).
-        var programa = await programas.ObtenerPorIdAsync(request.ProgramaId, cancellationToken)
+        // Solo un publicado activo es asignable (spec 2026-10-30). El
+        // repositorio ya lo filtra; la segunda comprobación es defensa en
+        // profundidad. Borrador, desactivado e inexistente: el mismo 404.
+        var programa = await programas.ObtenerPublicadoPorIdAsync(request.ProgramaId, cancellationToken)
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        if (!programa.EsAsignable)
+            throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        // Publicar exige cronograma: un publicado siempre tiene ítems activos.
         var items = programa.Items.Where(i => i.EstaActivo).ToList();
-        if (items.Count == 0)
-            throw new ConflictException("No se pudo asignar el plan de vacunación.");
 
         var desactivadas = await tareas.DesactivarPendientesDeGalponAsync(galpon.Id, cancellationToken);
         foreach (var item in items)

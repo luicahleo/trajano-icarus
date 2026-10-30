@@ -1,0 +1,30 @@
+@model VistaDetallesProgramaVacunacion
+@{
+    var programa = Model.Programa;
+    ViewData["Titulo"] = "Eliminar borrador";
+    ViewData["Seccion"] = "programas-vacunacion";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Eliminar borrador</h1>
+        <p class="pagina-cabecera__detalle">
+            El borrador dejará de figurar en el catálogo y no se podrá recuperar.
+            Su nombre sigue reservado. La operación queda registrada para la
+            auditoría técnica.
+        </p>
+    </div>
+    <span class="chip @Model.ClaseChip">@Model.Etiqueta</span>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <dl class="ficha">
+        <div><dt>Programa</dt><dd>@programa.Nombre</dd></div>
+        <div><dt>Ítems del cronograma</dt><dd>@programa.Items.Count</dd></div>
+    </dl>
+</section>
+<section class="tarjeta">
+    <form asp-action="Eliminar" asp-route-id="@programa.Id" method="post" class="acciones">
+        <button type="submit" class="boton boton--secundario">Eliminar borrador</button>
+        <a class="enlace" asp-action="Detalles" asp-route-id="@programa.Id">Cancelar y volver al borrador</a>
+    </form>
+</section>

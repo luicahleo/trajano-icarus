@@ -22,7 +22,7 @@ Los identificadores de dominio van en español, igual que el resto del proyecto.
 | Cliente (granjero) | El tenant del sistema. Granjero afiliado a CAISY. Puede registrar cualquier dato de su granja. |
 | Trabajador recolector | Trabajador del cliente encargado de la recolección de huevos: **la recolección la registra él**, no el cliente (aunque el cliente también puede). Usa Icarus solo con las funcionalidades que el cliente le asigna (entitlement por funcionalidad); nunca tiene acceso al resto de lo que ve el cliente. |
 | Permisos operativos del trabajador | El cliente con `GestionAvicola` administra la estructura de su única granja y opera todo el módulo. El trabajador solo recibe `ProduccionHuevos` y/o `Mortalidad`; esas funcionalidades le conceden lectura estructural implícita de la granja y sus galpones, pero nunca administración de estructura ni ajuste manual de inventario. Los permisos son efectivos únicamente mientras cliente y trabajador estén activos y el módulo siga habilitado. |
-| Gestor CAISY | Usuario global de oficina, sin tenant, con funcionalidades CAISY explícitas. SP8 incorpora `GestorPedidoAlimento` y SP9A incorpora `GestorRecepcionHuevos`; no equivale a Administrador de plataforma. |
+| Gestor CAISY | Usuario global de oficina, sin tenant, con funcionalidades CAISY explícitas. SP8 incorpora `GestorPedidoAlimento`, SP9A incorpora `GestorRecepcionHuevos` y el gestor veterinario incorpora `GestorVeterinario` (programas de vacunación); no equivale a Administrador de plataforma. |
 
 ## Entidades de Gestión avícola
 
@@ -38,12 +38,14 @@ Definidas en el spec del subproyecto 5
 ## Vacunación (SP7)
 
 Definida en el spec del subproyecto 7
-(`docs/superpowers/specs/2026-08-19-sp7-vacunacion-design.md`).
+(`docs/superpowers/specs/2026-08-19-sp7-vacunacion-design.md`) y en
+`docs/superpowers/specs/2026-10-30-gestor-veterinario-vacunacion-design.md`.
 
 | Término | Definición |
 |---|---|
-| Programa de vacunación | Plan sanitario por edad del lote, emitido por CAISY. **Catálogo global** (sin tenant): lo sube el Administrador de plataforma y cada cliente lo asigna a sus galpones. No es solo vacunas: incluye manejos (paracetamol, recorte de pico, desparasitación, traslado). Un programa desactivado no es asignable y deja de ser vigente donde estaba: se desactivan sus tareas pendientes en todos los galpones (el historial completado/cancelado se conserva). |
+| Programa de vacunación | Plan sanitario por edad del lote, emitido por CAISY. **Catálogo global** (sin tenant): lo prepara y publica el Gestor CAISY con `GestorVeterinario` y cada cliente asigna a sus galpones los publicados. Ciclo `Borrador` → `Publicado`: el borrador se edita, recibe el cronograma por Excel y se elimina con borrado lógico; el publicado es inmutable, sin versionado ni vigencia, y solo se desactiva. No es solo vacunas: incluye manejos (paracetamol, recorte de pico, desparasitación, traslado). Un programa desactivado no es asignable y deja de ser vigente donde estaba: se desactivan sus tareas pendientes en todos los galpones (el historial completado/cancelado se conserva). |
 | Ítem de plan | Una fila del cronograma: `EdadDia` (obligatoria, > 0, única por programa), `Vacuna` (texto libre: vacuna o manejo), `ModoAplicacion`, observaciones y `Fecha` (la fecha programada de la fila del Excel). |
+| Publicación del programa | Paso explícito del gestor que vuelve asignable un borrador con cronograma. Para corregir un publicado se desactiva y se publica otro con otro nombre (el nombre de un programa eliminado o desactivado sigue reservado). |
 | Asignación de plan | El cliente asigna un programa a un galpón: se materializa una tarea por ítem con `FechaProgramada = Fecha del ítem` (si el Excel la traía) o `FechaNacimientoLote + EdadDia` en su defecto. Al reasignar, las pendientes del plan anterior se desactivan y las completadas/canceladas quedan como historial. Nunca se borra físicamente. |
 | Tarea de vacunación | La ejecución de un ítem sobre un galpón. Estados: `Pendiente` → `Completada` o `Cancelada`. Completar registra `FechaAplicacion` (informada por el usuario, nunca futura; por defecto hoy), aves vacunadas y quién la registró. Cancelar es decisión solo del cliente, con motivo opcional. No hay reprogramación individual. |
 | Notificación de vacunación | Consulta de pendientes del tenant: vencidas y del día (`FechaProgramada <= hoy`) más próximas (7 días). Es el valor central de la feature: indica al trabajador qué toca vacunar. No hay jobs ni push. |

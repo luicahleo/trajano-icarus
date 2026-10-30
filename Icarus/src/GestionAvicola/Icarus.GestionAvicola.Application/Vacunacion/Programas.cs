@@ -1,6 +1,5 @@
 using FluentValidation;
 using FluentValidation.Results;
-using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.GestionAvicola.Domain;
@@ -8,8 +7,11 @@ using MediatR;
 
 namespace Icarus.GestionAvicola.Application.Vacunacion;
 
-// Registro de vuelo (spec SP7): solo campos no-PII (cantidades). Nunca
-// nombres de vacuna, motivos ni observaciones (texto libre).
+// Catálogo global de programas de vacunación (spec SP7 y spec 2026-10-30-
+// gestor-veterinario-vacunacion). La gestión es del Gestor CAISY con
+// GestorVeterinario; el tenant solo consulta publicados activos. Ningún
+// handler decide por el rol: lo decide la política del endpoint. Registro de
+// vuelo: solo cantidades, nunca nombres de programa o vacuna ni observaciones.
 public sealed record CrearProgramaVacunacionCommand(string Nombre, int CantidadAves, string? Observaciones)
     : IRequest<Guid>, IOperacionRegistrable
 {
@@ -34,6 +36,19 @@ public sealed record ImportarCronogramaExcelCommand(Guid ProgramaId, Stream Cont
         new Dictionary<string, DatoRegistroVuelo> { ["ItemsImportados"] = DatoRegistroVuelo.Entero });
 }
 
+public sealed record PublicarProgramaVacunacionCommand(Guid ProgramaId) : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.vacunacion.programas.publicar",
+        new Dictionary<string, DatoRegistroVuelo> { ["ItemsPublicados"] = DatoRegistroVuelo.Entero });
+}
+
+public sealed record EliminarBorradorProgramaVacunacionCommand(Guid ProgramaId) : IRequest, IOperacionRegistrable
+{
+    public DescriptorOperacionRegistroVuelo Registro { get; } = new(
+        "avicola.vacunacion.programas.eliminar-borrador", new Dictionary<string, DatoRegistroVuelo>());
+}
+
 public sealed record DesactivarProgramaVacunacionCommand(Guid ProgramaId) : IRequest, IOperacionRegistrable
 {
     public DescriptorOperacionRegistroVuelo Registro { get; } = new(
@@ -41,10 +56,17 @@ public sealed record DesactivarProgramaVacunacionCommand(Guid ProgramaId) : IReq
         new Dictionary<string, DatoRegistroVuelo> { ["TareasPendientesDesactivadas"] = DatoRegistroVuelo.Entero });
 }
 
-public sealed record ListarProgramasVacunacionQuery(bool IncluirInactivos)
-    : IRequest<IReadOnlyList<ProgramaVacunacionResumen>>;
+// Tenant (cliente y trabajador con Vacunacion): solo publicados activos.
+public sealed record ListarProgramasVacunacionQuery : IRequest<IReadOnlyList<ProgramaVacunacionResumen>>;
 
 public sealed record ObtenerProgramaVacunacionQuery(Guid ProgramaId) : IRequest<ProgramaVacunacionDetalle>;
+
+// Gestor: catálogo completo salvo borradores eliminados.
+public sealed record ListarProgramasVacunacionGestionQuery
+    : IRequest<IReadOnlyList<ProgramaVacunacionGestionResumen>>;
+
+public sealed record ObtenerProgramaVacunacionGestionQuery(Guid ProgramaId)
+    : IRequest<ProgramaVacunacionGestionDetalle>;
 
 public sealed class CrearProgramaVacunacionValidator : AbstractValidator<CrearProgramaVacunacionCommand>
 {
@@ -94,8 +116,9 @@ public sealed class ActualizarProgramaVacunacionHandler(
 {
     public async Task Handle(ActualizarProgramaVacunacionCommand request, CancellationToken cancellationToken)
     {
-        var programa = await programas.ObtenerPorIdIncluyendoInactivosAsync(request.ProgramaId, cancellationToken)
+        var programa = await programas.ObtenerParaGestionAsync(request.ProgramaId, cancellationToken)
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        programa.AsegurarEditable();
         if (await programas.ExisteNombreAsync(request.Nombre.Trim(), programa.Id, cancellationToken))
             throw new ConflictException("No se pudo actualizar el programa de vacunación.");
         programa.ActualizarDatos(request.Nombre, request.CantidadAves, request.Observaciones);
@@ -110,8 +133,8 @@ public sealed class ActualizarProgramaVacunacionHandler(
 
 // Atomicidad (spec SP7): una fila inválida rechaza la importación completa
 // con la lista de errores por número de fila (ValidationException -> 400 con
-// `errors`), sin guardar nada. La columna FECHA del Excel ya se ignoró en el
-// importador: la fuente de verdad es EDAD.
+// `errors.Cronograma`), sin guardar nada. Un publicado se rechaza antes de
+// leer el archivo.
 public sealed class ImportarCronogramaExcelHandler(
     IRepositorioProgramasVacunacion programas, IImportadorCronogramaVacunacion importador,
     IRegistroVuelo registroVuelo, IUnidadTrabajoGestionAvicola unidadTrabajo)
@@ -119,8 +142,9 @@ public sealed class ImportarCronogramaExcelHandler(
 {
     public async Task<int> Handle(ImportarCronogramaExcelCommand request, CancellationToken cancellationToken)
     {
-        var programa = await programas.ObtenerPorIdIncluyendoInactivosAsync(request.ProgramaId, cancellationToken)
+        var programa = await programas.ObtenerParaGestionAsync(request.ProgramaId, cancellationToken)
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        programa.AsegurarEditable();
         var resultado = importador.Importar(request.Contenido);
         if (resultado.Errores.Count > 0)
             throw new ValidationException(resultado.Errores.Select(e =>
@@ -146,6 +170,45 @@ public sealed class ImportarCronogramaExcelHandler(
     }
 }
 
+public sealed class PublicarProgramaVacunacionHandler(
+    IRepositorioProgramasVacunacion programas, IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    : IRequestHandler<PublicarProgramaVacunacionCommand>
+{
+    public async Task Handle(PublicarProgramaVacunacionCommand request, CancellationToken cancellationToken)
+    {
+        var programa = await programas.ObtenerParaGestionAsync(request.ProgramaId, cancellationToken)
+            ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        programa.Publicar();
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.publicar",
+                ("ItemsPublicados", DatoRegistroVuelo.Entero)),
+            "publicacion", "aplicada",
+            new Dictionary<string, object?> { ["ItemsPublicados"] = programa.Items.Count(i => i.EstaActivo) });
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+}
+
+// Borrado lógico de un borrador (glosario, regla transversal 1). Un segundo
+// intento no lo encuentra (ObtenerParaGestionAsync excluye los eliminados) y
+// responde 404: la aplicación de oficina lo trata como éxito ya aplicado.
+public sealed class EliminarBorradorProgramaVacunacionHandler(
+    IRepositorioProgramasVacunacion programas, IRegistroVuelo registroVuelo,
+    IUnidadTrabajoGestionAvicola unidadTrabajo)
+    : IRequestHandler<EliminarBorradorProgramaVacunacionCommand>
+{
+    public async Task Handle(EliminarBorradorProgramaVacunacionCommand request, CancellationToken cancellationToken)
+    {
+        var programa = await programas.ObtenerParaGestionAsync(request.ProgramaId, cancellationToken)
+            ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        programa.EliminarBorrador();
+        registroVuelo.Decidir(
+            DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.eliminar-borrador"),
+            "eliminacion", "aplicada");
+        await unidadTrabajo.SaveChangesAsync(cancellationToken);
+    }
+}
+
 public sealed class DesactivarProgramaVacunacionHandler(
     IRepositorioProgramasVacunacion programas, IRepositorioTareasVacunacion tareas,
     IRegistroVuelo registroVuelo, IUnidadTrabajoGestionAvicola unidadTrabajo)
@@ -153,13 +216,15 @@ public sealed class DesactivarProgramaVacunacionHandler(
 {
     public async Task Handle(DesactivarProgramaVacunacionCommand request, CancellationToken cancellationToken)
     {
-        var programa = await programas.ObtenerPorIdIncluyendoInactivosAsync(request.ProgramaId, cancellationToken)
+        var programa = await programas.ObtenerParaGestionAsync(request.ProgramaId, cancellationToken)
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        // La guarda de estado va primero: un borrador no toca ninguna tarea.
+        programa.Desactivar();
         // Un programa desactivado deja de ser vigente donde estaba asignado:
         // sus tareas pendientes se desactivan en todos los galpones; las
         // completadas y canceladas quedan como historial sanitario (spec SP7).
+        // El conteo solo va al registro de vuelo: el gestor no lo ve.
         var desactivadas = await tareas.DesactivarPendientesDeProgramaAsync(programa.Id, cancellationToken);
-        programa.Desactivar();
         registroVuelo.Decidir(
             DescriptorOperacionRegistroVuelo.Crear("avicola.vacunacion.programas.desactivar",
                 ("TareasPendientesDesactivadas", DatoRegistroVuelo.Entero)),
@@ -169,41 +234,64 @@ public sealed class DesactivarProgramaVacunacionHandler(
     }
 }
 
-// El catálogo es global (sin tenant). Los inactivos solo los ve el rol de
-// plataforma: el nombre del rol es contrato del JWT (GestionAvicola no
-// referencia Identity, regla de módulos).
-public sealed class ListarProgramasVacunacionHandler(
-    IRepositorioProgramasVacunacion programas, ICurrentUser usuario)
+public sealed class ListarProgramasVacunacionHandler(IRepositorioProgramasVacunacion programas)
     : IRequestHandler<ListarProgramasVacunacionQuery, IReadOnlyList<ProgramaVacunacionResumen>>
 {
     public async Task<IReadOnlyList<ProgramaVacunacionResumen>> Handle(
         ListarProgramasVacunacionQuery request, CancellationToken cancellationToken)
     {
-        var incluirInactivos = request.IncluirInactivos
-            && string.Equals(usuario.Rol, "Administrador", StringComparison.Ordinal);
-        var programasLista = await programas.ListarAsync(incluirInactivos, cancellationToken);
-        return programasLista.Select(p => new ProgramaVacunacionResumen(
+        var lista = await programas.ListarPublicadosAsync(cancellationToken);
+        return lista.Select(p => new ProgramaVacunacionResumen(
             p.Id, p.Nombre, p.FechaEmision, p.CantidadAves, p.Observaciones, p.EstaActivo)).ToList();
     }
 }
 
-public sealed class ObtenerProgramaVacunacionHandler(
-    IRepositorioProgramasVacunacion programas, ICurrentUser usuario)
+public sealed class ObtenerProgramaVacunacionHandler(IRepositorioProgramasVacunacion programas)
     : IRequestHandler<ObtenerProgramaVacunacionQuery, ProgramaVacunacionDetalle>
 {
     public async Task<ProgramaVacunacionDetalle> Handle(
         ObtenerProgramaVacunacionQuery request, CancellationToken cancellationToken)
     {
-        var programa = await programas.ObtenerPorIdIncluyendoInactivosAsync(request.ProgramaId, cancellationToken)
+        // Un borrador o un desactivado responden el mismo 404 genérico.
+        var programa = await programas.ObtenerPublicadoPorIdAsync(request.ProgramaId, cancellationToken)
             ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
-        var esAdministrador = string.Equals(usuario.Rol, "Administrador", StringComparison.Ordinal);
-        if (!programa.EstaActivo && !esAdministrador)
-            throw new NotFoundException("Programa de vacunación", request.ProgramaId);
         return new ProgramaVacunacionDetalle(
             programa.Id, programa.Nombre, programa.FechaEmision, programa.CantidadAves,
-            programa.Observaciones, programa.EstaActivo,
-            programa.Items.Where(i => i.EstaActivo).OrderBy(i => i.EdadDia)
-                .Select(i => new ItemPlanVacunacionResumen(i.Id, i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones, i.Fecha))
-                .ToList());
+            programa.Observaciones, programa.EstaActivo, ProyeccionProgramasVacunacion.ItemsActivos(programa));
     }
+}
+
+public sealed class ListarProgramasVacunacionGestionHandler(IRepositorioProgramasVacunacion programas)
+    : IRequestHandler<ListarProgramasVacunacionGestionQuery, IReadOnlyList<ProgramaVacunacionGestionResumen>>
+{
+    public async Task<IReadOnlyList<ProgramaVacunacionGestionResumen>> Handle(
+        ListarProgramasVacunacionGestionQuery request, CancellationToken cancellationToken)
+    {
+        var lista = await programas.ListarParaGestionAsync(cancellationToken);
+        return lista.Select(p => new ProgramaVacunacionGestionResumen(
+            p.Id, p.Nombre, p.FechaEmision, p.CantidadAves, p.Estado.ToString(), p.EstaActivo,
+            p.Items.Count(i => i.EstaActivo))).ToList();
+    }
+}
+
+public sealed class ObtenerProgramaVacunacionGestionHandler(IRepositorioProgramasVacunacion programas)
+    : IRequestHandler<ObtenerProgramaVacunacionGestionQuery, ProgramaVacunacionGestionDetalle>
+{
+    public async Task<ProgramaVacunacionGestionDetalle> Handle(
+        ObtenerProgramaVacunacionGestionQuery request, CancellationToken cancellationToken)
+    {
+        var programa = await programas.ObtenerParaGestionAsync(request.ProgramaId, cancellationToken)
+            ?? throw new NotFoundException("Programa de vacunación", request.ProgramaId);
+        return new ProgramaVacunacionGestionDetalle(
+            programa.Id, programa.Nombre, programa.FechaEmision, programa.CantidadAves, programa.Observaciones,
+            programa.Estado.ToString(), programa.EstaActivo, ProyeccionProgramasVacunacion.ItemsActivos(programa));
+    }
+}
+
+internal static class ProyeccionProgramasVacunacion
+{
+    public static IReadOnlyList<ItemPlanVacunacionResumen> ItemsActivos(ProgramaVacunacion programa) =>
+        programa.Items.Where(i => i.EstaActivo).OrderBy(i => i.EdadDia)
+            .Select(i => new ItemPlanVacunacionResumen(i.Id, i.EdadDia, i.Vacuna, i.ModoAplicacion, i.Observaciones, i.Fecha))
+            .ToList();
 }

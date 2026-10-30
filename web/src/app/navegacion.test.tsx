@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest';
 import { obtenerEnlacesNavegacion, obtenerTituloRuta } from './navegacion';
 
 describe('obtenerEnlacesNavegacion', () => {
-  test('incluye los módulos administrativos', () => {
+  test('incluye solo Clientes para el Administrador', () => {
     expect(
       obtenerEnlacesNavegacion('Administrador', false).map(({ etiqueta }) => etiqueta),
-    ).toEqual(['Clientes', 'Vacunación']);
+    ).toEqual(['Clientes']);
   });
 
   test('incluye pedidos, despachos y gestión avícola para el cliente', () => {

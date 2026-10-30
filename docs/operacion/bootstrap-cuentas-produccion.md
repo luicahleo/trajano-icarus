@@ -63,3 +63,6 @@ Los scripts `crear-usuario-caisy.ps1` y
 donde el bootstrap productivo no corre (por ejemplo, un entorno sin
 `Migraciones__EjecutarAlArranque`). En la VPS, con el bootstrap activo, ya no
 hace falta ejecutarlos.
+
+La cuenta del gestor veterinario (`GestorVeterinario`) no la crea el bootstrap: en
+la VPS se da de alta con `crear-usuario-gestor-veterinario.ps1`.

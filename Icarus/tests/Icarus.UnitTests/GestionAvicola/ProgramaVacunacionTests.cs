@@ -20,6 +20,8 @@ public class ProgramaVacunacionTests
         Assert.Equal(1000, programa.CantidadAves);
         Assert.True(programa.EstaActivo);
         Assert.Empty(programa.Items);
+        Assert.Equal(EstadoProgramaVacunacion.Borrador, programa.Estado);
+        Assert.False(programa.EsAsignable);
     }
 
     [Fact]
@@ -144,11 +146,119 @@ public class ProgramaVacunacionTests
         Assert.Equal("La fecha de emisión no puede ser futura.", ex.Message);
     }
 
-    [Fact]
-    public void DesactivarMarcaInactivoSinBorrar()
+    private static ProgramaVacunacion ProgramaPublicado()
     {
         var programa = CrearPrograma();
-        programa.Desactivar();
+        programa.ReemplazarCronograma([new DatosItemPlanVacunacion(3, "BIO COCCIVET R", null, null)]);
+        programa.Publicar();
+        return programa;
+    }
+
+    [Fact]
+    public void PublicarConCronogramaLoVuelveAsignable()
+    {
+        var programa = ProgramaPublicado();
+
+        Assert.Equal(EstadoProgramaVacunacion.Publicado, programa.Estado);
+        Assert.True(programa.EsAsignable);
+    }
+
+    [Fact]
+    public void PublicarSinCronogramaLanzaReglaNegocio()
+    {
+        var programa = CrearPrograma();
+
+        var ex = Assert.Throws<ReglaNegocioException>(programa.Publicar);
+
+        Assert.Equal("El programa debe tener un cronograma antes de publicarse.", ex.Message);
+        Assert.Equal(EstadoProgramaVacunacion.Borrador, programa.Estado);
+    }
+
+    [Fact]
+    public void PublicarDosVecesLanzaReglaNegocio()
+    {
+        var programa = ProgramaPublicado();
+
+        var ex = Assert.Throws<ReglaNegocioException>(programa.Publicar);
+
+        Assert.Equal("El programa ya está publicado.", ex.Message);
+    }
+
+    [Fact]
+    public void PublicarUnBorradorEliminadoLanzaReglaNegocio()
+    {
+        var programa = CrearPrograma();
+        programa.ReemplazarCronograma([new DatosItemPlanVacunacion(3, "A", null, null)]);
+        programa.EliminarBorrador();
+
+        var ex = Assert.Throws<ReglaNegocioException>(programa.Publicar);
+
+        Assert.Equal("Un borrador eliminado no se puede publicar.", ex.Message);
+    }
+
+    [Fact]
+    public void UnPublicadoEsInmutable()
+    {
+        var programa = ProgramaPublicado();
+
+        Assert.Equal("Un programa publicado ya no es editable.",
+            Assert.Throws<ReglaNegocioException>(() => programa.ActualizarDatos("OTRO", 10, null)).Message);
+        Assert.Equal("Un programa publicado ya no es editable.",
+            Assert.Throws<ReglaNegocioException>(() => programa.ReemplazarCronograma(
+                [new DatosItemPlanVacunacion(7, "GUMBORO", null, null)])).Message);
+        Assert.Equal("Un programa publicado ya no es editable.",
+            Assert.Throws<ReglaNegocioException>(() => programa.EstablecerFechaEmision(Hoy)).Message);
+        Assert.Equal("Un programa publicado ya no es editable.",
+            Assert.Throws<ReglaNegocioException>(programa.AsegurarEditable).Message);
+        Assert.Equal("PROGRAMA DE VACUNACION PARA 1000 AVES", programa.Nombre);
+    }
+
+    [Fact]
+    public void EliminarBorradorLoDejaInactivoYEsInocuoRepetirlo()
+    {
+        var programa = CrearPrograma();
+
+        programa.EliminarBorrador();
+        programa.EliminarBorrador();
+
         Assert.False(programa.EstaActivo);
+        Assert.Equal(EstadoProgramaVacunacion.Borrador, programa.Estado);
+        Assert.False(programa.EsAsignable);
+    }
+
+    [Fact]
+    public void EliminarUnPublicadoLanzaReglaNegocio()
+    {
+        var programa = ProgramaPublicado();
+
+        var ex = Assert.Throws<ReglaNegocioException>(programa.EliminarBorrador);
+
+        Assert.Equal("Un programa publicado no se elimina: se desactiva.", ex.Message);
+        Assert.True(programa.EstaActivo);
+    }
+
+    [Fact]
+    public void DesactivarUnPublicadoLoDejaInactivoSinBorrarYNoAsignable()
+    {
+        var programa = ProgramaPublicado();
+
+        programa.Desactivar();
+        programa.Desactivar();
+
+        Assert.False(programa.EstaActivo);
+        Assert.Equal(EstadoProgramaVacunacion.Publicado, programa.Estado);
+        Assert.False(programa.EsAsignable);
+        Assert.Single(programa.Items);
+    }
+
+    [Fact]
+    public void DesactivarUnBorradorLanzaReglaNegocio()
+    {
+        var programa = CrearPrograma();
+
+        var ex = Assert.Throws<ReglaNegocioException>(programa.Desactivar);
+
+        Assert.Equal("Un borrador no se desactiva: se elimina.", ex.Message);
+        Assert.True(programa.EstaActivo);
     }
 }

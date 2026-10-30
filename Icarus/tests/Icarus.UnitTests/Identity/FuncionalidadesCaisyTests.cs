@@ -33,6 +33,7 @@ public class FuncionalidadesCaisyTests
     [Theory]
     [InlineData("GestorPedidoAlimento")]
     [InlineData("GestorRecepcionHuevos")]
+    [InlineData("GestorVeterinario")]
     public void SoloSeAdmitenFuncionalidadesDefinidas(string nombre)
     {
         Assert.True(ReglasFuncionalidadesCaisy.EsValida(nombre));
@@ -80,5 +81,15 @@ public class FuncionalidadesCaisyTests
         var leido = Leer(token);
 
         Assert.DoesNotContain(leido.Claims, c => c.Type == ClaimsIdentidad.FuncionalidadesCaisy);
+    }
+
+    [Fact]
+    public void GestorVeterinarioTieneElBitCuatroYSeCombinaConLasDemas()
+    {
+        Assert.Equal(4, (int)FuncionalidadesCaisy.GestorVeterinario);
+
+        var combinadas = ReglasFuncionalidadesCaisy.Combinar(["GestorRecepcionHuevos", "GestorVeterinario"]);
+
+        Assert.Equal(6, (int)combinadas);
     }
 }

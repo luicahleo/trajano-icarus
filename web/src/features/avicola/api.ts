@@ -98,32 +98,10 @@ export const obtenerEficiencia = (id: string, desde?: string, hasta?: string) =>
   const q = p.toString();
   return peticion<EficienciaGalpon>({ ruta: `/galpones/${id}/eficiencia${q ? `?${q}` : ''}` });
 };
-export interface DatosProgramaVacunacion {
-  nombre: string;
-  cantidadAves: number;
-  observaciones: string | null;
-}
-export const listarProgramasVacunacion = (incluirInactivos = false) =>
-  peticion<ProgramaVacunacionResumen[]>({
-    ruta: `/vacunacion/programas${incluirInactivos ? '?incluirInactivos=true' : ''}`,
-  });
+export const listarProgramasVacunacion = () =>
+  peticion<ProgramaVacunacionResumen[]>({ ruta: '/vacunacion/programas' });
 export const obtenerProgramaVacunacion = (id: string) =>
   peticion<ProgramaVacunacionDetalle>({ ruta: `/vacunacion/programas/${id}` });
-export const crearProgramaVacunacion = (d: DatosProgramaVacunacion) =>
-  peticion<{ id: string }>({ ruta: '/vacunacion/programas', metodo: 'POST', cuerpo: d });
-export const actualizarProgramaVacunacion = (id: string, d: DatosProgramaVacunacion) =>
-  peticion<void>({ ruta: `/vacunacion/programas/${id}`, metodo: 'PUT', cuerpo: d });
-export const desactivarProgramaVacunacion = (id: string) =>
-  peticion<void>({ ruta: `/vacunacion/programas/${id}`, metodo: 'DELETE' });
-export const importarCronogramaExcel = (id: string, archivo: File) => {
-  const form = new FormData();
-  form.append('archivo', archivo);
-  return peticion<{ itemsImportados: number }>({
-    ruta: `/vacunacion/programas/${id}/cronograma-excel`,
-    metodo: 'POST',
-    cuerpo: form,
-  });
-};
 export const asignarPlanVacunacion = (galponId: string, programaId: string) =>
   peticion<void>({
     ruta: `/galpones/${galponId}/plan-vacunacion`,

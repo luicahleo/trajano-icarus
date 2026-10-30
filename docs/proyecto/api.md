@@ -18,9 +18,10 @@ Abreviaturas de autorización:
 | Nombres | Rol Cliente o Trabajador. |
 | F:`X` | Funcionalidad avícola efectiva `X`. |
 | Estructura | ProduccionHuevos, Mortalidad o Vacunacion. |
-| Catálogo V | Vacunacion o Administrador. |
+| Catálogo V | Vacunacion. |
 | CAISY Alimento | GestorCaisy + `GestorPedidoAlimento`. |
 | CAISY Huevo | GestorCaisy + `GestorRecepcionHuevos`. |
+| CAISY Veterinario | GestorCaisy + `GestorVeterinario`. |
 | Kiosco | Cookie de kiosco vigente + antiforgery cuando es mutación. |
 
 Respuestas habituales: 200 JSON, 201 con id, 204 sin cuerpo, archivo binario,
@@ -94,12 +95,16 @@ Todas exigen Admin.
 
 | Método | Ruta | Acceso | Propósito |
 |---|---|---|---|
-| POST | `/vacunacion/programas` | Admin | Crear programa global. |
-| GET | `/vacunacion/programas?incluirInactivos=` | Catálogo V | Listar; inactivos solo Admin. |
-| GET | `/vacunacion/programas/{id}` | Catálogo V | Detalle e ítems activos. |
-| PUT | `/vacunacion/programas/{id}` | Admin | Actualizar cabecera. |
-| DELETE | `/vacunacion/programas/{id}` | Admin | Desactivar y cerrar pendientes. |
-| POST | `/vacunacion/programas/{id}/cronograma-excel` | Admin | Importar/reemplazar cronograma. |
+| GET | `/vacunacion/programas` | Catálogo V | Listar publicados activos. |
+| GET | `/vacunacion/programas/{id}` | Catálogo V | Detalle de un publicado activo; 404 en otro caso. |
+| GET | `/programas-vacunacion-caisy` | CAISY Veterinario | Catálogo completo salvo borradores eliminados. |
+| GET | `/programas-vacunacion-caisy/{id}` | CAISY Veterinario | Detalle con estado e ítems activos. |
+| POST | `/programas-vacunacion-caisy` | CAISY Veterinario | Crear borrador. |
+| PUT | `/programas-vacunacion-caisy/{id}` | CAISY Veterinario | Editar datos del borrador. |
+| POST | `/programas-vacunacion-caisy/{id}/cronograma-excel` | CAISY Veterinario | Importar/reemplazar cronograma del borrador; errores por fila; 413 sobre 5 MB. |
+| POST | `/programas-vacunacion-caisy/{id}/publicar` | CAISY Veterinario | Publicar (exige cronograma). |
+| DELETE | `/programas-vacunacion-caisy/{id}` | CAISY Veterinario | Eliminar borrador (lógico). |
+| POST | `/programas-vacunacion-caisy/{id}/desactivar` | CAISY Veterinario | Desactivar publicado y retirar pendientes. |
 | POST | `/galpones/{galponId}/plan-vacunacion` | F:Galpones | Asignar/reasignar y materializar tareas. |
 | DELETE | `/galpones/{galponId}/plan-vacunacion` | F:Galpones | Quitar plan y desactivar pendientes. |
 | GET | `/galpones/{galponId}/vacunacion/tareas` | F:Vacunacion | Historial del galpón. |

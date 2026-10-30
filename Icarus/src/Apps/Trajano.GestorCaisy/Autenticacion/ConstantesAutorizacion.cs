@@ -17,6 +17,11 @@ public static class ConstantesAutorizacion
 
     public const string PoliticaGestorRecepcionHuevos = "GestorRecepcionHuevos";
 
+    // Bitmask FuncionalidadesCaisy del backend: GestorVeterinario = 4.
+    public const int BitGestorVeterinario = 4;
+
+    public const string PoliticaGestorVeterinario = "GestorVeterinario";
+
     public const string ClaimSub = "sub";
     public const string ClaimRol = "rol";
     public const string ClaimFuncionalidadesCaisy = "funcCaisy";

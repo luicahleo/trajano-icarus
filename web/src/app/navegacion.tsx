@@ -5,7 +5,6 @@ import FingerprintRoundedIcon from '@mui/icons-material/FingerprintRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
-import VaccinesRoundedIcon from '@mui/icons-material/VaccinesRounded';
 import type { Rol } from '../lib/tipos';
 
 export interface EnlaceNavegacion {
@@ -17,7 +16,6 @@ export interface EnlaceNavegacion {
 const ENLACES_POR_ROL: Partial<Record<Rol, EnlaceNavegacion[]>> = {
   Administrador: [
     { etiqueta: 'Clientes', ruta: '/admin/clientes', icono: <BusinessRoundedIcon /> },
-    { etiqueta: 'Vacunación', ruta: '/admin/vacunacion', icono: <VaccinesRoundedIcon /> },
   ],
   Cliente: [{ etiqueta: 'Trabajadores', ruta: '/trabajadores', icono: <GroupsRoundedIcon /> }],
 };

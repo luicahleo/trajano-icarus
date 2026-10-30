@@ -14,6 +14,9 @@ public enum FuncionalidadesCaisy
     Ninguno = 0,
     GestorPedidoAlimento = 1,
     GestorRecepcionHuevos = 2,
+    // Spec 2026-10-30-gestor-veterinario-vacunacion: prepara y publica los
+    // programas de vacunación del catálogo global.
+    GestorVeterinario = 4,
 }
 #pragma warning restore S2346
 

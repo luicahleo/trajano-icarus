@@ -107,4 +107,28 @@ public interface IApiIcarusClient
         CancellationToken token = default);
 
     Task MarcarNotificacionDespachoHuevoLeidaAsync(Guid id, CancellationToken token = default);
+
+    // Programas de vacunación (spec 2026-10-30): catálogo global en
+    // /programas-vacunacion-caisy, reservado a GestorVeterinario. El
+    // cronograma se importa como Excel (.xlsx) sobre un borrador.
+    Task<IReadOnlyList<ProgramaVacunacionGestionResumenApi>> ListarProgramasVacunacionAsync(
+        CancellationToken token = default);
+
+    Task<ProgramaVacunacionGestionDetalleApi> ObtenerProgramaVacunacionAsync(
+        Guid id, CancellationToken token = default);
+
+    Task<Guid> CrearProgramaVacunacionAsync(
+        DatosProgramaVacunacionApi datos, CancellationToken token = default);
+
+    Task ActualizarProgramaVacunacionAsync(
+        Guid id, DatosProgramaVacunacionApi datos, CancellationToken token = default);
+
+    Task<int> ImportarCronogramaVacunacionAsync(
+        Guid id, Stream contenido, string nombreArchivo, CancellationToken token = default);
+
+    Task PublicarProgramaVacunacionAsync(Guid id, CancellationToken token = default);
+
+    Task EliminarBorradorProgramaVacunacionAsync(Guid id, CancellationToken token = default);
+
+    Task DesactivarProgramaVacunacionAsync(Guid id, CancellationToken token = default);
 }

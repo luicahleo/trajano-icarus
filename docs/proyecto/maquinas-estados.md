@@ -12,6 +12,7 @@ independiente: una entidad puede conservar su estado y quedar inactiva.
 | NotificacionPreciosAlimentos | Borrador, Publicada, Anulada + inactiva | [Precios de alimento](pedidos-recepcion-alimentos.md) |
 | DespachoHuevo | Borrador, Despachado, Recibido | [Huevo](despacho-recepcion-huevos.md) |
 | PublicacionPrecioHuevo | Borrador, Publicada, Anulada, Corregida + inactiva | [Precios de huevo](despacho-recepcion-huevos.md) |
+| ProgramaVacunacion | Borrador, Publicado + inactivo | [Vacunación](gestion-avicola.md) |
 | TareaVacunacion | Pendiente, Completada, Cancelada + inactiva | [Vacunación](gestion-avicola.md) |
 | Produccion/Mortalidad | Día abierto → sellado; activa/inactiva | [Operación diaria](recogida-huevos-mortalidad.md) |
 | Operación offline | Pendiente con/sin backoff → error; eliminada al éxito | [Offline](recogida-huevos-mortalidad.md) |
@@ -110,7 +111,21 @@ Corregir enlaza `PublicacionCorrectivaId` y motivo. La correctiva pasa de Borrad
 a Publicada en la misma transacción. Despachos aún en tránsito se recongelan al
 recibir; los Recibido reciben ajustes inmutables.
 
-## 6. Tarea de vacunación
+## 6. Programa y tarea de vacunación
+
+```mermaid
+stateDiagram-v2
+    [*] --> Borrador: crear
+    Borrador --> Borrador: editar / importar Excel
+    Borrador --> Publicado: publicar (exige cronograma)
+    Borrador --> Eliminado: eliminar (borrado lógico)
+    Publicado --> Inactivo: desactivar (retira pendientes)
+    Eliminado --> [*]
+    Inactivo --> [*]
+```
+
+Eliminar y desactivar son borrado lógico: el borrador eliminado no lo ve nadie; el publicado desactivado lo ve solo el gestor como «Inactivo». Desactivar retira las tareas pendientes en todos los galpones.
+
 
 ```mermaid
 stateDiagram-v2
@@ -288,7 +303,7 @@ tenant o CAISY y se aplica en repositorio. Los listados calculan contador y ETag
 | Cliente | Activo → Suspendido → Reactivado; permisos efectivos solo activo. |
 | Trabajador | Activo → Desactivado; cese es fecha independiente; no borra historial. |
 | Granja/Galpón | Activo → Inactivo; una granja activa por tenant. |
-| ProgramaVacunacion | Activo → Inactivo; desactiva tareas pendientes. |
+| ProgramaVacunacion | Publicado activo → inactivo; desactiva tareas pendientes. Ciclo completo en §6. |
 | PlantillaFacial | Activa → Revocada; sustituida por nueva versión. |
 | Publicación de precio | Publicada futura → vigente por fecha → reemplazada por otra, sin job. |
 | RefreshToken | Vigente → Revocado o Expirado; rotación atómica, sin reutilización. |

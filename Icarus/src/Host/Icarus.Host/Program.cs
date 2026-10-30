@@ -165,6 +165,7 @@ api.MapUsuariosCaisy();
 api.MapGestionAvicola();
 api.MapPreciosAlimentos();
 api.MapPreciosHuevo();
+api.MapProgramasVacunacionCaisy();
 api.MapDespachosHuevo();
 api.MapPedidosAlimento();
 api.MapBalanceAlimentos();

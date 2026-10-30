@@ -5,7 +5,7 @@ import {
   registrarMortalidad,
   obtenerEficiencia,
   obtenerNotificacionVacunacion,
-  importarCronogramaExcel,
+  listarProgramasVacunacion,
   completarTareaVacunacion,
 } from './api';
 const r = (s: number, c: unknown) =>
@@ -74,25 +74,31 @@ describe('api vacunación', () => {
     expect(new URL(req.url).pathname).toBe('/api/vacunacion/tareas');
   });
 
-  test('importarCronogramaExcel sube FormData sin Content-Type JSON', async () => {
+  test('listarProgramasVacunacion hace GET /api/vacunacion/programas sin parámetros', async () => {
     const fetchMock = vi.fn(
       async () =>
-        new Response(JSON.stringify({ itemsImportados: 3 }), {
+        new Response(JSON.stringify([]), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         }),
     );
     vi.stubGlobal('fetch', fetchMock);
-    const archivo = new File(['x'], 'plan.xlsx');
 
-    const resultado = await importarCronogramaExcel('p1', archivo);
+    await listarProgramasVacunacion();
 
-    expect(resultado.itemsImportados).toBe(3);
     const req = solicitudVacunacion(fetchMock);
-    expect(req.method).toBe('POST');
-    expect(new URL(req.url).pathname).toBe('/api/vacunacion/programas/p1/cronograma-excel');
-    expect(req.headers.get('content-type')).not.toContain('application/json');
-    expect(await req.text()).toContain('name="archivo"');
+    expect(req.method).toBe('GET');
+    const url = new URL(req.url);
+    expect(url.pathname).toBe('/api/vacunacion/programas');
+    expect(url.search).toBe('');
+  });
+
+  test('el módulo avícola ya no expone la escritura del catálogo', async () => {
+    const api = await import('./api');
+    expect(api).not.toHaveProperty('crearProgramaVacunacion');
+    expect(api).not.toHaveProperty('actualizarProgramaVacunacion');
+    expect(api).not.toHaveProperty('desactivarProgramaVacunacion');
+    expect(api).not.toHaveProperty('importarCronogramaExcel');
   });
 
   test('completarTareaVacunacion envía fecha, aves y observaciones', async () => {

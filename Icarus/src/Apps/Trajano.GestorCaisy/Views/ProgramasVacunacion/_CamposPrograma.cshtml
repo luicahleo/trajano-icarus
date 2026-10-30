@@ -1,0 +1,15 @@
+@model FormularioProgramaVacunacionVista
+<div class="campo">
+    <label asp-for="Nombre">Nombre del programa</label>
+    <input asp-for="Nombre" maxlength="200" required />
+    <p class="campo__ayuda">Debe ser único en todo el catálogo, incluidos los programas eliminados o desactivados.</p>
+</div>
+<div class="campo">
+    <label asp-for="CantidadAves">Cantidad de aves</label>
+    <input asp-for="CantidadAves" type="number" min="1" step="1" required />
+    <p class="campo__ayuda">El «PARA 1000 AVES» del encabezado del documento de CAISY.</p>
+</div>
+<div class="campo">
+    <label asp-for="Observaciones">Observaciones</label>
+    <textarea asp-for="Observaciones" maxlength="1000" rows="3"></textarea>
+</div>

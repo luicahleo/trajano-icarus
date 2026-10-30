@@ -28,6 +28,7 @@ public class AsignacionPlanVacunacionHandlerTests
             new DatosItemPlanVacunacion(3, "BIO COCCIVET R", "Agua de bebida", null),
             new DatosItemPlanVacunacion(10, "NEWCASTLE", "Gota ocular", "Ayuno 2 horas"),
         ]);
+        programa.Publicar();
         return programa;
     }
 
@@ -51,7 +52,7 @@ public class AsignacionPlanVacunacionHandlerTests
     {
         var galpon = GalponDemo();
         _galpones.ObtenerPorIdAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(galpon);
-        _programas.ObtenerPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        _programas.ObtenerPublicadoPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((ProgramaVacunacion?)null);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -61,18 +62,22 @@ public class AsignacionPlanVacunacionHandlerTests
     }
 
     [Fact]
-    public async Task AsignarProgramaSinCronogramaLanzaConflict()
+    public async Task AsignarUnProgramaNoPublicadoLanzaNotFound()
     {
         var galpon = GalponDemo();
-        var programa = new ProgramaVacunacion("PLAN VACIO", Hoy.AddDays(-60), 1000, null);
+        var borrador = new ProgramaVacunacion("PLAN BORRADOR", Hoy.AddDays(-60), 1000, null);
+        borrador.ReemplazarCronograma([new DatosItemPlanVacunacion(3, "BIO COCCIVET R", null, null)]);
         _galpones.ObtenerPorIdAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(galpon);
-        _programas.ObtenerPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        // Defensa en profundidad: aunque el repositorio lo devolviera, un
+        // borrador no es asignable.
+        _programas.ObtenerPublicadoPorIdAsync(borrador.Id, Arg.Any<CancellationToken>()).Returns(borrador);
 
-        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            HandlerAsignar().Handle(new(galpon.Id, programa.Id), CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
+            HandlerAsignar().Handle(new(galpon.Id, borrador.Id), CancellationToken.None));
 
-        Assert.Equal("No se pudo asignar el plan de vacunación.", ex.Message);
+        Assert.Equal("Programa de vacunación no encontrado.", ex.Message);
         _tareas.DidNotReceive().Agregar(Arg.Any<TareaVacunacion>());
+        await _tareas.DidNotReceive().DesactivarPendientesDeGalponAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -81,7 +86,7 @@ public class AsignacionPlanVacunacionHandlerTests
         var galpon = GalponDemo();
         var programa = ProgramaDemo();
         _galpones.ObtenerPorIdAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(galpon);
-        _programas.ObtenerPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        _programas.ObtenerPublicadoPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
 
         await HandlerAsignar().Handle(new(galpon.Id, programa.Id), CancellationToken.None);
 
@@ -108,8 +113,9 @@ public class AsignacionPlanVacunacionHandlerTests
             new DatosItemPlanVacunacion(3, "BIO COCCIVET R", "Agua de bebida", null, new DateOnly(2026, 8, 8)),
             new DatosItemPlanVacunacion(10, "NEWCASTLE", null, null),
         ]);
+        programa.Publicar();
         _galpones.ObtenerPorIdAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(galpon);
-        _programas.ObtenerPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        _programas.ObtenerPublicadoPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
 
         await HandlerAsignar().Handle(new(galpon.Id, programa.Id), CancellationToken.None);
 
@@ -125,7 +131,7 @@ public class AsignacionPlanVacunacionHandlerTests
         var galpon = GalponDemo();
         var programa = ProgramaDemo();
         _galpones.ObtenerPorIdAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(galpon);
-        _programas.ObtenerPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        _programas.ObtenerPublicadoPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
         _tareas.DesactivarPendientesDeGalponAsync(galpon.Id, Arg.Any<CancellationToken>()).Returns(2);
 
         await HandlerAsignar().Handle(new(galpon.Id, programa.Id), CancellationToken.None);

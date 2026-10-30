@@ -179,3 +179,22 @@ public sealed record CreditoHuevoPedidoApi(
     [property: JsonRequired] decimal SaldoSinEstePedido,
     [property: JsonRequired] bool PedidoComputadoEnElSaldo,
     IReadOnlyList<AjusteCreditoHuevoApi> Ajustes);
+
+// Programas de vacunación (spec 2026-10-30): espejo de los DTO de gestión del
+// backend. El estado viaja como texto (Borrador, Publicado) y la actividad
+// aparte: un publicado inactivo se muestra como «Inactivo». Nunca llevan
+// datos de galpones, clientes ni tareas.
+public sealed record ProgramaVacunacionGestionResumenApi(
+    Guid Id, string Nombre, DateOnly? FechaEmision, int CantidadAves, string Estado, bool EstaActivo,
+    int CantidadItems);
+
+public sealed record ItemProgramaVacunacionApi(
+    Guid Id, int EdadDia, string Vacuna, string? ModoAplicacion, string? Observaciones, DateOnly? Fecha);
+
+public sealed record ProgramaVacunacionGestionDetalleApi(
+    Guid Id, string Nombre, DateOnly? FechaEmision, int CantidadAves, string? Observaciones,
+    string Estado, bool EstaActivo, IReadOnlyList<ItemProgramaVacunacionApi> Items);
+
+public sealed record DatosProgramaVacunacionApi(string Nombre, int CantidadAves, string? Observaciones);
+
+public sealed record CronogramaImportadoApi(int ItemsImportados);

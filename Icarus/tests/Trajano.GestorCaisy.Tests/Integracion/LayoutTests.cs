@@ -78,4 +78,20 @@ public class LayoutTests
         Assert.DoesNotContain("data-campana", html);
         Assert.DoesNotContain("data-banner-notificaciones", html);
     }
+
+    [Fact]
+    public async Task ElGestorVeterinarioVeElGrupoSanidadSinCampana()
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = await aplicacion.AccederAsync(funcCaisy: 4);
+
+        var html = await cliente.GetStringAsync("/ProgramasVacunacion");
+
+        Assert.Contains("lateral__grupo--sanidad", html);
+        Assert.Contains("lateral__grupo-titulo\">Sanidad</span>", html);
+        Assert.Contains("Programas de vacunación", html);
+        Assert.DoesNotContain("lateral__grupo--alimento", html);
+        Assert.DoesNotContain("data-campana", html);
+        Assert.DoesNotContain("data-banner-notificaciones", html);
+    }
 }

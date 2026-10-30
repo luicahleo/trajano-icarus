@@ -23,12 +23,21 @@ public class ManejadorCatalogoVacunacionTests
     }
 
     [Fact]
-    public async Task AdministradorSinClientePasa()
+    public async Task AdministradorSinClienteNoPasa()
     {
         _usuario.EstaAutenticado.Returns(true);
         _usuario.Rol.Returns("Administrador");
 
-        Assert.True(await Autoriza());
+        Assert.False(await Autoriza());
+    }
+
+    [Fact]
+    public async Task GestorCaisySinClienteNoPasa()
+    {
+        _usuario.EstaAutenticado.Returns(true);
+        _usuario.Rol.Returns("GestorCaisy");
+
+        Assert.False(await Autoriza());
     }
 
     [Fact]

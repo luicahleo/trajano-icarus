@@ -1,5 +1,4 @@
 using FluentValidation;
-using Icarus.BuildingBlocks.Application;
 using Icarus.BuildingBlocks.Application.Observability;
 using Icarus.BuildingBlocks.Domain;
 using Icarus.GestionAvicola.Application;
@@ -17,11 +16,10 @@ public class ProgramasVacunacionHandlerTests
     private readonly IRepositorioProgramasVacunacion _programas = Substitute.For<IRepositorioProgramasVacunacion>();
     private readonly IRepositorioTareasVacunacion _tareas = Substitute.For<IRepositorioTareasVacunacion>();
     private readonly IImportadorCronogramaVacunacion _importador = Substitute.For<IImportadorCronogramaVacunacion>();
-    private readonly ICurrentUser _usuario = Substitute.For<ICurrentUser>();
     private readonly IRegistroVuelo _vuelo = Substitute.For<IRegistroVuelo>();
     private readonly IUnidadTrabajoGestionAvicola _unidad = Substitute.For<IUnidadTrabajoGestionAvicola>();
 
-    private static ProgramaVacunacion ProgramaDemo()
+    private static ProgramaVacunacion Borrador()
     {
         var programa = new ProgramaVacunacion("PLAN CAISY 1000", Hoy.AddDays(-10), 1000, null);
         programa.ReemplazarCronograma([
@@ -31,8 +29,22 @@ public class ProgramasVacunacionHandlerTests
         return programa;
     }
 
+    private static ProgramaVacunacion Publicado()
+    {
+        var programa = Borrador();
+        programa.Publicar();
+        return programa;
+    }
+
+    private void ParaGestion(ProgramaVacunacion programa) =>
+        _programas.ObtenerParaGestionAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+
+    private void SinProgramaParaGestion() =>
+        _programas.ObtenerParaGestionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns((ProgramaVacunacion?)null);
+
     [Fact]
-    public async Task CrearConDatosValidosGuardaYNarra()
+    public async Task CrearConDatosValidosGuardaUnBorradorYNarra()
     {
         var handler = new CrearProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
@@ -40,7 +52,8 @@ public class ProgramasVacunacionHandlerTests
 
         Assert.NotEqual(Guid.Empty, id);
         _programas.Received(1).Agregar(Arg.Is<ProgramaVacunacion>(p =>
-            p.Nombre == "PLAN CAISY 1000" && p.CantidadAves == 1000 && p.EstaActivo));
+            p.Nombre == "PLAN CAISY 1000" && p.CantidadAves == 1000 && p.EstaActivo
+            && p.Estado == EstadoProgramaVacunacion.Borrador && p.FechaEmision == null));
         await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         _vuelo.Received().Decidir(
             Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.programas.crear"),
@@ -63,8 +76,7 @@ public class ProgramasVacunacionHandlerTests
     [Fact]
     public async Task ActualizarInexistenteLanzaNotFound()
     {
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns((ProgramaVacunacion?)null);
+        SinProgramaParaGestion();
         var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -76,8 +88,8 @@ public class ProgramasVacunacionHandlerTests
     [Fact]
     public async Task ActualizarConNombreDeOtroProgramaLanzaConflict()
     {
-        var programa = ProgramaDemo();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        var programa = Borrador();
+        ParaGestion(programa);
         _programas.ExisteNombreAsync("OTRO PLAN", programa.Id, Arg.Any<CancellationToken>()).Returns(true);
         var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
@@ -88,11 +100,10 @@ public class ProgramasVacunacionHandlerTests
     }
 
     [Fact]
-    public async Task ActualizarConDatosValidosGuarda()
+    public async Task ActualizarUnBorradorGuarda()
     {
-        var programa = ProgramaDemo();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
-        _programas.ExisteNombreAsync("PLAN RENOMBRADO", programa.Id, Arg.Any<CancellationToken>()).Returns(false);
+        var programa = Borrador();
+        ParaGestion(programa);
         var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
         await handler.Handle(new(programa.Id, "PLAN RENOMBRADO", 2000, "nota"), CancellationToken.None);
@@ -103,10 +114,23 @@ public class ProgramasVacunacionHandlerTests
     }
 
     [Fact]
+    public async Task ActualizarUnPublicadoLanzaReglaNegocioSinGuardar()
+    {
+        var programa = Publicado();
+        ParaGestion(programa);
+        var handler = new ActualizarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+
+        await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            handler.Handle(new(programa.Id, "PLAN RENOMBRADO", 2000, null), CancellationToken.None));
+
+        Assert.Equal("PLAN CAISY 1000", programa.Nombre);
+        await _unidad.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ImportarConProgramaInexistenteLanzaNotFound()
     {
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns((ProgramaVacunacion?)null);
+        SinProgramaParaGestion();
         var handler = new ImportarCronogramaExcelHandler(_programas, _importador, _vuelo, _unidad);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -114,10 +138,24 @@ public class ProgramasVacunacionHandlerTests
     }
 
     [Fact]
+    public async Task ImportarSobreUnPublicadoLanzaReglaNegocioSinLeerElExcel()
+    {
+        var programa = Publicado();
+        ParaGestion(programa);
+        var handler = new ImportarCronogramaExcelHandler(_programas, _importador, _vuelo, _unidad);
+
+        await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            handler.Handle(new(programa.Id, new MemoryStream()), CancellationToken.None));
+
+        _importador.DidNotReceive().Importar(Arg.Any<Stream>());
+        await _unidad.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ImportarConErroresLanzaValidationYSinGuardarNada()
     {
-        var programa = ProgramaDemo();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        var programa = Borrador();
+        ParaGestion(programa);
         _importador.Importar(Arg.Any<Stream>()).Returns(new ResultadoImportacionCronograma(
             [],
             [new ErrorFilaImportacion(3, "La edad debe ser un número entero mayor que cero.")]));
@@ -127,6 +165,7 @@ public class ProgramasVacunacionHandlerTests
             handler.Handle(new(programa.Id, new MemoryStream()), CancellationToken.None));
 
         Assert.Equal("Fila 3: La edad debe ser un número entero mayor que cero.", ex.Errors.Single().ErrorMessage);
+        Assert.Equal("Cronograma", ex.Errors.Single().PropertyName);
         Assert.Equal(2, programa.Items.Count(i => i.EstaActivo));
         await _unidad.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -134,8 +173,8 @@ public class ProgramasVacunacionHandlerTests
     [Fact]
     public async Task ImportarValidoReemplazaElCronogramaYDevuelveLaCantidad()
     {
-        var programa = ProgramaDemo();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        var programa = Borrador();
+        ParaGestion(programa);
         _importador.Importar(Arg.Any<Stream>()).Returns(new ResultadoImportacionCronograma(
             [new ItemCronogramaImportado(1, "NEWCASTLE", "Gota ocular", null),
              new ItemCronogramaImportado(3, "BIO COCCIVET R", "Agua de bebida", "Ayuno 2 horas")],
@@ -157,9 +196,7 @@ public class ProgramasVacunacionHandlerTests
     public async Task ImportarConFechaEnElExcelEstableceLaFechaDeEmision()
     {
         var programa = new ProgramaVacunacion("PLAN CAISY 1000", null, 1000, null);
-        programa.ReemplazarCronograma([new DatosItemPlanVacunacion(10, "B", null, null)]);
-        Assert.Null(programa.FechaEmision);
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        ParaGestion(programa);
         _importador.Importar(Arg.Any<Stream>()).Returns(new ResultadoImportacionCronograma(
             [new ItemCronogramaImportado(1, "NEWCASTLE", "Gota ocular", null)],
             [], new DateOnly(2026, 8, 6)));
@@ -171,20 +208,79 @@ public class ProgramasVacunacionHandlerTests
     }
 
     [Fact]
-    public async Task CrearNoPideFechaDeEmisionYDejaElProgramaSinEmitir()
+    public async Task PublicarInexistenteLanzaNotFound()
     {
-        var handler = new CrearProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+        SinProgramaParaGestion();
+        var handler = new PublicarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
 
-        await handler.Handle(new("PLAN CAISY 1000", 1000, null), CancellationToken.None);
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            handler.Handle(new(Guid.NewGuid()), CancellationToken.None));
+    }
 
-        _programas.Received(1).Agregar(Arg.Is<ProgramaVacunacion>(p => p.FechaEmision == null));
+    [Fact]
+    public async Task PublicarUnBorradorConCronogramaLoPublicaYNarraLosItems()
+    {
+        var programa = Borrador();
+        ParaGestion(programa);
+        var handler = new PublicarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+
+        await handler.Handle(new(programa.Id), CancellationToken.None);
+
+        Assert.Equal(EstadoProgramaVacunacion.Publicado, programa.Estado);
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.programas.publicar"),
+            "publicacion", "aplicada",
+            Arg.Is<IReadOnlyDictionary<string, object?>>(c => (int)c["ItemsPublicados"]! == 2));
+        await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PublicarSinCronogramaLanzaReglaNegocioSinGuardar()
+    {
+        var programa = new ProgramaVacunacion("PLAN VACIO", null, 1000, null);
+        ParaGestion(programa);
+        var handler = new PublicarProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+
+        await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            handler.Handle(new(programa.Id), CancellationToken.None));
+
+        await _unidad.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EliminarUnBorradorLoDejaInactivoYGuarda()
+    {
+        var programa = Borrador();
+        ParaGestion(programa);
+        var handler = new EliminarBorradorProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+
+        await handler.Handle(new(programa.Id), CancellationToken.None);
+
+        Assert.False(programa.EstaActivo);
+        _vuelo.Received().Decidir(
+            Arg.Is<DescriptorOperacionRegistroVuelo>(d => d.Nombre == "avicola.vacunacion.programas.eliminar-borrador"),
+            "eliminacion", "aplicada", Arg.Any<IReadOnlyDictionary<string, object?>?>());
+        await _unidad.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EliminarUnPublicadoLanzaReglaNegocioSinGuardar()
+    {
+        var programa = Publicado();
+        ParaGestion(programa);
+        var handler = new EliminarBorradorProgramaVacunacionHandler(_programas, _vuelo, _unidad);
+
+        await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            handler.Handle(new(programa.Id), CancellationToken.None));
+
+        Assert.True(programa.EstaActivo);
+        await _unidad.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task DesactivarInexistenteLanzaNotFound()
     {
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns((ProgramaVacunacion?)null);
+        SinProgramaParaGestion();
         var handler = new DesactivarProgramaVacunacionHandler(_programas, _tareas, _vuelo, _unidad);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -192,10 +288,10 @@ public class ProgramasVacunacionHandlerTests
     }
 
     [Fact]
-    public async Task DesactivarDesactivaLasPendientesDelProgramaYGuarda()
+    public async Task DesactivarUnPublicadoDesactivaLasPendientesDelProgramaYGuarda()
     {
-        var programa = ProgramaDemo();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        var programa = Publicado();
+        ParaGestion(programa);
         _tareas.DesactivarPendientesDeProgramaAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(3);
         var handler = new DesactivarProgramaVacunacionHandler(_programas, _tareas, _vuelo, _unidad);
 
@@ -211,61 +307,48 @@ public class ProgramasVacunacionHandlerTests
     }
 
     [Fact]
-    public async Task ListarSinRolAdministradorIgnoraElIncluirInactivos()
+    public async Task DesactivarUnBorradorLanzaReglaNegocioSinTocarTareas()
     {
-        _usuario.Rol.Returns("Cliente");
-        var handler = new ListarProgramasVacunacionHandler(_programas, _usuario);
+        var programa = Borrador();
+        ParaGestion(programa);
+        var handler = new DesactivarProgramaVacunacionHandler(_programas, _tareas, _vuelo, _unidad);
 
-        await handler.Handle(new(true), CancellationToken.None);
+        await Assert.ThrowsAsync<ReglaNegocioException>(() =>
+            handler.Handle(new(programa.Id), CancellationToken.None));
 
-        await _programas.Received(1).ListarAsync(false, Arg.Any<CancellationToken>());
+        await _tareas.DidNotReceive().DesactivarPendientesDeProgramaAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _unidad.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ListarComoAdministradorSiIncluyeInactivos()
+    public async Task ListarParaElTenantConsultaSoloLosPublicados()
     {
-        _usuario.Rol.Returns("Administrador");
-        _programas.ListarAsync(true, Arg.Any<CancellationToken>()).Returns([ProgramaDemo()]);
-        var handler = new ListarProgramasVacunacionHandler(_programas, _usuario);
+        _programas.ListarPublicadosAsync(Arg.Any<CancellationToken>()).Returns([Publicado()]);
+        var handler = new ListarProgramasVacunacionHandler(_programas);
 
-        var lista = await handler.Handle(new(true), CancellationToken.None);
+        var lista = await handler.Handle(new(), CancellationToken.None);
 
-        Assert.Single(lista);
-        Assert.Equal("PLAN CAISY 1000", lista[0].Nombre);
+        Assert.Equal("PLAN CAISY 1000", Assert.Single(lista).Nombre);
+        await _programas.DidNotReceive().ListarParaGestionAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ObtenerInexistenteLanzaNotFound()
+    public async Task ObtenerParaElTenantUnNoPublicadoLanzaNotFound()
     {
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        _programas.ObtenerPublicadoPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((ProgramaVacunacion?)null);
-        _usuario.Rol.Returns("Cliente");
-        var handler = new ObtenerProgramaVacunacionHandler(_programas, _usuario);
+        var handler = new ObtenerProgramaVacunacionHandler(_programas);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             handler.Handle(new(Guid.NewGuid()), CancellationToken.None));
     }
 
     [Fact]
-    public async Task ObtenerInactivoSinSerAdministradorLanzaNotFound()
+    public async Task ObtenerParaElTenantDevuelveItemsActivosOrdenadosPorEdad()
     {
-        var programa = ProgramaDemo();
-        programa.Desactivar();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
-        _usuario.Rol.Returns("Cliente");
-        var handler = new ObtenerProgramaVacunacionHandler(_programas, _usuario);
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new(programa.Id), CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task ObtenerDevuelveDetalleConItemsActivosOrdenadosPorEdad()
-    {
-        var programa = ProgramaDemo();
-        _programas.ObtenerPorIdIncluyendoInactivosAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
-        _usuario.Rol.Returns("Cliente");
-        var handler = new ObtenerProgramaVacunacionHandler(_programas, _usuario);
+        var programa = Publicado();
+        _programas.ObtenerPublicadoPorIdAsync(programa.Id, Arg.Any<CancellationToken>()).Returns(programa);
+        var handler = new ObtenerProgramaVacunacionHandler(_programas);
 
         var detalle = await handler.Handle(new(programa.Id), CancellationToken.None);
 
@@ -273,5 +356,48 @@ public class ProgramasVacunacionHandlerTests
         Assert.Equal(3, detalle.Items[0].EdadDia);
         Assert.Equal(10, detalle.Items[1].EdadDia);
         Assert.Equal("A", detalle.Items[0].Vacuna);
+    }
+
+    [Fact]
+    public async Task ListarParaGestionMapeaEstadoActividadYCantidadDeItems()
+    {
+        var borrador = Borrador();
+        var desactivado = Publicado();
+        desactivado.Desactivar();
+        _programas.ListarParaGestionAsync(Arg.Any<CancellationToken>()).Returns([borrador, desactivado]);
+        var handler = new ListarProgramasVacunacionGestionHandler(_programas);
+
+        var lista = await handler.Handle(new(), CancellationToken.None);
+
+        Assert.Equal(2, lista.Count);
+        Assert.Equal("Borrador", lista[0].Estado);
+        Assert.True(lista[0].EstaActivo);
+        Assert.Equal(2, lista[0].CantidadItems);
+        Assert.Equal("Publicado", lista[1].Estado);
+        Assert.False(lista[1].EstaActivo);
+    }
+
+    [Fact]
+    public async Task ObtenerParaGestionInexistenteLanzaNotFound()
+    {
+        SinProgramaParaGestion();
+        var handler = new ObtenerProgramaVacunacionGestionHandler(_programas);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            handler.Handle(new(Guid.NewGuid()), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ObtenerParaGestionDevuelveEstadoEItemsActivos()
+    {
+        var programa = Borrador();
+        ParaGestion(programa);
+        var handler = new ObtenerProgramaVacunacionGestionHandler(_programas);
+
+        var detalle = await handler.Handle(new(programa.Id), CancellationToken.None);
+
+        Assert.Equal("Borrador", detalle.Estado);
+        Assert.True(detalle.EstaActivo);
+        Assert.Equal(new[] { 3, 10 }, detalle.Items.Select(i => i.EdadDia));
     }
 }

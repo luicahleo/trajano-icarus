@@ -79,7 +79,8 @@ no contexto obligatorio. No cargarlos en bloque.
   por módulo) y módulo GestionAvicola (agregados Granja/Galpón —una granja activa
   por cliente—, recogidas de producción con huevos de descarte, mortalidad con
   ajuste de inventario, eficiencia diaria con umbral del 70 % y vacunación
-  (catálogo global de programas de CAISY subido por el Administrador, asignación
+  (catálogo global de programas de CAISY que el Gestor CAISY con
+  `GestorVeterinario` prepara como borrador y publica, asignación
   por galpón con día 0 = fecha de poblado, notificación de tareas al trabajador)),
   el catálogo global de Notificaciones de Precios de Alimentos de CAISY
   (cuentas globales GestorCaisy con funcionalidades componibles, importación
@@ -94,8 +95,8 @@ no contexto obligatorio. No cargarlos en bloque.
   (PWA) vive bajo `web/` e incluye la UI de Gestión Avícola offline-first para
   recogida y mortalidad en el rol Trabajador (cola IndexedDB con idempotencia,
   precalentado del día, sesión offline sin persistir el token y sincronización
-  automática), además de eficiencia, vacunación, la administración del catálogo
-  de vacunación y la bandeja de pedidos de alimento (deliberadamente online,
+  automática), además de eficiencia, vacunación y la bandeja de pedidos de
+  alimento (deliberadamente online,
   sin cola offline ni IndexedDB; incluye la vista histórica de la entrega con
   sus respaldos y la confirmación de recepción por línea). La aplicación de
   oficina MVC Trajano.GestorCaisy vive bajo
@@ -104,10 +105,12 @@ no contexto obligatorio. No cargarlos en bloque.
   DbContext ni acceso SQL, regla blindada en pruebas de arquitectura), guarda
   access y refresh token como claims de una cookie protegida HttpOnly (nunca
   localStorage), exige rol `GestorCaisy` más la funcionalidad
-  `GestorPedidoAlimento` y cubre precios de alimento y la bandeja de pedidos
-  entrantes (devolver, rechazar, aceptar, cambiar la entrega estimada y
-  registrar el despacho con su nota y sus respaldos privados; sin
-  service worker, caché offline ni IndexedDB). Sus pruebas viven en
+  de cada sección: con `GestorPedidoAlimento` cubre precios de alimento y la
+  bandeja de pedidos entrantes (devolver, rechazar, aceptar, cambiar la entrega
+  estimada y registrar el despacho con su nota y sus respaldos privados) y con
+  `GestorVeterinario` los programas de vacunación (borrador, cronograma por
+  Excel, publicación, eliminación del borrador y desactivación); sin service
+  worker, caché offline ni IndexedDB. Sus pruebas viven en
   `Icarus/tests/Trajano.GestorCaisy.Tests/`.
 - Cuando existan, sus `AGENTS.md` locales complementarán a este archivo al
   trabajar en esos árboles.

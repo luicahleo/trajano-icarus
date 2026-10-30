@@ -1,0 +1,25 @@
+@model FormularioProgramaVacunacionVista
+@{
+    ViewData["Titulo"] = "Nuevo programa";
+    ViewData["Seccion"] = "programas-vacunacion";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Nuevo programa</h1>
+        <p class="pagina-cabecera__detalle">
+            El programa se crea como borrador. Después importe su cronograma y
+            publíquelo para que los clientes puedan asignarlo.
+        </p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <div asp-validation-summary="All" class="alerta alerta--error" role="alert"></div>
+    <form asp-action="Nuevo" method="post" class="forma">
+        <partial name="_CamposPrograma" model="Model" />
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Crear borrador</button>
+            <a class="enlace" asp-action="Index">Cancelar</a>
+        </div>
+    </form>
+</section>

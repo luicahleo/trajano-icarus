@@ -13,6 +13,9 @@ public sealed class ConfiguracionProgramaVacunacion : IEntityTypeConfiguration<P
         builder.Property(p => p.Nombre).HasMaxLength(200);
         builder.Property(p => p.Observaciones).HasMaxLength(1000);
         builder.Property(p => p.FechaEmision).HasColumnType("date");
+        // Estado del ciclo (spec 2026-10-30), persistido como entero estable.
+        builder.Property(p => p.Estado).HasConversion<int>();
+        builder.Ignore(p => p.EsAsignable);
         // Unicidad incluyendo inactivos (spec SP7): el soft delete no libera el nombre.
         builder.HasIndex(p => p.Nombre).IsUnique();
         builder.HasMany(p => p.Items).WithOne().HasForeignKey("ProgramaVacunacionId").IsRequired();

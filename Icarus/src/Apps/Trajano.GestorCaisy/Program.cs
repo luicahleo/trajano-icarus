@@ -72,6 +72,11 @@ builder.Services.AddAuthorization(opciones =>
             politica.AddRequirements(new RequerimientoRolYFuncionalidad(
                 ConstantesAutorizacion.RolGestorCaisy,
                 ConstantesAutorizacion.BitGestorRecepcionHuevos)));
+    opciones.AddPolicy(
+        ConstantesAutorizacion.PoliticaGestorVeterinario, politica =>
+            politica.AddRequirements(new RequerimientoRolYFuncionalidad(
+                ConstantesAutorizacion.RolGestorCaisy,
+                ConstantesAutorizacion.BitGestorVeterinario)));
 });
 
 builder.Services.AddHttpContextAccessor();

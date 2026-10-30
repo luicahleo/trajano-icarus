@@ -1,0 +1,22 @@
+@model FormularioProgramaVacunacionVista
+@{
+    ViewData["Titulo"] = "Editar borrador";
+    ViewData["Seccion"] = "programas-vacunacion";
+}
+<div class="pagina-cabecera">
+    <div>
+        <h1>Editar borrador</h1>
+        <p class="pagina-cabecera__detalle">Un programa publicado ya no se edita.</p>
+    </div>
+</div>
+<partial name="_Avisos" />
+<section class="tarjeta">
+    <div asp-validation-summary="All" class="alerta alerta--error" role="alert"></div>
+    <form asp-action="Editar" asp-route-id="@Model.ProgramaId" method="post" class="forma">
+        <partial name="_CamposPrograma" model="Model" />
+        <div class="acciones">
+            <button type="submit" class="boton boton--primario">Guardar</button>
+            <a class="enlace" asp-action="Detalles" asp-route-id="@Model.ProgramaId">Cancelar</a>
+        </div>
+    </form>
+</section>

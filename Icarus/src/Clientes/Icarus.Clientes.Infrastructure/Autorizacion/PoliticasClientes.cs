@@ -9,8 +9,8 @@ public static class PoliticasClientes
 {
     public const string Prefijo = "Funcionalidad:";
 
-    // Lectura del catálogo de vacunación: funcionalidad Vacunacion o rol de
-    // plataforma (spec SP7). Se registra en AddClientesInfraestructura.
+    // Lectura del catálogo de vacunación: funcionalidad Vacunacion (spec SP7 y
+    // spec 2026-10-30). Se registra en AddClientesInfraestructura.
     public const string CatalogoVacunacion = "CatalogoVacunacion";
 
     public static string Para(Funcionalidades funcionalidad) => Prefijo + funcionalidad.ToString();

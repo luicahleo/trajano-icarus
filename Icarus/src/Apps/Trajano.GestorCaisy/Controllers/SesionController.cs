@@ -17,7 +17,7 @@ public sealed class SesionController(IApiIcarusClient api) : Controller
     public IActionResult Acceder()
     {
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectToAction("Index", "Precios");
+            return RedirectToAction("Index", ReclamosCaisy.ControladorInicial(User));
         return View();
     }
 
@@ -50,7 +50,7 @@ public sealed class SesionController(IApiIcarusClient api) : Controller
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             PrincipalGestorcaisy.ConCorreo(principal, formulario.Correo));
-        return RedirectToAction("Index", "Precios");
+        return RedirectToAction("Index", ReclamosCaisy.ControladorInicial(principal));
     }
 
     [HttpGet]

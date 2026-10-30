@@ -103,7 +103,7 @@ con su propio `Id`; para `Trabajador`, con `ClienteId`.
 | `galpones` | Número único por granja; capacidad, inventario, poblado y descarte del lote. |
 | `registros_produccion` | Fecha/hora, vendibles, descarte, snapshot de vivas e idempotencia. |
 | `registros_mortalidad` | Fecha/hora, muertas, snapshot de vivas e idempotencia. |
-| `programas_vacunacion` | Catálogo global con nombre único y datos generales. |
+| `programas_vacunacion` | Catálogo global con nombre único, estado (Borrador/Publicado) y datos generales. |
 | `programas_vacunacion_items` | Edad, manejo/vacuna, modo, observaciones y fecha opcional. |
 | `tareas_vacunacion` | Snapshot del ítem asignado al galpón, estado y ejecución. |
 

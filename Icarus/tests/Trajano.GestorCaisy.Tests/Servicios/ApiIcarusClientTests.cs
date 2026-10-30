@@ -420,4 +420,103 @@ public class ApiIcarusClientTests
 
         Assert.Equal(500, error.Estado);
     }
+
+    [Fact]
+    public async Task ListarProgramasVacunacionParseaElCatalogoDeGestion()
+    {
+        _manejador.Responder(HttpStatusCode.OK,
+            """[{"id":"6b2e4c46-2f1a-4b7e-9b4b-6ee7f7f2c001","nombre":"PLAN 1000","fechaEmision":"2026-08-06","cantidadAves":1000,"estado":"Borrador","estaActivo":true,"cantidadItems":12}]""");
+
+        var lista = await _cliente.ListarProgramasVacunacionAsync();
+
+        var programa = Assert.Single(lista);
+        Assert.Equal("Borrador", programa.Estado);
+        Assert.Equal(12, programa.CantidadItems);
+        Assert.Equal(new DateOnly(2026, 8, 6), programa.FechaEmision);
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Get, peticion.Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/", peticion.Uri.ToString());
+        Assert.Equal("Bearer token-actual", peticion.Autorizacion);
+    }
+
+    [Fact]
+    public async Task CrearProgramaVacunacionPosteaLosDatosYDevuelveElId()
+    {
+        var idEsperado = Guid.NewGuid();
+        _manejador.Responder(HttpStatusCode.Created, $$"""{"id":"{{idEsperado}}"}""");
+
+        var id = await _cliente.CrearProgramaVacunacionAsync(new DatosProgramaVacunacionApi("PLAN 1000", 1000, null));
+
+        Assert.Equal(idEsperado, id);
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Post, peticion.Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/", peticion.Uri.ToString());
+        Assert.Contains("\"nombre\":\"PLAN 1000\"", peticion.Cuerpo);
+        Assert.Contains("\"cantidadAves\":1000", peticion.Cuerpo);
+    }
+
+    [Fact]
+    public async Task ActualizarProgramaVacunacionHacePutALaRutaDelPrograma()
+    {
+        _manejador.Responder(HttpStatusCode.NoContent);
+        var id = Guid.NewGuid();
+
+        await _cliente.ActualizarProgramaVacunacionAsync(id, new DatosProgramaVacunacionApi("PLAN 2000", 2000, "nota"));
+
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Put, peticion.Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/{id}", peticion.Uri.ToString());
+        Assert.Contains("\"observaciones\":\"nota\"", peticion.Cuerpo);
+    }
+
+    [Fact]
+    public async Task ImportarCronogramaVacunacionEnviaMultipartYDevuelveLaCantidad()
+    {
+        _manejador.Responder(HttpStatusCode.OK, """{"itemsImportados":5}""");
+        var id = Guid.NewGuid();
+
+        var importados = await _cliente.ImportarCronogramaVacunacionAsync(
+            id, new MemoryStream("PK planilla"u8.ToArray()), "plan.xlsx");
+
+        Assert.Equal(5, importados);
+        var peticion = _manejador.Peticiones[0];
+        Assert.Equal(HttpMethod.Post, peticion.Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/{id}/cronograma-excel", peticion.Uri.ToString());
+        Assert.StartsWith("multipart/form-data", peticion.TipoDeContenido);
+        Assert.Contains("name=archivo", peticion.Cuerpo);
+    }
+
+    [Fact]
+    public async Task PublicarEliminarYDesactivarProgramaUsanSusRutas()
+    {
+        _manejador.Responder(HttpStatusCode.NoContent);
+        _manejador.Responder(HttpStatusCode.NoContent);
+        _manejador.Responder(HttpStatusCode.NoContent);
+        var id = Guid.NewGuid();
+
+        await _cliente.PublicarProgramaVacunacionAsync(id);
+        await _cliente.EliminarBorradorProgramaVacunacionAsync(id);
+        await _cliente.DesactivarProgramaVacunacionAsync(id);
+
+        Assert.Equal(HttpMethod.Post, _manejador.Peticiones[0].Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/{id}/publicar", _manejador.Peticiones[0].Uri.ToString());
+        Assert.Equal(HttpMethod.Delete, _manejador.Peticiones[1].Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/{id}", _manejador.Peticiones[1].Uri.ToString());
+        Assert.Equal(HttpMethod.Post, _manejador.Peticiones[2].Metodo);
+        Assert.Equal($"{BaseApi}programas-vacunacion-caisy/{id}/desactivar", _manejador.Peticiones[2].Uri.ToString());
+    }
+
+    [Fact]
+    public async Task LosErroresPorFilaDelCronogramaLleganAlLlamador()
+    {
+        _manejador.Responder(HttpStatusCode.BadRequest,
+            """{"title":"Solicitud inválida","errors":{"Cronograma":["Fila 2: La edad debe ser un número entero mayor que cero."]}}""");
+
+        var error = await Assert.ThrowsAsync<ErrorApiException>(() =>
+            _cliente.ImportarCronogramaVacunacionAsync(Guid.NewGuid(), new MemoryStream(new byte[] { 1 }), "plan.xlsx"));
+
+        Assert.Equal(400, error.Estado);
+        Assert.Equal("Fila 2: La edad debe ser un número entero mayor que cero.",
+            Assert.Single(error.ErroresValidacion!["Cronograma"]));
+    }
 }

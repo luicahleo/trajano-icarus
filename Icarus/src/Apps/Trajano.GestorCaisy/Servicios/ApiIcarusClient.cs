@@ -19,6 +19,11 @@ public sealed class ApiIcarusClient : IApiIcarusClient
     // código de cada operación; los valores dinámicos solo van a la URI real.
     private static class Plantillas
     {
+        public const string ProgramasVacunacion = "/api/programas-vacunacion-caisy/";
+        public const string ProgramaVacunacion = "/api/programas-vacunacion-caisy/{id}";
+        public const string ProgramaVacunacionCronograma = "/api/programas-vacunacion-caisy/{id}/cronograma-excel";
+        public const string ProgramaVacunacionPublicar = "/api/programas-vacunacion-caisy/{id}/publicar";
+        public const string ProgramaVacunacionDesactivar = "/api/programas-vacunacion-caisy/{id}/desactivar";
         public const string Sesion = "/api/identidad/sesion";
         public const string Renovar = "/api/identidad/sesion/renovar";
         public const string Notificaciones = "/api/precios-alimentos/";
@@ -546,6 +551,92 @@ public sealed class ApiIcarusClient : IApiIcarusClient
             accessToken => PeticionJson(HttpMethod.Post,
                 $"despachos-huevo-caisy/notificaciones/{id}/marcar-leida",
                 Plantillas.DespachoHuevoNotificacionLeida, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task<IReadOnlyList<ProgramaVacunacionGestionResumenApi>> ListarProgramasVacunacionAsync(
+        CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, "programas-vacunacion-caisy/",
+                Plantillas.ProgramasVacunacion, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content
+                .ReadFromJsonAsync<IReadOnlyList<ProgramaVacunacionGestionResumenApi>>(Json, token)
+            ?? [];
+    }
+
+    public async Task<ProgramaVacunacionGestionDetalleApi> ObtenerProgramaVacunacionAsync(
+        Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Get, $"programas-vacunacion-caisy/{id}",
+                Plantillas.ProgramaVacunacion, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        return await respuesta.Content.ReadFromJsonAsync<ProgramaVacunacionGestionDetalleApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta ilegible");
+    }
+
+    public async Task<Guid> CrearProgramaVacunacionAsync(
+        DatosProgramaVacunacionApi datos, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post, "programas-vacunacion-caisy/",
+                Plantillas.ProgramasVacunacion, accessToken, datos), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var creado = await respuesta.Content.ReadFromJsonAsync<BorradorImportadoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de alta ilegible");
+        return creado.Id;
+    }
+
+    public async Task ActualizarProgramaVacunacionAsync(
+        Guid id, DatosProgramaVacunacionApi datos, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Put, $"programas-vacunacion-caisy/{id}",
+                Plantillas.ProgramaVacunacion, accessToken, datos), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task<int> ImportarCronogramaVacunacionAsync(
+        Guid id, Stream contenido, string nombreArchivo, CancellationToken token = default)
+    {
+        // El Excel se copia a memoria (tope de 5 MB del lado de la API) para
+        // que la renovación de sesión pueda reenviar la misma carga.
+        using var memoria = new MemoryStream();
+        await contenido.CopyToAsync(memoria, token);
+        var bytes = memoria.ToArray();
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionMultipart(bytes, nombreArchivo,
+                $"programas-vacunacion-caisy/{id}/cronograma-excel",
+                Plantillas.ProgramaVacunacionCronograma, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+        var resultado = await respuesta.Content.ReadFromJsonAsync<CronogramaImportadoApi>(Json, token)
+            ?? throw new ErrorApiException((int)respuesta.StatusCode, "Respuesta de importación ilegible");
+        return resultado.ItemsImportados;
+    }
+
+    public async Task PublicarProgramaVacunacionAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post, $"programas-vacunacion-caisy/{id}/publicar",
+                Plantillas.ProgramaVacunacionPublicar, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task EliminarBorradorProgramaVacunacionAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Delete, $"programas-vacunacion-caisy/{id}",
+                Plantillas.ProgramaVacunacion, accessToken), token);
+        await AsegurarExitoAsync(respuesta, token);
+    }
+
+    public async Task DesactivarProgramaVacunacionAsync(Guid id, CancellationToken token = default)
+    {
+        using var respuesta = await EnviarConSesionAsync(
+            accessToken => PeticionJson(HttpMethod.Post, $"programas-vacunacion-caisy/{id}/desactivar",
+                Plantillas.ProgramaVacunacionDesactivar, accessToken), token);
         await AsegurarExitoAsync(respuesta, token);
     }
 

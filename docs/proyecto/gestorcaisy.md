@@ -46,6 +46,10 @@ sequenceDiagram
 |---|---|
 | `GestorPedidoAlimento` | `PreciosController`, `PedidosController` |
 | `GestorRecepcionHuevos` | `PreciosHuevoController`, `RecepcionesHuevoController` |
+| `GestorVeterinario` | `ProgramasVacunacionController` |
+
+Tras iniciar sesión se aterriza en la primera sección de la cuenta: alimento,
+huevo o vacunación.
 
 ## 3. Cliente API
 
@@ -113,7 +117,23 @@ previsualización y motivo.
 No hay negociación ni reconteo por línea. La confirmación es terminal y habilita
 el recibo.
 
-## 7. Errores y observabilidad
+## 7. Programas de vacunación
+
+`ProgramasVacunacionController` cubre el catálogo global de programas de
+vacunación:
+
+- lista con estado visible (Borrador, Publicado, Inactivo);
+- alta y edición de datos básicos del borrador;
+- importación del Excel del cronograma, con un error por fila en el resumen
+  de validación si alguna fila es inválida (no se guarda nada);
+- publicación, eliminación del borrador y desactivación, cada una con su
+  página de confirmación.
+
+El gestor nunca ve galpones, clientes ni tareas: los contratos de vacunación no
+los llevan y la API responde 403 en las rutas del tenant. No hay campana ni
+notificaciones para esta función.
+
+## 8. Errores y observabilidad
 
 El pipeline incluye contexto de petición, un resumen HTTP seguro, manejo de errores
 con reejecución, middleware de respuesta segura y filtro de errores API. Los 400/409
@@ -123,14 +143,14 @@ no encontrado; los errores inesperados terminan en una página genérica.
 La correlación MVC→API usa `DownstreamCorrelationId` en MVC y `CorrelationId` en
 API, con `TraceId` compartido. Cada reintento físico tiene su propio id de salto.
 
-## 8. Pruebas de frontera
+## 9. Pruebas de frontera
 
 `Icarus/tests/Trajano.GestorCaisy.Tests/` cubre controladores, sesión, cliente API,
 privacidad y flujos. Las pruebas de arquitectura impiden referencias a EF Core o
 módulos backend. Las pruebas de integración pueden levantar ambos hosts y medir el
 contrato HTTP real.
 
-## 9. Fuentes principales
+## 10. Fuentes principales
 
 - `Icarus/src/Apps/Trajano.GestorCaisy/Program.cs`
 - `Icarus/src/Apps/Trajano.GestorCaisy/Servicios/ApiIcarusClient.cs`

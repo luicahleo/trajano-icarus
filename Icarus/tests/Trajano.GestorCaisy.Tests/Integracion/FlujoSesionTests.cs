@@ -140,4 +140,29 @@ public class FlujoSesionTests
         Assert.Equal(HttpStatusCode.Redirect, precios.StatusCode);
         Assert.Equal("/Sesion/Acceder", precios.Headers.Location!.AbsolutePath);
     }
+
+    [Theory]
+    [InlineData(1, "/Precios")]
+    [InlineData(2, "/PreciosHuevo")]
+    [InlineData(4, "/ProgramasVacunacion")]
+    [InlineData(6, "/PreciosHuevo")]
+    public async Task ElAccesoAterrizaEnLaPrimeraSeccionDeLaCuenta(int funcCaisy, string destino)
+    {
+        using var aplicacion = new AplicacionDePruebas();
+        var cliente = aplicacion.CrearClienteSinRedireccion();
+        var token = await AplicacionDePruebas.TokenAntiforgeryAsync(cliente, "/Sesion/Acceder");
+        aplicacion.Api.AlIniciarSesion = (_, _) =>
+            new SesionApi(CreadorTokens.Crear("GestorCaisy", funcCaisy), CreadorTokens.Crear(), 900);
+
+        var respuesta = await cliente.PostAsync("/Sesion/Acceder", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                ["Correo"] = AplicacionDePruebas.CorreoValido,
+                ["Contrasena"] = AplicacionDePruebas.ClaveValida,
+                ["__RequestVerificationToken"] = token,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, respuesta.StatusCode);
+        Assert.Equal(destino, respuesta.Headers.Location?.OriginalString);
+    }
 }

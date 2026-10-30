@@ -770,6 +770,9 @@ namespace Icarus.GestionAvicola.Infrastructure.Migrations
                     b.Property<bool>("EstaActivo")
                         .HasColumnType("bit");
 
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
                     b.Property<DateOnly?>("FechaEmision")
                         .HasColumnType("date");
 
