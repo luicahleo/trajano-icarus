@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Gate de mojibake: ningún archivo de texto versionado puede contener el
-// carácter de reemplazo ni las secuencias que delatan UTF-8 leído como Latin-1.
+// Gate de mojibake: ningún archivo de texto del árbol, versionado o nuevo, puede
+// contener el carácter de reemplazo ni las secuencias que delatan UTF-8 leído
+// como Latin-1.
 //
 // Los patrones se escriben con escapes unicode y de byte a propósito: escritos
 // como caracteres literales, este archivo se marcaría a sí mismo.
@@ -47,13 +48,17 @@ export function analizar(salidaGitGrep) {
   return hallazgos;
 }
 
+export function buscarEnArbol({ cwd } = {}) {
+  return ejecutar('git', ['grep', '--untracked', '-I', '-n', '-P', PATRON_PCRE], {
+    cwd,
+    silencioso: true,
+    sinShell: true,
+  });
+}
+
 // Punto de entrada CLI. Al importarse como módulo (tests) no se ejecuta.
 if (process.argv[1] && process.argv[1].endsWith('check-mojibake.mjs')) {
-  const { codigo, salida } = ejecutar(
-    'git',
-    ['grep', '-I', '-n', '-P', PATRON_PCRE],
-    { silencioso: true, sinShell: true },
-  );
+  const { codigo, salida } = buscarEnArbol();
 
   // git grep: 0 = hubo coincidencias, 1 = ninguna, >1 = error real.
   if (codigo > 1) {

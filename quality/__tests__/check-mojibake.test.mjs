@@ -1,10 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   PATRONES,
   sinSpansDeCodigo,
   lineaTieneMojibake,
   analizar,
+  buscarEnArbol,
 } from '../check-mojibake.mjs';
 
 // Los literales se escriben con escapes a propósito: si estuvieran como
@@ -71,4 +76,26 @@ test('analizar descarta las líneas exentas por span de código', () => {
 
 test('analizar ignora una salida vacía', () => {
   assert.deepEqual(analizar(''), []);
+});
+
+test('buscarEnArbol incluye los archivos nuevos y respeta .gitignore', () => {
+  const raiz = mkdtempSync(join(tmpdir(), 'mojibake-'));
+  const git = (...a) => execFileSync('git', a, { cwd: raiz });
+  const danado = `texto ${REEMPLAZO} roto`;
+  try {
+    git('init', '-q');
+    writeFileSync(join(raiz, '.gitignore'), 'ignorada/\n');
+    writeFileSync(join(raiz, 'versionado.txt'), danado);
+    git('add', '.');
+    mkdirSync(join(raiz, 'ignorada'));
+    writeFileSync(join(raiz, 'ignorada', 'fuera.txt'), danado);
+    writeFileSync(join(raiz, 'nuevo.txt'), danado);
+
+    const { codigo, salida } = buscarEnArbol({ cwd: raiz });
+
+    assert.equal(codigo, 0);
+    assert.deepEqual(analizar(salida).map((h) => h.ruta).sort(), ['nuevo.txt', 'versionado.txt']);
+  } finally {
+    rmSync(raiz, { recursive: true, force: true });
+  }
 });
