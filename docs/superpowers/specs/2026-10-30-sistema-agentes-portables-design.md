@@ -237,9 +237,9 @@ intención podría sortearlas. Protegen de errores y atajos, y dejan rastro.
 
 | Riesgo | Control |
 |---|---|
-| Despliegue o push a `master` no autorizado | Guardia de comandos con tarea activa; decisión pendiente sobre revisores en GitHub |
+| Despliegue o push a `master` no autorizado | Guardia de comandos con tarea activa; revisor requerido en `production`, que frena un despliegue accidental pero no a un agente con la sesión de `gh` del usuario |
 | `--no-verify` | Guardia siempre activa |
-| Lectura de `.env` | Guardia con tarea activa y denegación de lectura en Claude |
+| Lectura de `.env` | Guardia con tarea activa, denegación de lectura en Claude y protección propia de archivos sensibles en Kimi |
 | Secretos en la bitácora | La CLI rechaza el texto y el gate `Tareas` revisa lo versionado |
 | Pérdida de datos locales | Guardia sobre borrado de volúmenes y `-RecrearDatos` |
 | Autoaprobación | `aprobar` exige terminal interactiva y confirmación escrita |
@@ -268,8 +268,8 @@ queda en la bitácora. Cambiar de PC exige push previo y `relevo` en la otra má
 | Fase | Contenido | Estado |
 |---|---|---|
 | 1. Desarrollo y verificación local | Roles, adaptadores, CLI, gate `Tareas`, guardia en Claude | Implementada |
-| 2. Piloto | Una tarea pequeña real con relevo entre proveedores; guardia en Kimi; ajustes | Tarea y relevo hechos; falta la guardia en Kimi |
-| 3. Despliegue preparado | Operaciones prepara y comprueba; estados `DESPLIEGUE_AUTORIZADO` y `DESPLEGADA`; `autorizar-despliegue` ligado al árbol aprobado | Requiere decisión |
+| 2. Piloto | Una tarea pequeña real con relevo entre proveedores; guardia en Kimi; ajustes | Hecha |
+| 3. Despliegue preparado | Operaciones prepara y comprueba; estados `DESPLIEGUE_AUTORIZADO` y `DESPLEGADA`; `autorizar-despliegue` ligado al árbol aprobado | Sin implementar; el despliegue lo ejecuta el usuario |
 | 4. Ejecución sin supervisión | Script que lance `claude -p` y `kimi -p` por rol con relevo automático | Opcional, solo si el piloto lo justifica |
 
 En la fase 1 ningún rol despliega.
@@ -296,15 +296,15 @@ En la fase 1 ningún rol despliega.
 - Una tarea pequeña no debe pasar por este sistema si no aporta valor: el escalado
   de `docs/ai/WORKFLOW.md` sigue vigente.
 
-**Decisiones del usuario**
+**Decisiones del usuario, tomadas el 2026-10-30**
 
-1. Aprobar este diseño, lo que habilita el push de la fase 1.
-2. Instalar el hook de guardia en `~/.kimi-code/config.toml`. Es configuración
-   global de tu usuario, por eso no se aplicó.
-3. Exigir un revisor en el entorno `production` de GitHub. Es la única barrera real
-   frente a un agente con la sesión de `gh`.
-4. Definir si en la fase 3 el despliegue lo ejecuta un agente tras tu autorización o
-   lo ejecutas tú con `deploy-produccion.ps1`. Recomendación: lo ejecutas tú, y el
-   agente prepara y comprueba.
-5. Confirmar que la bitácora va versionada. Es lo que permite cambiar de PC y
-   auditar; si prefieres menos ruido en git, puede pasar a `.local/`.
+1. Diseño aprobado y fase 1 publicada.
+2. El hook de guardia está instalado en `~/.kimi-code/config.toml`. Con una tarea
+   activa bloqueó un comando real en Kimi. La lectura de `.env` la frenó antes la
+   protección propia de Kimi, así que esa rama del hook no se ha ejercitado allí.
+3. El entorno `production` exige al usuario como revisor. Frena un despliegue
+   lanzado por error, pero no es una barrera dura: un agente con la sesión de `gh`
+   del usuario podría aprobarlo por API, y `can_admins_bypass` sigue activo. Una
+   barrera dura exigiría que los agentes no usen una sesión con esos permisos.
+4. En la fase 3 el despliegue lo ejecuta el usuario. El agente prepara y comprueba.
+5. La bitácora sigue versionada. Cada tarea agrega un commit documental al cierre.

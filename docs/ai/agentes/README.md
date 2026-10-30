@@ -86,4 +86,5 @@ command = "node C:/Users/lrcahuana/source/repos/Trajano-Icarus/quality/guardia-c
 timeout = 5
 ```
 
-Fuera de este repositorio el hook solo bloquea `--no-verify`.
+Fuera de este repositorio el hook solo bloquea `--no-verify`. Kimi frena por su
+cuenta la lectura de archivos sensibles como `.env`, antes de llegar a este hook.

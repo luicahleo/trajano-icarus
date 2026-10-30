@@ -207,6 +207,9 @@ scripts `crear-usuario-*.ps1` crean cuentas CAISY en entornos sin bootstrap.
 Workflow: `.github/workflows/deploy.yml`. Scripts: `deploy-produccion.ps1` y
 composes raíz. Nada de esto se ejecuta durante una tarea documental sin petición.
 
+El entorno `production` de GitHub exige la aprobación del usuario: cada despliegue
+queda en espera hasta aprobarlo en el run de GitHub Actions.
+
 ## 10. Verificación operativa tras despliegue
 
 - `GET /api/health` responde correctamente a través del reverse proxy.

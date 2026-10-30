@@ -22,7 +22,7 @@ El plan se ejecutó en la misma sesión que el diseño. Queda como registro de l
 - [x] Aprobación del diseño por el usuario.
 - [x] Piloto de la fase 2 con una tarea pequeña y un relevo entre proveedores.
 - [x] Prueba de `aprobar` en una terminal interactiva real.
-- [ ] Hook de guardia en la configuración de usuario de Kimi.
+- [x] Hook de guardia en la configuración de usuario de Kimi.
 
 ## Verificación
 
