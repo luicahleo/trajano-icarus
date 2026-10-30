@@ -14,3 +14,6 @@
 {"ts":"2026-10-30T17:00:11.400Z","tipo":"relevo","rol":"orquestador","proveedor":"anthropic","anterior":"moonshot","motivo":"Fin de la revisión en el piloto de la fase 2"}
 {"ts":"2026-10-30T17:00:12.199Z","tipo":"comando","rol":"operaciones","proveedor":"anthropic","texto":"Prueba real: un .md sin versionar con enlace roto hace fallar el gate; al borrarlo vuelve a verde."}
 {"ts":"2026-10-30T17:00:12.294Z","tipo":"nota","rol":"operaciones","proveedor":"anthropic","texto":"Cambio solo en la puerta: no hay aplicación que levantar, iniciar-pc1.ps1 no aplica."}
+{"ts":"2026-10-30T17:00:13.142Z","tipo":"estado","rol":"operaciones","proveedor":"anthropic","de":"ENTORNO","a":"PRUEBA_MANUAL","commit":"7e2d657","nota":"Evidencia vigente tras el commit."}
+{"ts":"2026-10-30T17:03:37.520Z","tipo":"aprobacion","rol":"humano","proveedor":"humano","arbol":"e7d590221ab77793d941668e57eedb8ff80b8381","commit":"7e2d657"}
+{"ts":"2026-10-30T17:04:31.100Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"APROBADA","a":"CERRADA","commit":"7e2d657","nota":"Aprobada por el usuario y publicada en develop."}

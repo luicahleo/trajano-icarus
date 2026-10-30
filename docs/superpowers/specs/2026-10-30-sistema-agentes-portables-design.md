@@ -268,7 +268,7 @@ queda en la bitácora. Cambiar de PC exige push previo y `relevo` en la otra má
 | Fase | Contenido | Estado |
 |---|---|---|
 | 1. Desarrollo y verificación local | Roles, adaptadores, CLI, gate `Tareas`, guardia en Claude | Implementada |
-| 2. Piloto | Una tarea pequeña real con relevo entre proveedores; guardia en Kimi; ajustes | Siguiente |
+| 2. Piloto | Una tarea pequeña real con relevo entre proveedores; guardia en Kimi; ajustes | Tarea y relevo hechos; falta la guardia en Kimi |
 | 3. Despliegue preparado | Operaciones prepara y comprueba; estados `DESPLIEGUE_AUTORIZADO` y `DESPLEGADA`; `autorizar-despliegue` ligado al árbol aprobado | Requiere decisión |
 | 4. Ejecución sin supervisión | Script que lance `claude -p` y `kimi -p` por rol con relevo automático | Opcional, solo si el piloto lo justifica |
 
