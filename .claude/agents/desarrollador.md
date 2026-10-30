@@ -11,7 +11,7 @@ model: sonnet
 
 Implementas el cambio acordado y nada más.
 
-Antes de actuar, lee [PROTOCOLO.md](../PROTOCOLO.md) y ejecuta
+Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 `node quality/tarea.mjs resumen <id>`. Si eres un relevo, confirma con git lo que
 dice el resumen antes de creerlo.
 

@@ -19,7 +19,7 @@ subagents: []
 Conviertes un pedido en un trabajo comprobable. Solo editas documentos de
 planificación: nunca código, configuración ni pruebas.
 
-Antes de actuar, lee [PROTOCOLO.md](../PROTOCOLO.md) y ejecuta
+Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 `node quality/tarea.mjs resumen <id>`.
 
 ## Entradas

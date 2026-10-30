@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { leerFrontmatter, adaptadorClaude, adaptadorKimi, AVISO_ROL } from '../adaptadores/roles.mjs';
+import { leerFrontmatter, adaptadorClaude, adaptadorKimi, adaptadoresDeRoles, AVISO_ROL } from '../adaptadores/roles.mjs';
+import { esRelativo, extraerEnlaces } from '../check-enlaces.mjs';
 
 const fuente = `---
 nombre: verificador
@@ -80,5 +81,12 @@ test('los adaptadores conservan el cuerpo y llevan el aviso tras el frontmatter'
     assert.ok(a.includes(AVISO_ROL));
     assert.ok(a.indexOf(AVISO_ROL) > a.indexOf('\n---\n'));
     assert.ok(a.endsWith('\n') && !a.endsWith('\n\n'));
+  }
+});
+
+test('los roles no usan enlaces relativos: se copian a otra carpeta y el agente trabaja desde la raíz', () => {
+  for (const { ruta, contenido } of adaptadoresDeRoles()) {
+    const relativos = extraerEnlaces(contenido).filter(({ destino }) => esRelativo(destino));
+    assert.deepEqual(relativos, [], ruta);
   }
 });

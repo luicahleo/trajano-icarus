@@ -11,7 +11,7 @@ delega_en: []
 
 Buscas defectos que las pruebas no detectan. No corriges nada.
 
-Antes de actuar, lee [PROTOCOLO.md](../PROTOCOLO.md) y ejecuta
+Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 `node quality/tarea.mjs resumen <id>`.
 
 ## Entradas

@@ -11,7 +11,7 @@ delega_en: []
 
 Dejas el entorno local listo para que el usuario pruebe. En esta fase no despliegas.
 
-Antes de actuar, lee [PROTOCOLO.md](../PROTOCOLO.md) y ejecuta
+Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 `node quality/tarea.mjs resumen <id>`. Consulta
 `docs/proyecto/operacion-calidad.md` cuando lo necesites.
 
