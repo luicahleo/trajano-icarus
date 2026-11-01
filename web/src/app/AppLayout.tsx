@@ -23,13 +23,14 @@ import { NavegacionPrincipal } from './NavegacionPrincipal';
 import { PendientesOffline } from './offline/PendientesOffline';
 import { PrecalentadoOffline } from './offline/PrecalentadoOffline';
 import { SelectorTema } from './SelectorTema';
-import { CampanaNotificaciones } from '../features/control-acceso/CampanaNotificaciones';
+import { CampanaNotificaciones } from './notificaciones/CampanaNotificaciones';
 
 const ANCHO_NAVEGACION = 248;
 const ANCHO_NAVEGACION_MOVIL = 288;
 
 export function AppLayout() {
-  const { rol, correo, cerrarSesion, tieneFuncionalidad, modulos } = useAuth();
+  const { rol, correo, cerrarSesion, tieneFuncionalidad, modulos, estaAutenticado } =
+    useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const tema = useTheme();
@@ -137,7 +138,7 @@ export function AppLayout() {
             </Typography>
           )}
           <SelectorTema />
-          {modulos.includes('ControlAcceso') && <CampanaNotificaciones />}
+          {estaAutenticado && <CampanaNotificaciones />}
           <PendientesOffline />
           <Button color="inherit" startIcon={<LogoutRoundedIcon />} onClick={salir}>
             Cerrar sesión

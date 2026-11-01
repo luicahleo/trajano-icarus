@@ -1,7 +1,9 @@
 import 'fake-indexeddb/auto';
 import html from '../../index.html?raw';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { isoDesplazado, tareaVacunacion } from '../test/vacunacion';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import { theme } from './theme';
@@ -16,39 +18,55 @@ function respuesta(status: number, cuerpo?: unknown) {
   });
 }
 
-function renderLayout(rol: Rol, rutaInicial = '/', funcionalidades: Funcionalidad[] = []) {
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce(respuesta(200, { accessToken: 'nuevo' }))
-      .mockResolvedValueOnce(
-        respuesta(200, {
-          usuarioId: 'u1',
-          correo: 'persona@icarus.test',
-          rol,
-          clienteId: null,
-          trabajadorId: null,
-          modulos: [],
-          funcionalidades,
-        }),
-      ),
+function renderLayout(
+  rol: Rol,
+  rutaInicial = '/',
+  funcionalidades: Funcionalidad[] = [],
+  tareas: unknown[] = [],
+) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(String(input), init);
+    const clave = `${req.method} ${new URL(req.url).pathname}`;
+    if (clave === 'POST /api/identidad/sesion/renovar') {
+      return respuesta(200, { accessToken: 'nuevo' });
+    }
+    if (clave === 'GET /api/identidad/me') {
+      return respuesta(200, {
+        usuarioId: 'u1',
+        correo: 'persona@icarus.test',
+        rol,
+        clienteId: null,
+        trabajadorId: null,
+        modulos: [],
+        funcionalidades,
+      });
+    }
+    if (clave === 'GET /api/vacunacion/tareas') {
+      return respuesta(200, { vencidasYHoy: tareas, proximas: [] });
+    }
+    return new Response('', { status: 404 });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const resultado = render(
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <MemoryRouter initialEntries={[rutaInicial]}>
+          <AuthProvider>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<div>contenido del layout</div>} />
+                <Route path="/admin/clientes" element={<div>listado de clientes</div>} />
+                <Route path="/avicola/tareas" element={<div>página de tareas</div>} />
+              </Route>
+              <Route path="/login" element={<div>pantalla de login</div>} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
-  return render(
-    <ThemeProvider theme={theme}>
-      <MemoryRouter initialEntries={[rutaInicial]}>
-        <AuthProvider>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<div>contenido del layout</div>} />
-              <Route path="/admin/clientes" element={<div>listado de clientes</div>} />
-            </Route>
-            <Route path="/login" element={<div>pantalla de login</div>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>
-    </ThemeProvider>,
-  );
+  return { ...resultado, fetchMock };
 }
 
 describe('AppLayout', () => {
@@ -111,6 +129,38 @@ describe('AppLayout', () => {
   test('muestra el correo de la sesión en la barra', async () => {
     renderLayout('Cliente');
     expect(await screen.findByText('persona@icarus.test')).toBeInTheDocument();
+  });
+
+  test('la campana está siempre en la cabecera, aunque no haya módulos ni notificaciones', async () => {
+    const usuario = userEvent.setup();
+    renderLayout('Administrador');
+
+    const campana = await screen.findByRole('button', { name: 'Notificaciones sin pendientes' });
+    await usuario.click(campana);
+    expect(await screen.findByText('No hay notificaciones')).toBeInTheDocument();
+  });
+
+  test('el trabajador con Vacunacion ve la insignia sin las futuras y llega a sus tareas', async () => {
+    const usuario = userEvent.setup();
+    renderLayout(
+      'Trabajador',
+      '/',
+      ['Vacunacion'],
+      [
+        tareaVacunacion('t1', 'g1', isoDesplazado(-2)),
+        tareaVacunacion('t2', 'g1', isoDesplazado(0)),
+        tareaVacunacion('t3', 'g2', isoDesplazado(1)),
+      ],
+    );
+
+    const campana = await screen.findByRole('button', { name: 'Notificaciones: 2 pendientes' });
+    expect(within(campana).getByText('2')).toBeInTheDocument();
+
+    await usuario.click(campana);
+    await usuario.click(
+      screen.getByRole('menuitem', { name: '2 tareas pendientes (1 vencida)' }),
+    );
+    expect(await screen.findByText('página de tareas')).toBeInTheDocument();
   });
 
   test('cerrar sesión navega a /login y deja anónimo', async () => {

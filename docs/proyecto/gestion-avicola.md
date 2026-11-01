@@ -137,6 +137,15 @@ La bandeja consulta pendientes del tenant:
 
 No hay jobs ni notificaciones push; la consulta es la fuente de verdad.
 
+En el PWA, el trabajador con `Vacunacion` ve en la campana general de la
+cabecera la sección «Vacunación», con una sola entrada-resumen («3 tareas
+pendientes (1 vencida)»). Cuenta las pendientes vencidas y de hoy según la fecha
+local, no se marca como leída y baja solo al completarlas. La entrada abre
+`/avicola/tareas`, con esas tareas agrupadas por galpón y la acción Completar.
+Al trabajador nunca se le muestran las próximas, y en el galpón solo ve un aviso
+con enlace. El Cliente conserva la tabla de hoy, vencidas y próximas, y el
+historial del galpón.
+
 ## 5. Relación con otros procesos
 
 - [Recogida y mortalidad](recogida-huevos-mortalidad.md): producción, bajas,

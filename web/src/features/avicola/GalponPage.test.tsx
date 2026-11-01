@@ -9,6 +9,7 @@ import {
   iniciarCoordinadorOffline,
   listarOperaciones,
 } from '../../app/offline/coordinador';
+import { isoDesplazado, tareaVacunacion } from '../../test/vacunacion';
 import { AuthProvider } from '../auth/AuthContext';
 import { GalponPage } from './GalponPage';
 
@@ -37,7 +38,18 @@ function fetchSimulado(reglas: Record<string, Response | Response[]>) {
   return fn;
 }
 
-function prepararFetch() {
+function prepararFetch(
+  opciones: {
+    rol?: 'Trabajador' | 'Cliente';
+    funcionalidades?: string[];
+    reglas?: Record<string, Response | Response[]>;
+  } = {},
+) {
+  const {
+    rol = 'Trabajador',
+    funcionalidades = ['ProduccionHuevos', 'Mortalidad'],
+    reglas = {},
+  } = opciones;
   return fetchSimulado({
     'POST /api/identidad/sesion/renovar': respuesta(200, {
       accessToken: 't',
@@ -45,11 +57,11 @@ function prepararFetch() {
     }),
     'GET /api/identidad/me': respuesta(200, {
       usuarioId: 'u1',
-      rol: 'Trabajador',
+      rol,
       clienteId: 'cli1',
       trabajadorId: 't1',
       modulos: ['GestionAvicola'],
-      funcionalidades: ['ProduccionHuevos', 'Mortalidad'],
+      funcionalidades,
     }),
     'GET /api/galpones/g1': respuesta(200, {
       id: 'g1',
@@ -74,6 +86,7 @@ function prepararFetch() {
       respuesta(200, { galponId: 'g1', fecha: '2026-08-31', registros: [], totalMuertas: 0 }),
     ],
     'GET /api/galpones/g1/eficiencia': [respuesta(200, { dias: [] })],
+    ...reglas,
   });
 }
 
@@ -218,5 +231,75 @@ describe('GalponPage con registros pendientes', () => {
     expect(await screen.findByRole('heading', { name: 'Editar galpón' })).toBeInTheDocument();
     expect(screen.getByLabelText('Fecha de poblado del lote')).toHaveValue('2026-01-15');
     expect(screen.getByLabelText('Fecha de descarte del lote')).toHaveValue('');
+  });
+});
+
+
+describe('GalponPage y la vacunación', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const pidio = (fetchMock: ReturnType<typeof vi.fn>, ruta: string) =>
+    fetchMock.mock.calls.some(([arg, init]) => {
+      const req = arg instanceof Request ? arg : new Request(String(arg), init as RequestInit);
+      return new URL(req.url).pathname === ruta;
+    });
+
+  test('el Trabajador ve solo un aviso con enlace a sus tareas, sin el historial', async () => {
+    const fetchMock = prepararFetch({
+      funcionalidades: ['ProduccionHuevos', 'Mortalidad', 'Vacunacion'],
+      reglas: {
+        'GET /api/vacunacion/tareas': respuesta(200, {
+          vencidasYHoy: [
+            tareaVacunacion('t1', 'g1', isoDesplazado(-1)),
+            tareaVacunacion('t2', 'g1', isoDesplazado(0)),
+            tareaVacunacion('t3', 'g9', isoDesplazado(0)),
+            tareaVacunacion('t4', 'g1', isoDesplazado(1)),
+          ],
+          proximas: [],
+        }),
+      },
+    });
+    renderPagina();
+
+    const enlace = await screen.findByRole('link', {
+      name: '2 tareas pendientes en este galpón',
+    });
+    expect(enlace).toHaveAttribute('href', '/avicola/tareas');
+    expect(screen.queryByRole('heading', { name: 'Vacunación' })).not.toBeInTheDocument();
+    expect(pidio(fetchMock, '/api/galpones/g1/vacunacion/tareas')).toBe(false);
+  });
+
+  test('el Trabajador sin pendientes en el galpón no ve aviso', async () => {
+    prepararFetch({
+      funcionalidades: ['ProduccionHuevos', 'Mortalidad', 'Vacunacion'],
+      reglas: {
+        'GET /api/vacunacion/tareas': respuesta(200, {
+          vencidasYHoy: [tareaVacunacion('t3', 'g9', isoDesplazado(0))],
+          proximas: [],
+        }),
+      },
+    });
+    renderPagina();
+    await screen.findByRole('heading', { name: 'Galpón 3' });
+    await new Promise((resolver) => setTimeout(resolver, 50));
+    expect(screen.queryByRole('link', { name: /pendiente/ })).not.toBeInTheDocument();
+  });
+
+  test('el Cliente conserva la sección de vacunación y no ve el aviso', async () => {
+    prepararFetch({
+      rol: 'Cliente',
+      funcionalidades: ['ProduccionHuevos', 'Mortalidad', 'Vacunacion'],
+      reglas: {
+        'GET /api/galpones/g1/vacunacion/tareas': respuesta(200, [
+          tareaVacunacion('t1', 'g1', isoDesplazado(0)),
+        ]),
+      },
+    });
+    renderPagina();
+    expect(await screen.findByRole('heading', { name: 'Vacunación' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /pendiente/ })).not.toBeInTheDocument();
   });
 });

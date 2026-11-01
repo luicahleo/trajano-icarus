@@ -5,6 +5,7 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Link as EnlaceMui,
   TextField,
   Typography,
   Dialog,
@@ -48,6 +49,8 @@ import { EditarBajasDialog } from './EditarBajasDialog';
 import { EditarRecogidaDialog } from './EditarRecogidaDialog';
 import { AsignarPlanDialog } from './AsignarPlanDialog';
 import { GalponAcciones } from './GalponAcciones';
+import { textoPendientesGalpon } from './tareasPendientes';
+import { useTareasPendientesVacunacion } from './useTareasPendientesVacunacion';
 
 function diaEficiencia(dias: EficienciaDia[] | undefined): EficienciaDia | undefined {
   return dias?.[0];
@@ -87,6 +90,7 @@ export function GalponPage() {
     enabled: Boolean(galponId),
   });
   const { tieneRol } = useAuth();
+  const esTrabajador = tieneRol('Trabajador');
   const puedeProduccion = useFuncionalidad('ProduccionHuevos');
   // El Trabajador registra producción pero no consulta la eficiencia.
   const veEficiencia = puedeProduccion && !tieneRol('Trabajador');
@@ -111,8 +115,11 @@ export function GalponPage() {
   const tareasVacunacion = useQuery({
     queryKey: [...CLAVE_TAREAS_VACUNACION, galponId],
     queryFn: () => listarTareasVacunacion(galponId),
-    enabled: Boolean(galponId) && puedeVacunacion,
+    // El trabajador no ve el historial: usa la campana y /avicola/tareas.
+    enabled: Boolean(galponId) && puedeVacunacion && !esTrabajador,
   });
+  const { pendientes: pendientesVacunacion } = useTareasPendientesVacunacion(esTrabajador);
+  const pendientesDelGalpon = pendientesVacunacion.filter((t) => t.galponId === galponId).length;
   const quitarPlan = useMutation({
     mutationFn: () => quitarPlanVacunacion(galponId),
     onSuccess: () => {
@@ -327,6 +334,13 @@ export function GalponPage() {
           <GalponAcciones galpon={galpon.data} />
         </Box>
       </Box>
+      {esTrabajador && pendientesDelGalpon > 0 && (
+        <Alert severity="warning" sx={{ mt: 2, py: 0 }}>
+          <EnlaceMui component={Link} to="/avicola/tareas" color="inherit">
+            {textoPendientesGalpon(pendientesDelGalpon)}
+          </EnlaceMui>
+        </Alert>
+      )}
       <TextField
         label="Fecha"
         type="date"
@@ -415,7 +429,7 @@ export function GalponPage() {
           </Button>
         </DialogActions>
       </Dialog>
-      {puedeVacunacion && (
+      {puedeVacunacion && !esTrabajador && (
         <Box component="section" sx={{ mt: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">Vacunación</Typography>

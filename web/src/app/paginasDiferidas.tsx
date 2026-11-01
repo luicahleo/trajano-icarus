@@ -40,6 +40,11 @@ export const GalponesPage = lazy(() =>
 export const GalponPage = lazy(() =>
   import('../features/avicola/GalponPage').then((modulo) => ({ default: modulo.GalponPage })),
 );
+export const TareasVacunacionPage = lazy(() =>
+  import('../features/avicola/TareasVacunacionPage').then((modulo) => ({
+    default: modulo.TareasVacunacionPage,
+  })),
+);
 export const EficienciaPage = lazy(() =>
   import('../features/avicola/EficienciaPage').then((modulo) => ({
     default: modulo.EficienciaPage,

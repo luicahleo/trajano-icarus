@@ -69,7 +69,20 @@ function renderNotificacion() {
 describe('VacunacionNotificacion', () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  test('con la funcionalidad muestra vencidas/hoy y próximas con el número de galpón', async () => {
+  test('el Trabajador no consulta ni ve la notificación: usa la campana', async () => {
+    const fetchMock = fetchConSesion(['Vacunacion'], {}, 'Trabajador');
+    renderNotificacion();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const pidioTareas = fetchMock.mock.calls.some(([arg]) => {
+      const req = arg instanceof Request ? arg : new Request(String(arg));
+      return new URL(req.url).pathname === '/api/vacunacion/tareas';
+    });
+    expect(pidioTareas).toBe(false);
+    expect(screen.queryByText(/Vacunación/)).not.toBeInTheDocument();
+  });
+
+  test('el Cliente con la funcionalidad ve vencidas/hoy y próximas con el número de galpón', async () => {
     const ayer = new Date(Date.now() - 86400000);
     const isoAyer = `${ayer.getFullYear()}-${String(ayer.getMonth() + 1).padStart(2, '0')}-${String(ayer.getDate()).padStart(2, '0')}`;
     fetchConSesion(['Vacunacion'], {
@@ -109,7 +122,7 @@ describe('VacunacionNotificacion', () => {
           },
         ],
       }),
-    });
+    }, 'Cliente');
     renderNotificacion();
 
     const vencidas = await screen.findByRole('table', {

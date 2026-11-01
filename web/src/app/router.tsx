@@ -22,6 +22,7 @@ import {
   GalponesPage,
   GalponPage,
   EficienciaPage,
+  TareasVacunacionPage,
   PedidosAlimentoPage,
   PedidoAlimentoDetallePage,
   PedidoFormularioPage,
@@ -192,6 +193,20 @@ export const router = createBrowserRouter([
                   <RequiereFuncionalidad funcionalidades={['ProduccionHuevos']}>
                     <Suspense fallback={<CargandoRuta />}>
                       <EficienciaPage />
+                    </Suspense>
+                  </RequiereFuncionalidad>
+                </RequiereRol>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: '/avicola/tareas',
+            element: (
+              <ProtectedRoute>
+                <RequiereRol roles={['Trabajador']}>
+                  <RequiereFuncionalidad funcionalidades={['Vacunacion']}>
+                    <Suspense fallback={<CargandoRuta />}>
+                      <TareasVacunacionPage />
                     </Suspense>
                   </RequiereFuncionalidad>
                 </RequiereRol>

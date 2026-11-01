@@ -36,6 +36,7 @@ páginas de otra; las rutas se declaran centralmente en `src/app/router.tsx`.
 | `/control-acceso/incidencias` | Cliente | Resolución/descarte de incidencias. |
 | `/avicola`, `/avicola/galpones`, `/:galponId` | ProduccionHuevos, Mortalidad o Vacunacion | Estructura y operación diaria. |
 | `/avicola/galpones/:galponId/eficiencia` | Administrador o Cliente + ProduccionHuevos | Eficiencia histórica. |
+| `/avicola/tareas` | Trabajador + Vacunacion | Tareas de vacunación vencidas y de hoy, por galpón; la abre la campana de la cabecera. |
 | `/pedidos`, `/nuevo`, `/:id`, `/:id/editar` | PedidoAlimento | Bandeja, formulario, envío y recepción. |
 | `/despachos`, `/nuevo`, `/:id`, `/:id/editar` | DespachoHuevo | Bandeja, formulario, envío y crédito. |
 | `*` | Cualquiera | Página no encontrada. |
@@ -119,6 +120,15 @@ flowchart LR
 | `despacho-huevo` | Borradores, envío, historial, crédito y ajustes. |
 | `control-acceso` | Personal, kiosco, jornadas, correcciones e incidencias. |
 | `kiosco` | Shell independiente de activación, captura y marcación. |
+
+La cabecera tiene una campana general de notificaciones
+(`app/notificaciones/`), visible para todo usuario con sesión. Su insignia suma
+los pendientes de todas las fuentes y su menú se agrupa por secciones. Cada
+fuente es un hook junto a su feature, con su propia clave de React Query y su
+propia regla de visibilidad, y se registra en `useFuentesNotificaciones`.
+Fuentes actuales: «Vacunación» (Trabajador con `Vacunacion`) y «Control de
+acceso» (tenant con el módulo `ControlAcceso`). Las notificaciones de pedidos de
+alimento y de despachos siguen en sus páginas.
 
 ## 6. PWA, builds y kiosco aislado
 

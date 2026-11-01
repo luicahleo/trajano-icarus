@@ -14,14 +14,17 @@ import { CancelarTareaDialog } from './CancelarTareaDialog';
 export function VacunacionNotificacion({ galpones }: { galpones: Galpon[] }) {
   const puede = useFuncionalidad('Vacunacion');
   const { rol } = useAuth();
+  // El trabajador ve sus tareas desde la campana de la cabecera; aquí verían
+  // también las próximas, que no deben mostrársele.
+  const visible = puede && rol !== 'Trabajador';
   const [completando, setCompletando] = useState<TareaVacunacionResumen | null>(null);
   const [cancelando, setCancelando] = useState<TareaVacunacionResumen | null>(null);
   const notificacion = useQuery({
     queryKey: CLAVE_NOTIFICACION_VACUNACION,
     queryFn: obtenerNotificacionVacunacion,
-    enabled: puede,
+    enabled: visible,
   });
-  if (!puede) return null;
+  if (!visible) return null;
 
   const numeroGalpon = (id: string) => galpones.find((g) => g.id === id)?.numero ?? '—';
   // La aplicación es el modo indicado en el plan; si no lo trae, sirve la
