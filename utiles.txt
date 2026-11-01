@@ -1,2 +1,4 @@
 # para usar los agentes: claude --agent orquestador o kimi --agent orquestador
 
+#deploy a produccion
+.\deploy-produccion.ps1 -Confirmar -Watch
