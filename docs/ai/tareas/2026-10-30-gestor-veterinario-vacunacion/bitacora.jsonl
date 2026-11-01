@@ -32,3 +32,4 @@
 {"ts":"2026-11-01T15:47:37.707Z","tipo":"estado","rol":"desarrollador","proveedor":"anthropic","de":"DESARROLLO","a":"VERIFICACION","commit":"e0d60b8"}
 {"ts":"2026-11-01T16:06:29.776Z","tipo":"verificacion","rol":"verificador","proveedor":"anthropic","resultado":"verde","codigo":0,"arbol":"ebfd1125b41e23404323a5945fddc47e95d6469e","commit":"e0d60b8","limpio":false,"log":"logs/puerta-2026-10-30-gestor-veterinario-vacunacion-20261101-155617.log","duracionMs":612135}
 {"ts":"2026-11-01T16:07:05.619Z","tipo":"estado","rol":"verificador","proveedor":"anthropic","de":"VERIFICACION","a":"ENTORNO","commit":"e0d60b8","nota":"Puerta verde sobre el árbol sin commit de la campana general; sin REVISION indicada."}
+{"ts":"2026-11-01T16:07:40.101Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"ENTORNO","a":"PRUEBA_MANUAL","commit":"494df97","nota":"Campana general y página de tareas verificadas; commit 494df97"}
