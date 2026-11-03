@@ -27,19 +27,22 @@ proceso de trabajo; `docs/proyecto/` documenta el producto.
 | [HANDOFF.template.md](HANDOFF.template.md) | Al cerrar una sesión con trabajo a medias |
 | [agentes/README.md](agentes/README.md) | Al trabajar con los agentes por rol o relevar a otro proveedor |
 | [agentes/PROTOCOLO.md](agentes/PROTOCOLO.md) | Al actuar en una tarea gestionada |
+| [tareas/INDICE.md](tareas/INDICE.md) | Antes de explorar un área: buscar el término y abrir solo la ficha que coincida |
+| [tareas/README.md](tareas/README.md) | Al escribir o revisar una ficha de cierre |
 
 ## Qué leer al iniciar
 
 | Tipo de tarea | Contexto inicial |
 |---|---|
-| Pregunta o diagnóstico | `AGENTS.md` y los archivos directamente relevantes |
+| Pregunta o diagnóstico | `AGENTS.md`, las fichas del área según `docs/ai/tareas/INDICE.md` y los archivos directamente relevantes |
 | Cambio pequeño | Lo anterior más los tests vecinos |
 | Feature o bloque | Lo anterior más `docs/ai/WORKFLOW.md` y el spec vigente |
 | Continuación de otra sesión | Lo anterior más `docs/ai/HANDOFF.md`, validado contra git |
 
 Los specs y planes de `docs/superpowers/` son **memoria consultable, no contexto
 obligatorio**. Nunca cargarlos en bloque: buscar por nombre, símbolo o
-dependencia y abrir solo los resultados relevantes.
+dependencia y abrir solo los resultados relevantes. Antes de abrirlos, buscar en
+el índice de fichas: la ficha resume la tarea y enlaza su spec y su plan.
 
 ## Compatibilidad entre agentes
 

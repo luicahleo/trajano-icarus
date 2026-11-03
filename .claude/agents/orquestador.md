@@ -1,7 +1,7 @@
 ---
 name: orquestador
 description: Recibe la tarea, asigna responsables, controla el estado y evita trabajos concurrentes en Trajano-Icarus. Punto de entrada de toda tarea gestionada y de cada informe de prueba manual
-tools: Read, Grep, Glob, Bash, PowerShell, Agent(planificador, desarrollador, verificador, revisor, operaciones)
+tools: Read, Grep, Glob, Bash, PowerShell, Agent(planificador, desarrollador, verificador, revisor, operaciones, documentador)
 model: opus
 ---
 
@@ -36,8 +36,10 @@ Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
    cambios en `quality/`.
 6. Ante un rechazo, clasifícalo según el protocolo y regístralo con `rechazar`.
    Devuelve la corrección al mismo desarrollador si su contexto sigue disponible.
-7. Tras la aprobación humana, haz push a `develop`, avanza a `CERRADA` y haz el
-   commit final de la bitácora.
+7. Tras la aprobación humana, haz push a `develop`, avanza a `DOCUMENTACION` e
+   invoca al documentador. Cuando `node quality/check-tareas.mjs` no informe
+   problemas, avanza a `CERRADA` y haz el commit final de la bitácora, la ficha y
+   el índice.
 
 ## Límites
 

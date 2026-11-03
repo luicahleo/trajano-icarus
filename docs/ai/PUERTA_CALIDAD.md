@@ -26,7 +26,7 @@ resto corre en segundos.
 | Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore` y los agentes por rol) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 | Mojibake | Ausencia del carácter de reemplazo y de las secuencias que delatan UTF-8 leído como Latin-1, en todo archivo del árbol, versionado o nuevo y salvo los excluidos por `.gitignore`, que git clasifique como texto | Escribir el carácter correcto en UTF-8 |
 | Enlaces | Que todo enlace relativo de los `.md` del árbol, versionados o nuevos y salvo los excluidos por `.gitignore`, apunte a un archivo existente | Corregir el enlace o crear el destino |
-| Tareas | Que cada bitácora de `docs/ai/tareas/` sea una historia legal, con aprobaciones humanas y sin credenciales reconocibles | Registrar eventos con `quality/tarea.mjs`; una bitácora no se edita a mano |
+| Tareas | Que cada bitácora de `docs/ai/tareas/` sea una historia legal, con aprobaciones humanas y sin credenciales reconocibles; que toda tarea cerrada tenga una `ficha.md` válida y que `INDICE.md` coincida con las fichas | Registrar eventos con `quality/tarea.mjs`; completar la ficha y ejecutar `node quality/tarea.mjs indice` |
 | Frontend lint | ESLint (flat config) sobre `web/` (`npm run lint`) | Según el error de ESLint |
 | Frontend build | `tsc -b && vite build` sobre `web/` (los errores de tipos son errores) | Según el error del compilador o del bundler |
 | Frontend tests | Vitest + Testing Library sobre `web/` (`npm run test`) | Según el test que falla |

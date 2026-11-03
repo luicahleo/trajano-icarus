@@ -28,6 +28,8 @@ import {
   reconstruir,
   validarTransicion,
 } from './lib/tareas.mjs';
+import { indiceEsperado, revisarDocumentacion, revisarIndice } from './check-tareas.mjs';
+import { MARCADOR, SECCIONES_FICHA } from './lib/fichas.mjs';
 
 const DIR_TAREAS = 'docs/ai/tareas';
 const RUTA_CERROJO = '.local/agentes/tarea-activa.json';
@@ -187,7 +189,14 @@ function avanzar({ raiz, escribir }, [id, destino], opciones) {
   exigirCerrojo(raiz, id, actor.proveedor);
 
   const tarea = reconstruir(leerEventos(raiz, id));
-  const motivo = validarTransicion(tarea, destino, contexto(raiz, actor.rol));
+  const ctx = contexto(raiz, actor.rol);
+  if (destino === 'CERRADA') {
+    ctx.problemasFicha = [
+      ...revisarDocumentacion(raiz, id, { estado: 'CERRADA', aprobado: tarea.aprobacion?.commit }),
+      ...revisarIndice(raiz),
+    ];
+  }
+  const motivo = validarTransicion(tarea, destino, ctx);
   if (motivo) fallar(motivo);
 
   agregarEvento(raiz, id, {
@@ -353,7 +362,98 @@ function resumen({ raiz, escribir }, [idPedido]) {
   );
 }
 
-const COMANDOS = { crear, avanzar, registrar, verificar, rechazar, aprobar, relevo, resumen };
+const ENLACE_SPEC_O_PLAN = /\]\(([^)\s]*superpowers\/(specs|plans)\/[^)\s]+\.md)\)/g;
+
+function enlacesDeTarea(tareaMd) {
+  const vistos = new Map();
+  for (const [, ruta, carpeta] of tareaMd.matchAll(ENLACE_SPEC_O_PLAN)) {
+    if (!vistos.has(ruta)) vistos.set(ruta, carpeta === 'specs' ? 'Spec' : 'Plan');
+  }
+  return [...vistos].map(([ruta, etiqueta]) => `- [${etiqueta}](${ruta})`);
+}
+
+// Commits que tocaron algo fuera de las tareas entre el inicio de la tarea y
+// el commit aprobado. Es un punto de partida: el documentador deja los clave.
+function commitsDeLaTarea(raiz, eventos, aprobado) {
+  const inicio = eventos.find((ev) => ev.tipo === 'estado' && ev.commit)?.commit;
+  if (!inicio) return [aprobado];
+  try {
+    const salida = git(raiz, ['log', '--reverse', '--format=%h', `${inicio}..${aprobado}`, '--', '.', `:(exclude)${DIR_TAREAS}`]);
+    return salida ? salida.split('\n') : [aprobado];
+  } catch {
+    return [aprobado];
+  }
+}
+
+const CONTENIDO_FICHA = {
+  'Por qué': [MARCADOR],
+  'Archivos clave': [`- \`${MARCADOR}\` — ${MARCADOR}`],
+  Pendientes: ['- Ninguno.'],
+};
+
+function plantillaFicha({ id, titulo, aprobado, commits, enlaces }) {
+  const cuerpo = SECCIONES_FICHA.flatMap((seccion) => {
+    const contenido =
+      seccion === 'Enlaces' ? ['- [Tarea](tarea.md)', ...enlaces] : CONTENIDO_FICHA[seccion] ?? [`- ${MARCADOR}`];
+    return [`## ${seccion}`, '', ...contenido, ''];
+  });
+  return [
+    '---',
+    `id: ${id}`,
+    `tipo: ${MARCADOR}`,
+    `modulos: [${MARCADOR}]`,
+    `temas: [${MARCADOR}]`,
+    `resumen: ${MARCADOR}`,
+    `aprobado: ${aprobado}`,
+    `commits: [${commits.join(', ')}]`,
+    '---',
+    '',
+    `# ${titulo}`,
+    '',
+    ...cuerpo,
+  ].join('\n');
+}
+
+function ficha({ raiz, escribir }, [id], opciones) {
+  const actor = exigirActor(opciones);
+  if (!['documentador', 'orquestador'].includes(actor.rol)) fallar('Solo el documentador escribe la ficha.');
+  const eventos = leerEventos(raiz, id);
+  const tarea = reconstruir(eventos);
+  if (!['DOCUMENTACION', 'CERRADA'].includes(tarea.estado)) {
+    fallar(`La tarea está en ${tarea.estado}: la ficha se escribe en DOCUMENTACION o sobre una tarea cerrada.`);
+  }
+  const ruta = join(dirTarea(raiz, id), 'ficha.md');
+  if (existsSync(ruta)) fallar('La ficha ya existe: edítala en lugar de regenerarla.');
+
+  const aprobado = tarea.aprobacion?.commit ?? commitActual(raiz);
+  const rutaTareaMd = join(dirTarea(raiz, id), 'tarea.md');
+  const tareaMd = existsSync(rutaTareaMd) ? readFileSync(rutaTareaMd, 'utf8') : '';
+  writeFileSync(
+    ruta,
+    plantillaFicha({
+      id,
+      titulo: tarea.titulo,
+      aprobado,
+      commits: commitsDeLaTarea(raiz, eventos, aprobado),
+      enlaces: enlacesDeTarea(tareaMd),
+    }),
+    'utf8',
+  );
+  escribir(`Ficha creada: ${DIR_TAREAS}/${id}/ficha.md. Sustituye cada ${MARCADOR} y ejecuta indice.`);
+}
+
+function indice({ raiz, escribir }) {
+  const ruta = join(raiz, DIR_TAREAS, 'INDICE.md');
+  const contenido = indiceEsperado(raiz);
+  if (existsSync(ruta) && readFileSync(ruta, 'utf8') === contenido) {
+    escribir('Índice sin cambios.');
+    return;
+  }
+  writeFileSync(ruta, contenido, 'utf8');
+  escribir(`Índice actualizado: ${DIR_TAREAS}/INDICE.md`);
+}
+
+const COMANDOS = { crear, avanzar, registrar, verificar, rechazar, aprobar, relevo, resumen, ficha, indice };
 
 export function ejecutarCli(args, deps) {
   const [comando, ...resto] = args;

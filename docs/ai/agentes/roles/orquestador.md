@@ -4,7 +4,7 @@ descripcion: Recibe la tarea, asigna responsables, controla el estado y evita tr
 cuando_usar: Punto de entrada de toda tarea gestionada y de cada informe de prueba manual
 nivel: alto
 herramientas: [leer, buscar, shell]
-delega_en: [planificador, desarrollador, verificador, revisor, operaciones]
+delega_en: [planificador, desarrollador, verificador, revisor, operaciones, documentador]
 ---
 
 # Orquestador
@@ -36,8 +36,10 @@ Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
    cambios en `quality/`.
 6. Ante un rechazo, clasifícalo según el protocolo y regístralo con `rechazar`.
    Devuelve la corrección al mismo desarrollador si su contexto sigue disponible.
-7. Tras la aprobación humana, haz push a `develop`, avanza a `CERRADA` y haz el
-   commit final de la bitácora.
+7. Tras la aprobación humana, haz push a `develop`, avanza a `DOCUMENTACION` e
+   invoca al documentador. Cuando `node quality/check-tareas.mjs` no informe
+   problemas, avanza a `CERRADA` y haz el commit final de la bitácora, la ficha y
+   el índice.
 
 ## Límites
 

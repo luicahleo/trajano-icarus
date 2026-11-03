@@ -32,11 +32,14 @@ dice el resumen antes de creerlo.
 1. Escribe la prueba, mírala fallar por el motivo correcto, implementa lo mínimo y
    mírala pasar. Una prueba que nunca viste en rojo no prueba nada.
 2. En una corrección, reproduce primero el fallo con una prueba.
-3. Ejecuta la prueba dirigida. La puerta completa la ejecuta el verificador.
-4. Anota en la bitácora lo que otro proveedor necesitaría para continuar, con
+3. Si el cambio altera el dominio o el comportamiento, actualiza los documentos
+   de `docs/proyecto/` y del glosario que fija el alcance. Enlaza en lugar de
+   copiar.
+4. Ejecuta la prueba dirigida. La puerta completa la ejecuta el verificador.
+5. Anota en la bitácora lo que otro proveedor necesitaría para continuar, con
    `registrar <id> nota`, en cuanto ocurra. Un proveedor puede quedarse sin tokens
    en cualquier momento.
-5. Avanza a `VERIFICACION`. No hagas commit: lo hace el orquestador.
+6. Avanza a `VERIFICACION`. No hagas commit: lo hace el orquestador.
 
 ## Límites
 

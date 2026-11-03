@@ -1,6 +1,6 @@
 # Agentes de Trajano-Icarus
 
-Seis roles especializados, iguales en cualquier proveedor. Las reglas están en
+Siete roles especializados, iguales en cualquier proveedor. Las reglas están en
 [PROTOCOLO.md](PROTOCOLO.md), y el diseño en el
 [spec del sistema de agentes](../../superpowers/specs/2026-10-30-sistema-agentes-portables-design.md).
 
@@ -11,6 +11,7 @@ Seis roles especializados, iguales en cualquier proveedor. Las reglas están en
 | `docs/ai/agentes/roles/` | Fuente de cada rol. Se edita aquí |
 | `.claude/agents/`, `.kimi-code/agents/` | Adaptadores generados. No se editan |
 | `docs/ai/tareas/` | Una carpeta por tarea, con su bitácora |
+| `docs/ai/tareas/INDICE.md` | Índice de fichas de cierre. Generado: no se edita |
 | `quality/tarea.mjs` | CLI de tareas, común a todos los proveedores |
 | `quality/guardia-comandos.mjs` | Hook que frena comandos peligrosos |
 

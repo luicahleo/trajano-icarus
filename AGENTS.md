@@ -32,10 +32,10 @@ mano: editar este, y correr `node quality/generar-adaptadores.mjs`.
 
 ## Agentes por rol
 
-- Seis roles portables entre proveedores: orquestador, planificador,
-  desarrollador, verificador, revisor y operaciones. La fuente está en
-  `docs/ai/agentes/roles/`; `.claude/agents/` y `.kimi-code/agents/` son
-  adaptadores generados.
+- Siete roles portables entre proveedores: orquestador, planificador,
+  desarrollador, verificador, revisor, operaciones y documentador. La fuente
+  está en `docs/ai/agentes/roles/`; `.claude/agents/` y `.kimi-code/agents/`
+  son adaptadores generados.
 - Si existe `.local/agentes/tarea-activa.json`, antes de cambiar nada leer
   `docs/ai/agentes/PROTOCOLO.md` y ejecutar `node quality/tarea.mjs resumen`.
 - Ningún agente aprueba una funcionalidad: la aprobación es una prueba manual
@@ -45,12 +45,15 @@ mano: editar este, y correr `node quality/generar-adaptadores.mjs`.
 
 1. Empezar solo con `git status --short --branch` y `git log -5 --oneline`.
 2. No ejecutar listados recursivos ni volcados de todos los archivos al iniciar.
-3. Buscar por término, símbolo o ruta probable; limitar el resultado primero y
+3. Antes de explorar un área, buscar su término en `docs/ai/tareas/INDICE.md`
+   (búsqueda, no lectura completa), abrir solo las fichas que coincidan y partir
+   de sus «Archivos clave». Specs y planes, solo si la ficha no basta.
+4. Buscar por término, símbolo o ruta probable; limitar el resultado primero y
    refinar antes de ampliar.
-4. Leer fragmentos antes que archivos completos. Abrir solo el spec, el plan, el
+5. Leer fragmentos antes que archivos completos. Abrir solo el spec, el plan, el
    código y los tests vinculados con la tarea actual.
-5. Revisar primero `git diff --stat` y después solo los diffs relevantes.
-6. Resumir logs y errores por causa, archivo y línea; no pegar salidas extensas.
+6. Revisar primero `git diff --stat` y después solo los diffs relevantes.
+7. Resumir logs y errores por causa, archivo y línea; no pegar salidas extensas.
 
 `docs/superpowers/specs/` y `docs/superpowers/plans/` son memoria consultable,
 no contexto obligatorio. No cargarlos en bloque.

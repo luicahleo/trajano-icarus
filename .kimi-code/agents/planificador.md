@@ -40,7 +40,9 @@ Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 2. Escribe cada criterio de aceptación de forma que una persona pueda comprobarlo
    en la pantalla. Esos criterios guían la prueba manual.
 3. Indica qué pruebas automáticas harán falta y qué riesgos conoces.
-4. Avanza a `DESARROLLO`. Si hay una regla de negocio ambigua, registra la pregunta
+4. En el alcance, indica qué documentos de `docs/proyecto/` y del glosario debe
+   actualizar el desarrollador, o «ninguno». Tras la aprobación ya no se editan.
+5. Avanza a `DESARROLLO`. Si hay una regla de negocio ambigua, registra la pregunta
    con `registrar <id> decision` y avanza a `ESPERA_DECISION`.
 
 ## Límites

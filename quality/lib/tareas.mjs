@@ -14,6 +14,7 @@ export const DUENOS = {
   ENTORNO: 'operaciones',
   PRUEBA_MANUAL: 'humano',
   APROBADA: 'orquestador',
+  DOCUMENTACION: 'documentador',
   BLOQUEADA: 'orquestador',
 };
 
@@ -26,10 +27,13 @@ export const ROLES = [
   'verificador',
   'revisor',
   'operaciones',
+  'documentador',
 ];
 
 // Sin PRUEBA_MANUAL: de ahí solo se sale con los eventos de aprobación y
-// rechazo. Sin BLOQUEADA: vuelve únicamente a su estado previo.
+// rechazo. Sin BLOQUEADA: vuelve únicamente a su estado previo. APROBADA a
+// CERRADA solo sobrevive para validar bitácoras anteriores al documentador:
+// validarTransicion la prohíbe.
 const SIGUIENTES = {
   RECIBIDA: ['PLANIFICACION', 'DESARROLLO', 'ESPERA_DECISION'],
   PLANIFICACION: ['DESARROLLO', 'ESPERA_DECISION'],
@@ -39,7 +43,8 @@ const SIGUIENTES = {
   REVISION: ['ENTORNO', 'DESARROLLO', 'ESPERA_DECISION'],
   ENTORNO: ['PRUEBA_MANUAL', 'DESARROLLO'],
   PRUEBA_MANUAL: [],
-  APROBADA: ['CERRADA'],
+  APROBADA: ['DOCUMENTACION', 'CERRADA'],
+  DOCUMENTACION: ['CERRADA'],
   BLOQUEADA: [],
 };
 
@@ -115,9 +120,12 @@ function exigirEvidencia(tarea, arbol) {
 }
 
 // Devuelve el motivo del rechazo, o null si la transición es válida.
-export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush }) {
+export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush, problemasFicha }) {
   if (TERMINALES.includes(tarea.estado)) return `La tarea está en un estado terminal: ${tarea.estado}.`;
   if (!transicionExiste(tarea, destino)) return `Transición no permitida: ${tarea.estado} a ${destino}.`;
+  if (tarea.estado === 'APROBADA' && destino === 'CERRADA') {
+    return 'Tras la aprobación, la tarea pasa por DOCUMENTACION antes de cerrarse.';
+  }
 
   const dueno = DUENOS[tarea.estado];
   if (rol !== 'orquestador' && rol !== dueno) {
@@ -139,6 +147,8 @@ export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush 
 
   if (destino === 'CERRADA') {
     if (tarea.aprobacion?.arbol !== arbol) return 'El contenido no es el aprobado por el humano.';
+    if (!Array.isArray(problemasFicha)) return 'No se comprobó la ficha de la tarea.';
+    if (problemasFicha.length > 0) return `La ficha no está lista: ${problemasFicha.join(' ')}`;
     if (sinPush !== 0) return `Hay ${sinPush} commit(s) sin push.`;
   }
 

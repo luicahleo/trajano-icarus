@@ -4,7 +4,7 @@ import { AVISO, ADAPTADORES } from '../adaptadores/manifiesto.mjs';
 import { AVISO_ROL } from '../adaptadores/roles.mjs';
 
 const INSTRUCCIONES = ADAPTADORES.filter((a) => !a.ruta.includes('/agents/'));
-const ROLES = ['desarrollador', 'operaciones', 'orquestador', 'planificador', 'revisor', 'verificador'];
+const ROLES = ['desarrollador', 'documentador', 'operaciones', 'orquestador', 'planificador', 'revisor', 'verificador'];
 
 test('cada adaptador declara harness, ruta y contenido', () => {
   for (const a of ADAPTADORES) {

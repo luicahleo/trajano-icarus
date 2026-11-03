@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ESTADOS,
   DUENOS,
+  ROLES,
   reconstruir,
   validarTransicion,
   destinoDeRechazo,
@@ -21,7 +22,7 @@ const paso = (de, a, datos = {}) => ev('estado', { de, a, ...datos });
 const base = [ev('creada', { titulo: 'Prueba' })];
 const verde = (arbol) => ev('verificacion', { resultado: 'verde', codigo: 0, arbol, rol: 'verificador' });
 const rojo = (arbol) => ev('verificacion', { resultado: 'rojo', codigo: 1, arbol, rol: 'verificador' });
-const contexto = (c = {}) => ({ arbol: 'a1', limpio: true, sinPush: 0, ...c });
+const contexto = (c = {}) => ({ arbol: 'a1', limpio: true, sinPush: 0, problemasFicha: [], ...c });
 
 test('una tarea nueva empieza en RECIBIDA con el orquestador como dueño', () => {
   const t = reconstruir(base);
@@ -138,6 +139,40 @@ test('la aprobación deja la tarea en APROBADA', () => {
   assert.equal(reconstruir(aprobada).estado, 'APROBADA');
 });
 
+const documentando = [...aprobada, paso('APROBADA', 'DOCUMENTACION')];
+
+test('DOCUMENTACION es del documentador', () => {
+  assert.ok(ROLES.includes('documentador'));
+  assert.equal(DUENOS.DOCUMENTACION, 'documentador');
+  assert.equal(reconstruir(documentando).responsable, 'documentador');
+});
+
+test('tras la aprobación se documenta antes de cerrar', () => {
+  const t = reconstruir(aprobada);
+  assert.equal(validarTransicion(t, 'DOCUMENTACION', { rol: 'orquestador', ...contexto() }), null);
+  assert.match(validarTransicion(t, 'CERRADA', { rol: 'orquestador', ...contexto() }), /DOCUMENTACION/);
+});
+
+test('DOCUMENTACION solo sale hacia CERRADA', () => {
+  const t = reconstruir(documentando);
+  assert.match(validarTransicion(t, 'DESARROLLO', { rol: 'orquestador', ...contexto() }), /no permitida/);
+});
+
+test('CERRADA exige el árbol aprobado, la ficha comprobada y ningún commit sin push', () => {
+  const t = reconstruir(documentando);
+  const cerrar = (c) => validarTransicion(t, 'CERRADA', { rol: 'documentador', ...contexto(c) });
+  assert.match(cerrar({ arbol: 'otro' }), /aprobado/);
+  assert.match(cerrar({ problemasFicha: undefined }), /ficha/);
+  assert.match(cerrar({ problemasFicha: ['Falta ficha.md.'] }), /ficha.*Falta ficha\.md/);
+  assert.match(cerrar({ sinPush: 2 }), /push/);
+  assert.equal(cerrar(), null);
+});
+
+test('validarBitacora acepta el cierre directo de las tareas anteriores al documentador', () => {
+  assert.deepEqual(validarBitacora([...aprobada, paso('APROBADA', 'CERRADA')]), []);
+  assert.deepEqual(validarBitacora([...documentando, paso('DOCUMENTACION', 'CERRADA')]), []);
+});
+
 test('un rechazo deja la tarea en su destino', () => {
   const t = reconstruir([
     ...hastaEntorno,
@@ -146,13 +181,6 @@ test('un rechazo deja la tarea en su destino', () => {
   ]);
   assert.equal(t.estado, 'ESPERA_DECISION');
   assert.equal(t.rechazos, 1);
-});
-
-test('CERRADA exige el árbol aprobado y ningún commit sin push', () => {
-  const t = reconstruir(aprobada);
-  assert.match(validarTransicion(t, 'CERRADA', { rol: 'orquestador', ...contexto({ arbol: 'otro' }) }), /aprobado/);
-  assert.match(validarTransicion(t, 'CERRADA', { rol: 'orquestador', ...contexto({ sinPush: 2 }) }), /push/);
-  assert.equal(validarTransicion(t, 'CERRADA', { rol: 'orquestador', ...contexto() }), null);
 });
 
 test('BLOQUEADA solo vuelve al estado previo', () => {
