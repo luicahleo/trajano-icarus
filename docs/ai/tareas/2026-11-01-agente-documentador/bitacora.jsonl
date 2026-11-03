@@ -23,3 +23,6 @@
 {"ts":"2026-11-03T10:06:26.658Z","tipo":"verificacion","rol":"verificador","proveedor":"anthropic","resultado":"verde","codigo":0,"arbol":"c5c930ca57e51f3f026c9aae38076c9652e1bd8b","commit":"4519cab","limpio":false,"log":"logs/puerta-2026-11-01-agente-documentador-20261103-095819.log","duracionMs":486394}
 {"ts":"2026-11-03T10:06:58.306Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"VERIFICACION","a":"ENTORNO","commit":"4519cab","nota":"Reverificación verde tras corregir I1, M5 y M1; revisión previa sin bloqueantes"}
 {"ts":"2026-11-03T10:07:13.027Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"ENTORNO","a":"PRUEBA_MANUAL","commit":"cbf7c6b","nota":"Commit cbf7c6b; verificación verde vigente"}
+{"ts":"2026-11-03T10:18:12.932Z","tipo":"aprobacion","rol":"humano","proveedor":"humano","arbol":"c5c930ca57e51f3f026c9aae38076c9652e1bd8b","commit":"4fdb638"}
+{"ts":"2026-11-03T10:19:21.098Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"APROBADA","a":"DOCUMENTACION","commit":"4fdb638","nota":"Push de develop a 4fdb638 tras la aprobación humana"}
+{"ts":"2026-11-03T10:22:00.627Z","tipo":"estado","rol":"orquestador","proveedor":"anthropic","de":"DOCUMENTACION","a":"CERRADA","commit":"4fdb638","nota":"Ficha e índice al día; gates de tareas, mojibake y enlaces verdes"}
