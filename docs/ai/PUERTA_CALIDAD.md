@@ -82,7 +82,8 @@ a `C3 83 C2 B3`). Regla para agentes y para edición manual:
 Un gate nuevo es un archivo `quality/check-<algo>.mjs` con funciones puras
 exportadas y un bloque CLI, su archivo de tests en `quality/__tests__/`, y una
 entrada en `quality/gates.json`. Tipos admitidos: `node` y `dotnet`, con `args`,
-y `npm`, con `script`; `cwd` opcional y relativo; `motivo` opcional para explicar
+y `npm`, con `script` (solo letras, números, `_`, `-` y `:`, para que no llegue
+texto a un shell); `cwd` opcional y relativo; `motivo` opcional para explicar
 el orden o un requisito. Una clave desconocida es un error, para que nada
 desactive un gate en silencio.
 

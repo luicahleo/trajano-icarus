@@ -30,7 +30,10 @@ evidencia: ya pasaban antes del cambio.
 - Cada criterio lleva al menos una línea `Evidencia:`, de uno de dos tipos:
   - ``Evidencia: test `<ruta>` «<nombre>»``: el nombre aparece literal en el
     archivo de pruebas (el texto de `test(...)` o `it(...)`, o el nombre del
-    método en .NET).
+    método en .NET). La ruta debe ser un archivo de pruebas reconocible: en una
+    carpeta `__tests__`, `tests` o `*Tests`, o un archivo `*.test.*`, `*.spec.*` o
+    `*Tests.cs`; nunca bajo `docs/ai/tareas/`. El nombre tiene al menos 8
+    caracteres.
   - `Evidencia: manual — <justificación>`: solo lo que no se automatiza con
     sensatez. La justificación dice por qué, con 10 caracteres como mínimo.
 - El planificador propone ruta y nombre; el desarrollador puede ajustarlos al
@@ -41,8 +44,8 @@ evidencia: ya pasaban antes del cambio.
 
 Lo comprueban la CLI y el gate `Tareas`:
 
-- `avanzar` de `PLANIFICACION` a `DESARROLLO` exige al menos un criterio y que
-  todos tengan evidencia válida.
+- `avanzar` a `DESARROLLO`, desde `PLANIFICACION` o desde `ESPERA_DECISION`,
+  exige al menos un criterio y que todos tengan evidencia válida.
 - De `DESARROLLO` a `DOCUMENTACION`, el gate exige el formato.
 - Desde `VERIFICACION`, además, que cada prueba citada exista y contenga su
   nombre, y que cada criterio con prueba tenga su «Rojo criterio N:».

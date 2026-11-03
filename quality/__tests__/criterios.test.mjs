@@ -106,3 +106,33 @@ test('solo cuentan como rojo los eventos comando con el prefijo exacto', () => {
   ]);
   assert.deepEqual([...rojos].sort((a, b) => a - b), [3, 12]);
 });
+
+test('una prueba citada debe ser un archivo de pruebas reconocible y fuera de las tareas', () => {
+  const evidencia = (ruta) => leerCriterios(tarea(`1. Uno.\n   Evidencia: test \`${ruta}\` «hace algo bien»\n`));
+  const problemas = (ruta) => validarCriterios(evidencia(ruta));
+
+  for (const admitida of [
+    'quality/__tests__/a.test.mjs',
+    'web/src/a.spec.ts',
+    'Icarus/tests/Trajano.X.Tests/Cosa.cs',
+    'Icarus/src/Algo/CosaTests.cs',
+  ]) {
+    assert.deepEqual(problemas(admitida), [], admitida);
+  }
+  for (const rechazada of [
+    'docs/ai/tareas/2026-01-01-x/tarea.md',
+    'docs/ai/tareas/2026-01-01-x/a.test.mjs',
+    'quality/lib/criterios.mjs',
+    'README.md',
+  ]) {
+    assert.equal(problemas(rechazada).length, 1, rechazada);
+    assert.match(problemas(rechazada)[0], /Criterio 1: .*no es un archivo de pruebas/, rechazada);
+  }
+});
+
+test('el nombre de una prueba citada no puede ser trivial', () => {
+  const criterios = leerCriterios(tarea('1. Uno.\n   Evidencia: test `a.test.mjs` «a»\n'));
+  const problemas = validarCriterios(criterios);
+  assert.equal(problemas.length, 1);
+  assert.match(problemas[0], /Criterio 1: el nombre de la prueba debe tener al menos 8 caracteres/);
+});

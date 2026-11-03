@@ -89,7 +89,7 @@ test('un gate node o dotnet se resuelve con su comando y sus argumentos', () => 
   });
 });
 
-test('un gate npm usa el CLI de npm con node en Windows y npm con shell en POSIX', () => {
+test('un gate npm usa el CLI de npm con node en Windows y npm en POSIX (el ejecutor solo aplica shell en win32)', () => {
   const gate = { nombre: 'Lint', tipo: 'npm', script: 'lint', cwd: 'web' };
   const base = { raiz: '/repo', execPath: '/opt/node/node.exe' };
 
@@ -123,5 +123,15 @@ test('el ejecutor no nombra rutas de este proyecto', () => {
   for (const archivo of ['verify.mjs', 'lib/gates.mjs']) {
     const fuente = readFileSync(join(QUALITY, archivo), 'utf8');
     for (const propio of PROPIOS) assert.doesNotMatch(fuente, propio, `${archivo} nombra ${propio}`);
+  }
+});
+
+test('el script de un gate npm solo admite letras, números, guion, guion bajo y dos puntos', () => {
+  const con = (script) => validarConfiguracion({ gates: [{ nombre: 'L', tipo: 'npm', script }] });
+  for (const valido of ['lint', 'test:unit', 'build-web', 'a_b']) assert.deepEqual(con(valido), [], valido);
+  for (const invalido of ['lint & dir', 'lint; x', 'a b', '$(x)', 'a|b', '../x', '', 7]) {
+    const problemas = con(invalido);
+    assert.equal(problemas.length, 1, String(invalido));
+    assert.match(problemas[0], /Gate 1 \(L\): .*script/, String(invalido));
   }
 });

@@ -118,10 +118,10 @@ prueba manual, y leyendo los documentos citados.
    Evidencia: manual — `git diff --stat -- quality/__tests__/verify.test.mjs` no muestra cambios; es la comprobación de que no se adaptó una prueba existente.
 9. `quality/verify.mjs` y `quality/lib/gates.mjs` no nombran rutas ni productos de
    este proyecto; un gate `npm` se resuelve con el CLI de npm lanzado por node en
-   Windows y con `npm` y shell en POSIX, y los gates `node` y `dotnet` con su
+   Windows y con `npm` en POSIX (el ejecutor solo aplica shell en win32), y los gates `node` y `dotnet` con su
    comando y sus argumentos.
    Evidencia: test `quality/__tests__/gates.test.mjs` «el ejecutor no nombra rutas de este proyecto»
-   Evidencia: test `quality/__tests__/gates.test.mjs` «un gate npm usa el CLI de npm con node en Windows y npm con shell en POSIX»
+   Evidencia: test `quality/__tests__/gates.test.mjs` «un gate npm usa el CLI de npm con node en Windows y npm en POSIX (el ejecutor solo aplica shell en win32)»
    Evidencia: test `quality/__tests__/gates.test.mjs` «un gate node o dotnet se resuelve con su comando y sus argumentos»
 10. Una configuración ausente, que no es JSON, vacía o con un gate inválido (tipo
     desconocido, sin argumentos, nombre repetido, clave no admitida, `cwd` absoluto
@@ -170,6 +170,21 @@ prueba manual, y leyendo los documentos citados.
     `docs/proyecto/operacion-calidad.md` describen la evidencia, las decisiones, la
     revisión y la lista de gates configurable.
     Evidencia: manual — es documentación de proceso; se comprueba leyéndola, y los gates Adaptadores, Mojibake y Enlaces cubren su forma.
+17. La evidencia `test` solo vale si la ruta es un archivo de pruebas reconocible
+    (`__tests__/`, `tests/`, `*Tests/`, `*.test.*`, `*.spec.*` o `*Tests.cs`) y no está
+    bajo `docs/ai/tareas/`; el nombre citado tiene al menos 8 caracteres.
+    Evidencia: test `quality/__tests__/criterios.test.mjs` «una prueba citada debe ser un archivo de pruebas reconocible y fuera de las tareas»
+    Evidencia: test `quality/__tests__/criterios.test.mjs` «el nombre de una prueba citada no puede ser trivial»
+18. La comprobación de criterios de la CLI también se aplica en
+    `ESPERA_DECISION` a `DESARROLLO`, no solo en `PLANIFICACION` a `DESARROLLO`.
+    Evidencia: test `quality/__tests__/tareas.test.mjs` «ESPERA_DECISION a DESARROLLO exige criterios comprobados y sin problemas»
+    Evidencia: test `quality/__tests__/tarea-cli.test.mjs` «avanzar de ESPERA_DECISION a DESARROLLO exige criterios con evidencia»
+19. El `script` de un gate `npm` solo admite letras, números, `_`, `-` y `:`; otro
+    valor se rechaza con un motivo y no se ejecuta ningún gate.
+    Evidencia: test `quality/__tests__/gates.test.mjs` «el script de un gate npm solo admite letras, números, guion, guion bajo y dos puntos»
+20. `docs/decisiones/README.md` admite, además de los dos cambios previos, corregir
+    enlaces y erratas de un registro aceptado sin cambiar el sentido de la decisión.
+    Evidencia: manual — es una regla de texto del registro de decisiones; se valida leyendo el README.
 
 ## Plan de pruebas
 
@@ -194,9 +209,6 @@ prueba manual, y leyendo los documentos citados.
   salir de `PLANIFICACION`.
 - El rojo es autodeclarado (un evento `comando` con prefijo fijo). El gate exige
   que exista, no que sea cierto; el revisor lo contrasta con la prueba.
-- Una tarea que va de `ESPERA_DECISION` a `DESARROLLO` sin pasar por
-  `PLANIFICACION` no pasa por la comprobación de la CLI; el gate sí revisa el
-  formato desde `DESARROLLO`.
 - La prueba que congela los gates obliga a tocarla en el bloque 2 al añadir gates.
   Es deliberado: quitar o debilitar un gate queda visible en el diff.
 - Exportar `GATES` al importar `verify.mjs` lee `quality/gates.json` en cada

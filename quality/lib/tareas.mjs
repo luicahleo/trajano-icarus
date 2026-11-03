@@ -141,7 +141,7 @@ export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush,
     if (motivo) return motivo;
   }
 
-  if (tarea.estado === 'PLANIFICACION' && destino === 'DESARROLLO') {
+  if (['PLANIFICACION', 'ESPERA_DECISION'].includes(tarea.estado) && destino === 'DESARROLLO') {
     if (!Array.isArray(problemasCriterios)) return 'No se comprobaron los criterios de aceptación.';
     if (problemasCriterios.length > 0) return `Los criterios no están listos: ${problemasCriterios.join(' ')}`;
   }

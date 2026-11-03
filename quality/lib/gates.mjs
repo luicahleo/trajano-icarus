@@ -14,6 +14,8 @@ const CLAVES_POR_TIPO = {
   dotnet: ['nombre', 'tipo', 'args', 'cwd', 'motivo'],
 };
 
+// Falla cerrado: sin shell ni espacios, el script no puede encadenar comandos.
+const SCRIPT_NPM = /^[\w:-]+$/;
 const esTexto = (valor) => typeof valor === 'string' && valor.trim() !== '';
 const esObjeto = (valor) => valor !== null && typeof valor === 'object' && !Array.isArray(valor);
 
@@ -46,6 +48,7 @@ function validarGate(gate, indice, nombres) {
   }
   if (gate.tipo === 'npm') {
     if (!esTexto(gate.script)) problemas.push(`${etiqueta}: falta el script de npm.`);
+    else if (!SCRIPT_NPM.test(gate.script)) problemas.push(`${etiqueta}: el script de npm solo admite letras, números, guion, guion bajo y dos puntos.`);
   } else if (!Array.isArray(gate.args) || gate.args.length === 0 || !gate.args.every(esTexto)) {
     problemas.push(`${etiqueta}: args debe ser una lista no vacía de textos.`);
   }
@@ -84,7 +87,8 @@ export function cargarGates(raiz, ruta = RUTA_CONFIGURACION) {
 
 // npm en Windows es npm.cmd: lanzarlo con shell dispara el aviso DEP0190 de Node
 // (argumentos concatenados sin escapar). Se invoca el CLI de npm con el propio
-// node, sin shell. En POSIX npm es un binario directo.
+// node, sin shell. En POSIX npm es un binario directo (el ejecutor solo aplica shell
+// en win32); si en Windows no existe el CLI, el nombre del script ya está validado.
 export function resolverGate(gate, { raiz, plataforma, execPath, existe }) {
   const conCwd = gate.cwd === undefined ? {} : { cwd: resolve(raiz, gate.cwd) };
   if (gate.tipo !== 'npm') return { nombre: gate.nombre, comando: gate.tipo, args: [...gate.args], ...conCwd };

@@ -330,3 +330,23 @@ test('la plantilla de crear indica el formato de evidencia de los criterios', co
   assert.match(md, /## Criterios de aceptación\n\nCada criterio numerado lleva al menos una línea «Evidencia:»/);
   assert.match(md, /docs\/ai\/tareas\/README\.md/);
 }));
+
+test('avanzar de ESPERA_DECISION a DESARROLLO exige criterios con evidencia', conRepo((raiz) => {
+  crear(raiz);
+  cli(raiz, ['avanzar', ID, 'PLANIFICACION', ...COMUN]);
+  cli(raiz, ['avanzar', ID, 'ESPERA_DECISION', ...PLANIFICADOR]);
+
+  const sinCriterios = cli(raiz, ['avanzar', ID, 'DESARROLLO', ...COMUN]);
+  assert.equal(sinCriterios.codigo, 1);
+  assert.match(sinCriterios.salida, /No hay criterios de aceptación/);
+
+  writeFileSync(rutaTareaMd(raiz), conCriterios('1. Algo visible.'));
+  const sinEvidencia = cli(raiz, ['avanzar', ID, 'DESARROLLO', ...COMUN]);
+  assert.equal(sinEvidencia.codigo, 1);
+  assert.match(sinEvidencia.salida, /Criterio 1: sin línea/);
+
+  writeFileSync(rutaTareaMd(raiz), conCriterios('1. Algo visible.\n   Evidencia: manual — solo se aprecia en la pantalla real.'));
+  const listo = cli(raiz, ['avanzar', ID, 'DESARROLLO', ...COMUN]);
+  assert.equal(listo.codigo, 0, listo.salida);
+  assert.match(bitacora(raiz), /"a":"DESARROLLO"/);
+}));

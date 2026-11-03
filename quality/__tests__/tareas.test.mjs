@@ -273,3 +273,14 @@ test('PLANIFICACION a DESARROLLO exige criterios comprobados y sin problemas', (
   );
   assert.equal(desarrollar({ problemasCriterios: [] }), null);
 });
+
+test('ESPERA_DECISION a DESARROLLO exige criterios comprobados y sin problemas', () => {
+  const t = reconstruir([...base, paso('RECIBIDA', 'PLANIFICACION'), paso('PLANIFICACION', 'ESPERA_DECISION')]);
+  const desarrollar = (c) => validarTransicion(t, 'DESARROLLO', { rol: 'orquestador', ...contexto(c) });
+  assert.match(desarrollar(), /No se comprobaron los criterios/);
+  assert.match(
+    desarrollar({ problemasCriterios: ['Criterio 1: sin línea «Evidencia:».'] }),
+    /criterios no están listos: Criterio 1: sin línea/,
+  );
+  assert.equal(desarrollar({ problemasCriterios: [] }), null);
+});

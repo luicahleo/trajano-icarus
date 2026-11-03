@@ -200,7 +200,7 @@ function avanzar({ raiz, escribir }, [id, destino], opciones) {
       ...revisarIndice(raiz),
     ];
   }
-  if (tarea.estado === 'PLANIFICACION' && destino === 'DESARROLLO') {
+  if (['PLANIFICACION', 'ESPERA_DECISION'].includes(tarea.estado) && destino === 'DESARROLLO') {
     const ruta = join(dirTarea(raiz, id), 'tarea.md');
     const tareaMd = existsSync(ruta) ? readFileSync(ruta, 'utf8') : '';
     ctx.problemasCriterios = validarCriterios(leerCriterios(tareaMd), { exigirAlMenosUno: true });

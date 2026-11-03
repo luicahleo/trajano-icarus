@@ -3,6 +3,17 @@
 // pruebas. Formato en docs/ai/tareas/README.md.
 
 export const MINIMO_JUSTIFICACION = 10;
+export const MINIMO_NOMBRE_PRUEBA = 8;
+
+// Patrón genérico y portable de un archivo de pruebas: carpeta __tests__, tests o
+// *Tests, o archivo *.test.* / *.spec.* / *Tests.cs. Las rutas bajo
+// docs/ai/tareas/ (tarea.md, bitácora, ficha) nunca cuentan como prueba.
+const RUTA_DE_PRUEBAS = /(^|\/)(__tests__|tests?|[^/]*Tests)\/|\.(test|spec)\.[^/]+$|Tests\.cs$/;
+const RUTA_DE_TAREAS = /^(\.\/)?docs\/ai\/tareas\//;
+export const esRutaDePruebas = (ruta) => {
+  const normal = ruta.replace(/\\/g, '/');
+  return !RUTA_DE_TAREAS.test(normal) && RUTA_DE_PRUEBAS.test(normal);
+};
 
 const SECCION = /^## Criterios de aceptación\s*$/;
 const OTRA_SECCION = /^## /;
@@ -62,6 +73,12 @@ export function validarCriterios(criterios, { exigirAlMenosUno = false } = {}) {
     for (const evidencia of evidencias) {
       if (evidencia.tipo === 'desconocida') {
         problemas.push(`Criterio ${numero}: evidencia con formato desconocido: «${evidencia.texto}».`);
+      } else if (evidencia.tipo === 'test' && !esRutaDePruebas(evidencia.ruta)) {
+        problemas.push(
+          `Criterio ${numero}: ${evidencia.ruta} no es un archivo de pruebas reconocible (__tests__/, tests/, Tests/, .test., .spec. o *Tests.cs) o está bajo docs/ai/tareas/.`,
+        );
+      } else if (evidencia.tipo === 'test' && evidencia.nombre.trim().length < MINIMO_NOMBRE_PRUEBA) {
+        problemas.push(`Criterio ${numero}: el nombre de la prueba debe tener al menos ${MINIMO_NOMBRE_PRUEBA} caracteres.`);
       } else if (evidencia.tipo === 'manual' && evidencia.justificacion.length < MINIMO_JUSTIFICACION) {
         problemas.push(
           `Criterio ${numero}: la evidencia manual necesita una justificación de al menos ${MINIMO_JUSTIFICACION} caracteres.`,

@@ -32,9 +32,10 @@ siguen en su spec.
 - `Aceptada`: vigente. Una decisión nueva entra con la tarea que la introduce, y
   el humano la acepta al aprobar esa tarea.
 - `Sustituida por NNN`: dejó de estar vigente; enlaza la que la sustituye.
-- Un registro aceptado no se edita. Solo admite dos cambios: sustituir
-  `PENDIENTE` por el motivo que da el humano, y pasar el estado a
-  `Sustituida por NNN` en el mismo cambio que crea el registro nuevo.
+- Un registro aceptado no se edita. Solo admite tres cambios: sustituir
+  `PENDIENTE` por el motivo que da el humano, pasar el estado a
+  `Sustituida por NNN` en el mismo cambio que crea el registro nuevo, y corregir
+  enlaces rotos o erratas sin cambiar el sentido de la decisión.
 - Para cambiar una decisión se crea un registro nuevo que explica por qué
   sustituye al anterior.
 
