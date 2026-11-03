@@ -119,15 +119,17 @@ Desde la raíz:
 ./verify.ps1
 ```
 
-En POSIX: `./verify.sh`. La puerta se detiene en el primer fallo e incluye:
+En POSIX: `./verify.sh`. La lista de gates vive en `quality/gates.json`; la
+puerta se detiene en el primer fallo e incluye:
 
 1. tests de scripts `quality/`;
 2. adaptadores generados;
 3. mojibake;
 4. enlaces Markdown relativos;
-5. lint, build y tests frontend;
-6. build backend con warnings como errores;
-7. tests unitarios, arquitectura e integración backend.
+5. tareas de agentes: bitácoras, fichas, índice y evidencia de los criterios;
+6. lint, build y tests frontend;
+7. build backend con warnings como errores;
+8. tests unitarios, arquitectura e integración backend.
 
 Requisitos: .NET 10, Node 22, dependencias `web/` y Docker para
 Testcontainers.MsSql. Está prohibido `--no-verify` y relajar baselines o

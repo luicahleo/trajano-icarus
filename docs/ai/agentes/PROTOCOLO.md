@@ -11,6 +11,12 @@ motivos están en el
 - El estado vive en la bitácora, nunca en la conversación.
 - Registra mientras trabajas. Un proveedor puede detenerse sin aviso.
 - La evidencia la escribe la CLI, no el agente.
+- Cada criterio de aceptación declara su evidencia: una prueba vista en rojo o
+  una comprobación manual justificada. Formato en
+  [tareas/README.md](../tareas/README.md).
+- Las decisiones aceptadas del [registro de decisiones](../../decisiones/README.md)
+  mandan. Si una tarea contradice una, o cumple su condición de
+  reconsideración, pasa a `ESPERA_DECISION`.
 - Solo el usuario aprueba una funcionalidad. Las pruebas automáticas no bastan.
 
 ## Estados y dueños
@@ -37,6 +43,14 @@ registra su respuesta.
 `APROBADA` a `CERRADA` solo aparece en las tres bitácoras cerradas antes de que
 existiera `DOCUMENTACION`. La CLI ya no la permite.
 
+## Revisión
+
+Toda tarea que cambia código, pruebas o configuración pasa por `REVISION` tras
+la verificación. La revisión ligera aplica el
+[checklist común](../revision/comun.md); la profunda añade el
+[de dominio](../revision/dominio.md) y es obligatoria en las zonas que este
+lista. Una tarea exclusivamente documental va de `VERIFICACION` a `ENTORNO`.
+
 ## Rechazo tras la prueba manual
 
 | Clasificación | Cuándo | Destino |
@@ -56,6 +70,7 @@ node quality/tarea.mjs crear <slug> --titulo "<título>" --rol orquestador --pro
 node quality/tarea.mjs resumen [<id>]
 node quality/tarea.mjs avanzar <id> <ESTADO> --rol <rol> --proveedor <p> [--nota "<texto>"]
 node quality/tarea.mjs registrar <id> <decision|bloqueo|comando|nota> --texto "<texto>" --rol <rol> --proveedor <p>
+node quality/tarea.mjs registrar <id> comando --texto "Rojo criterio <N>: <comando> — <motivo del fallo>" --rol desarrollador --proveedor <p>
 node quality/tarea.mjs verificar <id> --rol verificador --proveedor <p>
 node quality/tarea.mjs rechazar <id> --clasificacion <c> --pasos "<p>" --actual "<a>" --esperado "<e>" --rol orquestador --proveedor <p>
 node quality/tarea.mjs relevo <id> --proveedor <p> --motivo "<motivo>"

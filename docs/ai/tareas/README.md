@@ -7,6 +7,48 @@ deja de ser legal.
 
 Las reglas están en [el protocolo de agentes](../agentes/PROTOCOLO.md).
 
+## Criterios con evidencia
+
+> Portable: el formato y su comprobación forman parte del kit de proceso.
+
+Cada criterio de aceptación de `tarea.md` declara cómo se demuestra. Un
+criterio sin evidencia es un deseo, y «compila y las pruebas pasan» no es
+evidencia: ya pasaban antes del cambio.
+
+```markdown
+## Criterios de aceptación
+
+1. Al guardar una recogida con más descarte que el total, la pantalla muestra
+   el aviso y no guarda nada.
+   Evidencia: test `web/src/gestion-avicola/Recogida.test.tsx` «rechaza más descarte que el total»
+   Evidencia: manual — el aviso se valida en el dispositivo del galpón.
+```
+
+- Criterios numerados al inicio de línea, dentro de `## Criterios de aceptación`.
+  Un encabezado `###` agrupa y cierra el criterio anterior. Los números no se
+  repiten.
+- Cada criterio lleva al menos una línea `Evidencia:`, de uno de dos tipos:
+  - ``Evidencia: test `<ruta>` «<nombre>»``: el nombre aparece literal en el
+    archivo de pruebas (el texto de `test(...)` o `it(...)`, o el nombre del
+    método en .NET).
+  - `Evidencia: manual — <justificación>`: solo lo que no se automatiza con
+    sensatez. La justificación dice por qué, con 10 caracteres como mínimo.
+- El planificador propone ruta y nombre; el desarrollador puede ajustarlos al
+  escribir la prueba. Cambiar `test` por `manual` exige volver a
+  `PLANIFICACION`.
+- El desarrollador registra el rojo de cada criterio con prueba en cuanto lo ve:
+  `node quality/tarea.mjs registrar <id> comando --texto "Rojo criterio <N>: <comando> — <motivo del fallo>" --rol desarrollador --proveedor <p>`.
+
+Lo comprueban la CLI y el gate `Tareas`:
+
+- `avanzar` de `PLANIFICACION` a `DESARROLLO` exige al menos un criterio y que
+  todos tengan evidencia válida.
+- De `DESARROLLO` a `DOCUMENTACION`, el gate exige el formato.
+- Desde `VERIFICACION`, además, que cada prueba citada exista y contenga su
+  nombre, y que cada criterio con prueba tenga su «Rojo criterio N:».
+- Las tareas cerradas no se revisan: son historia, y sus pruebas pueden haberse
+  movido.
+
 ## Consultar
 
 [INDICE.md](INDICE.md) tiene una línea por ficha: id, tipo, módulos, temas y

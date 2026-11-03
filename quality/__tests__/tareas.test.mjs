@@ -262,3 +262,14 @@ test('detectarSecretos no marca texto normal', () => {
     assert.equal(detectarSecretos(texto), false, texto);
   }
 });
+
+test('PLANIFICACION a DESARROLLO exige criterios comprobados y sin problemas', () => {
+  const t = reconstruir([...base, paso('RECIBIDA', 'PLANIFICACION')]);
+  const desarrollar = (c) => validarTransicion(t, 'DESARROLLO', { rol: 'planificador', ...contexto(c) });
+  assert.match(desarrollar(), /No se comprobaron los criterios/);
+  assert.match(
+    desarrollar({ problemasCriterios: ['Criterio 1: sin línea «Evidencia:».'] }),
+    /criterios no están listos: Criterio 1: sin línea/,
+  );
+  assert.equal(desarrollar({ problemasCriterios: [] }), null);
+});

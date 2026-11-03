@@ -120,7 +120,7 @@ function exigirEvidencia(tarea, arbol) {
 }
 
 // Devuelve el motivo del rechazo, o null si la transición es válida.
-export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush, problemasFicha }) {
+export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush, problemasFicha, problemasCriterios }) {
   if (TERMINALES.includes(tarea.estado)) return `La tarea está en un estado terminal: ${tarea.estado}.`;
   if (!transicionExiste(tarea, destino)) return `Transición no permitida: ${tarea.estado} a ${destino}.`;
   if (tarea.estado === 'APROBADA' && destino === 'CERRADA') {
@@ -139,6 +139,11 @@ export function validarTransicion(tarea, destino, { rol, arbol, limpio, sinPush,
   if (haciaAdelante) {
     const motivo = exigirEvidencia(tarea, arbol);
     if (motivo) return motivo;
+  }
+
+  if (tarea.estado === 'PLANIFICACION' && destino === 'DESARROLLO') {
+    if (!Array.isArray(problemasCriterios)) return 'No se comprobaron los criterios de aceptación.';
+    if (problemasCriterios.length > 0) return `Los criterios no están listos: ${problemasCriterios.join(' ')}`;
   }
 
   if (destino === 'PRUEBA_MANUAL' && !limpio) {

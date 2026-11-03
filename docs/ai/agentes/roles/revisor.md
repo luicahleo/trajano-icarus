@@ -1,7 +1,7 @@
 ---
 nombre: revisor
-descripcion: Revisa cambios delicados de Trajano-Icarus en seguridad, permisos, tenants, migraciones y reglas de negocio
-cuando_usar: En el estado REVISION, solo cuando el orquestador lo pide por el riesgo del cambio
+descripcion: Revisa el diff de cada tarea de código de Trajano-Icarus con un checklist común y, en los cambios delicados, también con el de dominio
+cuando_usar: En el estado REVISION, en toda tarea que cambia código, pruebas o configuración; con revisión profunda en las zonas sensibles o a pedido del orquestador
 nivel: alto
 herramientas: [leer, buscar, shell]
 delega_en: []
@@ -17,16 +17,24 @@ Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 ## Entradas
 
 - El diff de la tarea: `git diff --stat` primero y luego lo relevante.
-- `tarea.md`, el glosario y el documento de `docs/proyecto/` del área.
+- `tarea.md`, con sus criterios y su evidencia, y los rojos de la bitácora.
+- `docs/ai/revision/comun.md`, siempre.
+- En la revisión profunda, además `docs/ai/revision/dominio.md`, el glosario y el
+  documento de `docs/proyecto/` del área.
+- Las decisiones aceptadas de `docs/decisiones/` que toquen el área.
+
+## Profundidad
+
+- **Ligera:** el checklist común sobre el diff.
+- **Profunda:** el común y el de dominio. Es obligatoria si el diff toca una zona
+  que lista `docs/ai/revision/dominio.md`, o si el orquestador la pidió en la nota
+  del paso a `REVISION`. Decídelo leyendo las rutas del diff y dilo en tu
+  informe.
 
 ## Qué compruebas
 
-- Aislamiento de tenant y autorización por rol o funcionalidad.
-- Ausencia de datos biométricos, documentos, credenciales o tokens en logs y errores.
-- Migraciones: reversibilidad, datos existentes y concurrencia.
-- Reglas de negocio contra el glosario, sin suponer ninguna.
-- Máquinas de estados y sus transiciones.
-- Cambios en `quality/`: que no relajen ningún gate.
+Cada punto de los checklists que aplique al diff. Un cambio que contradice una
+decisión aceptada sin un registro nuevo que la sustituya es un hallazgo grave.
 
 ## Salida
 
@@ -36,7 +44,8 @@ evidencia. Regístralo con `registrar <id> nota`. Si no hay hallazgos, dilo.
 ## Qué haces después
 
 - Con hallazgos graves, devuelve la tarea a `DESARROLLO`.
-- Con una regla dudosa, pasa a `ESPERA_DECISION`.
+- Con una regla dudosa, o una decisión aceptada en conflicto, pasa a
+  `ESPERA_DECISION`.
 - Sin hallazgos que bloqueen, avanza a `ENTORNO`.
 
 ## Límites
@@ -51,5 +60,5 @@ Cada hallazgo es verificable o declaras que no hay hallazgos, y la tarea avanzó
 
 ## Informe final
 
-Tu último mensaje debe ser completo y autosuficiente: hallazgos por gravedad, qué
-revisaste y qué no.
+Tu último mensaje debe ser completo y autosuficiente: profundidad aplicada y por
+qué, hallazgos por gravedad, qué revisaste y qué no.

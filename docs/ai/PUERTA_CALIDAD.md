@@ -10,8 +10,9 @@ a esa revisión, así que su autoridad no es negociable.
 ```
 
 En POSIX, `./verify.sh`. Ambos son envoltorios de `node quality/verify.mjs`, que
-ejecuta los gates en orden y **se detiene en el primero que falla** para dar
-retroalimentación rápida.
+lee la lista de gates de `quality/gates.json`, los ejecuta en orden y **se
+detiene en el primero que falla** para dar retroalimentación rápida. Si la
+configuración falta o no es válida, la puerta falla sin ejecutar ningún gate.
 
 Los gates de backend necesitan el SDK de .NET 10 y Docker corriendo: `Backend
 tests` incluye tests de integración con Testcontainers.MsSql desde el plan 2.
@@ -26,7 +27,7 @@ resto corre en segundos.
 | Adaptadores | Que cada archivo generado (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, los `.*ignore` y los agentes por rol) coincida con el manifiesto | `node quality/generar-adaptadores.mjs`; si el cambio era deliberado, va en `quality/adaptadores/manifiesto.mjs` |
 | Mojibake | Ausencia del carácter de reemplazo y de las secuencias que delatan UTF-8 leído como Latin-1, en todo archivo del árbol, versionado o nuevo y salvo los excluidos por `.gitignore`, que git clasifique como texto | Escribir el carácter correcto en UTF-8 |
 | Enlaces | Que todo enlace relativo de los `.md` del árbol, versionados o nuevos y salvo los excluidos por `.gitignore`, apunte a un archivo existente | Corregir el enlace o crear el destino |
-| Tareas | Que cada bitácora de `docs/ai/tareas/` sea una historia legal, con aprobaciones humanas y sin credenciales reconocibles; que toda tarea cerrada tenga una `ficha.md` válida y que `INDICE.md` coincida con las fichas | Registrar eventos con `quality/tarea.mjs`; completar la ficha y ejecutar `node quality/tarea.mjs indice` |
+| Tareas | Que cada bitácora de `docs/ai/tareas/` sea una historia legal, con aprobaciones humanas y sin credenciales reconocibles; que toda tarea cerrada tenga una `ficha.md` válida y que `INDICE.md` coincida con las fichas; que las tareas activas declaren la evidencia de cada criterio y, desde `VERIFICACION`, que sus pruebas existan y su rojo esté registrado | Registrar eventos con `quality/tarea.mjs`; completar la ficha y ejecutar `node quality/tarea.mjs indice`; completar la evidencia según `docs/ai/tareas/README.md` |
 | Frontend lint | ESLint (flat config) sobre `web/` (`npm run lint`) | Según el error de ESLint |
 | Frontend build | `tsc -b && vite build` sobre `web/` (los errores de tipos son errores) | Según el error del compilador o del bundler |
 | Frontend tests | Vitest + Testing Library sobre `web/` (`npm run test`) | Según el test que falla |
@@ -80,8 +81,22 @@ a `C3 83 C2 B3`). Regla para agentes y para edición manual:
 
 Un gate nuevo es un archivo `quality/check-<algo>.mjs` con funciones puras
 exportadas y un bloque CLI, su archivo de tests en `quality/__tests__/`, y una
-entrada en la lista `GATES` de `quality/verify.mjs`. Si además corre en CI,
-`.github/workflows/ci.yml` ya lo cubre: ese workflow invoca la puerta entera.
+entrada en `quality/gates.json`. Tipos admitidos: `node` y `dotnet`, con `args`,
+y `npm`, con `script`; `cwd` opcional y relativo; `motivo` opcional para explicar
+el orden o un requisito. Una clave desconocida es un error, para que nada
+desactive un gate en silencio.
+
+`quality/__tests__/gates-proyecto.test.mjs` congela la lista: añadir, quitar o
+cambiar un gate exige cambiar esa prueba en el mismo commit, y el revisor lo ve.
+Si además corre en CI, `.github/workflows/ci.yml` ya lo cubre: ese workflow
+invoca la puerta entera.
+
+## Portable y propio
+
+`quality/verify.mjs` y `quality/lib/gates.mjs` son el ejecutor portable y no
+nombran nada de este proyecto. `quality/gates.json` y
+`quality/__tests__/gates-proyecto.test.mjs` son propios de Trajano-Icarus.
+Inventario completo en [KIT_PROCESO.md](KIT_PROCESO.md).
 
 Este documento describe los gates, no cuenta tests ni proyectos: esas cifras
 caducan en cada commit.

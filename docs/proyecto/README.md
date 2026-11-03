@@ -80,6 +80,7 @@ flowchart TB
 ## Fuentes y convenciones
 
 - Vocabulario y reglas: [glosario avícola](../dominio/glosario-avicola.md).
+- Decisiones transversales: [registro de decisiones](../decisiones/README.md).
 - Proceso de desarrollo: [documentación para agentes](../ai/README.md).
 - Operación específica: [documentos de operación](../operacion/observabilidad.md).
 - Los diagramas usan Mermaid para que puedan revisarse como texto.

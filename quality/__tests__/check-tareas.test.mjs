@@ -128,3 +128,57 @@ test('una ficha inválida falla aunque la tarea siga abierta', conArbol(
   },
   (raiz) => assert.match(problemas(raiz), /ficha\.md: Quedan marcadores/),
 ));
+
+const indiceVacio = { 'docs/ai/tareas/INDICE.md': generarIndice([]) };
+const conCriterio = (evidencia) =>
+  `# x\n\n## Criterios de aceptación\n\n1. Algo comprobable.\n${evidencia ? `   ${evidencia}\n` : ''}\n## Plan de pruebas\n`;
+const EVIDENCIA_PRUEBA = 'Evidencia: test `p.test.mjs` «hace algo»';
+const PRUEBA = "test('hace algo', () => {});\n";
+const rojo1 = ev({ tipo: 'comando', rol: 'desarrollador', texto: 'Rojo criterio 1: node --test p.test.mjs — falla porque falta la regla' });
+const enVerificacion = (...extra) =>
+  `${[
+    ev({ tipo: 'creada', titulo: 'x' }),
+    ev({ tipo: 'estado', de: 'RECIBIDA', a: 'DESARROLLO' }),
+    ...extra,
+    ev({ tipo: 'estado', de: 'DESARROLLO', a: 'VERIFICACION' }),
+  ].join('\n')}\n`;
+
+test('en DESARROLLO un criterio sin evidencia falla el gate', conArbol(
+  { [`${T}/bitacora.jsonl`]: abierta, [`${T}/tarea.md`]: conCriterio(null), ...indiceVacio },
+  (raiz) => assert.match(problemas(raiz), /2026-11-01-ejemplo: tarea\.md: Criterio 1: sin línea «Evidencia:»/),
+));
+
+test('en VERIFICACION una evidencia que apunta a una prueba inexistente falla el gate', conArbol(
+  { [`${T}/bitacora.jsonl`]: enVerificacion(rojo1), [`${T}/tarea.md`]: conCriterio(EVIDENCIA_PRUEBA), ...indiceVacio },
+  (raiz) => assert.match(problemas(raiz), /tarea\.md: Criterio 1: no existe la prueba p\.test\.mjs/),
+));
+
+test('en VERIFICACION un criterio con prueba sin rojo registrado falla el gate', conArbol(
+  { 'p.test.mjs': PRUEBA, [`${T}/bitacora.jsonl`]: enVerificacion(), [`${T}/tarea.md`]: conCriterio(EVIDENCIA_PRUEBA), ...indiceVacio },
+  (raiz) => assert.match(problemas(raiz), /tarea\.md: Criterio 1: falta registrar la prueba vista en rojo/),
+));
+
+test('en VERIFICACION un criterio con prueba existente y rojo registrado pasa', conArbol(
+  { 'p.test.mjs': PRUEBA, [`${T}/bitacora.jsonl`]: enVerificacion(rojo1), [`${T}/tarea.md`]: conCriterio(EVIDENCIA_PRUEBA), ...indiceVacio },
+  (raiz) => assert.equal(problemas(raiz), ''),
+));
+
+test('las tareas cerradas no se revisan por criterios', conArbol(
+  {
+    'a.txt': 'uno\n',
+    [`${T}/bitacora.jsonl`]: cerrada,
+    [`${T}/tarea.md`]: conCriterio(null),
+    [`${T}/ficha.md`]: ficha,
+    'docs/ai/tareas/INDICE.md': generarIndice([leerFicha(ficha).meta]),
+  },
+  (raiz) => assert.equal(problemas(raiz), ''),
+));
+
+test('una tarea en planificación con criterios incompletos no falla el gate', conArbol(
+  {
+    [`${T}/bitacora.jsonl`]: `${[ev({ tipo: 'creada', titulo: 'x' }), ev({ tipo: 'estado', de: 'RECIBIDA', a: 'PLANIFICACION' })].join('\n')}\n`,
+    [`${T}/tarea.md`]: conCriterio(null),
+    ...indiceVacio,
+  },
+  (raiz) => assert.equal(problemas(raiz), ''),
+));

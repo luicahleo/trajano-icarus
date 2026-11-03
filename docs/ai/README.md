@@ -23,12 +23,16 @@ proceso de trabajo; `docs/proyecto/` documenta el producto.
 | [PUERTA_CALIDAD.md](PUERTA_CALIDAD.md) | Cuando un gate falla o hay que agregar uno |
 | [FLUJO_GIT.md](FLUJO_GIT.md) | Antes de integrar, promover o tocar ramas |
 | [ECONOMIA_TOKENS.md](ECONOMIA_TOKENS.md) | Al planificar la sesión: qué modelo y qué tamaño |
-| [CONTEXT-EFFICIENCY.md](CONTEXT-EFFICIENCY.md) | Al explorar un repositorio que no conocés |
+| [CONTEXT-EFFICIENCY.md](CONTEXT-EFFICIENCY.md) | Al explorar un repositorio que no conoces |
 | [HANDOFF.template.md](HANDOFF.template.md) | Al cerrar una sesión con trabajo a medias |
 | [agentes/README.md](agentes/README.md) | Al trabajar con los agentes por rol o relevar a otro proveedor |
 | [agentes/PROTOCOLO.md](agentes/PROTOCOLO.md) | Al actuar en una tarea gestionada |
 | [tareas/INDICE.md](tareas/INDICE.md) | Antes de explorar un área: buscar el término y abrir solo la ficha que coincida |
 | [tareas/README.md](tareas/README.md) | Al escribir o revisar una ficha de cierre |
+| [../decisiones/README.md](../decisiones/README.md) | Antes de diseñar, implementar o revisar: decisiones aceptadas |
+| [revision/comun.md](revision/comun.md) | Al revisar un diff |
+| [revision/dominio.md](revision/dominio.md) | En la revisión profunda |
+| [KIT_PROCESO.md](KIT_PROCESO.md) | Al llevar el proceso a otro proyecto: qué es portable y qué es propio |
 
 ## Qué leer al iniciar
 

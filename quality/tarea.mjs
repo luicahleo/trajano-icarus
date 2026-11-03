@@ -30,6 +30,7 @@ import {
 } from './lib/tareas.mjs';
 import { indiceEsperado, revisarDocumentacion, revisarIndice } from './check-tareas.mjs';
 import { MARCADOR, SECCIONES_FICHA } from './lib/fichas.mjs';
+import { leerCriterios, validarCriterios } from './lib/criterios.mjs';
 
 const DIR_TAREAS = 'docs/ai/tareas';
 const RUTA_CERROJO = '.local/agentes/tarea-activa.json';
@@ -164,6 +165,9 @@ const PLANTILLA = (titulo) => `# ${titulo}
 
 ## Criterios de aceptación
 
+Cada criterio numerado lleva al menos una línea «Evidencia:» (formato en
+docs/ai/tareas/README.md).
+
 ## Plan de pruebas
 `;
 
@@ -195,6 +199,11 @@ function avanzar({ raiz, escribir }, [id, destino], opciones) {
       ...revisarDocumentacion(raiz, id, { estado: 'CERRADA', aprobado: tarea.aprobacion?.commit }),
       ...revisarIndice(raiz),
     ];
+  }
+  if (tarea.estado === 'PLANIFICACION' && destino === 'DESARROLLO') {
+    const ruta = join(dirTarea(raiz, id), 'tarea.md');
+    const tareaMd = existsSync(ruta) ? readFileSync(ruta, 'utf8') : '';
+    ctx.problemasCriterios = validarCriterios(leerCriterios(tareaMd), { exigirAlMenosUno: true });
   }
   const motivo = validarTransicion(tarea, destino, ctx);
   if (motivo) fallar(motivo);

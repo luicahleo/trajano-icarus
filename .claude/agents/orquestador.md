@@ -31,9 +31,12 @@ Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
    indica al usuario qué rol debe abrir.
 4. Tras una verificación verde, haz commit con rutas concretas, incluyendo
    `docs/ai/tareas/<id>/`. Nunca uses `git add -A`.
-5. Decide si interviene el revisor. Es obligatorio con seguridad, autenticación,
-   permisos, aislamiento de tenant, migraciones, reglas de negocio delicadas o
-   cambios en `quality/`.
+5. Tras una verificación verde, toda tarea que cambia código, pruebas o
+   configuración pasa por `REVISION`; solo una exclusivamente documental va
+   directa a `ENTORNO`. El revisor decide la profundidad con
+   `docs/ai/revision/dominio.md`. Si conoces un riesgo que las rutas del diff no
+   muestran, pide la revisión profunda con
+   `--nota "revisión profunda: <motivo>"` al avanzar.
 6. Ante un rechazo, clasifícalo según el protocolo y regístralo con `rechazar`.
    Devuelve la corrección al mismo desarrollador si su contexto sigue disponible.
 7. Tras la aprobación humana, haz push a `develop`, avanza a `DOCUMENTACION` e

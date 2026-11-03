@@ -233,15 +233,23 @@ Fuentes: `docker-compose.yml`, `docker-compose.gestor.yml`,
 
 ## 9. Decisiones transversales
 
-- **Multi-tenant por filas y claims**, no una base por cliente.
-- **Soft delete** en agregados de negocio; los historiales no se borran físicamente.
-- **Fechas de negocio Bolivia** en operaciones comerciales y asistencia; persistencia
-  de instantes técnicos en UTC donde el modelo lo requiere.
-- **Online deliberado** para pedidos y despachos comerciales; offline solo para
-  recogida/mortalidad de la PWA.
-- **Sin procesos programados para vigencias o crédito:** se resuelven al consultar
-  o al ejecutar el comando correspondiente.
-- **Notificaciones internas persistentes**, no push como fuente de verdad.
+Cada decisión tiene su registro, con contexto, motivo, alternativas y cuándo
+reconsiderarla, en el [registro de decisiones](../decisiones/README.md):
+
+- [002](../decisiones/002-errores-por-excepciones-de-dominio.md): errores por
+  excepciones de dominio, no Result pattern.
+- [003](../decisiones/003-multi-tenant-por-filas-y-claims.md): multi-tenant por
+  filas y claims, no una base por cliente.
+- [004](../decisiones/004-soft-delete-en-agregados.md): soft delete en los
+  agregados de negocio; los historiales no se borran físicamente.
+- [005](../decisiones/005-fechas-de-negocio-bolivia-y-utc.md): fechas de negocio
+  de Bolivia; instantes técnicos en UTC donde el modelo lo requiere.
+- [006](../decisiones/006-online-deliberado-pedidos-y-despachos.md): online
+  deliberado para pedidos y despachos; offline solo para recogida y mortalidad.
+- [007](../decisiones/007-sin-procesos-programados.md): sin procesos programados
+  para vigencias o crédito.
+- [008](../decisiones/008-notificaciones-internas-persistentes.md):
+  notificaciones internas persistentes, no push como fuente de verdad.
 
 ## 10. Fuentes principales
 

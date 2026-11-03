@@ -12,6 +12,8 @@ Siete roles especializados, iguales en cualquier proveedor. Las reglas están en
 | `.claude/agents/`, `.kimi-code/agents/` | Adaptadores generados. No se editan |
 | `docs/ai/tareas/` | Una carpeta por tarea, con su bitácora |
 | `docs/ai/tareas/INDICE.md` | Índice de fichas de cierre. Generado: no se edita |
+| `docs/ai/revision/` | Checklists del revisor: común (portable) y de dominio |
+| `docs/decisiones/` | Registro de decisiones transversales |
 | `quality/tarea.mjs` | CLI de tareas, común a todos los proveedores |
 | `quality/guardia-comandos.mjs` | Hook que frena comandos peligrosos |
 

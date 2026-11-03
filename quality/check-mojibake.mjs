@@ -81,8 +81,8 @@ if (process.argv[1] && process.argv[1].endsWith('check-mojibake.mjs')) {
       console.log(`       ${h.ruta}:${h.numero}: ${h.linea.trim()}`);
     }
     console.log(
-      '       Escribí el carácter correcto en UTF-8. Si necesitás citar el ' +
-        'patrón en un .md, ponelo entre acentos graves.',
+      '       Escribe el carácter correcto en UTF-8. Si necesitas citar el ' +
+        'patrón en un .md, ponlo entre acentos graves.',
     );
     process.exit(1);
   }

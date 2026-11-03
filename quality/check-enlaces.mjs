@@ -87,7 +87,7 @@ if (process.argv[1] && process.argv[1].endsWith('check-enlaces.mjs')) {
     for (const r of rotos) {
       console.log(`       ${r.archivo}:${r.numero} -> ${r.destino}`);
     }
-    console.log('       Corregí el enlace o creá el destino.');
+    console.log('       Corrige el enlace o crea el destino.');
     process.exit(1);
   }
 

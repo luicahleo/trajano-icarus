@@ -1,49 +1,27 @@
 #!/usr/bin/env node
-// Puerta de calidad de Trajano-Icarus.
+// Puerta de calidad: ejecutor genérico y portable.
 //   node quality/verify.mjs
-// Ejecuta los gates en orden y se detiene en el primero que falla, para dar
-// retroalimentación rápida. Los gates de backend necesitan el SDK de .NET 10;
-// los tests de integración con Testcontainers (planes 2-3) necesitan Docker.
+// Lee los gates de quality/gates.json, los ejecuta en orden y se detiene en el
+// primero que falla, para dar retroalimentación rápida. Lo propio de cada
+// proyecto vive en esa configuración, no aquí.
 
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { ejecutar } from './lib/ejecutar.mjs';
+import { RUTA_CONFIGURACION, cargarGates, resolverGate } from './lib/gates.mjs';
 import { titulo, exito, fallo } from './lib/salida.mjs';
 
 // fileURLToPath, no .pathname: en Windows .pathname produce "/C:/..." y rompe spawn.
 const raiz = fileURLToPath(new URL('..', import.meta.url));
-const web = resolve(raiz, 'web');
+const configuracion = cargarGates(raiz);
 
-// npm en Windows es npm.cmd: lanzarlo con shell dispara el aviso DEP0190 de
-// Node (args concatenados sin escapar). Se invoca el CLI de npm con el propio
-// node, sin shell. En POSIX npm es un binario directo.
-const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-const gateNpm = (script) =>
-  process.platform === 'win32' && existsSync(npmCli)
-    ? { comando: process.execPath, args: [npmCli, 'run', script], cwd: web }
-    : { comando: 'npm', args: ['run', script], cwd: web, shell: true };
-
-// Los argumentos posicionales de `node --test` son patrones glob, no rutas de
-// directorio: un directorio suelto se intentaría cargar como módulo y fallaría.
-const PATRON_TESTS = 'quality/__tests__/*.test.mjs';
-
-export const GATES = [
-  // Va primero: si la propia puerta está rota, el resto de los veredictos no
-  // vale nada.
-  { nombre: 'Tests de la puerta', comando: 'node', args: ['--test', PATRON_TESTS] },
-  { nombre: 'Adaptadores', comando: 'node', args: ['quality/check-adaptadores.mjs'] },
-  { nombre: 'Mojibake', comando: 'node', args: ['quality/check-mojibake.mjs'] },
-  { nombre: 'Enlaces', comando: 'node', args: ['quality/check-enlaces.mjs'] },
-  { nombre: 'Tareas', comando: 'node', args: ['quality/check-tareas.mjs'] },
-  { nombre: 'Frontend lint', ...gateNpm('lint') },
-  { nombre: 'Frontend build', ...gateNpm('build') },
-  { nombre: 'Frontend tests', ...gateNpm('test') },
-  { nombre: 'Backend build', comando: 'dotnet', args: ['build', 'Icarus/Icarus.sln', '--nologo'] },
-  { nombre: 'Backend tests', comando: 'dotnet', args: ['test', 'Icarus/Icarus.sln', '--nologo', '--no-build'] },
-];
+export const GATES = configuracion.gates.map((gate) =>
+  resolverGate(gate, { raiz, plataforma: process.platform, execPath: process.execPath, existe: existsSync }),
+);
 
 export function ejecutarGates(gates, ejecutor) {
+  // Una lista vacía no es una puerta verde: es una puerta que no comprobó nada.
+  if (gates.length === 0) return { ok: false, ejecutados: [] };
   const ejecutados = [];
   for (const gate of gates) {
     const { codigo } = ejecutor(gate);
@@ -54,6 +32,13 @@ export function ejecutarGates(gates, ejecutor) {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('verify.mjs')) {
+  if (configuracion.problemas.length > 0) {
+    console.log(fallo(`La configuración de la puerta no es válida: ${RUTA_CONFIGURACION}`));
+    for (const problema of configuracion.problemas) console.log(`       ${problema}`);
+    console.log(fallo('La puerta de calidad no pasó. Arregla la configuración; no quites gates.'));
+    process.exit(1);
+  }
+
   const resultado = ejecutarGates(GATES, (gate) => {
     console.log(titulo(gate.nombre));
     const { cwd = raiz, shell = false } = gate;
@@ -64,8 +49,8 @@ if (process.argv[1] && process.argv[1].endsWith('verify.mjs')) {
 
   if (!resultado.ok) {
     const ultimo = resultado.ejecutados.at(-1);
-    console.log(fallo(`${ultimo.nombre} falló`, `código ${ultimo.codigo}`));
-    console.log(fallo('La puerta de calidad no pasó. Arreglá el contenido, no el gate.'));
+    if (ultimo) console.log(fallo(`${ultimo.nombre} falló`, `código ${ultimo.codigo}`));
+    console.log(fallo('La puerta de calidad no pasó. Arregla el contenido, no el gate.'));
     process.exit(1);
   }
 

@@ -63,7 +63,8 @@ no contexto obligatorio. No cargarlos en bloque.
 - Pregunta, explicación o diagnóstico: investigar y responder; no modificar.
 - Cambio pequeño y claro: implementar, probar en proporción y resumir.
 - Feature, bloque o cambio arquitectónico: seguir `docs/ai/WORKFLOW.md` desde
-  brainstorming hasta cierre.
+  brainstorming hasta cierre, leyendo antes las decisiones aceptadas de
+  `docs/decisiones/`.
 - Continuación de otra sesión: leer primero `docs/ai/HANDOFF.md` si existe, y
   verificar cada afirmación importante contra git y los archivos actuales.
 

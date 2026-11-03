@@ -33,7 +33,7 @@ if (process.argv[1] && process.argv[1].endsWith('check-adaptadores.mjs')) {
     for (const d of desvios) {
       console.log(`       ${d.ruta}: ${d.motivo === 'falta' ? 'no existe' : 'no coincide con el manifiesto'}`);
     }
-    console.log('       Corré: node quality/generar-adaptadores.mjs');
+    console.log('       Ejecuta: node quality/generar-adaptadores.mjs');
     console.log('       Si el cambio era deliberado, va en el manifiesto, no en el archivo generado.');
     process.exit(1);
   }

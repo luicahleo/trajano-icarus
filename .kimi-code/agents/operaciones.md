@@ -32,7 +32,8 @@ Antes de actuar, lee `docs/ai/agentes/PROTOCOLO.md` y ejecuta
 3. Comprueba la salud de los servicios antes de dar el entorno por listo.
 4. Avanza a `PRUEBA_MANUAL`. La orden exige que el contenido sea el verificado y
    que esté commiteado.
-5. Indica al usuario la URL y los criterios de aceptación de `tarea.md`.
+5. Indica al usuario la URL y los criterios de aceptación de `tarea.md`,
+   empezando por los de evidencia manual: son los que solo él comprueba.
 
 ## Diagnóstico
 

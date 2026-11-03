@@ -300,3 +300,33 @@ test('indice es idempotente', conRepo((raiz) => {
   assert.equal(r.codigo, 0);
   assert.match(r.salida, /sin cambios/);
 }));
+
+const PLANIFICADOR = ['--rol', 'planificador', '--proveedor', 'anthropic'];
+const rutaTareaMd = (raiz) => join(raiz, 'docs/ai/tareas', ID, 'tarea.md');
+const conCriterios = (lineas) => `# T\n\n## Criterios de aceptación\n\n${lineas}\n\n## Plan de pruebas\n`;
+
+test('avanzar de PLANIFICACION a DESARROLLO exige criterios con evidencia', conRepo((raiz) => {
+  crear(raiz);
+  cli(raiz, ['avanzar', ID, 'PLANIFICACION', ...COMUN]);
+
+  const sinCriterios = cli(raiz, ['avanzar', ID, 'DESARROLLO', ...PLANIFICADOR]);
+  assert.equal(sinCriterios.codigo, 1);
+  assert.match(sinCriterios.salida, /No hay criterios de aceptación/);
+
+  writeFileSync(rutaTareaMd(raiz), conCriterios('1. Algo visible.'));
+  const sinEvidencia = cli(raiz, ['avanzar', ID, 'DESARROLLO', ...PLANIFICADOR]);
+  assert.equal(sinEvidencia.codigo, 1);
+  assert.match(sinEvidencia.salida, /Criterio 1: sin línea/);
+
+  writeFileSync(rutaTareaMd(raiz), conCriterios('1. Algo visible.\n   Evidencia: manual — solo se aprecia en la pantalla real.'));
+  const listo = cli(raiz, ['avanzar', ID, 'DESARROLLO', ...PLANIFICADOR]);
+  assert.equal(listo.codigo, 0, listo.salida);
+  assert.match(bitacora(raiz), /"a":"DESARROLLO"/);
+}));
+
+test('la plantilla de crear indica el formato de evidencia de los criterios', conRepo((raiz) => {
+  crear(raiz);
+  const md = readFileSync(rutaTareaMd(raiz), 'utf8');
+  assert.match(md, /## Criterios de aceptación\n\nCada criterio numerado lleva al menos una línea «Evidencia:»/);
+  assert.match(md, /docs\/ai\/tareas\/README\.md/);
+}));
